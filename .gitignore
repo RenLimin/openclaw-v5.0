@@ -1,0 +1,16 @@
+# 私人/敏感 — 不纳入版本控制
+# 详见 MEMORY.md 说明
+MEMORY.md
+memory/
+
+# 系统
+.DS_Store
+*.swp
+*.swo
+*~
+.env
+.env.local
+.venv/
+__pycache__/
+*.pyc
+node_modules/
