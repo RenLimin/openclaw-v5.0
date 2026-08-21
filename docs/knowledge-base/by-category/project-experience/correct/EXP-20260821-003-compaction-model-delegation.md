@@ -91,14 +91,34 @@ openclaw config patch --file /tmp/compaction.patch.json5 --dry-run
 openclaw config patch --file /tmp/compaction.patch.json5
 ```
 
-### 3.3 一个被否决的方案（重要）
+### 3.3 contextWindow 校准（2026-08-21 更新）
 
-**否决**：给 `ark-code-latest` 声明 `contextWindow: 1048576`（对齐兄弟模型 glm-5.2/deepseek-v4）。
+**已验证并调整**（之前"保持 200k 不动"的结论已过时）：
 
-**否决理由**：`ark-code-latest` 是火山方舟的 **Auto 智能调度模式**，不是固定模型 — 平台按效果+速度动态路由到 Kimi-K2.7(256k) / MiniMax-M3(200k) / GLM-5.2(1049k) 等。声明 1049k 会在路由到 MiniMax-M3 时**立刻真实溢出**（provider 侧报错，比本地预判溢出更难排查）。
+通过 `arkcli models search/get` + 官方文档，确认了 Coding Plan 各模型的真实 context window：
 
-**结论**：200k 是正确的保守下界，**保持不动**。
-来源：火山引擎 Coding Plan 文档 — Auto 模式说明。
+| 模型 | 调整前 | 调整后 | 来源 |
+|---|---|---|---|
+| `glm-5.3` | 200,000 (默认) | **1,048,576** (1M) | 官方文档明确 1M ctx |
+| `kimi-k2.7-code` | 200,000 (默认) | **262,144** (262k) | HuggingFace/官方 262k |
+| `minimax-m3` | 200,000 (默认) | **1,048,576** (1M) | MiniMax 官方 1M |
+| `ark-code-latest` | 200,000 (默认) | **262,144** (262k) | Auto 池最小值 (kimi/doubao) |
+
+**`ark-code-latest` 的 Auto 池分析**（来源：`arkcli plans model-list`）：
+- doubao-seed-2-1-turbo → 262k
+- doubao-seed-2.0-lite → 262k
+- glm-5.3 → 1M
+- deepseek-v4-flash → 1M
+- glm-5.2 → 1M
+- kimi-k2.7-code → 262k
+- minimax-m3 → 1M
+- deepseek-v4-pro → 1M
+- **池最小值 = 262k** → 这是 `ark-code-latest` 的安全上界
+
+**关键认知修正**：
+- 之前认为 200k 是正确下界 → 实际上 OpenClaw 默认 200k 只是 fallback，火山官方模型 ctx 都 ≥262k
+- `ark-code-latest` 设 262k（而非 200k）更精确，但仍保守安全
+- 如果未来 Auto 池加入 <262k 模型，需再次下调
 
 ## 4. 验证
 
