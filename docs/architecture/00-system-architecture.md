@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.2 (2026-08-21 补全) |
+| 文档版本 | 0.3 (2026-08-21 上下文管理组件 + auto-compaction 配置) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（待 ADR-001 落档） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -140,6 +140,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | **知识库能力** | 自建系统的演进目标 | 轻量方案 (Markdown + frontmatter) |
 | **凭据管理** | 集中式 secrets 存储、SecretRef 解析 | 已建设 (Tavily key 案例) |
 | **工具策略** | `tools.profile` + `alsoAllow` 治理 | 已建设 (EXP-20260821-001) |
+| **上下文管理** | auto-compaction + session pruning + contextWindow 校准 | 已建设 (EXP-20260821-003) |
 
 **已建设组件清单**（截至 2026-08-21）：
 
@@ -159,6 +160,22 @@ L1 → 任何上层         (反向依赖，禁止)
    - Agent ID: `main`
    - 模型: `coding-plan/ark-code-latest`
    - 工具 profile: `coding` + `alsoAllow: [tavily_search, tavily_extract]`
+
+4. **上下文管理** (2026-08-21)
+   - 组件 ID: `agents.defaults.compaction` + `agents.defaults.contextPruning`
+   - 功能: 三层防线自动管理上下文溢出
+     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复，摘要委托 LongCat-2.0 (1M ctx)
+     - 第 2 层: Session pruning — cache-ttl 模式修剪旧 tool results
+     - 第 3 层: Mid-turn precheck — 多轮工具调用中途 ctx 压力检查
+   - 关键配置:
+     - `mode: "safeguard"` — 更严格保护 + 摘要质量审计
+     - `keepRecentTokens: 30000` — 压缩保留 30k 近期消息
+     - `maxActiveTranscriptBytes: "20mb"` — transcript 达 20MB 预压缩
+     - `midTurnPrecheck.enabled: true` — 中途检查
+     - `contextPruning: { mode: "cache-ttl", ttl: "5m" }` — 5分钟 TTL 修剪
+   - contextWindow 校准: 4 个模型从 200k 默认值修正至官方值
+     - glm-5.3: 200k → 1M | kimi-k2.7-code: 200k → 262k | minimax-m3: 200k → 1M | ark-code-latest: 200k → 262k
+   - 文档: `../knowledge-base/by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md`
 
 **预留位**（待 L2 建设时填充）：
 - 可观测性组件（metrics、trace）
@@ -446,7 +463,7 @@ L4 专有业务
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-08-21 | 0.1 | 初版骨架（4 层架构 + 契约 + 演进路线） |
-| 2026-08-21 | 0.2 | 补全内部细节：L1 能力清单、L2 组件分类与已建清单、L3 维度划分原则、L4 继承机制、依赖/选型约束、术语表、变更历史 |
+| 2026-08-21 | 0.3 | 新增 L2 上下文管理组件：auto-compaction 三层防线 + contextWindow 校准 + session pruning |
 
 ---
 
