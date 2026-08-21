@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-21 15:54 UTC+08:00
+最后生成：2026-08-21 16:38 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -60,7 +60,7 @@
 
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
-| `main` | 🦞 Jerry | `longcat/LongCat-2.0` | `/Users/bangcle/.openclaw/workspace` | ✅ |
+| `main` | 🦞 Jerry | `coding-plan/ark-code-latest` | `/Users/bangcle/.openclaw/workspace` | ✅ |
 
 ## L2 — 工具策略资产
 
@@ -104,7 +104,7 @@
 | 类别 | 数量 |
 |---|---|
 | ADR（架构决策记录） | 6 |
-| EXP（经验卡片） | 2 |
+| EXP（经验卡片） | 3 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -124,14 +124,15 @@
 |---|---|
 | [`EXP-20260821-001-tavily-tools-also-allow`](../knowledge-base/by-category/project-experience/correct/EXP-20260821-001-tavily-tools-also-allow.md) | active |
 | [`EXP-20260821-002-github-file-credential-helper`](../knowledge-base/by-category/project-experience/correct/EXP-20260821-002-github-file-credential-helper.md) | active |
+| [`EXP-20260821-003-compaction-model-delegation`](../knowledge-base/by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md) | active |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `61ae36d` |
-| Commit 数 | 20 |
+| HEAD | `f35aaf7` |
+| Commit 数 | 21 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

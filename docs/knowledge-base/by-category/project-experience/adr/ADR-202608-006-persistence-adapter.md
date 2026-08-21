@@ -3,7 +3,9 @@ type: adr
 id: ADR-202608-006
 date: 2026-08-21
 title: L2 持久化适配组件设计决策 — SQLite + Repository 模式 + 版本化迁移
-status: proposed
+status: accepted
+supersedes: null
+superseded_by: null
 deciders: [Rex, Jerry]
 layers: [L2, L3, L4]
 tags: [persistence, sqlite, repository, migration, database]
@@ -14,7 +16,7 @@ superseded_by: null
 # [ADR-202608-006] L2 持久化适配组件设计决策
 
 ## 1. 状态
-**proposed** — 待 Rex 确认后改为 accepted
+**accepted** — 2026-08-21 Rex 确认 · 已实现
 
 ## 2. 背景
 
@@ -99,8 +101,8 @@ sqlite3 stdlib → SQLAlchemy Core → PostgreSQL → DuckDB (分析)
 
 ## 5. 实现计划
 
-- [ ] ADR-006 accepted（本文件）
-- [ ] 验证：手动创建 SQLite + 测试迁移流程
+- [x] ADR-006 accepted（本文件）
+- [x] 验证：手动创建 SQLite + 测试迁移流程
 - [ ] 实现 connection.py / migration.py / repository.py
 - [ ] 测试：CRUD + 迁移
 
@@ -131,3 +133,4 @@ sqlite3 stdlib → SQLAlchemy Core → PostgreSQL → DuckDB (分析)
 ## 9. 变更历史
 
 - 2026-08-21: proposed
+- 2026-08-21: accepted（Rex 确认）

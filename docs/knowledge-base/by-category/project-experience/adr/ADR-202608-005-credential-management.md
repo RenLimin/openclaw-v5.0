@@ -3,7 +3,7 @@ type: adr
 id: ADR-202608-005
 date: 2026-08-21
 title: L2 凭据管理通用化 — 文件存储 + SecretRef 引用 + 标准生命周期
-status: proposed
+status: accepted
 deciders: [Rex, Jerry]
 layers: [L1, L2]
 tags: [credentials, secrets, security, secretref, cross-cutting]
