@@ -51,4 +51,4 @@ _(自动生成中 — 每篇文档的 frontmatter 都会被索引到这里)_
 | 2026-08-21 | [ADR-202608-004] 可观测性适配 | accepted + 实现 (agent_observer.py) |
 | 2026-08-21 | [EXP-20260821-002] GitHub 凭据配置 | file-based credential helper |
 | 2026-08-21 | [ADR-202608-005] 凭据管理通用化 | accepted + 实现 (credentials.sh) |
-| 2026-08-21 | 持久化适配设计 | DESIGN.md + ADR-006 (proposed) |
+| 2026-08-21 | 持久化适配 | ADR-006 accepted + 实现 (connection/migration/repository) |
