@@ -49,4 +49,5 @@ _(自动生成中 — 每篇文档的 frontmatter 都会被索引到这里)_
 | 2026-08-21 | [ADR-202608-001] 4 层架构决策 | accepted: L1/L2/L3/L4 + 候选对比 + 验证标准 |
 | 2026-08-21 | [ADR-202608-002] 知识库三维模型 | accepted: 层级×阶段×类别 + frontmatter 强制 |
 | 2026-08-21 | [ADR-202608-003] 知识库承载形式路径 | accepted: 3 阶段 (Markdown→工具链→自建) + 7 触发条件 |
+| 2026-08-21 | 可观测性适配设计 | DESIGN.md + ADR-004 (proposed) |
 | 2026-08-21 | [EXP-20260821-002] GitHub 凭据配置 | file-based credential helper（token 不入 git config）|
