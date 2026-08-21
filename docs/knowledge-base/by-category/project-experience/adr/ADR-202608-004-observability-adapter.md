@@ -3,7 +3,7 @@ type: adr
 id: ADR-202608-004
 date: 2026-08-21
 title: L2 可观测性适配组件设计决策 — 本地结构化日志优先, 渐进式演进
-status: proposed
+status: accepted
 deciders: [Rex, Jerry]
 layers: [L1, L2]
 tags: [observability, logging, tracing, monitoring, cross-cutting]
@@ -14,7 +14,7 @@ superseded_by: null
 # [ADR-202608-004] L2 可观测性适配组件设计决策
 
 ## 1. 状态
-**proposed** — 待 Rex 确认后改为 accepted
+**accepted** — 2026-08-21 Rex 确认
 
 ## 2. 背景
 
@@ -95,7 +95,7 @@ superseded_by: null
 
 ## 5. 实现计划
 
-- [ ] ADR-004 accepted（本文件）
+- [x] ADR-004 accepted（本文件）
 - [ ] 实现最小埋点（tool_call + agent_turn + error 三类事件）
 - [ ] 实现隐私过滤（redact 敏感字段）
 - [ ] 验证：手动触发 agent → 检查日志输出
@@ -129,3 +129,4 @@ superseded_by: null
 ## 9. 变更历史
 
 - 2026-08-21: proposed
+- 2026-08-21: accepted（Rex 确认）

@@ -20,5 +20,6 @@ skills/
 
 # 业务日志
 business/*/logs/
+logs/observability/
 *.err
 *.out
