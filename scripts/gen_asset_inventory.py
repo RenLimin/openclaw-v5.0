@@ -254,6 +254,8 @@ def render_tools(data: dict) -> list[str]:
 def render_credentials(data: dict) -> list[str]:
     """凭据资产：只列 provider 名与文件名，绝不读取内容。"""
     lines = ["## L2 — 凭据资产 (仅元信息，不含凭据值)", ""]
+    lines.append("> 凭据清单 (含轮换周期等元信息): `~/.openclaw/secrets/INDEX.md`")
+    lines.append("")
 
     providers = data["secret_providers"]
     lines.append("### SecretRef Providers")

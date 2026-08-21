@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-21 15:33 UTC+08:00
+最后生成：2026-08-21 15:37 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -72,6 +72,8 @@
 
 ## L2 — 凭据资产 (仅元信息，不含凭据值)
 
+> 凭据清单 (含轮换周期等元信息): `~/.openclaw/secrets/INDEX.md`
+
 ### SecretRef Providers
 
 | 别名 | 说明 |
@@ -82,6 +84,7 @@
 
 | 文件 | 权限 | 大小 |
 |---|---|---|
+| `~/.openclaw/secrets/INDEX.md` | `600` | 2425 B |
 | `~/.openclaw/secrets/github.token` | `600` | 40 B |
 | `~/.openclaw/secrets/tavily.apiKey` | `600` | 58 B |
 
@@ -111,7 +114,7 @@
 | [`ADR-202608-002-knowledge-base-three-dimensions`](../knowledge-base/by-category/project-experience/adr/ADR-202608-002-knowledge-base-three-dimensions.md) | accepted |
 | [`ADR-202608-003-knowledge-base-evolution-path`](../knowledge-base/by-category/project-experience/adr/ADR-202608-003-knowledge-base-evolution-path.md) | accepted |
 | [`ADR-202608-004-observability-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-004-observability-adapter.md) | accepted |
-| [`ADR-202608-005-credential-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-005-credential-management.md) | proposed |
+| [`ADR-202608-005-credential-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-005-credential-management.md) | accepted |
 
 ### 经验卡片清单
 
@@ -125,8 +128,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `e13d75b` |
-| Commit 数 | 16 |
+| HEAD | `5a442b2` |
+| Commit 数 | 17 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
