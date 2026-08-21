@@ -14,3 +14,11 @@ memory/
 __pycache__/
 *.pyc
 node_modules/
+
+# OpenClaw 运行时管理 (非 workspace assets)
+skills/
+
+# 业务日志
+business/*/logs/
+*.err
+*.out
