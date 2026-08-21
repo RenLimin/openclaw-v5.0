@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-21 15:45 UTC+08:00
+最后生成：2026-08-21 15:53 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -36,19 +36,20 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 84 个（可用 72）
+**总计** 85 个（可用 73）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 3 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 5 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 6 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
 | 名称 | 描述 |
 |---|---|
+| `edit-stale-state-break-loop` | Breaking edit-tool retry loops when prior mutations already changed the target text |
 | `edit-tool-exact-whitespace-recovery` | Edit-tool "oldText not found" usually means a whitespace mismatch. On macOS, use `od -c... |
 | `git-https-token-file-credential-helper` | Push to GitHub over HTTPS with a token file, no plaintext token in git config, plus fir... |
 | `openclaw-add-tool-via-also-allow` | Add a blocked tool in OpenClaw without changing global profile: patch tools.alsoAllow, ... |
@@ -115,7 +116,7 @@
 | [`ADR-202608-003-knowledge-base-evolution-path`](../knowledge-base/by-category/project-experience/adr/ADR-202608-003-knowledge-base-evolution-path.md) | accepted |
 | [`ADR-202608-004-observability-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-004-observability-adapter.md) | accepted |
 | [`ADR-202608-005-credential-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-005-credential-management.md) | accepted |
-| [`ADR-202608-006-persistence-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-006-persistence-adapter.md) | proposed |
+| [`ADR-202608-006-persistence-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-006-persistence-adapter.md) | accepted |
 
 ### 经验卡片清单
 
@@ -129,8 +130,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `4c9217c` |
-| Commit 数 | 18 |
+| HEAD | `99808ab` |
+| Commit 数 | 19 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
