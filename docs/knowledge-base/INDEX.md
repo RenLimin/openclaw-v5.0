@@ -52,3 +52,6 @@ _(自动生成中 — 每篇文档的 frontmatter 都会被索引到这里)_
 | 2026-08-21 | [EXP-20260821-002] GitHub 凭据配置 | file-based credential helper |
 | 2026-08-21 | [ADR-202608-005] 凭据管理通用化 | accepted + 实现 (credentials.sh) |
 | 2026-08-21 | 持久化适配 | ADR-006 accepted + 实现 (connection/migration/repository) |
+| 2026-08-21 | [EXP-20260821-003] compaction 死锁与上下文管理 | 跨模型切换溢出修复（§3.3 数值已被 EXP-004 修正）|
+| 2026-08-22 | [EXP-20260822-004] contextWindow 实测法 | 二分探边界；glm-5.3=1M / minimax-m3=1M / ark-code-latest=224k |
+| 2026-08-22 | [约定] commit 与配置变更 | Conventional Commits + 配置快照防丢失 |
