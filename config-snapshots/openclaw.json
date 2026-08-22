@@ -373,5 +373,10 @@
       "fallback": "none",
       "local": {}
     }
+  },
+  "commands": {
+    "ownerAllowFrom": [
+      "<REDACTED>"
+    ]
   }
 }

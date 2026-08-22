@@ -1,5 +1,16 @@
 # 每日观测摘要 → 企业微信投递
 
+> ⚠️ **2026-08-22 实测结论：此 runbook 的前提不成立，暂不执行。**
+>
+> aibot（智能机器人）单聊**无法主动投递**——`errcode=93006 invalid chatid`。
+> 单聊回调不含 `chatid`，只有单条消息级、会过期的 `response_url`，仅能回复当条消息。
+> 详见 [EXP-20260822-006](../knowledge-base/by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md)。
+>
+> 主动投递需 Agent mode（自建应用，5 项凭据 + 回调 URL 公网可达），
+> 需企业微信管理员权限与通讯录读取权限。**本项目已决定暂不建设**——
+> 摘要已落盘 `memory/` 与 `logs/observability/`，不值得为此扩大攻击面。
+> 待出现真实主动告警需求时再一并评估。
+
 > **状态**：⏸ 阻塞中 —— 缺 Agent mode 凭据
 > **授权**：Rex 2026-08-22 明确要求（ADR-008 §6 授权项 2/2）
 > **相关**：`EXP-20260822-005`（cron delivery 污染 status）· ADR-004（可观测性）
