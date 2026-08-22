@@ -23,3 +23,6 @@ business/*/logs/
 logs/observability/
 *.err
 *.out
+
+# dreaming 产物（个人化内容，不入版本控制）
+DREAMS.md

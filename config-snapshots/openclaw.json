@@ -1,0 +1,318 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "coding-plan/ark-code-latest"
+      },
+      "models": {
+        "coding-plan/ark-code-latest": {},
+        "coding-plan/deepseek-v4-flash": {},
+        "coding-plan/deepseek-v4-pro": {},
+        "coding-plan/doubao-seed-2-1-turbo": {},
+        "coding-plan/doubao-seed-2.0-lite": {},
+        "coding-plan/glm-5.2": {},
+        "coding-plan/glm-5.3": {},
+        "coding-plan/kimi-k2.7-code": {},
+        "coding-plan/minimax-m3": {}
+      },
+      "workspace": "/Users/bangcle/.openclaw/workspace",
+      "compaction": {
+        "memoryFlush": {
+          "model": "longcat/LongCat-2.0"
+        },
+        "notifyUser": true,
+        "enabled": true,
+        "keepRecentTokens": 30000,
+        "maxActiveTranscriptBytes": "20mb",
+        "midTurnPrecheck": {
+          "enabled": true
+        },
+        "mode": "safeguard",
+        "model": "longcat/LongCat-2.0"
+      },
+      "contextPruning": {
+        "mode": "cache-ttl",
+        "ttl": "5m"
+      }
+    },
+    "entries": {
+      "main": {
+        "agentDir": "/Users/bangcle/.openclaw/agents/main/agent",
+        "default": true,
+        "identity": {
+          "name": "main"
+        },
+        "name": "main",
+        "workspace": "/Users/bangcle/.openclaw/workspace"
+      }
+    }
+  },
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "token": "<REDACTED>"
+    },
+    "bind": "loopback",
+    "mode": "local",
+    "port": 18789,
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    }
+  },
+  "hooks": {
+    "internal": {
+      "entries": {
+        "session-memory": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "meta": {
+    "lastTouchedVersion": "2026.7.2-beta.7",
+    "migrations": {
+      "modelPolicyAllowlist": true
+    }
+  },
+  "models": {
+    "providers": {
+      "coding-plan": {
+        "api": "openai-completions",
+        "apiKey": "<REDACTED>",
+        "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
+        "models": [
+          {
+            "id": "ark-code-latest",
+            "name": "ark-code-latest",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 229376,
+            "maxTokens": 8192,
+            "api": "openai-completions"
+          },
+          {
+            "id": "doubao-seed-2-1-turbo",
+            "name": "doubao-seed-2-1-turbo",
+            "input": [
+              "text",
+              "image",
+              "video"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 262144,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "doubao-seed-2.0-lite",
+            "name": "doubao-seed-2.0-lite",
+            "input": [
+              "text",
+              "image",
+              "video",
+              "audio"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 131072,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "glm-5.3",
+            "name": "glm-5.3",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 1048576,
+            "maxTokens": 131072,
+            "api": "openai-completions"
+          },
+          {
+            "id": "deepseek-v4-flash",
+            "name": "deepseek-v4-flash",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 393216,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "glm-5.2",
+            "name": "glm-5.2",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 131072,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "kimi-k2.7-code",
+            "name": "kimi-k2.7-code",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 262144,
+            "maxTokens": 262144,
+            "api": "openai-completions"
+          },
+          {
+            "id": "minimax-m3",
+            "name": "minimax-m3",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 1048576,
+            "maxTokens": 131072,
+            "api": "openai-completions"
+          },
+          {
+            "id": "deepseek-v4-pro",
+            "name": "deepseek-v4-pro",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 393216,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          }
+        ]
+      },
+      "longCat": {
+        "baseUrl": "https://api.longcat.chat/openai/v1",
+        "apiKey": "<REDACTED>",
+        "api": "openai-completions",
+        "authHeader": true,
+        "models": [
+          {
+            "id": "LongCat-2.0",
+            "name": "LongCat-2.0",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 131072,
+            "compat": {
+              "maxTokensField": "max_tokens"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "skills": {
+    "install": {
+      "nodeManager": "npm"
+    }
+  },
+  "tools": {
+    "profile": "coding",
+    "alsoAllow": [
+      "tavily_search",
+      "tavily_extract"
+    ]
+  },
+  "wizard": {
+    "lastRunAt": "2026-08-21T02:25:08.646Z",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local",
+    "lastRunVersion": "2026.7.2-beta.7"
+  },
+  "plugins": {
+    "entries": {
+      "longcat": {
+        "enabled": true
+      },
+      "tavily": {
+        "enabled": true,
+        "config": {
+          "webSearch": {
+            "apiKey": {
+              "source": "file",
+              "provider": "tavilykey",
+              "id": "value"
+            }
+          }
+        }
+      }
+    },
+    "enabled": true,
+    "load": {
+      "paths": []
+    }
+  },
+  "secrets": {
+    "providers": {
+      "tavilykey": {
+        "source": "file",
+        "path": "/Users/bangcle/.openclaw/secrets/tavily.apiKey",
+        "mode": "singleValue"
+      }
+    }
+  }
+}
