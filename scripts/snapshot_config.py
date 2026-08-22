@@ -62,6 +62,16 @@ SECRET_KEYS = {
     "encodingaeskey",   # 企业微信回调加密
     "egressproxyurl",   # 可能含内网地址/认证信息
     "proxyurl",
+
+    # 成员/会话归属标识（公开仓库需脱敏；ownerAllowFrom 由 pairing approve 自动写入）
+    "ownerallowfrom",
+    "allowfrom",
+    "groupallowfrom",
+    "userid",
+    "openid",
+    "toparty",
+    "totag",
+    "touser",
 }
 # 这些字段名即使命中上面的规则也**保留**原值（非敏感的容量/策略参数）
 KEEP_KEYS = {"maxtokens", "keeprecenttokens", "maxtokensfield", "tokenbudget", "maxoutputtokens"}
@@ -84,8 +94,19 @@ def redact(obj: Any) -> Any:
     if isinstance(obj, dict):
         out = {}
         for k, v in obj.items():
-            if is_secret_key(k) and not isinstance(v, (dict, list)):
-                out[k] = REDACTED if v not in (None, "") else v
+            if is_secret_key(k):
+                # 敏感键：标量直接脱敏；列表逐元素脱敏（如
+                # ownerAllowFrom: ["wecom:1313"] 含成员归属标识）；
+                # dict 仍递归，避免脱掉整个子树结构。
+                if isinstance(v, list):
+                    out[k] = [
+                        REDACTED if isinstance(e, (str, int, float)) and e not in (None, "") else redact(e)
+                        for e in v
+                    ]
+                elif isinstance(v, dict):
+                    out[k] = redact(v)
+                else:
+                    out[k] = REDACTED if v not in (None, "") else v
             else:
                 out[k] = redact(v)
         return out
