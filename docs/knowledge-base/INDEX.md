@@ -55,3 +55,4 @@ _(自动生成中 — 每篇文档的 frontmatter 都会被索引到这里)_
 | 2026-08-21 | [EXP-20260821-003] compaction 死锁与上下文管理 | 跨模型切换溢出修复（§3.3 数值已被 EXP-004 修正）|
 | 2026-08-22 | [EXP-20260822-004] contextWindow 实测法 | 二分探边界；glm-5.3=1M / minimax-m3=1M / ark-code-latest=224k |
 | 2026-08-22 | [约定] commit 与配置变更 | Conventional Commits + 配置快照防丢失 |
+| 2026-08-22 | [EXP-20260822-005] cron delivery 污染 job 状态 | 无 channel 环境须 delivery.mode=none；每日观测摘要已转 ok |
