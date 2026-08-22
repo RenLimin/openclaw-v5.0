@@ -56,3 +56,5 @@ _(自动生成中 — 每篇文档的 frontmatter 都会被索引到这里)_
 | 2026-08-22 | [EXP-20260822-004] contextWindow 实测法 | 二分探边界；glm-5.3=1M / minimax-m3=1M / ark-code-latest=224k |
 | 2026-08-22 | [约定] commit 与配置变更 | Conventional Commits + 配置快照防丢失 |
 | 2026-08-22 | [EXP-20260822-005] cron delivery 污染 job 状态 | 无 channel 环境须 delivery.mode=none；每日观测摘要已转 ok |
+| 2026-08-22 | [ADR-202608-007] L2 配置管理 | accepted + 实现 (config.sh: audit/snapshot/diff/apply/probe) |
+| 2026-08-22 | 架构文档 v0.4 | 配置管理组件从“复用 L1”→“已建设”；ctx 改为实测值 |

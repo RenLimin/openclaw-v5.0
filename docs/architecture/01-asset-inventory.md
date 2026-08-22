@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-22 11:14 UTC+08:00
+最后生成：2026-08-22 11:47 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -36,14 +36,14 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 89 个（可用 77）
+**总计** 90 个（可用 78）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 3 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 10 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 11 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -56,6 +56,7 @@
 | `openclaw-config-patch-array-replace` | "openclaw config patch" array fields (e.g. models[]) replace entirely — never merge. Us... |
 | `openclaw-config-readback-and-backup-chain-audit` | openclaw.json key missing after an earlier "applied" patch: read back config, audit .ba... |
 | `openclaw-context-overflow-compaction-recovery` | Fix OpenClaw sessions where /compact also fails after switching to a smaller-context mo... |
+| `openclaw-cron-delivery-triage` | Cron/automation job shows status=error but its output files are fine — diagnose deliver... |
 | `openclaw-debug-missing-tool` | Diagnose OpenClaw "documented tool not callable" via tools.profile and plugin capabilit... |
 | `openclaw-generated-asset-inventory` | Generate a self-updating OpenClaw asset/inventory doc from CLI JSON sources with drift ... |
 | `probe-model-context-window-limit` | Measure a provider model's real input-token limit by binary-search probe before setting... |
@@ -107,7 +108,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 6 |
+| ADR（架构决策记录） | 7 |
 | EXP（经验卡片） | 5 |
 | 模板 | 4 |
 
@@ -121,6 +122,7 @@
 | [`ADR-202608-004-observability-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-004-observability-adapter.md) | accepted |
 | [`ADR-202608-005-credential-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-005-credential-management.md) | accepted |
 | [`ADR-202608-006-persistence-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-006-persistence-adapter.md) | accepted |
+| [`ADR-202608-007-config-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-007-config-management.md) | accepted |
 
 ### 经验卡片清单
 
@@ -137,8 +139,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `27d4924` |
-| Commit 数 | 27 |
+| HEAD | `778167a` |
+| Commit 数 | 28 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

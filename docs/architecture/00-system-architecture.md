@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.3 (2026-08-21 上下文管理组件 + auto-compaction 配置) |
+| 文档版本 | 0.4 (2026-08-22 配置管理组件 — 快照/审计/实测/漂移检测) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（待 ADR-001 落档） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -132,7 +132,7 @@ L1 → 任何上层         (反向依赖，禁止)
 
 | 组件类 | 说明 | 状态 |
 |---|---|---|
-| **配置管理** | profile、config schema、env 注入、SecretRef 包装 | 复用 L1 |
+| **配置管理** | profile、config schema、env 注入、SecretRef 包装；**变更治理（快照/审计/漂移检测）** | 已建设 (ADR-007) |
 | **可观测性适配** | logging、metrics、tracing | 预留位 (待建设) |
 | **持久化适配** | memory、文件、KV、未来 SQL/NoSQL | 部分复用 + 预留位 |
 | **工具/技能封装** | domain-specific skills、L1 工具的二次封装 | 复用 + 自建 (Tavily) |
@@ -173,14 +173,30 @@ L1 → 任何上层         (反向依赖，禁止)
      - `maxActiveTranscriptBytes: "20mb"` — transcript 达 20MB 预压缩
      - `midTurnPrecheck.enabled: true` — 中途检查
      - `contextPruning: { mode: "cache-ttl", ttl: "5m" }` — 5分钟 TTL 修剪
-   - contextWindow 校准: 4 个模型从 200k 默认值修正至官方值
-     - glm-5.3: 200k → 1M | kimi-k2.7-code: 200k → 262k | minimax-m3: 200k → 1M | ark-code-latest: 200k → 262k
+   - contextWindow 校准: 官方数据 + **实测二分探边界**修正
+     - glm-5.3: 1M（实测 1,048,568 通过，ARK 端点无需 `[1m]` 后缀）
+     - minimax-m3: 1M（实测；曾误设 512000 — 那是 MiniMax 直连 API 的限制）
+     - ark-code-latest: **229376 (224k)**（实测 224,051 通过 / 230,051 拒绍）
+     - kimi-k2.7-code: 262144
    - 文档: `../knowledge-base/by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md`
 
+5. **配置管理** (2026-08-22)
+   - 组件 ID: `scripts/config.sh` + `config-snapshots/`
+   - 定位: **治理封装**，不重新实现 L1 的配置读写（严禁绕过 `openclaw config`）
+   - 解决的四个治理问题（均有已发生事故背书）:
+     - P1 变更不可追溯 → 脱敏快照入 git（`.bak` 仅 5 份轮转且不答“谁改的”）
+     - P2 “应用成功”≠“生效” → 四步流程固化，**强制读回确认**
+     - P3 能力声明靠推断 → `probe_context_window.py` 二分实测
+     - P4 配置漂移无人发现 → `--check` 模式 + pre-commit 提醒（不阻塞）
+   - 关键子命令: `audit` / `snapshot` / `diff` / `apply <patch>` / `probe <model>`
+   - 脱敏策略: **精确字段名匹配 + 白名单**（子串匹配会误伤 `maxTokens`/`keepRecentTokens`）
+   - 契约: L3 不直接读 `~/.openclaw/openclaw.json`，经 `config.sh audit` 与快照访问
+   - ADR: `../knowledge-base/by-category/project-experience/adr/ADR-202608-007-config-management.md`
+   - 设计: `components/config/DESIGN.md`
+
 **预留位**（待 L2 建设时填充）：
-- 可观测性组件（metrics、trace）
-- 持久化组件（关系数据库/对象存储）
 - 工具策略治理文档（哪些工具 deny/allow/why）
+- 知识库能力（自建系统，属阶段 3）
 
 **演进方式**：
 - 优先复用 L1 能力
@@ -464,6 +480,7 @@ L4 专有业务
 |---|---|---|
 | 2026-08-21 | 0.1 | 初版骨架（4 层架构 + 契约 + 演进路线） |
 | 2026-08-21 | 0.3 | 新增 L2 上下文管理组件：auto-compaction 三层防线 + contextWindow 校准 + session pruning |
+| 2026-08-22 | 0.4 | 新增 L2 配置管理组件（ADR-007）：脱敏快照 + 四步变更流程 + 实测探边界 + 漂移检测；contextWindow 改为实测值（ark-code-latest 224k）|
 
 ---
 
