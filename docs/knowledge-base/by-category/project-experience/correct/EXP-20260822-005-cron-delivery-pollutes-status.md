@@ -147,6 +147,23 @@ openclaw cron runs --id <jobId>    # 看最新 entry
 - **约定**：`docs/conventions/commit-and-config.md`（同样强调"读回才算验证"）
 - **相关卡片**：`EXP-20260822-004`（同日：不要相信推断，去实测）
 
+## 6.1 环境变更（2026-08-22 12:03）
+
+WeCom channel 已由 Rex 配置并启用（`openclaw channels list --all` → `installed, configured, enabled`）。
+
+**本卡片的结论仍然成立**，但适用前提变了：
+
+| 项 | 状态 |
+|---|---|
+| 根因分析（status 混合执行与投递结果） | ✅ 仍然正确，与 channel 有无无关 |
+| 「产物落盘型 job 应设 delivery.mode=none」 | ✅ 仍然推荐 —— 写文件的任务本就不需要投递 |
+| 「本机零 channel，投递必然失败」 | ⚠️ **已过期** —— 现有 WeCom 可投递 |
+| 6 个 CLI 陷阱 | ✅ 仍然有效 |
+
+**未改动现有 cron 配置**：`delivery.mode=none` 对落盘型任务依然是正确选择。
+若要把每日观测摘要投到 WeCom，需 Rex 明确要求（涉及对外发送）。
+
 ## 7. 变更历史
 
 - 2026-08-22: 创建（cron delivery 污染 status 的识别与修复 + 6 个 CLI 陷阱）
+- 2026-08-22 12:03: 补 §6.1 —— WeCom channel 已配置，标注哪些结论过期、哪些仍成立

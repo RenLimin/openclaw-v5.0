@@ -45,6 +45,8 @@ PATTERNS=(
   '-----BEGIN [A-Z ]*PRIVATE KEY-----'
   'aws_secret_access_key\s*=\s*[A-Za-z0-9/+=]{20,}'
   '"(apiKey|api_key|password|secret)"\s*:\s*"[^"<*][^"]{12,}"'
+  # 归属标识（botId/corpId/appId 等）：非密钥但暴露租户归属，公开仓库不应出现
+  '"(botId|corpId|agentId|appId|clientId|tenantId|chatId)"\s*:\s*"[^"<*][^"]{10,}"'
 )
 
 hits=0

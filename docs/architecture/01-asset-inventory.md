@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-22 11:58 UTC+08:00
+最后生成：2026-08-22 12:12 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,25 +23,27 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 76 个（启用 55） · bundled 74 · global 2
+**总计** 78 个（启用 57） · bundled 74 · global 4
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
 | ID | 来源 | 提供的工具 | 提供的能力 |
 |---|---|---|---|
 | `longcat` | global | — | model-provider: longcat |
+| `openclaw-weixin` | global | — | channel: openclaw-weixin |
 | `tavily` | global | — | web-search: tavily |
+| `wecom-openclaw-plugin` | global | — | channel: wecom |
 
 **内置模型 provider**（31 个，按需激活）：`anthropic`, `byteplus`, `clawrouter`, `cohere`, `comfy`, `copilot-proxy`, `fal`, `github-copilot`, `google`, `huggingface`, `litellm`, `lmstudio`, `meta`, `microsoft-foundry`, `minimax`, `mistral`, `novita`, `nvidia`, `ollama`, `openai`, `opencode`, `opencode-go`, `openrouter`, `sglang`, `synthetic`, `together`, `vllm`, `volcengine`, `vydra`, `xai`, `xiaomi`
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 91 个（可用 79）
+**总计** 106 个（可用 94）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
-| `openclaw-extra` | 3 | 插件附带技能 |
+| `openclaw-extra` | 18 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
 | `openclaw-workspace` | 12 | **本 workspace 自建**（受版本控制） |
 
@@ -109,7 +111,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 7 |
+| ADR（架构决策记录） | 8 |
 | EXP（经验卡片） | 5 |
 | 模板 | 4 |
 
@@ -124,6 +126,7 @@
 | [`ADR-202608-005-credential-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-005-credential-management.md) | accepted |
 | [`ADR-202608-006-persistence-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-006-persistence-adapter.md) | accepted |
 | [`ADR-202608-007-config-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-007-config-management.md) | accepted |
+| [`ADR-202608-008-tool-policy-governance`](../knowledge-base/by-category/project-experience/adr/ADR-202608-008-tool-policy-governance.md) | accepted |
 
 ### 经验卡片清单
 
@@ -140,8 +143,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `611ab05` |
-| Commit 数 | 29 |
+| HEAD | `e4d3433` |
+| Commit 数 | 30 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

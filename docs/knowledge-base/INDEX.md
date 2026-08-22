@@ -58,3 +58,5 @@ _(自动生成中 — 每篇文档的 frontmatter 都会被索引到这里)_
 | 2026-08-22 | [EXP-20260822-005] cron delivery 污染 job 状态 | 无 channel 环境须 delivery.mode=none；每日观测摘要已转 ok |
 | 2026-08-22 | [ADR-202608-007] L2 配置管理 | accepted + 实现 (config.sh: audit/snapshot/diff/apply/probe) |
 | 2026-08-22 | 架构文档 v0.4 | 配置管理组件从“复用 L1”→“已建设”；ctx 改为实测值 |
+| 2026-08-22 | [ADR-202608-008] L2 工具策略治理 | accepted；三态模型（denied / allowed-but-broken / allowed-and-working）+ 六项审计 |
+| 2026-08-22 | 架构文档 v0.5 | §5.4 回答原预留问题；ADR 清单补至 008；**L2 核心组件建设完成** |

@@ -97,7 +97,15 @@ Example placeholders (replace or remove them):
 - TTS: preferred voice "Nova"; default speaker Kitchen HomePod
 ```
 
-**Voice storytelling:** if you have `sag` (ElevenLabs TTS), use voice for stories, movie summaries, and storytime moments - more engaging than walls of text.
+**Voice storytelling:** `sag` (ElevenLabs TTS) is **currently unavailable** — missing `ELEVENLABS_API_KEY` (verified 2026-08-22 via `openclaw skills check`). Don't attempt voice output until it's configured; use text. See ADR-008 §6.
+
+**Local environment reality check** (verified 2026-08-22, re-verify with `bash scripts/tool_policy_audit.sh`):
+
+- **WeCom (企业微信) is configured and enabled** as of 2026-08-22 12:03 (installed by Rex, `dmPolicy: pairing`, `allowFrom: []`). Other channels (Feishu/Telegram/Slack/etc) remain `not configured`. Re-check with `openclaw channels list --all` — this changed mid-session once already.
+  - Existing cron jobs still use `delivery.mode=none` (set when no channel existed, EXP-20260822-005). Revisit only if Rex wants cron output delivered to WeCom.
+  - Group-chat and "代发" rules in USER.md §6 are now live for work projects, not inert.
+- **`memory_search` runs keyword-only** — no embedding provider, so semantic recall is degraded, not absent. Chinese synonym matching suffers. Still run it (the mandate stands), but don't assume a miss means "nothing in memory"; try alternate wording or `grep`/`rg` over `memory/`.
+- **12 skills allowed but non-functional** (missing bins/env): `coding-agent`, `goplaces`, `mcporter`, `obsidian`, `openai-whisper`, `openai-whisper-api`, `oracle`, `sag`, `session-logs`, `sherpa-onnx-tts`, `spotify-player`, `trello`. Don't invoke them blind.
 
 **Platform formatting:**
 
