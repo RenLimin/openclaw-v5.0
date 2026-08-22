@@ -164,7 +164,7 @@ L1 → 任何上层         (反向依赖，禁止)
 4. **上下文管理** (2026-08-21)
    - 组件 ID: `agents.defaults.compaction` + `agents.defaults.contextPruning`
    - 功能: 三层防线自动管理上下文溢出
-     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复，摘要委托 LongCat-2.0 (1M ctx)
+     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复，各模型自治（自身 ctx 内独立压缩）
      - 第 2 层: Session pruning — cache-ttl 模式修剪旧 tool results
      - 第 3 层: Mid-turn precheck — 多轮工具调用中途 ctx 压力检查
    - 关键配置:
