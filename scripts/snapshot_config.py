@@ -43,6 +43,19 @@ SECRET_KEYS = {
     "credentials",
     "privatekey",
     "bearer",
+    # 租户/实例绑定标识 — 本身非密钥，但会暴露归属，公开仓库不应出现。
+    # 触发案例: 2026-08-22 WeCom channel 的 botId 进入公开仓库快照（ADR-007 §5 预判的风险）
+    "botid",
+    "corpid",
+    "agentid",
+    "appid",
+    "clientid",
+    "tenantid",
+    "webhookurl",
+    "chatid",
+    "channelsecret",
+    "signingsecret",
+    "verificationtoken",
 }
 # 这些字段名即使命中上面的规则也**保留**原值（非敏感的容量/策略参数）
 KEEP_KEYS = {"maxtokens", "keeprecenttokens", "maxtokensfield", "tokenbudget", "maxoutputtokens"}

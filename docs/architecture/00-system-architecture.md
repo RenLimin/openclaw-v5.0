@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.4 (2026-08-22 配置管理组件 — 快照/审计/实测/漂移检测) |
+| 文档版本 | 0.5 (2026-08-22 工具策略治理 — L2 组件全部建设完成) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（待 ADR-001 落档） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -139,7 +139,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | **调度/任务编排** | cron、agent turn、isolated run、heartbeat | 复用 L1 |
 | **知识库能力** | 自建系统的演进目标 | 轻量方案 (Markdown + frontmatter) |
 | **凭据管理** | 集中式 secrets 存储、SecretRef 解析 | 已建设 (Tavily key 案例) |
-| **工具策略** | `tools.profile` + `alsoAllow` 治理 | 已建设 (EXP-20260821-001) |
+| **工具策略** | `tools.profile` + `alsoAllow` 治理；**「允许」vs「可用」分离审计** | 已建设 (ADR-008) |
 | **上下文管理** | auto-compaction + session pruning + contextWindow 校准 | 已建设 (EXP-20260821-003) |
 
 **已建设组件清单**（截至 2026-08-21）：
@@ -194,9 +194,20 @@ L1 → 任何上层         (反向依赖，禁止)
    - ADR: `../knowledge-base/by-category/project-experience/adr/ADR-202608-007-config-management.md`
    - 设计: `components/config/DESIGN.md`
 
-**预留位**（待 L2 建设时填充）：
-- 工具策略治理文档（哪些工具 deny/allow/why）
-- 知识库能力（自建系统，属阶段 3）
+6. **工具策略治理** (2026-08-22)
+   - 组件 ID: `tools.profile` + `tools.alsoAllow` + `scripts/tool_policy_audit.sh`
+   - 核心认知: **「允许」≠「可用」** —— 三态治理（denied / allowed-but-broken / allowed-and-working）
+   - 当前策略: `profile: "coding"` + `alsoAllow: [tavily_search, tavily_extract]`（最小权限）
+   - 官方规则要点: `allow` 与 `alsoAllow` 同 scope 互斥；deny 优先；
+     `deny:["write"]` 不连带 `apply_patch`，但 `allow:["write"]` 会连带启用
+   - 实测发现: `memory_search` 静默降级（缺 embedding provider）· 12 技能缺依赖
+   - ADR: `../knowledge-base/by-category/project-experience/adr/ADR-202608-008-tool-policy-governance.md`
+   - 设计: `components/tool-policy/DESIGN.md`
+
+**L2 组件建设状态**：核心组件已全部完成（可观测性 · 凭据 · 持久化 · 上下文 · 配置 · 工具策略）
+
+**预留位**：
+- 知识库能力自建系统（属阶段 3，见 ADR-003 演进路径）
 
 **演进方式**：
 - 优先复用 L1 能力
@@ -337,15 +348,40 @@ L4 专有业务
 
 > 任何试图绕过 5.2 或在 5.3 之外扩展的能力，必须先走 ADR。
 
-### 5.4 已知工具策略问题
+### 5.4 工具策略治理
 
-**Issue 模式**：`tools.profile` 限制 + plugin 显式工具
+**核心认知修正**：工具治理不只是"哪些被 deny"，而是**三种状态**：
 
-**已验证案例**：Tavily `tavily_search` / `tavily_extract` 在 `profile=coding` 下默认 deny，通过 `alsoAllow` 解锁（详见 EXP-20260821-001）
+| 状态 | `profile`/`allow`/`deny` 可表达 | 危险性 |
+|---|---|---|
+| `denied` | ✅ | 低 —— 明确失败 |
+| `allowed-but-broken` | ❌ **不能** | **高 —— 静默失败** |
+| `allowed-and-working` | ✅ | — |
 
-**预留位**：
-- 是否有其他 plugin 工具受同样影响？
-- 未来 OpenClaw 升级是否改变 coding profile 的 deny 列表？
+**已验证案例**：Tavily `tavily_search` / `tavily_extract` 在 `profile=coding` 下默认 deny，
+通过 `alsoAllow` 解锁（EXP-20260821-001）
+
+**原预留问题的回答**（2026-08-22 实测）：
+
+1. **"是否有其他 plugin 工具受同样影响？"**
+   → 当前仅 Tavily 需显式解锁。但发现**反向不对称**：`terminal`/`screen`/`dashboard`
+   属 `group:ui`，**不在官方 `coding` profile 列表内**却实际可用。
+   **机制未查清，不下结论** —— 官方 profile 表不足以完整预测实际工具面。
+
+2. **"升级是否改变 coding profile 的 deny 列表？"**
+   → 无法预判，已转为**监控点**：升级后重跑 `scripts/tool_policy_audit.sh`。
+   DESIGN.md 记录了当前官方 profile 表作为比对基线。
+
+**实测发现的真实问题**：
+
+| 问题 | 严重性 | 状态 |
+|---|---|---|
+| `memory_search` 静默降级为 keyword-only（缺 embedding provider） | **高** | 待定夺（推荐本地 GGUF，零成本） |
+| 12 个技能允许但缺依赖（含 `AGENTS.md` 引用的 `sag`） | 中 | 待定夺（`doctor --fix`） |
+| 媒体工具在 profile 内但无 provider | 低 | 官方预期行为，无需处理 |
+
+**审计**：`bash scripts/tool_policy_audit.sh`（六项检查）
+**详见**：`components/tool-policy/DESIGN.md` · ADR-008
 
 ---
 
@@ -425,7 +461,11 @@ L4 专有业务
 | ADR-001 | 4 层架构决策 | 高 | ✅ accepted (2026-08-21) |
 | ADR-002 | 知识库三维模型 | 中 | ✅ accepted (2026-08-21) |
 | ADR-003 | 知识库承载形式演进路径 | 中 | ✅ accepted (2026-08-21) |
-| ADR-004 | L1 工具策略治理（`alsoAllow` 用法） | 低 | ⏳（已有 EXP-20260821-001，待触发升级条件时再升） |
+| ADR-004 | L2 可观测性适配 | 中 | ✅ accepted (2026-08-21) |
+| ADR-005 | L2 凭据管理通用化 | 高 | ✅ accepted (2026-08-21) |
+| ADR-006 | L2 持久化适配（SQLite + Repository） | 高 | ✅ accepted (2026-08-21) |
+| ADR-007 | L2 配置管理（治理封装） | 高 | ✅ accepted (2026-08-22) |
+| ADR-008 | L2 工具策略治理（三态模型） | 中 | ✅ accepted (2026-08-22) |
 
 **ADR 模板**：`../knowledge-base/templates/ADR.md`
 
@@ -481,6 +521,7 @@ L4 专有业务
 | 2026-08-21 | 0.1 | 初版骨架（4 层架构 + 契约 + 演进路线） |
 | 2026-08-21 | 0.3 | 新增 L2 上下文管理组件：auto-compaction 三层防线 + contextWindow 校准 + session pruning |
 | 2026-08-22 | 0.4 | 新增 L2 配置管理组件（ADR-007）：脱敏快照 + 四步变更流程 + 实测探边界 + 漂移检测；contextWindow 改为实测值（ark-code-latest 224k）|
+| 2026-08-22 | 0.5 | 新增 L2 工具策略治理（ADR-008）：三态治理模型 + 六项审计；§5.4 回答原预留问题；**L2 核心组件建设完成** |
 
 ---
 
