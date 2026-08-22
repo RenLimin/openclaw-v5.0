@@ -63,3 +63,4 @@ _(自动生成中 — 每篇文档的 frontmatter 都会被索引到这里)_
 | 2026-08-22 | [ADR-202608-009] L2 记忆语义检索 | accepted + 实测；本地 GGUF embedding 修复 memory_search 静默降级 |
 | 2026-08-22 | 架构文档 v0.6 | 新增记忆语义检索组件 |
 | 2026-08-22 | [EXP-20260822-006] WeCom aibot 无法主动推送 | 实测 errcode 93006；README 误读警示；快照脱敏漏列表元素同期修复 |
+| 2026-08-23 | [EXP-20260823-007] 插件声明兼容却 import 缺失 SDK 入口 | openclaw-weixin 加载失败；peerDependencies 不校验子路径；降级无效（4 版本同问题）|

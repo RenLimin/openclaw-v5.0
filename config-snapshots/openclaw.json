@@ -339,7 +339,7 @@
         }
       },
       "openclaw-weixin": {
-        "enabled": true
+        "enabled": false
       },
       "wecom-openclaw-plugin": {
         "enabled": true
@@ -365,6 +365,9 @@
       "secret": "<REDACTED>",
       "dmPolicy": "pairing",
       "allowFrom": []
+    },
+    "openclaw-weixin": {
+      "channelConfigUpdatedAt": "2026-08-22T16:04:10.425Z"
     }
   },
   "memory": {
