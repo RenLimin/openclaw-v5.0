@@ -366,5 +366,12 @@
       "dmPolicy": "pairing",
       "allowFrom": []
     }
+  },
+  "memory": {
+    "search": {
+      "provider": "local",
+      "fallback": "none",
+      "local": {}
+    }
   }
 }
