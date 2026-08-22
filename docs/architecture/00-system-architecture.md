@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.5 (2026-08-22 工具策略治理 — L2 组件全部建设完成) |
+| 文档版本 | 0.6 (2026-08-22 记忆语义检索 — 本地 GGUF embedding) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（待 ADR-001 落档） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -141,6 +141,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | **凭据管理** | 集中式 secrets 存储、SecretRef 解析 | 已建设 (Tavily key 案例) |
 | **工具策略** | `tools.profile` + `alsoAllow` 治理；**「允许」vs「可用」分离审计** | 已建设 (ADR-008) |
 | **上下文管理** | auto-compaction + session pruning + contextWindow 校准 | 已建设 (EXP-20260821-003) |
+| **记忆语义检索** | 本地 GGUF embedding（零成本/零外发）+ 向量索引 | 已建设 (ADR-009) |
 
 **已建设组件清单**（截至 2026-08-21）：
 
@@ -466,6 +467,7 @@ L4 专有业务
 | ADR-006 | L2 持久化适配（SQLite + Repository） | 高 | ✅ accepted (2026-08-21) |
 | ADR-007 | L2 配置管理（治理封装） | 高 | ✅ accepted (2026-08-22) |
 | ADR-008 | L2 工具策略治理（三态模型） | 中 | ✅ accepted (2026-08-22) |
+| ADR-009 | L2 记忆语义检索（本地 GGUF embedding） | 高 | ✅ accepted (2026-08-22) |
 
 **ADR 模板**：`../knowledge-base/templates/ADR.md`
 

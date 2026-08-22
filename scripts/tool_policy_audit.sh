@@ -129,7 +129,47 @@ if "openai" in str(prov):
             degraded = True
             reason = "OPENAI_API_KEY 与 models.providers.openai.apiKey 均未配置"
 elif prov == "local":
-    print("  · provider=local，检查 GGUF 模型路径与 llama-cpp 插件")
+    # 实测校验：插件已装 + 模型文件存在且完整 + 未误设 modelPath
+    import subprocess as sp, os
+    ok = True
+    pl = sp.run(["openclaw","plugins","list"], capture_output=True, text=True).stdout
+    if "llama" in pl.lower():
+        print("  ✅ llama-cpp provider 插件已加载")
+    else:
+        print("  ❌ llama-cpp provider 插件未加载 —— provider=local 会失败"); ok = False
+
+    # 插件按此固定文件名在缓存目录查找（见 dist/index.js L26）
+    EXPECT = os.path.expanduser("~/.node-llama-cpp/models/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf")
+    if os.path.exists(EXPECT):
+        sz = os.path.getsize(EXPECT)
+        with open(EXPECT, "rb") as f:
+            magic = f.read(4)
+        if magic == b"GGUF":
+            print(f"  ✅ 模型存在且有效 ({sz/1048576:.0f} MB, GGUF magic OK)")
+        else:
+            print(f"  ❌ 模型文件损坏（magic={magic!r}，应为 GGUF）"); ok = False
+    else:
+        print(f"  ❌ 模型缺失: {EXPECT}")
+        print("     HuggingFace 在本网络不可达，用镜像下载（文件名必须一致）:")
+        print("     curl -L -o hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf \\")
+        print("       https://hf-mirror.com/ggml-org/embeddinggemma-300m-qat-q8_0-GGUF/resolve/main/embeddinggemma-300m-qat-Q8_0.gguf")
+        ok = False
+
+    # modelPath 绝对路径会导致索引身份与 gateway 永久不匹配（ADR-009 §7.1 坑 2）
+    r3 = sp.run(["openclaw","config","get","memory.search.local.modelPath"],
+                capture_output=True, text=True)
+    mp = r3.stdout.strip().strip('"')
+    if r3.returncode == 0 and mp and mp != "null" and "not found" not in (r3.stdout+r3.stderr):
+        print(f"  ⚠️  已设 local.modelPath={mp}")
+        print("     绝对路径会造成索引身份与 gateway 不匹配（ADR-009 §7.1 坑 2）")
+        print("     修复: openclaw config unset memory.search.local.modelPath && openclaw memory index --force")
+        ok = False
+    else:
+        print("  ✅ 未设 modelPath（用默认 hf: 标识，索引身份一致）")
+
+    if not ok:
+        sys.exit(1)
+    sys.exit(0)
 
 if degraded:
     print(f"  ❌ 语义检索不可用 → 静默降级为 keyword-only")

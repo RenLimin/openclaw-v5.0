@@ -104,7 +104,8 @@ Example placeholders (replace or remove them):
 - **WeCom (企业微信) is configured and enabled** as of 2026-08-22 12:03 (installed by Rex, `dmPolicy: pairing`, `allowFrom: []`). Other channels (Feishu/Telegram/Slack/etc) remain `not configured`. Re-check with `openclaw channels list --all` — this changed mid-session once already.
   - Existing cron jobs still use `delivery.mode=none` (set when no channel existed, EXP-20260822-005). Revisit only if Rex wants cron output delivered to WeCom.
   - Group-chat and "代发" rules in USER.md §6 are now live for work projects, not inert.
-- **`memory_search` runs keyword-only** — no embedding provider, so semantic recall is degraded, not absent. Chinese synonym matching suffers. Still run it (the mandate stands), but don't assume a miss means "nothing in memory"; try alternate wording or `grep`/`rg` over `memory/`.
+- **`memory_search` has working semantic recall** as of 2026-08-22 (ADR-009): local GGUF embeddings via `@openclaw/llama-cpp-provider`, `provider: "local"`, 768-dim, 557 chunks indexed. Chinese synonym matching verified (`textScore: 0` + `vectorScore: 0.69` hits). No API cost, no data leaves the machine.
+  - ⚠️ Model lives at `~/.node-llama-cpp/models/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf` — **do not rename it or set `local.modelPath`**, both break index identity. HuggingFace is unreachable here; use `hf-mirror.com` if re-downloading.
 - **12 skills allowed but non-functional** (missing bins/env): `coding-agent`, `goplaces`, `mcporter`, `obsidian`, `openai-whisper`, `openai-whisper-api`, `oracle`, `sag`, `session-logs`, `sherpa-onnx-tts`, `spotify-player`, `trello`. Don't invoke them blind.
 
 **Platform formatting:**

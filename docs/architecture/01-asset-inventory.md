@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-22 12:24 UTC+08:00
+最后生成：2026-08-22 22:42 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,12 +23,13 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 78 个（启用 57） · bundled 74 · global 4
+**总计** 79 个（启用 58） · bundled 74 · global 5
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
 | ID | 来源 | 提供的工具 | 提供的能力 |
 |---|---|---|---|
+| `llama-cpp` | global | — | — |
 | `longcat` | global | — | model-provider: longcat |
 | `openclaw-weixin` | global | — | channel: openclaw-weixin |
 | `tavily` | global | — | web-search: tavily |
@@ -38,14 +39,14 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 107 个（可用 95）
+**总计** 108 个（可用 96）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 18 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 13 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 14 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -59,6 +60,7 @@
 | `openclaw-add-tool-via-also-allow` | Add a blocked tool in OpenClaw without changing global profile: patch tools.alsoAllow, ... |
 | `openclaw-config-patch-array-replace` | "openclaw config patch" array fields (e.g. models[]) replace entirely — never merge. Us... |
 | `openclaw-config-readback-and-backup-chain-audit` | openclaw.json key missing after an earlier "applied" patch: read back config, audit .ba... |
+| `openclaw-config-schema-and-plugin-doc-discovery` | Find real openclaw config paths, plugin channel docs, and CLI subcommands before editin... |
 | `openclaw-context-overflow-compaction-recovery` | Fix OpenClaw sessions where /compact also fails after switching to a smaller-context mo... |
 | `openclaw-cron-delivery-triage` | Cron/automation job shows status=error but its output files are fine — diagnose deliver... |
 | `openclaw-debug-missing-tool` | Diagnose OpenClaw "documented tool not callable" via tools.profile and plugin capabilit... |
@@ -112,7 +114,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 8 |
+| ADR（架构决策记录） | 9 |
 | EXP（经验卡片） | 5 |
 | 模板 | 4 |
 
@@ -128,6 +130,7 @@
 | [`ADR-202608-006-persistence-adapter`](../knowledge-base/by-category/project-experience/adr/ADR-202608-006-persistence-adapter.md) | accepted |
 | [`ADR-202608-007-config-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-007-config-management.md) | accepted |
 | [`ADR-202608-008-tool-policy-governance`](../knowledge-base/by-category/project-experience/adr/ADR-202608-008-tool-policy-governance.md) | accepted |
+| [`ADR-202608-009-memory-embedding-provider`](../knowledge-base/by-category/project-experience/adr/ADR-202608-009-memory-embedding-provider.md) | accepted |
 
 ### 经验卡片清单
 
@@ -144,8 +147,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `da8d517` |
-| Commit 数 | 32 |
+| HEAD | `7009f29` |
+| Commit 数 | 33 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
