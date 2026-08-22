@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-22 23:50 UTC+08:00
+最后生成：2026-08-23 00:21 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,7 +23,7 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 79 个（启用 58） · bundled 74 · global 5
+**总计** 79 个（启用 57） · bundled 74 · global 5
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
@@ -31,7 +31,6 @@
 |---|---|---|---|
 | `llama-cpp` | global | — | — |
 | `longcat` | global | — | model-provider: longcat |
-| `openclaw-weixin` | global | — | channel: openclaw-weixin |
 | `tavily` | global | — | web-search: tavily |
 | `wecom-openclaw-plugin` | global | — | channel: wecom |
 
@@ -39,25 +38,27 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 111 个（可用 99）
+**总计** 113 个（可用 101）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 18 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 17 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 19 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
 | 名称 | 描述 |
 |---|---|
 | `config-snapshot-redaction-and-drift-check` | Committing sanitized config snapshots to git: exact-key redaction, secret scan, and --c... |
+| `config-snapshot-redaction-verification` | Sanitized config snapshot leaks a secret/ID before commit: fix key-list redaction and v... |
 | `config-snapshot-tenant-identifier-leak-audit` | Auditing config snapshots for leaked tenant IDs (botId/corpId/appId) before committing ... |
 | `edit-stale-state-break-loop` | Breaking edit-tool retry loops when prior mutations already changed the target text |
 | `edit-tool-exact-whitespace-recovery` | Edit-tool "oldText not found" usually means a whitespace mismatch. On macOS, use `od -c... |
 | `git-https-token-file-credential-helper` | Push to GitHub over HTTPS with a token file, no plaintext token in git config, plus fir... |
 | `git-nothing-to-commit-untracked-file-triage` | Diagnose "nothing to commit" or a missing file from a commit: check ignore/tracking sta... |
+| `node-plugin-capability-check-from-dist-source` | Verify an installed npm/OpenClaw plugin's real capability (e.g. proactive send, require... |
 | `openclaw-add-tool-via-also-allow` | Add a blocked tool in OpenClaw without changing global profile: patch tools.alsoAllow, ... |
 | `openclaw-channel-proactive-delivery-triage` | Diagnose OpenClaw channel proactive/cron delivery failures (e.g. WeCom bot summary not ... |
 | `openclaw-config-patch-array-replace` | "openclaw config patch" array fields (e.g. models[]) replace entirely — never merge. Us... |
@@ -118,7 +119,7 @@
 | 类别 | 数量 |
 |---|---|
 | ADR（架构决策记录） | 9 |
-| EXP（经验卡片） | 6 |
+| EXP（经验卡片） | 7 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -145,14 +146,15 @@
 | [`EXP-20260822-004-context-window-empirical-probe`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-004-context-window-empirical-probe.md) | active |
 | [`EXP-20260822-005-cron-delivery-pollutes-status`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-005-cron-delivery-pollutes-status.md) | active |
 | [`EXP-20260822-006-wecom-aibot-cannot-push-proactively`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md) | — |
+| [`EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath`](../knowledge-base/by-category/project-experience/correct/EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath.md) | — |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `e053a7a` |
-| Commit 数 | 35 |
+| HEAD | `0f99e50` |
+| Commit 数 | 36 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
