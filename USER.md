@@ -57,6 +57,12 @@
 - Always 在长任务/重活时**先列计划 + 一次确认**，再开干
 - Always 在发现方案有重大变化时**回头更新**（plan/MEMORY/ADR）
 - Prefer 在完成可交付物后**直接 commit**（git 用户已配置时）
+<!-- observed: 2026-08-22 | status: active -->
+- Always 在**建设完成且验证通过**后直接 `commit` + `push`，不逐次询问（Rex 2026-08-22 明确授权）
+  - 前提：已实测验证 + 凭据扫描通过 + commit message 合规
+  - 例外仍需先问：`push --force`、改写已推送历史、删 provider/plugin/模型、改 `tools.*` 策略
+  - 验证未通过则不提交，报告阻塞点，不要"先提上去再修"
+  - 细则：`docs/conventions/commit-and-config.md` §1.5
 
 ## 5. 决策与权衡 (Decision Style)
 

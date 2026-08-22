@@ -8,6 +8,7 @@
 #   bash scripts/config.sh diff              # 当前配置 vs 上次快照
 #   bash scripts/config.sh apply <file>      # 四步流程: dry-run → apply → 读回 → 快照
 #   bash scripts/config.sh probe <model> <n> # 实测模型 contextWindow
+#   bash scripts/config.sh scan              # 凭据泄漏扫描（推送前）
 #
 # 设计: docs/architecture/components/config/DESIGN.md
 # ADR:  docs/knowledge-base/by-category/project-experience/adr/ADR-202608-007-config-management.md
@@ -136,6 +137,18 @@ for pname, p in (d.get("models") or {}).get("providers", {}).items():
 PY
     echo ""
 
+    # 7. 凭据泄漏扫描（有 staged 内容时）
+    if [[ -n "$(git diff --cached --name-only 2>/dev/null)" ]]; then
+        log_step "凭据泄漏扫描 (staged)"
+        if bash scripts/scan_secrets.sh >/dev/null 2>&1; then
+            log_ok "staged 改动无凭据泄漏"
+        else
+            log_err "staged 改动含疑似凭据 — 运行: bash scripts/config.sh scan"
+            problems=$((problems + 1))
+        fi
+        echo ""
+    fi
+
     echo "════════════════════════════════════════════"
     if [[ $problems -eq 0 ]]; then
         log_ok "审计通过，无问题"
@@ -241,7 +254,7 @@ cmd_probe() {
 
 # --------------------------------------------------------------------------
 usage() {
-    sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 main() {
@@ -253,6 +266,7 @@ main() {
         diff)     cmd_diff "$@" ;;
         apply)    cmd_apply "$@" ;;
         probe)    cmd_probe "$@" ;;
+        scan)     bash scripts/scan_secrets.sh "$@" ;;
         ""|-h|--help|help) usage ;;
         *) log_err "未知命令: $cmd"; echo ""; usage; return 1 ;;
     esac

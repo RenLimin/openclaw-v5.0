@@ -48,6 +48,28 @@ L2 组件名（`observability` / `credentials` / `persistence` / `context` / `co
 - ❌ 不写 `update`、`wip`、`修改一下` 这类无信息量的描述
 - ❌ 不把多个不相关变更塞进一个 commit
 
+### 1.5 自动提交与推送授权
+
+<!-- observed: 2026-08-22 | status: active -->
+
+**Rex 已授权**：每次**建设完成且验证通过**的内容，默认直接 `commit` + `push`，无需逐次询问。
+
+**前提条件（缺一不可）**：
+
+1. 交付物已**实测验证** — 不是"应该能跑"，而是跑过且输出符合预期
+2. 推送前完成**凭据扫描**：`bash scripts/config.sh scan`（覆盖 12 类密钥模式，退出码 1 即中止）
+3. `bash scripts/config.sh audit` 无新增问题（涉配置变更时）
+4. commit message 符合 §1 规范
+
+**仍需先问的例外**（授权不覆盖）：
+
+- `git push --force` / 改写已推送历史 / 删除远程分支
+- 删除 provider / plugin / 已有模型声明
+- 改动 `tools.*` 策略（影响 agent 能力边界）
+- 任何其他不可逆操作（参见 §2.4）
+
+**验证未通过时**：不提交。报告阻塞点，不要"先提上去再修"。
+
 ## 2. 配置变更约定（`~/.openclaw/openclaw.json`）
 
 ### 2.1 问题
@@ -108,11 +130,12 @@ python3 scripts/snapshot_config.py --diff     # 显示当前配置与上次快�
 ```
 □ dry-run 通过
 □ 应用后读回确认（openclaw config get / validate）
-□ 配置快照已更新（scripts/snapshot_config.py）
+□ 配置快照已更新（bash scripts/config.sh snapshot）
 □ 结论有依据（实测数据 / 官方一手来源 / 文档引用）
 □ 推翻旧结论时已标注 supersedes / superseded_by
 □ commit message 符合 §1 规范
-□ 无凭据泄漏（git diff 里搜一遍 key/token/secret）
+□ 无凭据泄漏（`bash scripts/config.sh scan`）
+□ 建设类交付：已实测验证 → 直接 commit + push（§1.5 授权）
 ```
 
 ## 4. 相关
