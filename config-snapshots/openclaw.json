@@ -268,6 +268,44 @@
   "skills": {
     "install": {
       "nodeManager": "npm"
+    },
+    "entries": {
+      "coding-agent": {
+        "enabled": false
+      },
+      "goplaces": {
+        "enabled": false
+      },
+      "mcporter": {
+        "enabled": false
+      },
+      "obsidian": {
+        "enabled": false
+      },
+      "openai-whisper": {
+        "enabled": false
+      },
+      "openai-whisper-api": {
+        "enabled": false
+      },
+      "oracle": {
+        "enabled": false
+      },
+      "sag": {
+        "enabled": false
+      },
+      "session-logs": {
+        "enabled": false
+      },
+      "sherpa-onnx-tts": {
+        "enabled": false
+      },
+      "spotify-player": {
+        "enabled": false
+      },
+      "trello": {
+        "enabled": false
+      }
     }
   },
   "tools": {
