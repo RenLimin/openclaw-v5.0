@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-22 10:56 UTC+08:00
+最后生成：2026-08-22 11:14 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -36,14 +36,14 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 88 个（可用 76）
+**总计** 89 个（可用 77）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 3 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 9 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 10 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -58,6 +58,7 @@
 | `openclaw-context-overflow-compaction-recovery` | Fix OpenClaw sessions where /compact also fails after switching to a smaller-context mo... |
 | `openclaw-debug-missing-tool` | Diagnose OpenClaw "documented tool not callable" via tools.profile and plugin capabilit... |
 | `openclaw-generated-asset-inventory` | Generate a self-updating OpenClaw asset/inventory doc from CLI JSON sources with drift ... |
+| `probe-model-context-window-limit` | Measure a provider model's real input-token limit by binary-search probe before setting... |
 
 ## L2 — Agent 资产
 
@@ -107,7 +108,7 @@
 | 类别 | 数量 |
 |---|---|
 | ADR（架构决策记录） | 6 |
-| EXP（经验卡片） | 4 |
+| EXP（经验卡片） | 5 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -129,14 +130,15 @@
 | [`EXP-20260821-002-github-file-credential-helper`](../knowledge-base/by-category/project-experience/correct/EXP-20260821-002-github-file-credential-helper.md) | active |
 | [`EXP-20260821-003-compaction-model-delegation`](../knowledge-base/by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md) | active |
 | [`EXP-20260822-004-context-window-empirical-probe`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-004-context-window-empirical-probe.md) | active |
+| [`EXP-20260822-005-cron-delivery-pollutes-status`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-005-cron-delivery-pollutes-status.md) | active |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `c34742f` |
-| Commit 数 | 26 |
+| HEAD | `27d4924` |
+| Commit 数 | 27 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
