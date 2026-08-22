@@ -2,7 +2,7 @@
 # 安装 git hooks 到 .git/hooks/
 #
 # .git/ 不受版本控制，clone 后 hook 会丢失。
-# canonical 版本存放在 scripts/hooks/，本脚本负责安装。
+# canonical 版本存放在 scripts/git-hooks/，本脚本负责安装。
 #
 # 用法:
 #   bash scripts/install-hooks.sh          # 安装
@@ -12,7 +12,7 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-SRC_DIR="scripts/hooks"
+SRC_DIR="scripts/git-hooks"
 DST_DIR=".git/hooks"
 
 if [ ! -d "$SRC_DIR" ]; then
