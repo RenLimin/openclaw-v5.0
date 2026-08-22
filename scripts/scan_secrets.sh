@@ -47,6 +47,8 @@ PATTERNS=(
   '"(apiKey|api_key|password|secret)"\s*:\s*"[^"<*][^"]{12,}"'
   # 归属标识（botId/corpId/appId 等）：非密钥但暴露租户归属，公开仓库不应出现
   '"(botId|corpId|agentId|appId|clientId|tenantId|chatId)"\s*:\s*"[^"<*][^"]{10,}"'
+  # WeCom / 企业微信及同类 provider 的密钥字段
+  '"(corpSecret|appSecret|botSecret|encodingAESKey|signingSecret|channelSecret)"\s*:\s*"[^"<*][^"]{8,}"'
 )
 
 hits=0

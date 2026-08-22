@@ -56,6 +56,12 @@ SECRET_KEYS = {
     "channelsecret",
     "signingsecret",
     "verificationtoken",
+    "corpsecret",       # WeCom Agent mode
+    "appsecret",
+    "botsecret",
+    "encodingaeskey",   # 企业微信回调加密
+    "egressproxyurl",   # 可能含内网地址/认证信息
+    "proxyurl",
 }
 # 这些字段名即使命中上面的规则也**保留**原值（非敏感的容量/策略参数）
 KEEP_KEYS = {"maxtokens", "keeprecenttokens", "maxtokensfield", "tokenbudget", "maxoutputtokens"}
