@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-22 11:47 UTC+08:00
+最后生成：2026-08-22 11:58 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -36,19 +36,20 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 90 个（可用 78）
+**总计** 91 个（可用 79）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 3 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 11 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 12 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
 | 名称 | 描述 |
 |---|---|
+| `config-snapshot-redaction-and-drift-check` | Committing sanitized config snapshots to git: exact-key redaction, secret scan, and --c... |
 | `edit-stale-state-break-loop` | Breaking edit-tool retry loops when prior mutations already changed the target text |
 | `edit-tool-exact-whitespace-recovery` | Edit-tool "oldText not found" usually means a whitespace mismatch. On macOS, use `od -c... |
 | `git-https-token-file-credential-helper` | Push to GitHub over HTTPS with a token file, no plaintext token in git config, plus fir... |
@@ -139,8 +140,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `778167a` |
-| Commit 数 | 28 |
+| HEAD | `611ab05` |
+| Commit 数 | 29 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
