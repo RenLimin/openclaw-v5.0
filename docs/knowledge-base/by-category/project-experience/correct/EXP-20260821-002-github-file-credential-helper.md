@@ -1,12 +1,12 @@
 ---
-type: experience-card
+type: experience
 id: EXP-20260821-002
 date: 2026-08-21
 title: GitHub token 用 file-based credential helper 配置（避免明文入 git config）
-layer: [L2]
+layers: [L2]
 stage: develop
 severity: high
-kind: correct
+category: correct
 tags: [git, github, credentials, security, secretref]
 status: active
 supersedes: null

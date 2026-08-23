@@ -8,6 +8,7 @@ supersedes: null
 superseded_by: null
 deciders: [Rex, Jerry]
 layers: [L1, L2]
+stage: design
 tags: [memory, embedding, semantic-search, local-model, privacy, fail-closed]
 ---
 

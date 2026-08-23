@@ -8,6 +8,7 @@ supersedes: null
 superseded_by: null
 deciders: [Rex, Jerry]
 layers: [L1, L2]
+stage: manage
 tags: [tools, policy, governance, least-privilege, silent-degradation, memory-search]
 ---
 

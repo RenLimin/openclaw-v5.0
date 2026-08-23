@@ -1,12 +1,12 @@
 ---
-type: experience-card
+type: experience
 id: EXP-20260822-004
 date: 2026-08-22
 title: contextWindow 实测法 — 二分探边界定官方声明的真实上限
-layer: [L1]                    # OpenClaw 系统层：模型能力声明契约
+layers: [L1]                    # OpenClaw 系统层：模型能力声明契约
 stage: manage
 severity: high                 # 声明过大 → 真实溢出；声明过小 → 浪费容量
-kind: correct
+category: correct
 tags: [openclaw, context-window, ark, volcengine, glm, minimax, probe, empirical]
 status: active
 supersedes: null

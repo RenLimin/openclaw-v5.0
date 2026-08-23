@@ -5,6 +5,7 @@ date: 2026-08-22
 title: WeCom aibot 单聊只能应答不能主动推送（93006）
 category: correct
 layers: [L1, L2]
+stage: manage
 tags: [wecom, channel, cron, delivery, proactive-messaging, platform-limit]
 related: [EXP-20260822-005, ADR-202608-004]
 ---

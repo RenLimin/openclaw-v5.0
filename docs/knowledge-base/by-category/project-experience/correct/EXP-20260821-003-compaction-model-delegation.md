@@ -1,12 +1,12 @@
 ---
-type: experience-card
+type: experience
 id: EXP-20260821-003
 date: 2026-08-21
 title: 跨模型会话溢出死锁 — 用 compaction.model 委托大 ctx 模型解压
-layer: [L1]                    # OpenClaw 系统层：会话/上下文管理契约
+layers: [L1]                    # OpenClaw 系统层：会话/上下文管理契约
 stage: manage
 severity: high                 # 会导致会话完全不可用，需 /reset 才能恢复
-kind: correct
+category: correct
 tags: [openclaw, compaction, context-window, model-switch, ark-code-latest, longcat]
 status: active
 supersedes: null

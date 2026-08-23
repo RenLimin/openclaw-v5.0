@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-23 00:44 UTC+08:00
+最后生成：2026-08-23 08:32 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -38,14 +38,14 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 113 个（可用 101）
+**总计** 114 个（可用 102）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 18 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 19 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 20 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -61,6 +61,7 @@
 | `node-plugin-capability-check-from-dist-source` | Verify an installed npm/OpenClaw plugin's real capability (e.g. proactive send, require... |
 | `openclaw-add-tool-via-also-allow` | Add a blocked tool in OpenClaw without changing global profile: patch tools.alsoAllow, ... |
 | `openclaw-channel-proactive-delivery-triage` | Diagnose OpenClaw channel proactive/cron delivery failures (e.g. WeCom bot summary not ... |
+| `openclaw-channel-regression-log-audit` | Regression-test an OpenClaw chat channel after gateway restart using gateway.log layer ... |
 | `openclaw-config-patch-array-replace` | "openclaw config patch" array fields (e.g. models[]) replace entirely — never merge. Us... |
 | `openclaw-config-readback-and-backup-chain-audit` | openclaw.json key missing after an earlier "applied" patch: read back config, audit .ba... |
 | `openclaw-config-schema-and-plugin-doc-discovery` | Find real openclaw config paths, plugin channel docs, and CLI subcommands before editin... |
@@ -111,15 +112,15 @@
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
-| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 | 每日观测摘要 | ✅ | cron `0 9 * * *` | `isolated` |
+| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 
 ## 文档资产
 
 | 类别 | 数量 |
 |---|---|
 | ADR（架构决策记录） | 9 |
-| EXP（经验卡片） | 7 |
+| EXP（经验卡片） | 8 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -147,14 +148,15 @@
 | [`EXP-20260822-005-cron-delivery-pollutes-status`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-005-cron-delivery-pollutes-status.md) | active |
 | [`EXP-20260822-006-wecom-aibot-cannot-push-proactively`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md) | — |
 | [`EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath`](../knowledge-base/by-category/project-experience/correct/EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath.md) | — |
+| [`EXP-20260823-008-kb-phase3-evaluation`](../knowledge-base/by-category/project-experience/correct/EXP-20260823-008-kb-phase3-evaluation.md) | active |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `6b158f0` |
-| Commit 数 | 37 |
+| HEAD | `4bc85ea` |
+| Commit 数 | 38 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

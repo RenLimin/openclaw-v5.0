@@ -6,6 +6,7 @@ title: L2 可观测性适配组件设计决策 — 本地结构化日志优先, 
 status: accepted
 deciders: [Rex, Jerry]
 layers: [L1, L2]
+stage: design
 tags: [observability, logging, tracing, monitoring, cross-cutting]
 supersedes: null
 superseded_by: null
@@ -23,7 +24,7 @@ superseded_by: null
 - 后续所有 L2/L3/L4 组件都需要观测能力
 - 没有可观测性，系统建设中的问题无法被及时发现和回溯
 
-**设计文档**: [components/observability/DESIGN.md](./components/observability/DESIGN.md)
+**设计文档**: [components/observability/DESIGN.md](../../../../architecture/components/observability/DESIGN.md)
 
 ## 3. 核心决策
 

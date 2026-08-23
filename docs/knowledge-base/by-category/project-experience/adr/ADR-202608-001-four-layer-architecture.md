@@ -6,6 +6,7 @@ title: 综合开放平台采用 4 层分层架构 (L1 系统层 / L2 基础设�
 status: accepted
 deciders: [Rex, Jerry]
 layers: [L1, L2, L3, L4]
+stage: design
 tags: [architecture, layering, openclaw, foundation]
 supersedes: null
 superseded_by: null

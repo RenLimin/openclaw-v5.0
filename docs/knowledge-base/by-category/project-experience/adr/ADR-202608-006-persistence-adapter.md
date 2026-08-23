@@ -8,6 +8,7 @@ supersedes: null
 superseded_by: null
 deciders: [Rex, Jerry]
 layers: [L2, L3, L4]
+stage: design
 tags: [persistence, sqlite, repository, migration, database]
 supersedes: null
 superseded_by: null
@@ -25,7 +26,7 @@ superseded_by: null
 - 当前只有 MEMORY.md + memory/ 文件，不适合业务数据
 - 每个维度自己选数据库会导致技术栈碎片化
 
-**设计文档**: [components/persistence/DESIGN.md](./components/persistence/DESIGN.md)
+**设计文档**: [components/persistence/DESIGN.md](../../../../architecture/components/persistence/DESIGN.md)
 
 ## 3. 核心决策
 

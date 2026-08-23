@@ -5,6 +5,7 @@ date: 2026-08-23
 title: 第三方 channel 插件声明兼容却 import 不存在的 SDK 入口
 category: correct
 layers: [L1, L2]
+stage: manage
 tags: [plugin, channel, compatibility, peer-dependency, weixin, third-party]
 related: [EXP-20260822-006, ADR-202608-008]
 ---

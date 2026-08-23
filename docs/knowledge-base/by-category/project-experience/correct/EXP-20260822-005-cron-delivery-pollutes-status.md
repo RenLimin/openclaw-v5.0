@@ -1,12 +1,12 @@
 ---
-type: experience-card
+type: experience
 id: EXP-20260822-005
 date: 2026-08-22
 title: cron delivery 失败会污染 job 状态 — 无 channel 环境须设 delivery.mode=none
-layer: [L1, L2]                # L1 OpenClaw cron 契约；L2 可观测性组件
+layers: [L1, L2]                # L1 OpenClaw cron 契约；L2 可观测性组件
 stage: manage
 severity: medium               # 任务实际成功，但状态误报 error，掩盖真实故障
-kind: correct
+category: correct
 tags: [openclaw, cron, automations, delivery, channel, observability]
 status: active
 supersedes: null

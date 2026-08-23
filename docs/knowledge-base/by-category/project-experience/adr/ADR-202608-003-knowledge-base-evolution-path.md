@@ -6,6 +6,7 @@ title: 知识库承载形式采用 "Markdown + 元数据先行, 自建系统演�
 status: accepted
 deciders: [Rex, Jerry]
 layers: [L2, L3]
+stage: design
 tags: [knowledge-base, migration, self-hosted, strategy]
 supersedes: null
 superseded_by: null
@@ -191,10 +192,18 @@ Markdown (回到源, 无损)
 - [ ] **2026-08~09**: 用知识库支撑前 2 个 L2 组件选型
 
 ### 阶段 2: 工具链增强期
-- [ ] **2026-Q4**: 评估"tag explorer" 工具（按 tag/标签聚合展示）
-- [ ] **2026-Q4**: 评估"cross-reference"工具（自动发现文档间引用）
-- [ ] **2027-Q1**: 评估"full-text search" 工具（如 ripgrep 集成）
-- [ ] **2027-Q1**: 阶段 2 验收（工具链稳定 + 30+ 条知识）
+- [x] **2026-08-23**: `scripts/kb_index.py` 交付 — 提前完成下列前三项
+  - [x] "tag explorer"（`--tags` 聚合 + 标签云入 INDEX）
+  - [x] "cross-reference"（`--xref` 引用图 + 孤岛/断链检测）
+  - [x] 三维交叉查询（`--query layer=Lx stage=xx tag=xx`）
+  - [x] schema 校验 + pre-commit 阻塞（额外交付，原计划未列）
+- [ ] **2027-Q1**: 评估 "full-text search" 工具（待定 — 当前 20 篇规模下 `--query` 已够，且 `memory_search` 已提供语义检索）
+- [ ] **2027-Q1**: 阶段 2 验收（工具链稳定 + 30+ 条知识；当前 20 条）
+
+> **2026-08-23 阶段 3 启动评估结果**：7 触发条件 **0/7 达成**，依 §5.3 「至少 2 个才评估」
+> → **自建系统暂缓**。定性条件 2/3/4 已用本阶段工具实测，不再靠主观判断。
+> 完整评估见 [EXP-20260823-008](../correct/EXP-20260823-008-kb-phase3-evaluation.md)。
+> 真瓶颈是 **L3/L4 内容缺口**（develop/manage 格子全空），自建系统解决不了。
 
 ### 阶段 3: 自建系统期
 - [ ] **触发时**: 评估外部方案（避免无谓自建）

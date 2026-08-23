@@ -6,6 +6,7 @@ title: 知识库采用 3 维矩阵组织 (层级 × 阶段 × 类别)
 status: accepted
 deciders: [Rex, Jerry]
 layers: [L1, L2, L3, L4]
+stage: design
 tags: [knowledge-base, taxonomy, organization]
 supersedes: null
 superseded_by: null

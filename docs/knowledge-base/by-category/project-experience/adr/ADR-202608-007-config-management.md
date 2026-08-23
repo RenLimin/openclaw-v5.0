@@ -8,6 +8,7 @@ supersedes: null
 superseded_by: null
 deciders: [Rex, Jerry]
 layers: [L1, L2]
+stage: manage
 tags: [config, governance, snapshot, drift-detection, secret-redaction]
 ---
 

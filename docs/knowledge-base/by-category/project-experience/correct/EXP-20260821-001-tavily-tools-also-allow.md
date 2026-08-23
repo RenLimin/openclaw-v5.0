@@ -1,12 +1,12 @@
 ---
-type: experience-card
+type: experience
 id: EXP-20260821-001
 date: 2026-08-21
 title: Tavily plugin 显式工具通过 tools.alsoAllow 解锁（绕过 tools.profile=coding 的 deny）
-layer: [L1, L2]                # 涉及 OpenClaw 系统层契约 + 基础设施层配置
+layers: [L1, L2]                # 涉及 OpenClaw 系统层契约 + 基础设施层配置
 stage: develop
 severity: medium
-kind: correct                  # 验证可行的方案
+category: correct                  # 验证可行的方案
 tags: [openclaw, tavily, tools-profile, plugin, web-search]
 status: active
 supersedes: null

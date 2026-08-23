@@ -6,6 +6,7 @@ title: L2 凭据管理通用化 — 文件存储 + SecretRef 引用 + 标准生�
 status: accepted
 deciders: [Rex, Jerry]
 layers: [L1, L2]
+stage: design
 tags: [credentials, secrets, security, secretref, cross-cutting]
 supersedes: null
 superseded_by: null
@@ -24,7 +25,7 @@ superseded_by: null
 
 **问题**：新接入第 3、第 4 个服务时，选哪种方式？凭据轮换、权限审计、漂移检测没有统一流程。
 
-**设计文档**: [components/credentials/DESIGN.md](./components/credentials/DESIGN.md)
+**设计文档**: [components/credentials/DESIGN.md](../../../../architecture/components/credentials/DESIGN.md)
 
 ## 3. 核心决策
 
