@@ -79,7 +79,11 @@
     "providers": {
       "coding-plan": {
         "api": "openai-completions",
-        "apiKey": "<REDACTED>",
+        "apiKey": {
+          "source": "file",
+          "provider": "codingplankey",
+          "id": "value"
+        },
         "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
         "models": [
           {
@@ -244,7 +248,11 @@
       },
       "longCat": {
         "baseUrl": "https://api.longcat.chat/openai/v1",
-        "apiKey": "<REDACTED>",
+        "apiKey": {
+          "source": "file",
+          "provider": "longcatkey",
+          "id": "value"
+        },
         "api": "openai-completions",
         "authHeader": true,
         "models": [
@@ -306,6 +314,12 @@
       "trello": {
         "enabled": false
       }
+    },
+    "workshop": {
+      "autonomous": {
+        "mode": "propose"
+      },
+      "approvalPolicy": "pending"
     }
   },
   "tools": {
@@ -348,13 +362,30 @@
     "enabled": true,
     "load": {
       "paths": []
-    }
+    },
+    "allow": [
+      "llama-cpp",
+      "longcat",
+      "tavily",
+      "wecom-openclaw-plugin",
+      "openclaw-weixin"
+    ]
   },
   "secrets": {
     "providers": {
       "tavilykey": {
         "source": "file",
         "path": "/Users/bangcle/.openclaw/secrets/tavily.apiKey",
+        "mode": "singleValue"
+      },
+      "codingplankey": {
+        "source": "file",
+        "path": "/Users/bangcle/.openclaw/secrets/coding-plan.apiKey",
+        "mode": "singleValue"
+      },
+      "longcatkey": {
+        "source": "file",
+        "path": "/Users/bangcle/.openclaw/secrets/longcat.apiKey",
         "mode": "singleValue"
       }
     }
@@ -365,9 +396,6 @@
       "secret": "<REDACTED>",
       "dmPolicy": "pairing",
       "allowFrom": []
-    },
-    "openclaw-weixin": {
-      "channelConfigUpdatedAt": "2026-08-22T16:04:10.425Z"
     }
   },
   "memory": {
