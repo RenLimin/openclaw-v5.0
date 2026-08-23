@@ -2,7 +2,7 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "coding-plan/ark-code-latest"
+        "primary": "longcat/LongCat-2.0"
       },
       "models": {
         "coding-plan/ark-code-latest": {},
@@ -50,7 +50,11 @@
   "gateway": {
     "auth": {
       "mode": "token",
-      "token": "<REDACTED>"
+      "token": {
+        "source": "file",
+        "provider": "gatewayauthtoken",
+        "id": "value"
+      }
     },
     "bind": "loopback",
     "mode": "local",
@@ -386,6 +390,11 @@
       "longcatkey": {
         "source": "file",
         "path": "/Users/bangcle/.openclaw/secrets/longcat.apiKey",
+        "mode": "singleValue"
+      },
+      "gatewayauthtoken": {
+        "source": "file",
+        "path": "/Users/bangcle/.openclaw/secrets/gateway.auth.token",
         "mode": "singleValue"
       }
     }
