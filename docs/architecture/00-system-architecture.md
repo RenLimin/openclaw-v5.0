@@ -179,17 +179,21 @@ L1 → 任何上层         (反向依赖，禁止)
 
 4. **上下文管理** (2026-08-21)
    - 组件 ID: `agents.defaults.compaction` + `agents.defaults.contextPruning`
-   - 功能: 三层防线自动管理上下文溢出
+   - 功能: 两层防线自动管理上下文溢出（原设计为三层，第 2 层已证实不生效 —— 见下）
      - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复；**摘要委托给独立大 ctx 模型**（`compaction.model` = `longcat/LongCat-2.0`），与会话模型解耦 — 避免“用已溢出的模型去压缩”的死锁（EXP-003）
-     - 第 2 层: Session pruning — cache-ttl 模式修剪旧 tool results
+     - ~~第 2 层: Session pruning — cache-ttl 模式修剪旧 tool results~~ → **❌ 不生效**（provider 不在 cache-ttl 白名单，详见关键配置节）
      - 第 3 层: Mid-turn precheck — 多轮工具调用中途的 ctx 压力信号；**它不做内联压缩**，而是中止当前 prompt 提交并交给外层 recovery 路径
    - 关键配置:
      - `mode: "safeguard"` — 更严格保护 + 摘要质量审计（`qualityGuard` 在 safeguard 下默认启用）
      - `keepRecentTokens: 30000` — **cut-point 预算**（token 计，非消息条数），压缩时保留最近 30k token 的 transcript 尾部**逐字不改**；官方默认 `20000`，此处显式提高以保留更多近期上下文
      - `maxActiveTranscriptBytes: "20mb"` — transcript 达 20MB 触发 preflight 本地压缩（开下一次 run 前）
      - `midTurnPrecheck.enabled: true` — 中途检查（**官方默认 `false`，需显式开启**）
-     - `contextPruning: { mode: "cache-ttl", ttl: "5m" }` — 5分钟 TTL 修剪（只裁剪上下文里的旧 tool results，**不改磁盘历史**）
-       - ⚠️ **待验证**：官方 `session-pruning.md:54` 说 cache-ttl 的**自动**默认仅对 Anthropic 系 auth 生效，其他 provider 默认 `off`。本处是**显式配置**（非依赖自动默认），但在 ark/volcengine 路由下是否真实生效**尚无实测证据**，不应当作已建成的防线依赖
+     - `contextPruning: { mode: "cache-ttl", ttl: "5m" }` — **❌ 已证实 100% 不生效的死配置**（2026-08-23 第三轮 review 结案）
+       - **根因**：`buildContextPruningFactory`（`dist/selection-B_4MkgWU.js:18595-18598`）确认 `mode === "cache-ttl"` 后立即调 `isCacheTtlEligibleProvider` 做 provider 白名单校验，不过则**提前 return**，pruning extension 从未注册。
+       - **白名单完整出路**（`dist/proxy-dRac3ChC.js:28-33` + `selection-B_4MkgWU.js:8770-8790`）：`provider ∈ {anthropic, anthropic-vertex}`、`amazon-bedrock`+Anthropic 模型、`modelApi === "anthropic-messages"`、`kilocode`+`anthropic/*`、Google `gemini-2.5/3`。
+       - **本机逐条不命中**：provider=`coding-plan`、`api=openai-completions`、主模型 `coding-plan/ark-code-latest`。插件覆盖路径（`resolveProviderCacheTtlEligibility`）亦不存在 —— `plugins.allow` 内 4 个插件对 `isCacheTtlEligible` 钩子均**零命中**。
+       - **官方文档为何不够**：`session-pruning.md:54` 只讲「自动默认仅 Anthropic 系」，未说明**显式配置也受同一白名单约束**。`reference/prompt-caching.md:104` 列出的允许路由全为 Anthropic 系，是该白名单的文档投影。
+       - **处置**：配置保留无害（本就不跑），但**不得当作防线依赖**。若需控制 tool result 膨胀，本机唯一有效路径是 compaction 系 + 收紧单次工具输出。
    - contextWindow 校准: 官方数据 + **实测二分探边界**修正
      - glm-5.3: 1M（实测 1,048,568 通过，ARK 端点无需 `[1m]` 后缀）
      - minimax-m3: 1M（实测；曾误设 512000 — 那是 MiniMax 直连 API 的限制）
@@ -396,9 +400,14 @@ L4 专有业务
 **原预留问题的回答**（2026-08-22 实测）：
 
 1. **"是否有其他 plugin 工具受同样影响？"**
-   → 当前仅 Tavily 需显式解锁。但发现**反向不对称**：`terminal`/`screen`/`dashboard`
-   属 `group:ui`，**不在官方 `coding` profile 列表内**却实际可用。
-   **机制未查清，不下结论** —— 官方 profile 表不足以完整预测实际工具面。
+   → 当前仅 Tavily 需显式解锁。发现的**反向不对称**已于 2026-08-23 查清：
+   - `terminal`/`screen`：官方文档表格列入 `group:ui`，但**运行时 `POLICY_TOOL_GROUPS`
+     仅含 `browser`+`canvas`**（`dist/register-pGYK5dOd.js:3928`）。它们不被任何 `group:`
+     覆盖 ⇒ `coding` profile 的 allowlist 不构成排除路径 ⇒ **天然可用**。
+   - `dashboard`：**不属 `group:ui`**（文档版与运行时版都没有），是 workboard 插件工具，
+     走 plugin 注册路径。**原将它归入 `group:ui` 是事实错误。**
+   - → **官方文档表格已过期**（`config-tools.md:41` 列 5 个，运行时只 2 个），属官方文档缺口。
+   - → 结论仍成立：**官方 profile 表不足以完整预测实际工具面** —— 但现在知道原因了。
 
 2. **"升级是否改变 coding profile 的 deny 列表？"**
    → 无法预判，已转为**监控点**：升级后重跑 `scripts/tool_policy_audit.sh`。

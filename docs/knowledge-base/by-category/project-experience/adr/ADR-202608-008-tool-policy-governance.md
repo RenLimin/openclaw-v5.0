@@ -73,6 +73,26 @@ L2 建设的最后一个组件。架构文档 §5.4 原把工具策略问题定�
 **理由**：EXP-20260821-001 的教训就是 `contracts.tools` 与 `Capabilities` 是不同注册路径。
 在没查源码前给出"可能是因为…"的推测，会污染知识库。**"未查清"是合法结论，"我猜"不是。**
 
+---
+
+#### ✅ 后续：机制已查清（2026-08-23 第三轮 review）
+
+本决策的谨慎被证实是对的 —— 答案**必须读 dist 源码常量**，光看官方文档表格会得出错误结论。
+
+| 项 | 真相 | 依据 |
+|---|---|---|
+| 运行时 `group:ui` | 仅 `["browser", "canvas"]` | `dist/register-pGYK5dOd.js:3928` |
+| 官方文档 `group:ui` | 列 5 个：`browser`/`screen`/`terminal`/`canvas`/`show_widget` | `gateway/config-tools.md:41` |
+| `terminal`/`screen` | **不被任何 `group:` 覆盖** ⇒ profile allowlist 不构成排除路径 ⇒ 天然可用 | 两表对比 |
+| `dashboard` | **两版都不在 `group:ui`**，是 workboard 插件工具 | `plugins/manifest.md:165`、`web/dashboards.md:66` |
+
+**两点修正**：
+1. 本决策原文把 `dashboard` 归入 `group:ui` 是**事实错误**（它从未属于该组）。
+2. 真因是**官方文档表格与运行时实现不一致** —— 属官方文档缺口，非本系统配置问题。
+
+**新增方法论**：官方文档表格与运行时常量**都要查**，不一致时**以运行时为准**。
+已入监控点：升级后重查 `POLICY_TOOL_GROUPS`。
+
 ## 4. 官方规则要点（一手来源：`docs/gateway/config-tools.md`）
 
 | 规则 | 说明 |

@@ -117,18 +117,37 @@ owner: Rex + Jerry
 `agents.defaults.mediaModels` **未配置**。据官方文档，工具"只在至少配置一个
 provider 时出现"。属预期行为，非故障 —— 但说明**profile 声明 ≠ 工具可用**。
 
-### 2.3 待查清的不对称现象
+### 2.3 不对称现象（已查清@2026-08-23 第三轮 review）
 
 | 观察 | 说明 |
 |---|---|
 | Tavily 插件工具在 `coding` 下**被 deny**，需 `alsoAllow` 显式解锁（EXP-20260821-001） | 已验证 |
-| 但 `terminal` / `screen` / `dashboard` 属 `group:ui`，**不在 `coding` profile 列表内**，却实际可用且未出现在 `alsoAllow` | ⚠️ **机制未查清** |
+| `terminal` / `screen` 官方文档表格列入 `group:ui`，但**运行时 `POLICY_TOOL_GROUPS` 仅含 `browser`+`canvas`** | ✅ 已查清 |
+| `dashboard` **不在** `group:ui` 里 —— 文档版与运行时版都没有。它是 workboard 插件工具 | ✅ 已查清 |
 
-**诚实结论**：官方 profile 表**不足以完整预测实际工具面**。可能原因（均未验证）：
-plugin 工具走独立注册路径 / 文档表格不完整 / 运行时 surface 另有补充规则。
+**运行时真值**（`dist/register-pGYK5dOd.js:3928`）：
 
-**不下结论，只记录现象**。需要时用 `openclaw plugins inspect` + 源码确认。
-这正是 EXP-20260821-001 的教训：`contracts.tools` 与 `Capabilities` 是不同注册路径。
+```js
+"group:ui": ["browser", "canvas"],
+```
+
+**官方文档说法**（`gateway/config-tools.md:41`）：
+
+> `group:ui` | `browser`, `screen`, `terminal`, `canvas`, `show_widget`
+
+**结论**：
+
+1. **`terminal`/`screen` 天然可用** —— 它们不被任何 `group:` 覆盖，因此 `coding` profile
+   的 allowlist **不构成对它们的排除路径**。这就是「实际可用却不在 profile 列表内」的答案。
+2. **`dashboard` 属插件工具** —— 走 plugin 注册路径（`plugins/manifest.md:165`、
+   `web/dashboards.md:66`），不受 profile 约束。**v1 把它归入 `group:ui` 是事实错误。**
+3. **官方文档表格已过期** —— 列 5 个工具，运行时只有 2 个。属官方文档缺陷，
+   记入「官方文档缺口」类目。
+
+> **ADR-008 决策 4 的谨慎是对的** —— 当时没瞎猜「可能是因为…」，而是明确记「未查清」。
+> 现在查清了：答案确实需要读 dist 源码常量，光看官方文档表格会得出错误结论
+> （表格说 `terminal` 属 `group:ui` ⇒ 会误以为 `coding` profile 应该排除它）。
+> **教训**：官方文档表格与运行时常量都要查，不一致时以运行时为准。
 
 ## 3. 治理原则
 
@@ -153,32 +172,90 @@ plugin 工具走独立注册路径 / 文档表格不完整 / 运行时 surface �
 | `group:messaging` | **不在 coding profile** | 本机零 channel 配置，无需求 |
 | `full` profile | **拒绝** | 违反最小权限 |
 
-## 4.1 `tools.elevated` — 提权 exec 门禁（2026-08-23 补登）
+## 4.1 `tools.elevated` — 提权 exec 门禁（2026-08-23 补登，同日修正）
 
-> 本节在 v1 中**完全缺失**。WeCom 已接入外部渠道，而 `allowFrom` 是外部渠道
-> 触发提权 exec 的**唯一白名单门禁** —— 不记录等于治理空白。
+> ⚠️ **2026-08-23 第三轮 review 修正**：本节 v2 内容有严重论证错误 —— 把 `allowFrom` 说成
+> 「外部渠道触发提权 exec 的唯一白名单门禁」，并断言「提权 exec 全面禁用，此为期望状态」。
+> **方向反了**。错因与 ADR-009 同构：读 `gateway/config-tools.md:184-203` 拿到字段语义就停，
+> 没读 `tools/elevated.md` 开头那个 Info 框里的决定性前提。
 
-### 当前状态（实测@2026-08-23）
+### 决定性前提：sandbox 未开启 ⇒ elevated 是 no-op
+
+三处官方原文一致：
+
+| 出处 | 原文 |
+|---|---|
+| `tools/elevated.md:10-12`（Info 框） | Elevated mode only changes behavior when the agent is **sandboxed**. For unsandboxed agents, **exec already runs on the host**. |
+| `gateway/sandboxing.md:9` | Sandboxing is **off by default** |
+| `gateway/sandboxing.md:23` | **If sandboxing is off, `tools.elevated` changes nothing** since exec already runs on the host. |
+
+**本机实测**：`openclaw config get agents.defaults.sandbox` → `Config path not found`
+（未配置 → 走默认 `off`，`sandboxing.md:31` 默认值表确认）。
+
+上一轮记录的报错原文恰是铁证：`elevated is not available right now (runtime.direct)`
+—— `direct` 即「未沙箱化」，由 `dist/elevated-unavailable-BU5O8gUq.js:71` 的
+`params.runtimeSandboxed ? "sandboxed" : "direct"` 生成。
+
+### 当前真实状态（实测@2026-08-23）
 
 ```json5
 // tools 下只有两个字段，elevated 未配置 → 走默认关闭
 { tools: { profile: "coding", alsoAllow: ["tavily_search", "tavily_extract"] } }
 ```
 
-**结论**：提权 exec 当前**全面禁用**，此为期望状态，不要为临时需求打开。
+| 说法 | 判定 |
+|---|---|
+| 「提权 exec 全面禁用」 | ⚠️ **误导**。被禁的是 `elevated` **标志位**；`exec` 实际权限**已是 host 全权**（sandbox=off + `group:runtime` 已 allow） |
+| 「`allowFrom` 是唯一门禁」 | ❌ **错误**。sandbox=off 下它管的那条路本来就不存在 |
+| 「此为期望状态」 | ⚠️ 结论巧合正确（不该开 elevated），但**理由错**——不是「有一道墙」，而是「那道墙在 sandbox=off 下不存在」 |
 
-### 字段语义（官方 `gateway/config-tools.md:184-203`）
+### 真正有效的门禁
+
+| 门禁 | 作用 | 官方依据 |
+|---|---|---|
+| `tools.deny` | **hard stop**，elevated 无法覆盖 | `tools/elevated.md` §What elevated does not control：if `exec` is denied by tool policy, elevated cannot override it |
+| `tools.toolsBySender` | 按**渠道 + 发送者**收紧当前轮工具集，可 `deny: ["group:runtime"]` | `gateway/config-tools.md:164-182` |
+| `channels.wecom.dmPolicy` / `allowFrom` | 渠道层准入（谁能触达 agent） | 渠道配置 |
+
+**若要限制 WeCom 触发 host exec，正确的键是 `tools.toolsBySender`，不是 `tools.elevated`。**
+这是当前唯一真实有效的对外渠道 exec 收紧手段：
+
+```json5
+{ tools: { toolsBySender: {
+    "channel:wecom:*": { deny: ["group:runtime", "group:fs"] },
+} } }
+```
+
+> ⚠️ 上述为**建议形态，未实测**。`config-tools.md:166` 强调 sender 值必须来自
+> channel adapter 而非消息文本；启用前需验证 WeCom adapter 提供的 sender 键形态。
+
+### 字段语义（官方 `gateway/config-tools.md:184-204` + `tools/elevated.md:85-102`）
 
 | 字段 | 语义 |
 |---|---|
-| `tools.elevated.enabled` | 总开关 |
-| `tools.elevated.allowFrom.<channelId>: [senderIds]` | 按**渠道 + 发送者**白名单；无匹配则拒绕 |
-| `agents.entries.*.tools.elevated` | per-agent 覆盖，**只能更严**（不能放宽） |
+| `tools.elevated.enabled` | 总开关，必须为 `true` |
+| `tools.elevated.allowFrom.<provider>: [senderIds]` | 按 **provider（渠道）→ 发送者列表**；渠道维度在 **key** 上 |
+| `agents.entries.*.tools.elevated.enabled` | per-agent 门禁，**只能更严**；全局与 per-agent 必须都为 `true` |
+| `agents.entries.*.tools.elevated.allowFrom` | per-agent 白名单，发送者需**同时**匹配全局 + per-agent |
 | `/elevated on\|off\|ask\|full` | per-session 状态；行内指令仅影响单条消息 |
 
-`allowFrom` 的 key 前缀格式：`channel:<channelId>:<senderId>` / `id:<senderId>` /
-`e164:<phone>` / `username:<handle>` / `name:<displayName>` / `"*"`。
-匹配顺序：channel+id → id → e164 → username → name → 通配符。
+**allowFrom 条目前缀**（`tools/elevated.md:94-102`）：
+
+| 前缀 | 匹配 |
+|---|---|
+| （无前缀） | Sender ID、E.164 或 From 字段 |
+| `name:` | 发送者显示名 |
+| `username:` | 发送者用户名 |
+| `tag:` | 发送者 tag |
+| `id:` / `from:` / `e164:` | 显式身份定向 |
+
+> ⚠️ **v2 抄错表已更正**：原写 `channel:<channelId>:<senderId>` 前缀与 `"*"` 通配符 ——
+> 那是 `toolsBySender` 的格式（`config-tools.md:172-174`）。`tools.elevated.allowFrom`
+> **无** `channel:` 前缀、**无**通配符条目，渠道维度体现在 key 上。
+
+另注（`tools/elevated.md:89`）：渠道插件可通过 SDK hook 提供 fallback allowlist，但
+**目前无任何 bundled 渠道实现该 hook**，故实践中每个 provider 都需显式
+`tools.elevated.allowFrom.<provider>` 条目。
 
 提权 `exec` **绕过 sandbox**，走配置的 escape path（默认 `gateway`）。
 
@@ -193,6 +270,9 @@ plugin 工具走独立注册路径 / 文档表格不完整 / 运行时 surface �
 
 **`tools.elevated` 是配置层门禁，用户口头授权无法绕过。**
 
+> 补充理解：该报错的 `runtime.direct` 本身就说明未沙箱化 —— 即 elevated 在本机
+> 无论如何都不可用（no-op + 门禁双重挡）。但 `sudo` 仍需密码，与 elevated 无关。
+
 正确做法（已写入技能 `macos-orphan-launchagent-cleanup`）：
 
 1. 完成所有不需 sudo 的步骤（备份、检查、bootout）
@@ -204,9 +284,13 @@ plugin 工具走独立注册路径 / 文档表格不完整 / 运行时 surface �
 ### 治理规则
 
 1. `tools.elevated.enabled` 保持**未配置/关闭**。开启需新增 ADR，说明具体场景与白名单范围
-2. 若必须开，`allowFrom` **只列具体 senderId，禁用 `"*"` 通配符**
+2. 若必须开，`allowFrom` **只列具体 senderId**（该字段本就无通配符条目）
 3. WeCom 等外部渠道**永不列入** `allowFrom` —— 消息可伪造，提权不应受外部输入驱动
-4. 需要提权的一次性操作→ 交用户终端执行，不改配置
+   - ⚠️ **注意**：sandbox=off 时这是**空条款**（它防的路径不存在）。真正需要防的
+     「WeCom 消息驱动 host 上的 `exec`」由规则 5 覆盖
+4. 需要提权的一次性操作 → 交用户终端执行，不改配置
+5. **（新增）** 收紧外部渠道的 host exec 用 `tools.toolsBySender`；若将来开启 sandbox
+   （`mode: "non-main"`），需重新评估本节全部结论 —— elevated 届时才真正成为门禁
 
 ## 5. 审计
 
@@ -225,6 +309,8 @@ bash scripts/tool_policy_audit.sh
 - ⚠️ 若未来配置 channel，重新评估是否需要 `group:messaging`
 - ⚠️ **`tools.elevated` 保持关闭** —— 任何开启请求需走 ADR，并确认 `allowFrom` 不含外部渠道与通配符
 - ⚠️ **`plugins.allow` 不得为空** —— 空值时非内置插件可自动加载，包括已停用的（实测@2026-08-23 `doctor --lint` 报告）
+- ⚠️ **`group:ui` 运行时常量漂移** —— 官方文档表格列 5 个工具，运行时仅含 `browser`/`canvas`；
+  升级后重查 `dist/register-pGYK5dOd.js` 的 `POLICY_TOOL_GROUPS`（官方可能修文档或改实现）
 
 ## 7. 相关
 

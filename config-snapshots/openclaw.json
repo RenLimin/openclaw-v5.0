@@ -402,7 +402,8 @@
     "search": {
       "provider": "local",
       "fallback": "none",
-      "local": {}
+      "local": {},
+      "rememberAcrossConversations": false
     }
   },
   "commands": {

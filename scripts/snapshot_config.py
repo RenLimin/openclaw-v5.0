@@ -19,6 +19,7 @@ from __future__ import annotations
 import difflib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -77,6 +78,38 @@ SECRET_KEYS = {
 KEEP_KEYS = {"maxtokens", "keeprecenttokens", "maxtokensfield", "tokenbudget", "maxoutputtokens"}
 REDACTED = "<REDACTED>"
 
+# ── 第二道防线：值形态兜底 ──────────────────────────────────────────────
+# 背景：2026-08-23 review 实测发现纯 key 名精确匹配漏 6/7。
+# 漏网典型：env.GROQ_API_KEY（前缀命名）、mcpServers.args[] 里的 --key、
+# baseUrl 里的 user:pass@、gateway.auth.headers.Authorization。
+# 仓库为 public，一次「加个 MCP server」即可让凭据公开 → 必须有值形态兜底。
+#
+# 设计原则：key 名匹配（第一道）与值形态匹配（第二道）**并行**，任一命中即脱敏；
+# 但 SecretRef 间接引用与已脱敏占位符必须放行，否则破坏快照可 diff 性。
+
+# key 名**后缀/子串**匹配（补精确集合的漏）——先减 KEEP_KEYS 再判
+SECRET_KEY_SUFFIXES = (
+    "apikey", "secret", "token", "password", "passwd",
+    "credential", "privatekey", "aeskey",
+)
+
+# 已是间接引用/占位符 → 放行（不是明文，脱了反而丢结构信息）
+REF_MARKERS = (
+    "${", "secretref", "file://", "op://", "env:", "vault:",
+    "<redacted>", "__openclaw_redacted__", "secretref-managed",
+)
+
+# 明文凭据的形态特征（命中即脱，无论 key 名）
+PLAIN_MARKERS = (
+    "sk-", "sk_", "gsk_", "ghp_", "gho_", "github_pat_", "tvly-",
+    "xoxb-", "xoxp-", "xapp-", "bearer ", "eyj",  # eyJ = JWT header
+    "aki", "asia",  # 云厂商 AK 前缀（小写比对）
+)
+
+_URL_USERINFO = re.compile(r"^[a-z][a-z0-9+.-]*://[^/@\s]*:[^/@\s]+@", re.I)
+_LONG_OPAQUE = re.compile(r"^[A-Za-z0-9_\-]{32,}$")
+_HEXISH = re.compile(r"^[0-9a-f]{32,}$", re.I)
+
 
 def _norm(key: str) -> str:
     return key.lower().replace("_", "").replace("-", "")
@@ -86,7 +119,41 @@ def is_secret_key(key: str) -> bool:
     k = _norm(key)
     if k in KEEP_KEYS:
         return False
-    return k in SECRET_KEYS
+    if k in SECRET_KEYS:
+        return True
+    # 后缀/子串兜底：覆盖 GROQ_API_KEY / MY_API_KEY / xxxClientSecret 等
+    return any(k.endswith(sfx) or sfx in k for sfx in SECRET_KEY_SUFFIXES)
+
+
+def looks_like_secret_value(val: Any) -> bool:
+    """值形态兜底：无论 key 名如何，明文凭据形态即脱敏。
+
+    放行间接引用与占位符，避免破坏 SecretRef 结构与快照 diff 能力。
+    """
+    if not isinstance(val, str):
+        return False
+    s = val.strip()
+    if len(s) < 16:
+        return False
+    low = s.lower()
+    # 已是引用/占位符 → 不是明文，放行
+    if any(m in low for m in REF_MARKERS):
+        return False
+    # URL 里带 user:pass@
+    if _URL_USERINFO.search(s):
+        return True
+    # 已知凭据前缀
+    if any(low.startswith(m) or (" " in m and m in low) for m in PLAIN_MARKERS):
+        return True
+    # 纯 hex 长串（常见于 token/hash）
+    if _HEXISH.match(s):
+        return True
+    # 长 opaque 串：必须同时含大小写或数字，且不含空格/斜杠/点（排除路径、句子、URL、版本号）
+    if _LONG_OPAQUE.match(s):
+        has_digit = any(c.isdigit() for c in s)
+        has_alpha = any(c.isalpha() for c in s)
+        return has_digit and has_alpha
+    return False
 
 
 def redact(obj: Any) -> Any:
@@ -107,11 +174,15 @@ def redact(obj: Any) -> Any:
                     out[k] = redact(v)
                 else:
                     out[k] = REDACTED if v not in (None, "") else v
+            elif looks_like_secret_value(v):
+                # 第二道防线：key 名不敏感，但值是明文凭据形态
+                out[k] = REDACTED
             else:
                 out[k] = redact(v)
         return out
     if isinstance(obj, list):
-        return [redact(v) for v in obj]
+        # 列表元素也走值形态兜底（mcpServers.args 里的 --key <secret>）
+        return [REDACTED if looks_like_secret_value(v) else redact(v) for v in obj]
     return obj
 
 

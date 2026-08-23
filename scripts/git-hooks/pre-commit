@@ -38,16 +38,28 @@ fi
 # 存在阻塞性错误时阻塞提交: 非法 layer/stage/category、重复 ID、缺 title。
 # 这些会让三维查询静默漏数据 — 与 ADR-008 「静默失败比明确失败更危险」同理。
 if [ -f scripts/kb_index.py ] && [ -d docs/knowledge-base ]; then
-    if python3 scripts/kb_index.py --validate >/tmp/kb_validate.out 2>&1; then
+    KB_OUT="$(mktemp -t kb_validate)"
+    trap 'rm -f "$KB_OUT"' EXIT
+    if python3 scripts/kb_index.py --validate >"$KB_OUT" 2>&1; then
         echo "✅ 知识库 schema 校验通过"
-        # INDEX.md 派生小节跟随内容变化, 自动重生并加入提交
-        python3 scripts/kb_index.py --emit-index >/dev/null 2>&1 || true
+        # INDEX.md 派生小节跟随内容变化, 自动重生并加入提交。
+        # 不用 `|| true` 吐错: 它失败时 INDEX.md 会静默陈旧而 hook 报成功
+        # (2026-08-23 第三轮 review 发现)。
+        EMIT_OUT="$(mktemp -t kb_emit)"
+        trap 'rm -f "$KB_OUT" "$EMIT_OUT"' EXIT
+        if ! python3 scripts/kb_index.py --emit-index >"$EMIT_OUT" 2>&1; then
+            cat "$EMIT_OUT"
+            echo ""
+            echo "❌ INDEX.md 派生生成失败 — 不能静默放过"
+            echo "    修完后重试, 或用 git commit --no-verify 跳过 (不推荐)"
+            exit 1
+        fi
         if ! git diff --quiet -- docs/knowledge-base/INDEX.md 2>/dev/null; then
             git add docs/knowledge-base/INDEX.md
             echo "✅ INDEX.md 派生小节已同步并加入本次提交"
         fi
     else
-        cat /tmp/kb_validate.out
+        cat "$KB_OUT"
         echo ""
         echo "❌ 知识库校验失败 — 存在阻塞性错误"
         echo "    修完后重试, 或用 git commit --no-verify 跳过 (不推荐)"

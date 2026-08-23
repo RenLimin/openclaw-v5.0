@@ -15,7 +15,13 @@ superseded_by: null
 # [ADR-202608-005] L2 凭据管理通用化决策
 
 ## 1. 状态
-**proposed** — 待 Rex 确认后改为 accepted
+
+**accepted**（2026-08-21 Rex 确认；2026-08-23 第三轮 review 同步正文与 frontmatter）
+
+> ⚠️ **修正记录**：本节原写 `proposed — 待 Rex 确认后改为 accepted`，与 frontmatter 的
+> `status: accepted` 矛盾两天。根因：Rex 确认后只改了 frontmatter，没同步正文。
+> → **教训**：状态字段在两处出现就会漂移，`kb_index.py` 应增加「frontmatter status
+> 与正文 §1 一致性」校验（已列入待办）。
 
 ## 2. 背景
 
@@ -95,11 +101,34 @@ superseded_by: null
 
 ## 5. 实现计划
 
-- [ ] ADR-005 accepted（本文件）
-- [ ] 将 GitHub token 迁移到 SecretRef provider
-- [ ] 创建 INDEX.md
-- [ ] 创建标准操作脚本（add / rotate / revoke）
-- [ ] 更新资产清单生成器
+- [x] ADR-005 accepted（本文件）—— 2026-08-21 Rex 确认
+- [x] ~~将 GitHub token 迁移到 SecretRef provider~~ → **无需迁移**：GitHub 走
+      `credential.helper = osxkeychain`（实测 `~/.gitconfig:5`），属本 ADR 定义的
+      **方式 B（外部凭据管理器）**，不属 SecretRef 覆盖面。
+      `secrets/github.token`（40B, 600）保留供 skill 直读，**不注册为 provider**。
+- [x] 创建 INDEX.md —— `~/.openclaw/secrets/INDEX.md`（2425B）
+- [x] 创建标准操作脚本（add / rotate / revoke）—— `scripts/credentials.sh`（8025B）
+- [x] 更新资产清单生成器 —— `scripts/gen_asset_inventory.py` 已含凭据段
+
+### 实际完成的 SecretRef 迁移（实测@2026-08-23）
+
+| 字段 | 状态 |
+|---|---|
+| `models.providers.coding-plan.apiKey` | ✅ SecretRef（provider `codingplankey`）|
+| `models.providers.longCat.apiKey` | ✅ SecretRef（provider `longcatkey`）|
+| `plugins.entries.tavily.config.webSearch.apiKey` | ✅ SecretRef（provider `tavilykey`）|
+| `agents/main/agent/models.json` | ✅ 自动写入非密标记 `secretref-managed` |
+| `gateway.auth.token` | ❌ **仍明文** —— fail-closed 风险，需维护窗口（见 §6 监控点）|
+| `channels.wecom.secret` | ❌ **仍明文** —— core 代码对该字段调 `.trim()`，不兼容 SecretRef 对象（实测已回退）|
+
+> ⚠️ **`channels.wecom.secret` 不得使用 SecretRef**（2026-08-23 实测教训）：
+> `dist/channel-B2DGqAWl.js:1799` 无条件对 `account.secret` 调 `.trim()`，收到
+> SecretRef 对象后抛 `account.secret?.trim is not a function`，将
+> `channels.wecom.accounts.default` **降级判为 unconfigured**。
+> **`config patch --dry-run` 会通过** —— schema 层接受，运行时才报错。
+> → **教训：dry-run 通过 ≠ 运行时可用，配置变更必须跟 `doctor` 实测。**
+> 官方 SecretRef 覆盖矩阵（`reference/secretref-credential-surface.md`）**未收录 wecom**，
+> 这个缺席是有原因的，不要当成「文档没写但能用」。
 
 ## 6. 验证标准
 
