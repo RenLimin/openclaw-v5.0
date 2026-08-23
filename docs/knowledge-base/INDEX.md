@@ -80,7 +80,7 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 <!-- kb_index:auto:start -->
 
 > 以下内容由 `scripts/kb_index.py --emit-index` 自动生成，请勿手工编辑。
-> 来源：21 篇 Markdown（ADR-003 §4.3 — Markdown 是唯一来源）。
+> 来源：22 篇 Markdown（ADR-003 §4.3 — Markdown 是唯一来源）。
 
 ### 全部条目
 
@@ -101,20 +101,21 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 | [EXP-20260821-003](./by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md) | 跨模型会话溢出死锁 — 用 compaction.model 委托大 ctx 模型解压 | L1 | manage | active |
 | [EXP-20260822-004](./by-category/project-experience/correct/EXP-20260822-004-context-window-empirical-probe.md) | contextWindow 实测法 — 二分探边界定官方声明的真实上限 | L1 | manage | active |
 | [EXP-20260822-005](./by-category/project-experience/correct/EXP-20260822-005-cron-delivery-pollutes-status.md) | cron delivery 失败会污染 job 状态 — 无 channel 环境须设 delivery.mode=none | L1,L2 | manage | active |
-| [EXP-20260822-006](./by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md) | WeCom aibot 单聊只能应答不能主动推送（93006） | L1,L2 | manage | — |
-| [EXP-20260823-007](./by-category/project-experience/correct/EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath.md) | 第三方 channel 插件声明兼容却 import 不存在的 SDK 入口 | L1,L2 | manage | — |
+| [EXP-20260822-006](./by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md) | WeCom aibot 单聊只能应答不能主动推送（93006） | L1,L2 | manage | active |
+| [EXP-20260823-007](./by-category/project-experience/correct/EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath.md) | 第三方 channel 插件声明兼容却 import 不存在的 SDK 入口 | L1,L2 | manage | active |
 | [EXP-20260823-008](./by-category/project-experience/correct/EXP-20260823-008-kb-phase3-evaluation.md) | 知识库阶段 3 启动评估 — 用工具链实测替代主观判断，结论为暂缓自建 | L2 | design | active |
+| [EXP-20260823-009](./by-category/project-experience/correct/EXP-20260823-009-review-selective-citation-and-drift-taxonomy.md) | 建设期全盘 review — 选择性引用官方文档导致 ADR 核心论证错误 | L1,L2 | manage | active |
 
 ### 标签云
 
-`openclaw`(5) · `knowledge-base`(4) · `governance`(3) · `channel`(3) · `migration`(2) · `observability`(2) · `cross-cutting`(2) · `credentials`(2) · `security`(2) · `secretref`(2) · `tooling`(2) · `markdown`(2) · `plugin`(2) · `context-window`(2) · `cron`(2) · `delivery`(2) · `architecture`(1) · `layering`(1) · `foundation`(1) · `taxonomy`(1) · `organization`(1) · `self-hosted`(1) · `strategy`(1) · `logging`(1) · `tracing`(1) · `monitoring`(1) · `secrets`(1) · `persistence`(1) · `sqlite`(1) · `repository`(1) · `database`(1) · `config`(1) · `snapshot`(1) · `drift-detection`(1) · `secret-redaction`(1) · `tools`(1) · `policy`(1) · `least-privilege`(1) · `silent-degradation`(1) · `memory-search`(1) · `memory`(1) · `embedding`(1) · `semantic-search`(1) · `local-model`(1) · `privacy`(1) · `fail-closed`(1) · `indexing`(1) · `tavily`(1) · `tools-profile`(1) · `web-search`(1) · `git`(1) · `github`(1) · `compaction`(1) · `model-switch`(1) · `ark-code-latest`(1) · `longcat`(1) · `ark`(1) · `volcengine`(1) · `glm`(1) · `minimax`(1) · `probe`(1) · `empirical`(1) · `automations`(1) · `wecom`(1) · `proactive-messaging`(1) · `platform-limit`(1) · `compatibility`(1) · `peer-dependency`(1) · `weixin`(1) · `third-party`(1) · `adr-003`(1) · `evaluation`(1) · `yagni`(1)
+`openclaw`(5) · `knowledge-base`(4) · `secretref`(3) · `governance`(3) · `channel`(3) · `migration`(2) · `observability`(2) · `cross-cutting`(2) · `credentials`(2) · `security`(2) · `tooling`(2) · `markdown`(2) · `plugin`(2) · `context-window`(2) · `cron`(2) · `delivery`(2) · `architecture`(1) · `layering`(1) · `foundation`(1) · `taxonomy`(1) · `organization`(1) · `self-hosted`(1) · `strategy`(1) · `logging`(1) · `tracing`(1) · `monitoring`(1) · `secrets`(1) · `persistence`(1) · `sqlite`(1) · `repository`(1) · `database`(1) · `config`(1) · `snapshot`(1) · `drift-detection`(1) · `secret-redaction`(1) · `tools`(1) · `policy`(1) · `least-privilege`(1) · `silent-degradation`(1) · `memory-search`(1) · `memory`(1) · `embedding`(1) · `semantic-search`(1) · `local-model`(1) · `privacy`(1) · `fail-closed`(1) · `indexing`(1) · `tavily`(1) · `tools-profile`(1) · `web-search`(1) · `git`(1) · `github`(1) · `compaction`(1) · `model-switch`(1) · `ark-code-latest`(1) · `longcat`(1) · `ark`(1) · `volcengine`(1) · `glm`(1) · `minimax`(1) · `probe`(1) · `empirical`(1) · `automations`(1) · `wecom`(1) · `proactive-messaging`(1) · `platform-limit`(1) · `compatibility`(1) · `peer-dependency`(1) · `weixin`(1) · `third-party`(1) · `adr-003`(1) · `evaluation`(1) · `yagni`(1) · `review`(1) · `documentation-drift`(1) · `adr`(1) · `confirmation-bias`(1) · `plugins-allow`(1) · `self-learning`(1)
 
 ### 三维分布 (layer × stage)
 
 | layer | design | develop | manage |
 |---|---|---|---|
-| L1 | 5 | 1 | 7 |
-| L2 | 8 | 3 | 5 |
+| L1 | 5 | 1 | 8 |
+| L2 | 8 | 3 | 6 |
 | L3 | 4 | 0 | 0 |
 | L4 | 3 | 0 | 0 |
 

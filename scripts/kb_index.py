@@ -134,8 +134,22 @@ def parse_doc(path: Path) -> Doc:
         body = text
     else:
         body = text[m.end():]
+        raw_fm = m.group(1)
+        # 重复键检测：yaml.safe_load 按“后值覆盖”静默处理，不报错
+        _seen_keys: dict[str, int] = {}
+        for _line in _strip_comments(raw_fm).splitlines():
+            if not _line or _line[0] in " \t-":
+                continue  # 跳过嵌套/列表项，只查顶层键
+            if ":" not in _line:
+                continue
+            _k = _line.split(":", 1)[0].strip()
+            if _k:
+                _seen_keys[_k] = _seen_keys.get(_k, 0) + 1
+        for _k, _n in _seen_keys.items():
+            if _n > 1:
+                doc.drift.append(f"frontmatter 重复键 `{_k}`（出现 {_n} 次，后值静默覆盖前值）")
         try:
-            meta = yaml.safe_load(_strip_comments(m.group(1))) or {}
+            meta = yaml.safe_load(_strip_comments(raw_fm)) or {}
         except yaml.YAMLError as exc:
             doc.errors.append(f"frontmatter YAML 解析失败: {exc}")
             meta = {}
@@ -224,6 +238,8 @@ def validate(docs: list[Doc]) -> int:
             soft.append(f"{d.path}: 无 tags（检索会变差）")
         if not d.stage:
             soft.append(f"{d.path}: 缺 stage（三维查询会漏）")
+        if d.doc_type in {"adr", "experience"} and not d.status:
+            soft.append(f"{d.path}: 缺 status（生命周期不可追踪，资产清单会显示 —）")
 
     # ID 唯一性
     dupes = {k: v for k, v in Counter(d.doc_id for d in docs if d.doc_id).items() if v > 1}

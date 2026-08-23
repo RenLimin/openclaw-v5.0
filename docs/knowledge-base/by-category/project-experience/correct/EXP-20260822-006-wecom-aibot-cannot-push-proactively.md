@@ -7,6 +7,7 @@ category: correct
 layers: [L1, L2]
 stage: manage
 tags: [wecom, channel, cron, delivery, proactive-messaging, platform-limit]
+status: active
 related: [EXP-20260822-005, ADR-202608-004]
 ---
 

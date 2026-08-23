@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.7 (2026-08-23 建设路径 review — 文档与实际对齐 + 阶段术语统一) |
+| 文档版本 | 0.8 (2026-08-23 全盘 review — ADR-009 论证纠错 + 凭据 SecretRef 化 + 插件/技能治理收紧) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（ADR-001 accepted） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -180,15 +180,16 @@ L1 → 任何上层         (反向依赖，禁止)
 4. **上下文管理** (2026-08-21)
    - 组件 ID: `agents.defaults.compaction` + `agents.defaults.contextPruning`
    - 功能: 三层防线自动管理上下文溢出
-     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复，各模型自治（自身 ctx 内独立压缩）
+     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复；**摘要委托给独立大 ctx 模型**（`compaction.model` = `longcat/LongCat-2.0`），与会话模型解耦 — 避免“用已溢出的模型去压缩”的死锁（EXP-003）
      - 第 2 层: Session pruning — cache-ttl 模式修剪旧 tool results
-     - 第 3 层: Mid-turn precheck — 多轮工具调用中途 ctx 压力检查
+     - 第 3 层: Mid-turn precheck — 多轮工具调用中途的 ctx 压力信号；**它不做内联压缩**，而是中止当前 prompt 提交并交给外层 recovery 路径
    - 关键配置:
-     - `mode: "safeguard"` — 更严格保护 + 摘要质量审计
-     - `keepRecentTokens: 30000` — 压缩保留 30k 近期消息
-     - `maxActiveTranscriptBytes: "20mb"` — transcript 达 20MB 预压缩
-     - `midTurnPrecheck.enabled: true` — 中途检查
-     - `contextPruning: { mode: "cache-ttl", ttl: "5m" }` — 5分钟 TTL 修剪
+     - `mode: "safeguard"` — 更严格保护 + 摘要质量审计（`qualityGuard` 在 safeguard 下默认启用）
+     - `keepRecentTokens: 30000` — **cut-point 预算**（token 计，非消息条数），压缩时保留最近 30k token 的 transcript 尾部**逐字不改**；官方默认 `20000`，此处显式提高以保留更多近期上下文
+     - `maxActiveTranscriptBytes: "20mb"` — transcript 达 20MB 触发 preflight 本地压缩（开下一次 run 前）
+     - `midTurnPrecheck.enabled: true` — 中途检查（**官方默认 `false`，需显式开启**）
+     - `contextPruning: { mode: "cache-ttl", ttl: "5m" }` — 5分钟 TTL 修剪（只裁剪上下文里的旧 tool results，**不改磁盘历史**）
+       - ⚠️ **待验证**：官方 `session-pruning.md:54` 说 cache-ttl 的**自动**默认仅对 Anthropic 系 auth 生效，其他 provider 默认 `off`。本处是**显式配置**（非依赖自动默认），但在 ark/volcengine 路由下是否真实生效**尚无实测证据**，不应当作已建成的防线依赖
    - contextWindow 校准: 官方数据 + **实测二分探边界**修正
      - glm-5.3: 1M（实测 1,048,568 通过，ARK 端点无需 `[1m]` 后缀）
      - minimax-m3: 1M（实测；曾误设 512000 — 那是 MiniMax 直连 API 的限制）
@@ -550,6 +551,40 @@ L4 专有业务
 | Node.js v26.7.0 | OpenClaw runtime | 跟随 OpenClaw 最低版本 |
 | macOS 26.5.2 | 当前运行平台 | 跨平台时需注意 LaunchAgent → systemd 迁移 |
 
+### 8.1.1 运行时服务层（LaunchAgent）
+
+> 本层在 v0.7 之前**完全未入档**，导致 5 个孤儿服务长期潜伏（含 2 个存活 16–17 天的幽灵进程）。
+
+**当前自有服务（实测@2026-08-23 11:00）**：
+
+| Label | plist | 状态 | 监听 | 备注 |
+|---|---|---|---|---|
+| `ai.openclaw.gateway` | `~/Library/LaunchAgents/ai.openclaw.gateway.plist` | ✅ PID 44602 / exit 0 | `127.0.0.1:18789` + `[::1]:18789` | L1 核心，**不可动** |
+
+**已清除的孤儿服务（2026-08-23，Rex 授权）**：
+
+| Label | 清理前状态 | 端口 | 指向代码 |
+|---|---|---|---|
+| `ai.openclaw.dashboard` | PID 67715，存活 17d20h | **`*:18793`（全网卡暴露）** | `workspace/model-scheduling-dashboard/` 已不存在 |
+| `ai.openclaw.model-scheduling` | PID 66605，存活 16d18h | `127.0.0.1:20128` | `~/.openclaw/model-scheduling/` 已不存在 |
+| `ai.openclaw.delivery-management-web` | 未运行，exit 2 | 8088 | `business/bangcle-security-delivery/` 仅剩 logs |
+| `bangcle.delivery-web` | 未运行，exit 78 | 8088 | 同上 + env wrapper（已丢） |
+| `pm2.bangcle`（Label 实为 **`com.PM2`**） | 未加载，`root:wheel` | — | pm2 可执行文件 + `~/.pm2` 均不存在 |
+
+清理后：**当前全部 LISTEN 端口均绑 `127.0.0.1`/`[::1]`，无一对外暴露**（清 dashboard 前有 `*:18793`）。
+
+**备份**：`~/.openclaw/backups/launchagents-2026-08-23/` 共 5 个 plist（重开发时的端口/入口/版本唯一线索）。
+业务代码已随 `openclaw reset` 清除，需从 GitHub 重新拉取。
+
+**治理规则（新增）**：
+
+1. 新增任何 LaunchAgent 必须同步登记到本节，包括 Label、plist 路径、监听地址、代码入口
+2. **清理 workspace 目录时必须同步 `bootout` 对应 LaunchAgent** —— `KeepAlive` 只在进程**退出**时重启，不检查可执行文件是否还在，代码删了进程不退就会以空壳状态长期存活
+3. 监听地址默认绑 `127.0.0.1`，`*:<port>` 需显式理由
+4. 清理流程见技能 `macos-orphan-launchagent-cleanup`
+
+**相关日志路径**：`~/Library/Logs/openclaw/`（已清空）、`business/*/logs/`（已清空，目录保留）
+
 ### 8.2 选型边界（本架构限制下）
 
 | 类别 | 可选 | 不可选 |
@@ -590,6 +625,7 @@ L4 专有业务
 | 2026-08-22 | 0.5 | 新增 L2 工具策略治理（ADR-008）：三态治理模型 + 六项审计；§5.4 回答原预留问题；**L2 核心组件建设完成** |
 | 2026-08-22 | 0.6 | 新增 L2 记忆语义检索组件（ADR-009）：本地 GGUF embedding 为主 provider |
 | 2026-08-23 | 0.7 | 建设路径 review — 文档与实际对齐；§3.2 组件表修正（7 组件全部标「已建设」+ 收集四件套清单）；§6 阶段标记完成/入口条件/暂缓状态；§0 元信息清掉过期待办；ADR-010 accepted |
+| 2026-08-23 | 0.8 | 全盘 review + 14 项修复：修正「各模型自治」与实配 `compaction.model` 委托的自相矛盾；补 §8.1.1 LaunchAgent 服务层；凭据明文 5→1 处（SecretRef）；`plugins.allow` 显式白名单；self-learning 降为 `propose` + `approvalPolicy: pending`；技能 25→23（macos 四合一）；EXP-009 沉淀 |
 
 ---
 

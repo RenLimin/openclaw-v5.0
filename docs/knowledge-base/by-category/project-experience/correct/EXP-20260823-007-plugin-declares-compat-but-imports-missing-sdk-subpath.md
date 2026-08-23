@@ -7,6 +7,7 @@ category: correct
 layers: [L1, L2]
 stage: manage
 tags: [plugin, channel, compatibility, peer-dependency, weixin, third-party]
+status: active
 related: [EXP-20260822-006, ADR-202608-008]
 ---
 

@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-23 09:32 UTC+08:00
+最后生成：2026-08-23 13:30 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,7 +23,7 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 79 个（启用 57） · bundled 74 · global 5
+**总计** 79 个（启用 5） · bundled 74 · global 5
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
@@ -34,8 +34,6 @@
 | `tavily` | global | — | web-search: tavily |
 | `wecom-openclaw-plugin` | global | — | channel: wecom |
 
-**内置模型 provider**（31 个，按需激活）：`anthropic`, `byteplus`, `clawrouter`, `cohere`, `comfy`, `copilot-proxy`, `fal`, `github-copilot`, `google`, `huggingface`, `litellm`, `lmstudio`, `meta`, `microsoft-foundry`, `minimax`, `mistral`, `novita`, `nvidia`, `ollama`, `openai`, `opencode`, `opencode-go`, `openrouter`, `sglang`, `synthetic`, `together`, `vllm`, `volcengine`, `vydra`, `xai`, `xiaomi`
-
 ## L2 — 技能资产 (Skills)
 
 **总计** 115 个（可用 103）
@@ -43,9 +41,9 @@
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
-| `openclaw-extra` | 18 | 插件附带技能 |
+| `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 21 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 23 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -58,11 +56,13 @@
 | `edit-tool-exact-whitespace-recovery` | Edit-tool "oldText not found" usually means a whitespace mismatch. On macOS, use `od -c... |
 | `git-https-token-file-credential-helper` | Push to GitHub over HTTPS with a token file, no plaintext token in git config, plus fir... |
 | `git-nothing-to-commit-untracked-file-triage` | Diagnose "nothing to commit" or a missing file from a commit: check ignore/tracking sta... |
+| `macos-orphan-launchagent-cleanup` | 卸载并彻底清除指向已删除代码的 macOS LaunchAgent 孤儿服务与幽灵进程，含 lsof 误判规避 |
 | `markdown-frontmatter-schema-audit-gate` | Validate and gate Markdown doc frontmatter (layers/stage/tags/IDs, cross-refs, relative... |
 | `node-plugin-capability-check-from-dist-source` | Verify an installed npm/OpenClaw plugin's real capability (e.g. proactive send, require... |
 | `openclaw-add-tool-via-also-allow` | Add a blocked tool in OpenClaw without changing global profile: patch tools.alsoAllow, ... |
 | `openclaw-channel-proactive-delivery-triage` | Diagnose OpenClaw channel proactive/cron delivery failures (e.g. WeCom bot summary not ... |
 | `openclaw-channel-regression-log-audit` | Regression-test an OpenClaw chat channel after gateway restart using gateway.log layer ... |
+| `openclaw-config-drift-audit` | Audit an OpenClaw install for config/docs drift: channel-vs-plugin status conflicts, do... |
 | `openclaw-config-patch-array-replace` | "openclaw config patch" array fields (e.g. models[]) replace entirely — never merge. Us... |
 | `openclaw-config-readback-and-backup-chain-audit` | openclaw.json key missing after an earlier "applied" patch: read back config, audit .ba... |
 | `openclaw-config-schema-and-plugin-doc-discovery` | Find real openclaw config paths, plugin channel docs, and CLI subcommands before editin... |
@@ -96,6 +96,8 @@
 
 | 别名 | 说明 |
 |---|---|
+| `codingplankey` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
+| `longcatkey` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
 | `tavilykey` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
 
 ### 凭据文件
@@ -103,7 +105,10 @@
 | 文件 | 权限 | 大小 |
 |---|---|---|
 | `~/.openclaw/secrets/INDEX.md` | `600` | 2425 B |
+| `~/.openclaw/secrets/coding-plan.apiKey` | `600` | 46 B |
+| `~/.openclaw/secrets/gateway.auth.token` | `600` | 48 B |
 | `~/.openclaw/secrets/github.token` | `600` | 40 B |
+| `~/.openclaw/secrets/longcat.apiKey` | `600` | 32 B |
 | `~/.openclaw/secrets/tavily.apiKey` | `600` | 58 B |
 
 > ⚠️ 标记表示权限不是 600，应执行 `chmod 600` 收紧。
@@ -121,7 +126,7 @@
 | 类别 | 数量 |
 |---|---|
 | ADR（架构决策记录） | 10 |
-| EXP（经验卡片） | 8 |
+| EXP（经验卡片） | 9 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -148,17 +153,18 @@
 | [`EXP-20260821-003-compaction-model-delegation`](../knowledge-base/by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md) | active |
 | [`EXP-20260822-004-context-window-empirical-probe`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-004-context-window-empirical-probe.md) | active |
 | [`EXP-20260822-005-cron-delivery-pollutes-status`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-005-cron-delivery-pollutes-status.md) | active |
-| [`EXP-20260822-006-wecom-aibot-cannot-push-proactively`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md) | — |
-| [`EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath`](../knowledge-base/by-category/project-experience/correct/EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath.md) | — |
+| [`EXP-20260822-006-wecom-aibot-cannot-push-proactively`](../knowledge-base/by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md) | active |
+| [`EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath`](../knowledge-base/by-category/project-experience/correct/EXP-20260823-007-plugin-declares-compat-but-imports-missing-sdk-subpath.md) | active |
 | [`EXP-20260823-008-kb-phase3-evaluation`](../knowledge-base/by-category/project-experience/correct/EXP-20260823-008-kb-phase3-evaluation.md) | active |
+| [`EXP-20260823-009-review-selective-citation-and-drift-taxonomy`](../knowledge-base/by-category/project-experience/correct/EXP-20260823-009-review-selective-citation-and-drift-taxonomy.md) | active |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `6119560` |
-| Commit 数 | 39 |
+| HEAD | `c8af79b` |
+| Commit 数 | 40 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

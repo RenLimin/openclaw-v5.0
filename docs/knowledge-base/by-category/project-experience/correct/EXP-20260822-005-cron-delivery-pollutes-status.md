@@ -133,6 +133,8 @@ openclaw cron runs --id <jobId>    # 看最新 entry
 **监控点**：
 - ⚠️ 未来若配置了真实 channel（Feishu/WeCom 等），需重新评估是否要打开投递
 - ⚠️ 新建 cron job 时，若产物落盘则**默认加 `--no-deliver`**，不要等它报错
+- ⚠️ **`--no-deliver` 阻止不了 agent 主动调 `message`**（见 §6.2）—— WeCom 已上线，
+  落盘型 job 若要确保静默，需在提示词或 `payload.toolsAllow` 里限制
 
 **升级判断**：
 - [x] 涉及 L1 契约（cron/automations 投递语义）
@@ -163,7 +165,39 @@ WeCom channel 已由 Rex 配置并启用（`openclaw channels list --all` → `i
 **未改动现有 cron 配置**：`delivery.mode=none` 对落盘型任务依然是正确选择。
 若要把每日观测摘要投到 WeCom，需 Rex 明确要求（涉及对外发送）。
 
+## 6.2 ⚠️ 重要修正（2026-08-23）：`--no-deliver` 不等于"不会外发"
+
+本卡片隐含假设「设了 `delivery.mode=none` 任务结果就不会外发」。
+**官方文档明确否定了这个推断**（`cli/cron.md:97` / `cron-jobs.md:331`）：
+
+> `--no-deliver` disables that fallback **but does not remove the agent's
+> `message` tool** when a chat route is available.
+
+即：
+
+| 机制 | `delivery.mode=none` 能否阻止 |
+|---|---|
+| 自动投递（announce/webhook） | ✅ 能阻止 |
+| **agent 主动调 `message` 工具** | ❌ **阻止不了** |
+
+**为何现在才重要**：卡片创建时本机零 channel，`message` 工具无路可走，
+两者区别不可观测。**WeCom 上线后（见 §6.1）差异变得真实** ——
+落盘型 job 的 agent 仍可主动往 WeCom 发消息，`delivery.mode=none` 管不了。
+
+**确保不外发需两层**：
+
+1. `delivery.mode=none` —— 关自动投递
+2. **job 提示词里显式要求不调 `message`**，或给 job 限制工具集（`payload.toolsAllow`）
+
+当前三个 cron job 均为落盘型，提示词未显式禁止 `message`。
+**属潜在风险而非已发生事故**（实测未见主动投递），已记入监控点。
+
+> 教训：卡片的结论依赖环境前提时，**前提变了要回头重评**。
+> “本机零 channel” 这类前提应在卡片里显式标注，而非隐含在结论里。
+
 ## 7. 变更历史
 
 - 2026-08-22: 创建（cron delivery 污染 status 的识别与修复 + 6 个 CLI 陷阱）
 - 2026-08-22 12:03: 补 §6.1 —— WeCom channel 已配置，标注哪些结论过期、哪些仍成立
+- 2026-08-23: 补 §6.2 —— 官方文档明确 `--no-deliver` **不移除 `message` 工具**，
+  WeCom 上线后落盘型 job 仍可主动外发；监控点新增一条

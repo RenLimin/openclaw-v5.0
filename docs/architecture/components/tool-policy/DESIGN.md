@@ -153,6 +153,61 @@ plugin 工具走独立注册路径 / 文档表格不完整 / 运行时 surface �
 | `group:messaging` | **不在 coding profile** | 本机零 channel 配置，无需求 |
 | `full` profile | **拒绝** | 违反最小权限 |
 
+## 4.1 `tools.elevated` — 提权 exec 门禁（2026-08-23 补登）
+
+> 本节在 v1 中**完全缺失**。WeCom 已接入外部渠道，而 `allowFrom` 是外部渠道
+> 触发提权 exec 的**唯一白名单门禁** —— 不记录等于治理空白。
+
+### 当前状态（实测@2026-08-23）
+
+```json5
+// tools 下只有两个字段，elevated 未配置 → 走默认关闭
+{ tools: { profile: "coding", alsoAllow: ["tavily_search", "tavily_extract"] } }
+```
+
+**结论**：提权 exec 当前**全面禁用**，此为期望状态，不要为临时需求打开。
+
+### 字段语义（官方 `gateway/config-tools.md:184-203`）
+
+| 字段 | 语义 |
+|---|---|
+| `tools.elevated.enabled` | 总开关 |
+| `tools.elevated.allowFrom.<channelId>: [senderIds]` | 按**渠道 + 发送者**白名单；无匹配则拒绕 |
+| `agents.entries.*.tools.elevated` | per-agent 覆盖，**只能更严**（不能放宽） |
+| `/elevated on\|off\|ask\|full` | per-session 状态；行内指令仅影响单条消息 |
+
+`allowFrom` 的 key 前缀格式：`channel:<channelId>:<senderId>` / `id:<senderId>` /
+`e164:<phone>` / `username:<handle>` / `name:<displayName>` / `"*"`。
+匹配顺序：channel+id → id → e164 → username → name → 通配符。
+
+提权 `exec` **绕过 sandbox**，走配置的 escape path（默认 `gateway`）。
+
+### 实测教训：授权 ≠ 能力 ★
+
+2026-08-23 删 root 属主 plist 时，Rex 口头授权 sudo 后**两条路都被挡**：
+
+| 方式 | 失败 |
+|---|---|
+| `exec(elevated=true)` | `elevated is not available right now (runtime.direct). Failing gates: allowFrom` |
+| `sudo -n` | `a password is required`（非交互 exec 无法输入密码） |
+
+**`tools.elevated` 是配置层门禁，用户口头授权无法绕过。**
+
+正确做法（已写入技能 `macos-orphan-launchagent-cleanup`）：
+
+1. 完成所有不需 sudo 的步骤（备份、检查、bootout）
+2. 把确切命令交给用户手动执行
+3. 用 `test -e` 验证结果
+
+**不要为删一个小文件去改 `tools.*` 安全策略。**
+
+### 治理规则
+
+1. `tools.elevated.enabled` 保持**未配置/关闭**。开启需新增 ADR，说明具体场景与白名单范围
+2. 若必须开，`allowFrom` **只列具体 senderId，禁用 `"*"` 通配符**
+3. WeCom 等外部渠道**永不列入** `allowFrom` —— 消息可伪造，提权不应受外部输入驱动
+4. 需要提权的一次性操作→ 交用户终端执行，不改配置
+
 ## 5. 审计
 
 ```bash
@@ -168,6 +223,8 @@ bash scripts/tool_policy_audit.sh
 - ⚠️ 新增 plugin 后确认其工具是否需 `alsoAllow`（不要假设自动可用）
 - ⚠️ `memory_search` 修好后，更新本文与审计脚本的期望值
 - ⚠️ 若未来配置 channel，重新评估是否需要 `group:messaging`
+- ⚠️ **`tools.elevated` 保持关闭** —— 任何开启请求需走 ADR，并确认 `allowFrom` 不含外部渠道与通配符
+- ⚠️ **`plugins.allow` 不得为空** —— 空值时非内置插件可自动加载，包括已停用的（实测@2026-08-23 `doctor --lint` 报告）
 
 ## 7. 相关
 

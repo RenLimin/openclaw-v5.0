@@ -10,6 +10,9 @@ memory/
 *~
 .env
 .env.local
+.env.*
+*.env
+secrets/
 .venv/
 __pycache__/
 *.pyc

@@ -10,8 +10,6 @@ deciders: [Rex, Jerry]
 layers: [L2, L3, L4]
 stage: design
 tags: [persistence, sqlite, repository, migration, database]
-supersedes: null
-superseded_by: null
 ---
 
 # [ADR-202608-006] L2 持久化适配组件设计决策

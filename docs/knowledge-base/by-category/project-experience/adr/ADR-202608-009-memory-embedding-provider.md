@@ -10,6 +10,7 @@ deciders: [Rex, Jerry]
 layers: [L1, L2]
 stage: design
 tags: [memory, embedding, semantic-search, local-model, privacy, fail-closed]
+related: [ADR-202608-008, ADR-202608-005, EXP-20260821-001]
 ---
 
 # [ADR-202608-009] L2 记忆语义检索 — 本地 GGUF embedding
@@ -52,15 +53,70 @@ ADR-008 实测发现 `memory_search` 静默降级：
 |---|---|
 | 未设置 / `auto` / `none` | 可退化为 FTS 词法检索 |
 | **显式远程**（openai/gemini/ollama/openai-compatible…） | **fail closed** |
-| `local` | 本地模型，无网络依赖 |
+| `local` | ⚠️ **同样可静默退化为 keyword-only**（见 §3.1 修正） |
 
 **这条否决了「远程为主 + 本地兜底」的直觉方案**：
 - ❌ `provider: <远程>` + `fallback: local` —— 远程挂了**先 fail closed**，
   比现在"降级但能用"更糟
-- ✅ `provider: local` —— 不存在"不可用"
+- ✅ `provider: local` —— 无网络依赖、无 API 成本、无数据外发（**但不等于不会降级**）
 
 **否决 Ollama**：本机未安装 ollama（虽有 plugin），且它属"显式远程 provider"，
 同样 fail closed。
+
+### 3.1 ⚠️ 修正（2026-08-23 全盘 review）：`local` 也会静默降级
+
+**本 ADR 原写「`provider: local` 不存在不可用」，该论证错误。**
+
+官方 `concepts/memory-search.md:118-121` 原文：
+
+> **FTS-only mode.** Set `provider: "none"` to intentionally disable embeddings
+> and search with keywords only. Leaving `provider` unset or set to `"auto"`
+> falls back to keyword-only ranking when embedding setup or a request fails,
+> **as does `provider: "local"` (the GGUF/llama.cpp provider)**.
+
+即 `local` 与 `auto`/未设置**属于同一类**：embedding 初始化或单次请求失败时
+**静默退回 keyword-only**，不报错、不 fail closed。
+
+**真实结论**：选 `local` 并未消除静默降级风险，只是把触发条件从
+
+| 原触发条件（远程） | 新触发条件（local） |
+|---|---|
+| 缺 API key / 网络故障 / 额度耗尽 | 模型文件被移动或改名 / 插件失效 / GGUF 加载失败 / llama.cpp 二进制损坏 |
+
+换成了另一组。**风险形状变了，风险没消失。**
+
+这恰好放大了 §7.1 两个坑的危害 —— 改文件名或设 `modelPath` 不仅让索引身份不匹配，
+还会**静默退回关键词检索**，而系统指令强制每次记忆查询都调 `memory_search`。
+
+**因此本 ADR 新增决策 4（监控），见下。**
+
+### 决策 4：必须监控 provider 实际值，不能假设配置生效
+
+`memory_search` 返回体里有 `provider` 字段与 `debug.embeddingBootstrap`。
+**断言 `provider === "local"` 且 `vectorScore` 非零**才算语义检索在工作。
+
+```bash
+# 快速断言（返回 provider 与首条 vectorScore）
+openclaw memory status --agent main | grep -E 'Provider|Vector dims'
+```
+
+判据：
+
+| 观察 | 含义 |
+|---|---|
+| `provider: local` + `vectorScore > 0` | ✅ 语义检索正常 |
+| `provider: local` + 全部 `vectorScore: 0` | ⚠️ 已静默降级为 keyword-only |
+| `debug.embeddingBootstrap.degradedTo` 存在 | ❌ 明确降级，读 `reason` |
+
+**实测@2026-08-23**：查「密钥泄露到开源仓库」→ `provider: local`，
+`vectorScore` 0.742 / 0.629 / 0.642 均非零，`USER.md#L103` 的 `textScore: 0` —— 纯向量召回，正常。
+
+**教训（方法论）**：本 ADR 的原始论证是**选择性引用**的产物 —— 读到
+「Explicit non-local providers fail closed」这句正好支持已选方案，就停止检索，
+把"远程会 fail closed"推断成"local 不会降级"。而官方在**同一份文档另一段**
+明确否定了这个推断。
+
+→ **引用官方文档作为决策依据时，必须读完相关章节全文，不能引到支持自己的那句就停。**
 
 ### 决策 2：火山 embedding 不设为主 provider（即使开通）
 
@@ -164,6 +220,7 @@ sed -i '' 's/^export VOLCENGINE-EMBEDDING_API_KEY=/export VOLCENGINE_EMBEDDING_A
 | HuggingFace 不可达致 worker 挂起 | 模型已本地预置；文件名与缓存目录不可改（§7.1） |
 | 换 provider/model 使索引失效 | `openclaw memory index --force`；官方会报 index identity warning 而非静默 |
 | 磁盘占用 | 已记录到监控点 |
+| **`local` 静默降级为 keyword-only** ★ | **决策 4 的 provider 断言**（§3.1）；模型文件名/路径变更后必须复验 |
 
 ## 7. 验证（已完成，实测通过）
 
@@ -231,3 +288,8 @@ CLI 按配置的绝对路径给索引打标签，运行中的 gateway 期望默�
 ## 9. 变更历史
 
 - 2026-08-22: 创建并 accepted；实施完成并实测验证（含 §7.1 两个坑的记录）
+- 2026-08-23: **§3.1 核心论证修正** —— 原写「`provider: local` 不存在不可用」，
+  经官方 `concepts/memory-search.md:118-121` 核实**错误**：`local` 与 `auto` 同类，
+  同样静默退化为 keyword-only。新增决策 4（provider 实际值监控）+ 风险表新增一行。
+  根因是选择性引用官方文档（只读支持已选方案的那句）。决策结论（选 local）不变 ——
+  零成本/零外发/无网络依赖仍成立 —— 但**理由中「不会降级」一条作废**。

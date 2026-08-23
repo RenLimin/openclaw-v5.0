@@ -36,7 +36,7 @@ owner: Rex + Jerry
 |---|---|
 | 未设置 / `"auto"`（legacy）/ `"none"` | **可退化**为 FTS 词法检索 |
 | **显式远程 provider**（openai / gemini / ollama / openai-compatible…） | **fail closed** —— `memory_search` 返回 unavailable，**不静默退化** |
-| `"local"` | 本地模型，不依赖网络 |
+| `"local"` | ⚠️ **与 `auto` 同类：同样可静默退化为 keyword-only**（见 §2.1） |
 
 > Explicit non-local providers fail closed. If you set `memory.search.provider` to
 > a concrete remote-backed provider … and that provider is unavailable at runtime,
@@ -46,9 +46,32 @@ owner: Rex + Jerry
 
 - ❌ `provider: "<远程>"` + `fallback: "local"` —— 远程挂了先 fail closed，
   比现在的"降级但能用"更糟（现在至少有关键词检索）
-- ✅ `provider: "local"` + `fallback: "none"` —— 本地无网络依赖，不存在"不可用"
+- ✅ `provider: "local"` + `fallback: "none"` —— 零 API 成本、零数据外发、无网络依赖
 
 **结论：本地必须是主 provider，不是兜底。**
+
+### 2.1 ⚠️ 修正（2026-08-23）：`local` 同样会静默降级
+
+本文原写「`local` 不存在不可用」，**该论证错误**。官方
+`concepts/memory-search.md:118-121` 明确：
+
+> Leaving `provider` unset or set to `"auto"` falls back to keyword-only ranking
+> when embedding setup or a request fails, **as does `provider: "local"`
+> (the GGUF/llama.cpp provider)**.
+
+选 `local` **未消除**静默降级，只是把触发条件从「缺 API key / 网络故障」
+换成「**模型文件被改名或移动 / 插件失效 / GGUF 加载失败**」。
+
+这恰好放大了 §3.1 两个坑的危害 —— 改文件名或设 `modelPath`
+不仅索引身份不匹配，还会**静默退回关键词检索**。
+
+**因此必须监控 provider 实际值**（见 §7 监控点首条）：
+
+| 观察 | 含义 |
+|---|---|
+| `provider: local` + `vectorScore > 0` | ✅ 语义检索正常 |
+| `provider: local` + 全部 `vectorScore: 0` | ⚠️ 已静默降级 |
+| `debug.embeddingBootstrap.degradedTo` 存在 | ❌ 明确降级，读 `reason` |
 
 ## 3. 方案：本地 GGUF 为主
 
@@ -214,13 +237,18 @@ Recall store: scripts=25 latin, 26 cjk, 182 mixed
 
 ## 7. 监控点
 
+- ⚠️ **首要：断言 `provider` 实际值为 `local` 且 `vectorScore` 非零** ——
+  `local` 同样会静默降级为 keyword-only（§2.1），配置对 ≠ 在工作。
+  实测@2026-08-23：`provider: local`，`vectorScore` 0.742/0.629/0.642，正常
 - ⚠️ OpenClaw 升级后确认 `memory.search` 字段语义未变（尤其 fail-closed 规则）
 - ⚠️ 若换 embedding 模型，必须 `memory index --force`，否则向量检索静默暂停
 - ⚠️ 定期抽查中文召回质量；若确认不足，才评估云端方案
 - ⚠️ 插件占用约 1.3 GB + 模型 313 MB（若保留两个文件名副本则 626 MB）
 - ⚠️ **模型文件名不可改** —— 必须是 `hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf`，
-  否则插件找不到会尝试联网下载并挂起
+  否则插件找不到会尝试联网下载并挂起（**且会静默降级**，见 §2.1）
 - ⚠️ **不要设 `local.modelPath` 绝对路径** —— 会造成索引身份与 gateway 永久不匹配
+  （⚠️ 注：**官方 `memory-builtin.md:44-57` 的示例恰恰是显式设 `modelPath`** ——
+  本禁令是**本机网络环境特定例外**（HF 不可达、预置模型），不是通用规则）
 - ⚠️ 重建索引前先确认无残留 `*.reindex-lock.sqlite`（进程被 kill 会留下陈旧锁）
 
 ## 8. 相关
