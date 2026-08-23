@@ -80,7 +80,7 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 <!-- kb_index:auto:start -->
 
 > 以下内容由 `scripts/kb_index.py --emit-index` 自动生成，请勿手工编辑。
-> 来源：20 篇 Markdown（ADR-003 §4.3 — Markdown 是唯一来源）。
+> 来源：21 篇 Markdown（ADR-003 §4.3 — Markdown 是唯一来源）。
 
 ### 全部条目
 
@@ -95,6 +95,7 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 | [ADR-202608-007](./by-category/project-experience/adr/ADR-202608-007-config-management.md) | L2 配置管理组件设计决策 — 治理封装而非重新实现 | L1,L2 | manage | accepted |
 | [ADR-202608-008](./by-category/project-experience/adr/ADR-202608-008-tool-policy-governance.md) | L2 工具策略治理 — 「允许」与「可用」分离审计 | L1,L2 | manage | accepted |
 | [ADR-202608-009](./by-category/project-experience/adr/ADR-202608-009-memory-embedding-provider.md) | L2 记忆语义检索 — 本地 GGUF embedding 为主 provider | L1,L2 | design | accepted |
+| [ADR-202608-010](./by-category/project-experience/adr/ADR-202608-010-knowledge-base-tooling.md) | L2 知识库工具链组件 — Markdown 解析/索引/三维查询/schema 治理 | L2 | develop | accepted |
 | [EXP-20260821-001](./by-category/project-experience/correct/EXP-20260821-001-tavily-tools-also-allow.md) | Tavily plugin 显式工具通过 tools.alsoAllow 解锁（绕过 tools.profile=coding 的 deny） | L1,L2 | develop | active |
 | [EXP-20260821-002](./by-category/project-experience/correct/EXP-20260821-002-github-file-credential-helper.md) | GitHub token 用 file-based credential helper 配置（避免明文入 git config） | L2 | develop | active |
 | [EXP-20260821-003](./by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md) | 跨模型会话溢出死锁 — 用 compaction.model 委托大 ctx 模型解压 | L1 | manage | active |
@@ -106,14 +107,14 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 
 ### 标签云
 
-`openclaw`(5) · `knowledge-base`(3) · `channel`(3) · `migration`(2) · `observability`(2) · `cross-cutting`(2) · `credentials`(2) · `security`(2) · `secretref`(2) · `governance`(2) · `plugin`(2) · `context-window`(2) · `cron`(2) · `delivery`(2) · `architecture`(1) · `layering`(1) · `foundation`(1) · `taxonomy`(1) · `organization`(1) · `self-hosted`(1) · `strategy`(1) · `logging`(1) · `tracing`(1) · `monitoring`(1) · `secrets`(1) · `persistence`(1) · `sqlite`(1) · `repository`(1) · `database`(1) · `config`(1) · `snapshot`(1) · `drift-detection`(1) · `secret-redaction`(1) · `tools`(1) · `policy`(1) · `least-privilege`(1) · `silent-degradation`(1) · `memory-search`(1) · `memory`(1) · `embedding`(1) · `semantic-search`(1) · `local-model`(1) · `privacy`(1) · `fail-closed`(1) · `tavily`(1) · `tools-profile`(1) · `web-search`(1) · `git`(1) · `github`(1) · `compaction`(1) · `model-switch`(1) · `ark-code-latest`(1) · `longcat`(1) · `ark`(1) · `volcengine`(1) · `glm`(1) · `minimax`(1) · `probe`(1) · `empirical`(1) · `automations`(1) · `wecom`(1) · `proactive-messaging`(1) · `platform-limit`(1) · `compatibility`(1) · `peer-dependency`(1) · `weixin`(1) · `third-party`(1) · `adr-003`(1) · `tooling`(1) · `evaluation`(1) · `markdown`(1) · `yagni`(1)
+`openclaw`(5) · `knowledge-base`(4) · `governance`(3) · `channel`(3) · `migration`(2) · `observability`(2) · `cross-cutting`(2) · `credentials`(2) · `security`(2) · `secretref`(2) · `tooling`(2) · `markdown`(2) · `plugin`(2) · `context-window`(2) · `cron`(2) · `delivery`(2) · `architecture`(1) · `layering`(1) · `foundation`(1) · `taxonomy`(1) · `organization`(1) · `self-hosted`(1) · `strategy`(1) · `logging`(1) · `tracing`(1) · `monitoring`(1) · `secrets`(1) · `persistence`(1) · `sqlite`(1) · `repository`(1) · `database`(1) · `config`(1) · `snapshot`(1) · `drift-detection`(1) · `secret-redaction`(1) · `tools`(1) · `policy`(1) · `least-privilege`(1) · `silent-degradation`(1) · `memory-search`(1) · `memory`(1) · `embedding`(1) · `semantic-search`(1) · `local-model`(1) · `privacy`(1) · `fail-closed`(1) · `indexing`(1) · `tavily`(1) · `tools-profile`(1) · `web-search`(1) · `git`(1) · `github`(1) · `compaction`(1) · `model-switch`(1) · `ark-code-latest`(1) · `longcat`(1) · `ark`(1) · `volcengine`(1) · `glm`(1) · `minimax`(1) · `probe`(1) · `empirical`(1) · `automations`(1) · `wecom`(1) · `proactive-messaging`(1) · `platform-limit`(1) · `compatibility`(1) · `peer-dependency`(1) · `weixin`(1) · `third-party`(1) · `adr-003`(1) · `evaluation`(1) · `yagni`(1)
 
 ### 三维分布 (layer × stage)
 
 | layer | design | develop | manage |
 |---|---|---|---|
 | L1 | 5 | 1 | 7 |
-| L2 | 8 | 2 | 5 |
+| L2 | 8 | 3 | 5 |
 | L3 | 4 | 0 | 0 |
 | L4 | 3 | 0 | 0 |
 

@@ -12,11 +12,11 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.6 (2026-08-22 记忆语义检索 — 本地 GGUF embedding) |
+| 文档版本 | 0.7 (2026-08-23 建设路径 review — 文档与实际对齐 + 阶段术语统一) |
 | 文档状态 | active |
-| 决策状态 | 4 层架构已锁定（待 ADR-001 落档） |
+| 决策状态 | 4 层架构已锁定（ADR-001 accepted） |
 | 配套文档 | `../knowledge-base/README.md` |
-| 待办 | ADR-001（4 层架构决策记录） |
+| 待办 | 无（L3 启动待 Rex 拍板，见 §6.2）|
 
 ---
 
@@ -133,17 +133,32 @@ L1 → 任何上层         (反向依赖，禁止)
 | 组件类 | 说明 | 状态 |
 |---|---|---|
 | **配置管理** | profile、config schema、env 注入、SecretRef 包装；**变更治理（快照/审计/漂移检测）** | 已建设 (ADR-007) |
-| **可观测性适配** | logging、metrics、tracing | 预留位 (待建设) |
-| **持久化适配** | memory、文件、KV、未来 SQL/NoSQL | 部分复用 + 预留位 |
+| **可观测性适配** | logging、metrics、tracing | 已建设 (ADR-004) |
+| **持久化适配** | memory、文件、KV、未来 SQL/NoSQL | 已建设 (ADR-006) |
 | **工具/技能封装** | domain-specific skills、L1 工具的二次封装 | 复用 + 自建 (Tavily) |
 | **调度/任务编排** | cron、agent turn、isolated run、heartbeat | 复用 L1 |
-| **知识库能力** | 自建系统的演进目标 | 轻量方案 (Markdown + frontmatter) |
-| **凭据管理** | 集中式 secrets 存储、SecretRef 解析 | 已建设 (Tavily key 案例) |
+| **知识库能力** | Markdown 解析/索引/三维查询/交叉引用/schema 治理 | 已建设 (ADR-010，工具链层) |
+| **凭据管理** | 集中式 secrets 存储、SecretRef 解析 | 已建设 (ADR-005) |
 | **工具策略** | `tools.profile` + `alsoAllow` 治理；**「允许」vs「可用」分离审计** | 已建设 (ADR-008) |
 | **上下文管理** | auto-compaction + session pruning + contextWindow 校准 | 已建设 (EXP-20260821-003) |
 | **记忆语义检索** | 本地 GGUF embedding（零成本/零外发）+ 向量索引 | 已建设 (ADR-009) |
 
-**已建设组件清单**（截至 2026-08-21）：
+> **状态取值口径**：`已建设` 要求 **ADR + DESIGN.md + 实现** 三件齐备（见下方四件套清单）。
+> `复用 L1` 表示不自建，直接用 L1 能力。若仅有实现而缺 ADR/DESIGN，**不得标「已建设」**。
+
+**已建设组件四件套清单**（截至 2026-08-23）：
+
+| 组件 | ADR | DESIGN.md | 实现 | 验证方式 |
+|---|---|---|---|---|
+| 可观测性 | 004 | `components/observability/` | `scripts/observability/agent_observer.py` | `--daily --jsonl` 实跑 |
+| 凭据管理 | 005 | `components/credentials/` | `scripts/credentials.sh` | `scan_secrets.sh` |
+| 持久化 | 006 | `components/persistence/` | `persistence/` (connection/repository/migration/schemas) | 迁移幂等测试 |
+| 配置管理 | 007 | `components/config/` | `scripts/config.sh` | `config.sh diff` 漂移检测 |
+| 工具策略 | 008 | `components/tool-policy/` | `scripts/tool_policy_audit.sh` | 六项审计 |
+| 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态（`memory.search.provider=local`）| 向量召回实测 |
+| 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py` | pre-commit 阻塞实测 |
+
+**已建设组件清单**（截至 2026-08-23）：
 
 1. **Tavily 集成** (2026-08-21)
    - 组件 ID: `plugins.entries.tavily`
@@ -205,10 +220,25 @@ L1 → 任何上层         (反向依赖，禁止)
    - ADR: `../knowledge-base/by-category/project-experience/adr/ADR-202608-008-tool-policy-governance.md`
    - 设计: `components/tool-policy/DESIGN.md`
 
-**L2 组件建设状态**：核心组件已全部完成（可观测性 · 凭据 · 持久化 · 上下文 · 配置 · 工具策略）
+7. **知识库能力** (2026-08-23)
+   - 组件 ID: `scripts/kb_index.py`
+   - 定位: **工具链层**（非服务层）。Markdown 是永久单一来源，本组件只读并产出可重建的索引/视图
+   - 能力: `--validate`（schema 校验）/ `--stats`（三维分布）/ `--query`（layer×stage×category 交叉）
+     / `--tags`（聚合）/ `--xref`（引用图 + 孤岛/断链）/ `--emit-index`（幂等生成）/ `--json`
+   - 契约: **不反向写内容文件**（唯一例外：INDEX.md 标记区，纯派生视图）
+   - 治理: pre-commit 第 3 段 — 阻断性错误（非法 layer/stage/category、重复 ID、缺 title）拒绝提交
+   - 首跑抳到 34 处问题，其中 **11 篇缺 `stage`** 属静默失败（文档可读但三维查询静默漏掉）
+     — 与 ADR-008 三态模型同类，也是本组件存在的核心理由
+   - ADR: `../knowledge-base/by-category/project-experience/adr/ADR-202608-010-knowledge-base-tooling.md`
+   - 设计: `components/knowledge-base/DESIGN.md`
+   - 评估: `../knowledge-base/by-category/project-experience/correct/EXP-20260823-008-kb-phase3-evaluation.md`
+
+**L2 组件建设状态**：7 个组件已建成（可观测 · 凭据 · 持久化 · 上下文 · 配置 · 工具策略 · 知识库能力）
 
 **预留位**：
-- 知识库能力自建系统（属阶段 3，见 ADR-003 演进路径）
+- 知识库**自建系统**（服务形态：DB + Web 渲染）— 与上方「知识库能力」组件区分：
+  当前已建的是**工具链层**（CLI + Markdown 为源），自建系统是**服务层**。
+  启动条件见 ADR-003 §4.2 七触发条件（2026-08-23 实测 **0/7**，暂缓 — 见 EXP-20260823-008）
 
 **演进方式**：
 - 优先复用 L1 能力
@@ -247,9 +277,9 @@ L1 → 任何上层         (反向依赖，禁止)
 
 #### 3.3.2 通用业务层状态
 
-**当前**：未启动（阶段一）
+**当前**：未启动（§6.1 阶段一已完成，但此层的入口条件停在 §6.2 阶段二）
 
-**待 L2 最小可用后启动**（阶段二）
+**待 Rex 定夺是否启动**（§6.2 阶段二入口条件已满足）
 
 **预留位**（待启动时填充）：
 - L3 第一个维度的选型理由
@@ -293,7 +323,7 @@ L4 专有业务
 | **流程扩展** | 继承 L3 流程，插入专有步骤 | `checkout` L3 + `risk_assessment` L4 |
 | **接口扩展** | L4 暴露专有 API，不影响 L3 | `/api/proprietary/*` |
 
-**当前**：未启动（阶段一）
+**当前**：未启动（§6.1 阶段一已完成，此层依赖 L3 启动）
 
 **预留位**（待启动时填充）：
 - L4 第一个项目的选型
@@ -388,29 +418,54 @@ L4 专有业务
 
 ## 6. 演进路线
 
-### 6.1 阶段一：基座搭建（**当前**）
+### 6.1 阶段一：基座搭建（✅ 已完成，2026-08-21~23）
 
 | 项 | 状态 |
 |---|---|
-| L1 + L2 最小可用（基于 OpenClaw workspace） | ✅ 进行中 |
+| L1 + L2 最小可用 | ✅ 已完成 |
 | L3 / L4 暂未启动 | ⏳ |
-| 知识库采用 **Markdown + 元数据** 轻量方案 | ✅ 已建设 |
-| 工作区基础文件（AGENTS / IDENTITY / SOUL / USER / MEMORY） | ✅ |
-| 第一个 L2 组件（Tavily 集成） | ✅ |
+| 知识库轻量方案（Markdown + 元数据）| ✅ 已建设 |
+| 工作区基础文件（AGENTS / IDENTITY / SOUL / USER / MEMORY）| ✅ |
+| 7 个 L2 组件建成 | ✅ 见 §3.2 四件套清单 |
+| 9 份 ADR accepted | ✅ |
 
-**目标**：跑通分层，验证契约
+**目标**：跑通分层，验证契约 ✅
 
-**当前进度**：
+**完成条件核对**：
 - ✅ 系统架构文档（本文件）
-- ✅ 知识库骨架（三维模型）
+- ✅ 知识库骨架（三维模型 + ADR-002）
 - ✅ 工作区配置（USER/IDENTITY/SOUL）
 - ✅ 第一个 L2 组件（Tavily）
-- ⏳ 第一份 ADR（4 层架构决策）
+- ✅ ADR-001/002/003（4 层架构 + 三维模型 + 演进路径）
+- ✅ 上下文管理（auto-compaction + contextWindow 实测）
+- ✅ 配置管理（快照 + 四步流程 + 漂移检测）
+- ✅ 工具策略治理（三态模型 + 六项审计）
+- ✅ 记忆语义检索（本地 GGUF embedding）
+- ✅ 知识库工具链（`kb_index.py`：schema 校验/三维查询/交叉引用/INDEX 自动生成）
 
-**下一里程碑**（阶段一内）：
-1. ADR-001: 4 层架构决策
-2. ADR-002: 知识库三维模型
-3. ADR-003: 知识库承载形式（Markdown → 自建系统的路径）
+**入口条件完成**：
+- 阶段一所有 ADR 已 accepted（见 §7）
+- L2 最小可用稳固（7 组件，均有 ADR + DESIGN.md + 实现 + 验证）
+
+### 6.2 阶段二：业务能力沉淀（**已满足入口条件，待 Rex 定夺**）
+
+| 项 | 状态 |
+|---|---|
+| L3 按业务维度逐步建设 | ⏳ 待定夺 |
+| L4 开始引入 | ⏳ 待定夺 |
+| 知识库继续以文件形式承载，增加工具链 | ✅ 已交付（`kb_index.py`）|
+
+**目标**：验证 L3 维度划分、L4 继承机制
+
+**入口条件**（§6.1 完成后）：
+- ✅ 阶段一 ADR 全部完成（9 份 accepted）
+- ✅ L2 最小可用稳固（7 组件，含四件套）
+
+**入口条件已满足**。阶段二未启动的原因是 Rex 要求暂缓 L3 建设（2026-08-23）。
+
+**待 Rex 拍板**：
+- L3 第一个业务维度选什么？
+- 维度划分原则见 §3.3.1
 
 ### 6.2 阶段二：业务能力沉淀
 
@@ -424,18 +479,27 @@ L4 专有业务
 
 **入口条件**：阶段一 ADR 全部完成、L2 最小可用稳固
 
-### 6.3 阶段三：自建知识库系统
+### 6.3 阶段三：自建知识库系统（**暂缓** — 触发条件 0/7，见 EXP-20260823-008）
 
 | 项 | 状态 |
 |---|---|
-| 在 L2 / L3 中实现**自建知识库系统** | ⏳ |
-| 支持人机协作阅读、跨系统移植 | ⏳ |
-| 文档/经验/ADR 全部迁入自建系统 | ⏳ |
-| 文件形式的知识库作为**导出格式**保留 | ⏳（策略已定）|
+| L2 工具链层（`kb_index.py`） | ✅ 已交付（见 §3.2 组件清单）|
+| L2 服务层（DB + Web 渲染） | ⏳ 暂缓 |
+| 人机协作阅读、跨系统移植 | ⏳ 暂缓 |
+| 文档/经验/ADR 全部迁入自建系统 | ⏳ 暂缓 |
+| 文件形式保留为**导出格式** | ✅ 策略已定 |
 
 **目标**：知识库系统本身成为 L2/L3 能力，**自指**（用知识库方法管理知识库系统的知识）
 
 **入口条件**：阶段二业务沉淀稳定、知识库有足够内容驱动自建系统的需求
+
+**启动触发条件**（ADR-003 §4.2，**需 ≥2 个达成**）：
+- 2026-08-23 实测：**0/7**（文档 23 篇、团队 2 人、检索 1 步、孤岛 1、L3/L4 内容空）
+- 下一评估：ADR-003 阶段 1 验收（2026-09-21 或内容质变时）
+- 完整评估：`../knowledge-base/by-category/project-experience/correct/EXP-20260823-008-kb-phase3-evaluation.md`
+
+> **注意**：阶段三（自建系统）与 §3.2 已建成的「知识库能力」组件（`kb_index.py` 工具链）是**不同物**。
+> 工具链是自建系统的解析内核，先建工具链 = 降低自建时的开发成本，不是提前启动阶段三。
 
 ### 6.4 阶段四：企业级治理
 
@@ -455,7 +519,7 @@ L4 专有业务
 
 本系统的所有重大架构决策均通过 ADR 沉淀。
 
-**待办 ADR 列表**（按优先级）：
+**ADR 清单**（按优先级）：
 
 | # | 主题 | 优先级 | 状态 |
 |---|---|---|---|
@@ -524,6 +588,8 @@ L4 专有业务
 | 2026-08-21 | 0.3 | 新增 L2 上下文管理组件：auto-compaction 三层防线 + contextWindow 校准 + session pruning |
 | 2026-08-22 | 0.4 | 新增 L2 配置管理组件（ADR-007）：脱敏快照 + 四步变更流程 + 实测探边界 + 漂移检测；contextWindow 改为实测值（ark-code-latest 224k）|
 | 2026-08-22 | 0.5 | 新增 L2 工具策略治理（ADR-008）：三态治理模型 + 六项审计；§5.4 回答原预留问题；**L2 核心组件建设完成** |
+| 2026-08-22 | 0.6 | 新增 L2 记忆语义检索组件（ADR-009）：本地 GGUF embedding 为主 provider |
+| 2026-08-23 | 0.7 | 建设路径 review — 文档与实际对齐；§3.2 组件表修正（7 组件全部标「已建设」+ 收集四件套清单）；§6 阶段标记完成/入口条件/暂缓状态；§0 元信息清掉过期待办；ADR-010 accepted |
 
 ---
 
