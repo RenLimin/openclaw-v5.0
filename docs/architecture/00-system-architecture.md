@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 1.1 (2026-08-24 — L1 能力盘点补全（原预留位问号已答）+ L2 组件计数口径校准 + 阶段 3 数据更新) |
+| 文档版本 | 1.2 (2026-08-24 — 沙箱隔离方案 B 落地：colima+docker+non-main，实测 uid=1000/写拦截/断网/WeCom 正常) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（ADR-001 accepted） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -132,7 +132,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | 能力 | 原因 |
 |---|---|
 | 20+ IM 通道（Telegram/Slack/Discord/Matrix/…） | 无业务需求；仅 WeCom 满足团队协作。**非缺口**，按需启用即可 |
-| **沙箱隔离** `agents.defaults.sandbox.mode` | 官方**默认 `off`**（opt-in）。三个 backend 全不可用：docker **未安装**（无 docker/colima/orbstack）、ssh **无 `~/.ssh/config` 远程机**、openshell **插件未启用**。⚠️ 2026-08-24 纠正：此前写「配置项不存在于 schema」是**查错了键**（查的 `tools.sandbox`，真键是 `agents.defaults.sandbox.*`）—— 配置项存在，缺的是 backend 运行时 |
+| **沙箱隔离** `agents.defaults.sandbox.mode` | ✅ **已启用** `non-main`（2026-08-24 方案 B 落地）。colima 0.10.3 + docker 29.7.2 + `openclaw-sandbox:bookworm-slim` 335MB。官方加固基线：`workspaceAccess=ro` / `readOnlyRoot` / `network:none` / `capDrop:ALL`。已实测：子会话 `uid=1000(sandbox)` + 容器 hostname + Linux 根 + 写拦截 + 断网；WeCom 会话正常（`alsoAllow` 补了 memory/web/messaging） |
 | `remote.batch` embedding API | 仅支持 gemini/openai/voyage；本系统用本地 llama-cpp |
 | MCP / 1Password 等 plugin | 无需求；`plugins.allow` 白名单外 |
 

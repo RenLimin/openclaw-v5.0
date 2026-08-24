@@ -36,6 +36,25 @@
       "contextPruning": {
         "mode": "cache-ttl",
         "ttl": "5m"
+      },
+      "sandbox": {
+        "mode": "non-main",
+        "scope": "agent",
+        "backend": "docker",
+        "workspaceAccess": "ro",
+        "docker": {
+          "image": "openclaw-sandbox:bookworm-slim",
+          "readOnlyRoot": true,
+          "tmpfs": [
+            "/tmp",
+            "/var/tmp",
+            "/run"
+          ],
+          "network": "none",
+          "capDrop": [
+            "ALL"
+          ]
+        }
       }
     },
     "entries": {
@@ -48,7 +67,7 @@
         "name": "main",
         "workspace": "/Users/bangcle/.openclaw/workspace",
         "model": {
-          "primary": "coding-plan/ark-code-latest",
+          "primary": "longcat/LongCat-2.0",
           "fallbacks": [
             "coding-plan/deepseek-v4-flash"
           ]
@@ -340,7 +359,18 @@
     "alsoAllow": [
       "tavily_search",
       "tavily_extract"
-    ]
+    ],
+    "sandbox": {
+      "tools": {
+        "alsoAllow": [
+          "group:memory",
+          "group:web",
+          "group:messaging",
+          "tavily_search",
+          "tavily_extract"
+        ]
+      }
+    }
   },
   "wizard": {
     "lastRunAt": "2026-08-21T02:25:08.646Z",
