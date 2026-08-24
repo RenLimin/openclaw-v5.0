@@ -115,6 +115,50 @@
 
 ---
 
+## 10. 模型调度 (Model Scheduling)
+
+<!-- observed: 2026-08-24 | status: active -->
+
+- Always 在回复末尾附加模型信息(格式见 SOUL.md §模型信息透明)
+- Prefer 使用 model-scheduling 路由引擎选择最优模型(而非固定主模型)
+- Always 当 Rex 通过 `/model` 切换模型后,下一回复末尾显示新模型信息
+
+### 10.1 可用模型入口
+
+通过 `/model` 命令或 `sessions_send` 切换到 model-scheduling 专用 agent:
+
+| Agent | 适用任务 | 主模型 |
+|---|---|---|
+| `ms-coding` | 编码/调试/重构 | ark-code-latest |
+| `ms-research` | 搜索/研究/分析 | doubao-seed-2.1-turbo |
+| `ms-reasoning` | 推理/架构/设计 | deepseek-v4-flash |
+| `ms-chat` | 闲聊/日常 | doubao-seed-2.0-lite |
+
+### 10.2 自动调度(已启用)
+
+| 任务 | 频率 | 说明 |
+|---|---|---|
+| 模型调度优化 | 每周 01:00 | 健康探测 + 用量获取 + 路由优化 |
+| 会话智能路由 | 每 4h | 分析任务类型,建议最优模型 |
+
+### 10.3 手动调用
+
+```bash
+# 获取推荐模型
+python3 model-scheduling/scripts/router.py "任务描述"
+
+# 模型同步
+python3 model-scheduling/scripts/sync_models.py
+
+# 健康探测
+python3 model-scheduling/scripts/health_check.py
+
+# 用量获取
+python3 model-scheduling/scripts/fetch_usage.py
+```
+
+---
+
 ## 相关
 
 - 灵魂（AI 自己是谁）：`SOUL.md`
