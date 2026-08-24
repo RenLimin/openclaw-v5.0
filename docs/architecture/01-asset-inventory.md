@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-24 22:01 UTC+08:00
+最后生成：2026-08-24 22:13 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -78,6 +78,10 @@
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
 | `main` | 🦞 Jerry | `longcat/LongCat-2.0` | `/Users/bangcle/.openclaw/workspace` | ✅ |
+| `ms-coding` | 🦞 Jerry | `coding-plan/ark-code-latest` | `/Users/bangcle/.openclaw/workspace` | — |
+| `ms-research` | 🦞 Jerry | `coding-plan/doubao-seed-2.1-turbo` | `/Users/bangcle/.openclaw/workspace` | — |
+| `ms-reasoning` | 🦞 Jerry | `coding-plan/deepseek-v4-flash` | `/Users/bangcle/.openclaw/workspace` | — |
+| `ms-chat` | 🦞 Jerry | `coding-plan/doubao-seed-2.0-lite` | `/Users/bangcle/.openclaw/workspace` | — |
 
 ## L2 — 工具策略资产
 
@@ -118,8 +122,8 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
+| 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 | 每日观测摘要 | ✅ | cron `0 9 * * *` | `isolated` |
@@ -174,8 +178,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `e2533c5` |
-| Commit 数 | 59 |
+| HEAD | `27ec73b` |
+| Commit 数 | 60 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

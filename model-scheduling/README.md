@@ -5,14 +5,39 @@
 ## 快速开始
 
 ```bash
-# 1. 一次性初始化(首次部署)
+# 1. 一次性初始化(首次部署) — 同步模型 + 获取用量 + 健康探测
 bash model-scheduling/setup.sh
 
-# 2. 查看推荐模型
+# 2. 注册会话 agent(一次性写入 openclaw.json)
+bash model-scheduling/setup_agents.sh
+
+# 3. 查看推荐模型
 python3 model-scheduling/scripts/router.py "你的任务描述"
 
-# 3. 指定任务类型
+# 4. 指定任务类型
 python3 model-scheduling/scripts/router.py --task-type coding --json
+```
+
+## 会话中调用
+
+### 方式 1:路由到专用 agent(推荐)
+
+初始化后,4 个专用 agent 已注册到 openclaw.json:
+
+| Agent | 适用任务 | 主模型 |
+|---|---|---|
+| `ms-coding` | 编码/调试/重构 | ark-code-latest |
+| `ms-research` | 搜索/研究/分析 | doubao-seed-2.1-turbo |
+| `ms-reasoning` | 推理/架构/设计 | deepseek-v4-flash |
+| `ms-chat` | 闲聊/日常 | doubao-seed-2.0-lite |
+
+通过 `sessions_send` 将任务路由到对应 agent,自动使用推荐的模型和 fallback chain。
+
+### 方式 2:运行时切换(不写配置)
+
+```bash
+# 切换到推荐模型
+openclaw sessions patch --session agent:main:main --model coding-plan/deepseek-v4-flash
 ```
 
 ## 调用方式
