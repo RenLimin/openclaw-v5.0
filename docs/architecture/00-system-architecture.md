@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 1.0 (2026-08-24 — compaction 同 provider + 上下文管理 2/3 层纠正 + 记忆检索健康监控 + 知识库六项子能力全备) |
+| 文档版本 | 1.1 (2026-08-24 — L1 能力盘点补全（原预留位问号已答）+ L2 组件计数口径校准 + 阶段 3 数据更新) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（ADR-001 accepted） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -113,9 +113,37 @@ L1 → 任何上层         (反向依赖，禁止)
 - 关注 release notes 中的 breaking changes
 - L2 适配层必须能优雅降级或快速响应
 
-**预留位**：
-- 哪些 L1 能力是本系统**未使用**的？为什么不用？→ 待 L2 建设时记录
-- 哪些 L1 能力**受限**（如 `tools.profile` deny）？→ 详见 §3.2 L2 配置小节
+**L1 能力使用盘点**（2026-08-24 实查，原「预留位」问号已回答）：
+
+| L1 能力 | 使用状态 | 说明 |
+|---|---|---|
+| Agent Runtime | ✅ 全量使用 | 主 agent + cron isolated run；`agents.entries.main.model` 显式钉模型隔离 sticky 污染 |
+| Skills | ✅ 使用 | 91/103 可见；**12 个「允许但非功能」**（缺 bin/env，见 AGENTS.md）；self-learning 已降为 propose |
+| Memory | ✅ 全量使用 + 自建监控 | MEMORY.md + memory/ + 语义检索（本地 GGUF）；ADR-009 决策 4 监控已落地 |
+| Cron | ✅ 使用 | 4 个 enabled；均显式钉 model + fallbacks |
+| Gateway | ⚠️ **部分使用** | 仅 **WeCom + webchat**；其余 20+ IM 通道 not installed |
+| Config | ✅ 全量使用 | + 自建变更治理（ADR-007 快照/审计/漂移） |
+| Tools | ⚠️ **受限使用** | `profile: coding` + `alsoAllow: [tavily_search, tavily_extract]` |
+| Plugins | ✅ 使用 | 4 个钉版本 + integrity 全绿；`plugins.allow` 严格白名单（enabled 57→5） |
+| Audit | ✅ 使用 | 工具调用审计 + prompt injection 检测（L1 内建） |
+
+**未使用的 L1 能力及原因**：
+
+| 能力 | 原因 |
+|---|---|
+| 20+ IM 通道（Telegram/Slack/Discord/Matrix/…） | 无业务需求；仅 WeCom 满足团队协作。**非缺口**，按需启用即可 |
+| `tools.sandbox` | **配置项不存在于当前 schema**；且 Docker/openshell/ssh backend 均不可用 ⇒ 设了会破坏 WeCom 会话（2026-08-23 暂缓决定） |
+| `remote.batch` embedding API | 仅支持 gemini/openai/voyage；本系统用本地 llama-cpp |
+| MCP / 1Password 等 plugin | 无需求；`plugins.allow` 白名单外 |
+
+**受限的 L1 能力**：
+
+| 限制 | 手段 | 实际效果 |
+|---|---|---|
+| 工具白名单 | `tools.profile: coding` + `alsoAllow` | 非 coding 类工具不可用；Tavily 经 alsoAllow 显式解锁（EXP-001） |
+| `tools.elevated` | — | ⚠️ **实为 no-op**：sandbox 默认 off ⇒ exec 本就在 host。真正生效的是 `tools.deny` + `toolsBySender`（2026-08-23 纠正） |
+| 插件加载 | `plugins.allow` 严格白名单 | enabled 57→5；**改后必须逐项验证依赖能力** |
+| 通道准入 | `dmPolicy: pairing`, `allowFrom: []` | WeCom 需配对才能私聊 |
 
 ### 3.2 L2 — 基础设施层 (Infrastructure Layer)
 
@@ -239,7 +267,15 @@ L1 → 任何上层         (反向依赖，禁止)
    - 设计: `components/knowledge-base/DESIGN.md`
    - 评估: `../knowledge-base/by-category/project-experience/correct/EXP-20260823-008-kb-phase3-evaluation.md`
 
-**L2 组件建设状态**：7 个组件已建成（可观测 · 凭据 · 持久化 · 上下文 · 配置 · 工具策略 · 知识库能力）
+**L2 组件建设状态**：**7 个组件四件套齐备**（ADR + DESIGN.md + 实现 + 验证）——
+可观测性 · 凭据管理 · 持久化 · 配置管理 · 工具策略 · 记忆语义检索 · 知识库能力。
+
+> ⚠️ **口径说明（2026-08-24 校准）**：上方能力表有 10 行，但其中
+> - **上下文管理** —— 配置态组件，**2/3 层实际生效**（session pruning 是死配置）；有 EXP 无独立 ADR/DESIGN ⇒ 按本文档口径**不计入「已建设」7 个**
+> - **工具/技能封装**（Tavily）—— 标「复用 + 自建」，有 EXP-001 无独立 ADR/DESIGN
+> - **调度/任务编排** —— 标「复用 L1」，不自建
+>
+> 三者均非缺口，只是不满足「ADR + DESIGN + 实现」三件齐备的**计数口径**。
 
 **预留位**：
 - 知识库**自建系统**（服务形态：DB + Web 渲染）— 与上方「知识库能力」组件区分：
@@ -498,7 +534,7 @@ L4 专有业务
 |---|---|
 | L2 工具链层（`kb_index.py`） | ✅ 已交付（见 §3.2 组件清单）|
 | L2 服务层（DB + Web 渲染） | ⏳ 暂缓 |
-| 人机协作阅读、跨系统移植 | ⏳ 暂缓 |
+| 人机协作阅读、跨系统移植 | ⏸️ **CLI 能力已就绪**（`--render` / `--export` 往返无损 24/24）；**服务形态**暂缓 |
 | 文档/经验/ADR 全部迁入自建系统 | ⏳ 暂缓 |
 | 文件形式保留为**导出格式** | ✅ 策略已定 |
 
@@ -507,7 +543,9 @@ L4 专有业务
 **入口条件**：阶段二业务沉淀稳定、知识库有足够内容驱动自建系统的需求
 
 **启动触发条件**（ADR-003 §4.2，**需 ≥2 个达成**）：
-- 2026-08-23 实测：**0/7**（文档 23 篇、团队 2 人、检索 1 步、孤岛 1、L3/L4 内容空）
+- 2026-08-24 复测：**0/7**（文档 **24 篇**、团队 2 人、检索 1 步、**孤岛 0 / 断链 0**、L3/L4 仅 design 有内容）
+- 2026-08-23 首测：0/7（文档 23 篇、孤岛 1）—— 见 EXP-20260823-008
+- ⏸️ **就绪度：能力已备 6/6**（§4.4 六项子能力全覆盖，含 `--render`/`--export`）**，需求未达 0/7**
 - 下一评估：ADR-003 阶段 1 验收（2026-09-21 或内容质变时）
 - 完整评估：`../knowledge-base/by-category/project-experience/correct/EXP-20260823-008-kb-phase3-evaluation.md`
 
@@ -640,6 +678,7 @@ L4 专有业务
 | 2026-08-23 | 0.8 | 全盘 review + 14 项修复：修正「各模型自治」与实配 `compaction.model` 委托的自相矛盾；补 §8.1.1 LaunchAgent 服务层；凭据明文 5→1 处（SecretRef）；`plugins.allow` 显式白名单；self-learning 降为 `propose` + `approvalPolicy: pending`；技能 25→23（macos 四合一）；EXP-009 沉淀 |
 | 2026-08-24 | 0.9 | compaction 跨 provider 反模式定案 → 改 `coding-plan/deepseek-v4-flash`（同主会话 provider）；上下文管理实际生效率由「已建设」纠正为 **2/3 层**（session pruning 死配置）；记忆检索健康监控落地（ADR-009 决策 4，行为探针 + 注入故障双向验证）；sticky 模型隔离 |
 | 2026-08-24 | 1.0 | 知识库六项子能力补齐（新增 `--render` 渲染 / `--export` 导出，往返无损实测 24/24 字节一致 + xref 双向对称）⇒ 阶段 3 **能力就绪 6/6**；七条件复测仍 0/7 ⇒ 维持暂缓，并在 ADR-003 §4.2.1 明确「触发条件非待办清单」；`.zshenv` 非法变量名 + 冗余明文 key 清理 |
+| 2026-08-24 | 1.1 | 回答 Rex「建设到哪一步」：L1 能力使用盘点补全（9 项逐一实查 + 未使用/受限原因表，原两个「预留位」问号已答）；L2 组件计数口径校准（能力表 10 行 vs 四件套 7 个的差异说明，原名单漏记忆语义检索、误列上下文管理）；§6.3 阶段 3 数据由 08-23 旧值更新为 08-24 复测值（24 篇/孤岛 0）|
 
 ---
 
