@@ -98,7 +98,7 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 | [ADR-202608-010](./by-category/project-experience/adr/ADR-202608-010-knowledge-base-tooling.md) | L2 知识库工具链组件 — Markdown 解析/索引/三维查询/schema 治理 | L2 | develop | accepted |
 | [EXP-20260821-001](./by-category/project-experience/correct/EXP-20260821-001-tavily-tools-also-allow.md) | Tavily plugin 显式工具通过 tools.alsoAllow 解锁（绕过 tools.profile=coding 的 deny） | L1,L2 | develop | active |
 | [EXP-20260821-002](./by-category/project-experience/correct/EXP-20260821-002-github-file-credential-helper.md) | GitHub token 用 file-based credential helper 配置（避免明文入 git config） | L2 | develop | active |
-| [EXP-20260821-003](./by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md) | 跨模型会话溢出死锁 — 用 compaction.model 委托大 ctx 模型解压 | L1 | manage | active |
+| [EXP-20260821-003](./by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md) | 跨模型会话溢出死锁 — 用 compaction.model 委托大 ctx 模型解压 | L1 | manage | superseded |
 | [EXP-20260822-004](./by-category/project-experience/correct/EXP-20260822-004-context-window-empirical-probe.md) | contextWindow 实测法 — 二分探边界定官方声明的真实上限 | L1 | manage | active |
 | [EXP-20260822-005](./by-category/project-experience/correct/EXP-20260822-005-cron-delivery-pollutes-status.md) | cron delivery 失败会污染 job 状态 — 无 channel 环境须设 delivery.mode=none | L1,L2 | manage | active |
 | [EXP-20260822-006](./by-category/project-experience/correct/EXP-20260822-006-wecom-aibot-cannot-push-proactively.md) | WeCom aibot 单聊只能应答不能主动推送（93006） | L1,L2 | manage | active |

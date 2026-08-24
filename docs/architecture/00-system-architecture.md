@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.8 (2026-08-23 全盘 review — ADR-009 论证纠错 + 凭据 SecretRef 化 + 插件/技能治理收紧) |
+| 文档版本 | 0.9 (2026-08-24 — compaction 改同 provider + 上下文管理实际生效率纠正 2/3 层 + 记忆检索健康监控落地) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（ADR-001 accepted） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -140,8 +140,8 @@ L1 → 任何上层         (反向依赖，禁止)
 | **知识库能力** | Markdown 解析/索引/三维查询/交叉引用/schema 治理 | 已建设 (ADR-010，工具链层) |
 | **凭据管理** | 集中式 secrets 存储、SecretRef 解析 | 已建设 (ADR-005) |
 | **工具策略** | `tools.profile` + `alsoAllow` 治理；**「允许」vs「可用」分离审计** | 已建设 (ADR-008) |
-| **上下文管理** | auto-compaction + session pruning + contextWindow 校准 | 已建设 (EXP-20260821-003) |
-| **记忆语义检索** | 本地 GGUF embedding（零成本/零外发）+ 向量索引 | 已建设 (ADR-009) |
+| **上下文管理** | auto-compaction + contextWindow 校准（session pruning ❌ 死配置） | 已建设，**2/3 层实际生效** (EXP-20260821-003, EXP-20260824-011) |
+| **记忆语义检索** | 本地 GGUF embedding（零成本/零外发）+ 向量索引 + **健康监控** | 已建设 (ADR-009 决策 4 已落地 2026-08-24) |
 
 > **状态取值口径**：`已建设` 要求 **ADR + DESIGN.md + 实现** 三件齐备（见下方四件套清单）。
 > `复用 L1` 表示不自建，直接用 L1 能力。若仅有实现而缺 ADR/DESIGN，**不得标「已建设」**。
@@ -155,7 +155,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | 持久化 | 006 | `components/persistence/` | `persistence/` (connection/repository/migration/schemas) | 迁移幂等测试 |
 | 配置管理 | 007 | `components/config/` | `scripts/config.sh` | `config.sh diff` 漂移检测 |
 | 工具策略 | 008 | `components/tool-policy/` | `scripts/tool_policy_audit.sh` | 六项审计 |
-| 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态（`memory.search.provider=local`）| 向量召回实测 |
+| 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态（`memory.search.provider=local`）+ `scripts/observability/memory_search_monitor.py` | 行为探针三态判据 + **注入故障双向验证** |
 | 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py` | pre-commit 阻塞实测 |
 
 **已建设组件清单**（截至 2026-08-23）：
@@ -180,7 +180,8 @@ L1 → 任何上层         (反向依赖，禁止)
 4. **上下文管理** (2026-08-21)
    - 组件 ID: `agents.defaults.compaction` + `agents.defaults.contextPruning`
    - 功能: 两层防线自动管理上下文溢出（原设计为三层，第 2 层已证实不生效 —— 见下）
-     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复；**摘要委托给独立大 ctx 模型**（`compaction.model` = `longcat/LongCat-2.0`），与会话模型解耦 — 避免“用已溢出的模型去压缩”的死锁（EXP-003）
+     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复；摘要委托给**同 provider 的大 ctx 模型**（`compaction.model` = `coding-plan/deepseek-v4-flash`，1049k）— 避免“用已溢出的模型去压缩”的死锁（EXP-003）
+       - ⚠️ **2026-08-24 修正**：原为 `longcat/LongCat-2.0`（跨 provider 委托）。实测证明**跨 provider 是反模式** —— LongCat 网络故障时 ARK 侧全程 200 正常，却因压缩模型死在另一个 provider 上，造成「会话活着但压缩死了」的分裂故障。且显式 `compaction.model` **不继承 fallback 链**（`concepts/compaction.md:101`）、`compaction.fallbacks` 又是非法字段 ⇒ 拿不到兜底。**压缩模型应与主会话同 provider**，共享同一条网络/鉴权命运
      - ~~第 2 层: Session pruning — cache-ttl 模式修剪旧 tool results~~ → **❌ 不生效**（provider 不在 cache-ttl 白名单，详见关键配置节）
      - 第 3 层: Mid-turn precheck — 多轮工具调用中途的 ctx 压力信号；**它不做内联压缩**，而是中止当前 prompt 提交并交给外层 recovery 路径
    - 关键配置:
@@ -447,7 +448,7 @@ L4 专有业务
 - ✅ 工作区配置（USER/IDENTITY/SOUL）
 - ✅ 第一个 L2 组件（Tavily）
 - ✅ ADR-001/002/003（4 层架构 + 三维模型 + 演进路径）
-- ✅ 上下文管理（auto-compaction + contextWindow 实测）
+- ⚠️ 上下文管理（auto-compaction + contextWindow 实测；**session pruning 层不生效**，详见 §L2 第 4 项）
 - ✅ 配置管理（快照 + 四步流程 + 漂移检测）
 - ✅ 工具策略治理（三态模型 + 六项审计）
 - ✅ 记忆语义检索（本地 GGUF embedding）
@@ -635,6 +636,7 @@ L4 专有业务
 | 2026-08-22 | 0.6 | 新增 L2 记忆语义检索组件（ADR-009）：本地 GGUF embedding 为主 provider |
 | 2026-08-23 | 0.7 | 建设路径 review — 文档与实际对齐；§3.2 组件表修正（7 组件全部标「已建设」+ 收集四件套清单）；§6 阶段标记完成/入口条件/暂缓状态；§0 元信息清掉过期待办；ADR-010 accepted |
 | 2026-08-23 | 0.8 | 全盘 review + 14 项修复：修正「各模型自治」与实配 `compaction.model` 委托的自相矛盾；补 §8.1.1 LaunchAgent 服务层；凭据明文 5→1 处（SecretRef）；`plugins.allow` 显式白名单；self-learning 降为 `propose` + `approvalPolicy: pending`；技能 25→23（macos 四合一）；EXP-009 沉淀 |
+| 2026-08-24 | 0.9 | compaction 跨 provider 反模式定案 → 改 `coding-plan/deepseek-v4-flash`（同主会话 provider）；上下文管理实际生效率由「已建设」纠正为 **2/3 层**（session pruning 死配置）；记忆检索健康监控落地（ADR-009 决策 4，行为探针 + 注入故障双向验证）；sticky 模型隔离 |
 
 ---
 

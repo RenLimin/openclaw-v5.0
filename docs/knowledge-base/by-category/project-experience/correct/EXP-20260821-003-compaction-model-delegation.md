@@ -8,12 +8,29 @@ stage: manage
 severity: high                 # 会导致会话完全不可用，需 /reset 才能恢复
 category: correct
 tags: [openclaw, compaction, context-window, model-switch, ark-code-latest, longcat]
-status: active
+status: superseded
 supersedes: null
-superseded_by: null
+superseded_by: EXP-20260824-011
 ---
 
 # [EXP-20260821-003] 跨模型切换导致的 compaction 死锁与修复
+
+> ⚠️ **2026-08-24 部分证伪 — 本卡的「委托」方案已被修正。**
+>
+> 核心洞察（**不要用已溢出的模型去压缩自己**）仍然成立，但本卡给出的具体做法
+> ——把 `compaction.model` 指向**另一个 provider** 的大 ctx 模型（`longcat/LongCat-2.0`）
+> ——**是反模式**，2026-08-24 实测造成更严重的故障：
+>
+> - LongCat 网络故障时 ARK 侧全程 200 正常，但压缩模型死在 LongCat 上
+>   ⇒ 「会话活着但压缩死了」的**分裂故障**，整会话卡死
+> - 显式 `compaction.model` **不继承 fallback 链**（`concepts/compaction.md:101`），
+>   而 `compaction.fallbacks` 是**非法字段**（schema 拒绝）⇒ 拿不到任何兜底
+>
+> **修正后的规则**：压缩模型应选**与主会话同 provider** 的大 ctx 模型
+> （当前 `coding-plan/deepseek-v4-flash`，1049k），共享同一条网络/鉴权命运。
+>
+> 详见 `EXP-20260824-011` 与 `memory/2026-08-24.md`。下文保留原始记录供审计。
+
 
 ## 1. 背景
 

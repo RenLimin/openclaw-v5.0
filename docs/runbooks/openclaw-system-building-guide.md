@@ -195,7 +195,10 @@ open http://127.0.0.1:18789
   agents: {
     defaults: {
       compaction: {
-        model: "longcat/LongCat-2.0",  // 委托给最大 ctx 模型
+        model: "coding-plan/deepseek-v4-flash",  // 大 ctx(1049k)，且**与主会话同 provider**
+        // ⚠️ 2026-08-24 教训：勿指向另一个 provider。显式 compaction.model 不继承 fallback
+        // 链（concepts/compaction.md:101），compaction.fallbacks 是非法字段 ⇒ 该 provider
+        // 一挂，压缩就没兜底，造成「会话活着但压缩死了」的分裂故障。
         mode: "safeguard",
         keepRecentTokens: 30000,       // cut-point 预算
         maxActiveTranscriptBytes: "20mb",
@@ -851,7 +854,7 @@ launchctl list | grep openclaw
     defaults: {
       model: {
         primary: "coding-plan/ark-code-latest",
-        fallbacks: ["longcat/LongCat-2.0"],
+        fallbacks: ["coding-plan/deepseek-v4-flash"],
       },
     },
   },
@@ -1017,8 +1020,8 @@ openssl enc -aes-256-cbc -d -pbkdf2 \
 | 配置项 | 值 |
 |---|---|
 | `agents.defaults.model.primary` | `coding-plan/ark-code-latest` |
-| `agents.defaults.model.fallbacks` | `["longcat/LongCat-2.0"]` |
-| `agents.defaults.compaction.model` | `longcat/LongCat-2.0` |
+| `agents.defaults.model.fallbacks` | `["coding-plan/deepseek-v4-flash"]` |
+| `agents.defaults.compaction.model` | `coding-plan/deepseek-v4-flash`（同主会话 provider）|
 | `agents.defaults.compaction.mode` | `safeguard` |
 | `agents.defaults.contextPruning.mode` | `cache-ttl`（⚠️ 不生效）|
 | `tools.profile` | `coding` |

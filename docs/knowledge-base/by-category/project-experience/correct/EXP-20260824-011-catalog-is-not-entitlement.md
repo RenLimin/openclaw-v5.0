@@ -9,6 +9,7 @@ stage: manage
 status: active
 tags: [evidence, methodology, entitlement, embedding, volcengine, memory-search, false-memory]
 related: [ADR-202608-009, EXP-20260823-009, EXP-20260823-010]
+supersedes: EXP-20260821-003
 ---
 
 # 平台目录 ≠ 当前套餐权限
@@ -156,3 +157,4 @@ HTTP 400 InvalidParameter: Embeddings API input limit exceeded: max 10, got 81
 - [ADR-202608-009](../adr/ADR-202608-009-memory-embedding-provider.md) — 本地 embedding provider 决策
 - [EXP-20260823-009](./EXP-20260823-009-review-selective-citation-and-drift-taxonomy.md) — 选择性引用
 - [EXP-20260823-010](./EXP-20260823-010-heuristics-instead-of-evidence.md) — 启发式代替证据
+- [EXP-20260821-003](./EXP-20260821-003-compaction-model-delegation.md) — **本卡取代其方案**：compaction 跨 provider 委托已定案为反模式，应改为同 provider
