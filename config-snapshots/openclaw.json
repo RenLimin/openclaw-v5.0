@@ -46,7 +46,13 @@
           "name": "main"
         },
         "name": "main",
-        "workspace": "/Users/bangcle/.openclaw/workspace"
+        "workspace": "/Users/bangcle/.openclaw/workspace",
+        "model": {
+          "primary": "coding-plan/ark-code-latest",
+          "fallbacks": [
+            "coding-plan/deepseek-v4-flash"
+          ]
+        }
       }
     }
   },
@@ -359,10 +365,10 @@
           }
         }
       },
-      "openclaw-weixin": {
-        "enabled": false
-      },
       "wecom-openclaw-plugin": {
+        "enabled": true
+      },
+      "llama-cpp": {
         "enabled": true
       }
     },
@@ -374,8 +380,7 @@
       "llama-cpp",
       "longcat",
       "tavily",
-      "wecom-openclaw-plugin",
-      "openclaw-weixin"
+      "wecom-openclaw-plugin"
     ]
   },
   "secrets": {
