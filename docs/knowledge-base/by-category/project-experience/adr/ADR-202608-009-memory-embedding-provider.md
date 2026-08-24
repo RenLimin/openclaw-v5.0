@@ -95,18 +95,63 @@ ADR-008 实测发现 `memory_search` 静默降级：
 `memory_search` 返回体里有 `provider` 字段与 `debug.embeddingBootstrap`。
 **断言 `provider === "local"` 且 `vectorScore` 非零**才算语义检索在工作。
 
+> ⚠️ **2026-08-24 重大修正：不可用 `memory status` 作为健康判据。**
+>
+> 当天实测：`openclaw memory status --index` 报告 **provider=local / 393 chunks /
+> Embeddings: ready / dims=768 全部正常**，但 `memory_search` 实际返回
+> `disabled:true` + `"index sources changed"`，**一条结果都不返回**。
+> → **status 与实际能力不一致，必须用行为探针（实查）而非读状态字段。**
+>
+> 另实测：`openclaw memory search --json` **只返回 `{"results": [...]}`**，
+> 不含 `provider`/`disabled`/`debug` 字段（仅 `memory_search` 工具侧有）。
+> 所以 CLI 侧只能靠**行为断言**判定。
+
+**落地实现**：`scripts/observability/memory_search_monitor.py`
+
+原理：发一条**与目标文档无关键词重叠**的中文查询（「如何避免把密钥泄露到开源代码仓库」），
+断言命中里存在 `textScore == 0` 且 `vectorScore >= 0.35` 的条目 ——
+这种命中**只能由向量召回产生**，关键词匹配做不到。
+
 ```bash
-# 快速断言（返回 provider 与首条 vectorScore）
-openclaw memory status --agent main | grep -E 'Provider|Vector dims'
+python3 scripts/observability/memory_search_monitor.py            # 人读
+python3 scripts/observability/memory_search_monitor.py --jsonl --quiet   # cron 用，正常时静默
 ```
 
-判据：
+三态判据（退出码）：
+
+| 退出码 | 状态 | 判定条件 | 含义 |
+|---|---|---|---|
+| 0 | `ok` | 存在 `textScore=0` 且 `vectorScore>=0.35` 的命中 | ✅ 纯向量召回正常 |
+| 1 | `degraded` | 有结果但全部 `vectorScore == 0` | ⚠️ 已静默降级为 keyword-only |
+| 2 | `down` | 零结果 / 命令失败 / `disabled` | ❌ 检索完全停摆 |
+| 3 | — | 脚本自身异常 | 监控不可用 |
+
+额外告警：`statusMisreportsHealth` —— 当探针失败而 `memory status` 仍报
+`embeddings: ready` 时置位，直接指向「索引身份不匹配」（= 2026-08-24 故障型态），
+修法 `openclaw memory index --force`。
+
+**调度**：cron 「记忆检索健康监控」（`07e25a0f`），每日 09:30 / 15:30 / 21:30 CST，
+`--quiet` 模式（正常静默，只在异常时报），日志写 `logs/observability/memory-search-*.jsonl`。
+
+**双向验证@2026-08-24**（不只测健康路径，必须证明能**捕获**故障）：
+
+| 场景 | 监控输出 | 退出码 |
+|---|---|---|
+| 正常（`provider: local`） | `OK` — 6 条命中全为纯向量，`USER.md#103` textScore=0 / vec=0.691 | 0 |
+| 注入故障（临时改 `provider: none`） | `DOWN` — 零命中，而 status 仍报 428 chunks | 2 |
+| 恢复 `provider: local`（索引身份已变） | `DOWN` + 🔴 status 报健康但实查失败 | 2 |
+| `memory index --force` 后 | `OK` 恢复 | 0 |
+
+测试后配置已恢复，经 `diff` 确认**与测试前字节级一致**。
+
+**旧判据（仍适用于工具侧 `memory_search` 返回体）**：
 
 | 观察 | 含义 |
 |---|---|
 | `provider: local` + `vectorScore > 0` | ✅ 语义检索正常 |
 | `provider: local` + 全部 `vectorScore: 0` | ⚠️ 已静默降级为 keyword-only |
 | `debug.embeddingBootstrap.degradedTo` 存在 | ❌ 明确降级，读 `reason` |
+| `disabled:true` + `index sources changed` | ❌ 全面停摆（比降级更严重） |
 
 **实测@2026-08-23**：查「密钥泄露到开源仓库」→ `provider: local`，
 `vectorScore` 0.742 / 0.629 / 0.642 均非零，`USER.md#L103` 的 `textScore: 0` —— 纯向量召回，正常。
