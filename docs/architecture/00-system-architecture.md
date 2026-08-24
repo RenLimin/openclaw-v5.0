@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 0.9 (2026-08-24 — compaction 改同 provider + 上下文管理实际生效率纠正 2/3 层 + 记忆检索健康监控落地) |
+| 文档版本 | 1.0 (2026-08-24 — compaction 同 provider + 上下文管理 2/3 层纠正 + 记忆检索健康监控 + 知识库六项子能力全备) |
 | 文档状态 | active |
 | 决策状态 | 4 层架构已锁定（ADR-001 accepted） |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -137,7 +137,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | **持久化适配** | memory、文件、KV、未来 SQL/NoSQL | 已建设 (ADR-006) |
 | **工具/技能封装** | domain-specific skills、L1 工具的二次封装 | 复用 + 自建 (Tavily) |
 | **调度/任务编排** | cron、agent turn、isolated run、heartbeat | 复用 L1 |
-| **知识库能力** | Markdown 解析/索引/三维查询/交叉引用/schema 治理 | 已建设 (ADR-010，工具链层) |
+| **知识库能力** | Markdown 解析/索引/三维查询/交叉引用/schema 治理/**渲染**/**导出** | 已建设 (ADR-010，工具链层)；**ADR-003 §4.4 六项子能力全备 (2026-08-24)** |
 | **凭据管理** | 集中式 secrets 存储、SecretRef 解析 | 已建设 (ADR-005) |
 | **工具策略** | `tools.profile` + `alsoAllow` 治理；**「允许」vs「可用」分离审计** | 已建设 (ADR-008) |
 | **上下文管理** | auto-compaction + contextWindow 校准（session pruning ❌ 死配置） | 已建设，**2/3 层实际生效** (EXP-20260821-003, EXP-20260824-011) |
@@ -156,7 +156,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | 配置管理 | 007 | `components/config/` | `scripts/config.sh` | `config.sh diff` 漂移检测 |
 | 工具策略 | 008 | `components/tool-policy/` | `scripts/tool_policy_audit.sh` | 六项审计 |
 | 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态（`memory.search.provider=local`）+ `scripts/observability/memory_search_monitor.py` | 行为探针三态判据 + **注入故障双向验证** |
-| 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py` | pre-commit 阻塞实测 |
+| 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py`（解析/索引/检索/关联/**渲染**/**导出** 六项全备）| pre-commit 阻塞实测 + **导出往返无损 24/24 字节一致** |
 
 **已建设组件清单**（截至 2026-08-23）：
 
@@ -244,7 +244,9 @@ L1 → 任何上层         (反向依赖，禁止)
 **预留位**：
 - 知识库**自建系统**（服务形态：DB + Web 渲染）— 与上方「知识库能力」组件区分：
   当前已建的是**工具链层**（CLI + Markdown 为源），自建系统是**服务层**。
-  启动条件见 ADR-003 §4.2 七触发条件（2026-08-23 实测 **0/7**，暂缓 — 见 EXP-20260823-008）
+  启动条件见 ADR-003 §4.2 七触发条件（2026-08-24 复测仍 **0/7**，暂缓 — 见 EXP-20260823-008 / EXP-20260824-012）
+  ⏸️ **就绪度：能力已备 6/6，需求未达 0/7** —— §4.4 六项子能力（含新增 `--render` / `--export`，导出往返无损实测 24/24 字节一致）已全部覆盖，触发条件达成即可启动，无能力缺口。
+  ⚠️ 七触发条件**不是待办清单**：它们度量需求强度，人为凑指标属 Goodhart's law，且只能靠灌水/虚报/改阈值实现（分别重犯 ADR-002 污染、EXP-010 造假、EXP-009 事后修判据）。
 
 **演进方式**：
 - 优先复用 L1 能力
@@ -637,6 +639,7 @@ L4 专有业务
 | 2026-08-23 | 0.7 | 建设路径 review — 文档与实际对齐；§3.2 组件表修正（7 组件全部标「已建设」+ 收集四件套清单）；§6 阶段标记完成/入口条件/暂缓状态；§0 元信息清掉过期待办；ADR-010 accepted |
 | 2026-08-23 | 0.8 | 全盘 review + 14 项修复：修正「各模型自治」与实配 `compaction.model` 委托的自相矛盾；补 §8.1.1 LaunchAgent 服务层；凭据明文 5→1 处（SecretRef）；`plugins.allow` 显式白名单；self-learning 降为 `propose` + `approvalPolicy: pending`；技能 25→23（macos 四合一）；EXP-009 沉淀 |
 | 2026-08-24 | 0.9 | compaction 跨 provider 反模式定案 → 改 `coding-plan/deepseek-v4-flash`（同主会话 provider）；上下文管理实际生效率由「已建设」纠正为 **2/3 层**（session pruning 死配置）；记忆检索健康监控落地（ADR-009 决策 4，行为探针 + 注入故障双向验证）；sticky 模型隔离 |
+| 2026-08-24 | 1.0 | 知识库六项子能力补齐（新增 `--render` 渲染 / `--export` 导出，往返无损实测 24/24 字节一致 + xref 双向对称）⇒ 阶段 3 **能力就绪 6/6**；七条件复测仍 0/7 ⇒ 维持暂缓，并在 ADR-003 §4.2.1 明确「触发条件非待办清单」；`.zshenv` 非法变量名 + 冗余明文 key 清理 |
 
 ---
 

@@ -80,7 +80,7 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 <!-- kb_index:auto:start -->
 
 > 以下内容由 `scripts/kb_index.py --emit-index` 自动生成，请勿手工编辑。
-> 来源：24 篇 Markdown（ADR-003 §4.3 — Markdown 是唯一来源）。
+> 来源：25 篇 Markdown（ADR-003 §4.3 — Markdown 是唯一来源）。
 
 ### 全部条目
 
@@ -107,17 +107,18 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 | [EXP-20260823-009](./by-category/project-experience/correct/EXP-20260823-009-review-selective-citation-and-drift-taxonomy.md) | 建设期全盘 review — 选择性引用官方文档导致 ADR 核心论证错误 | L1,L2 | manage | active |
 | [EXP-20260823-010](./by-category/project-experience/correct/EXP-20260823-010-heuristics-instead-of-evidence.md) | 用启发式代替证据 — 记录造假、dry-run 幻觉、局部检查三种同源错误 | L1,L2 | manage | active |
 | [EXP-20260824-011](./by-category/project-experience/correct/EXP-20260824-011-catalog-is-not-entitlement.md) | 平台目录 ≠ 当前套餐权限 — 邻近信息源代替权威源的第三次同源错误 | L1,L2 | manage | active |
+| [EXP-20260824-012](./by-category/project-experience/correct/EXP-20260824-012-kb-phase3-readiness.md) | 知识库阶段 3 就绪度 — 补齐六项子能力，但拒绝人为凑触发条件 | L2 | design | active |
 
 ### 标签云
 
-`openclaw`(5) · `knowledge-base`(4) · `secretref`(4) · `governance`(3) · `channel`(3) · `migration`(2) · `observability`(2) · `cross-cutting`(2) · `credentials`(2) · `security`(2) · `memory-search`(2) · `embedding`(2) · `tooling`(2) · `markdown`(2) · `plugin`(2) · `context-window`(2) · `volcengine`(2) · `cron`(2) · `delivery`(2) · `review`(2) · `evidence`(2) · `methodology`(2) · `architecture`(1) · `layering`(1) · `foundation`(1) · `taxonomy`(1) · `organization`(1) · `self-hosted`(1) · `strategy`(1) · `logging`(1) · `tracing`(1) · `monitoring`(1) · `secrets`(1) · `persistence`(1) · `sqlite`(1) · `repository`(1) · `database`(1) · `config`(1) · `snapshot`(1) · `drift-detection`(1) · `secret-redaction`(1) · `tools`(1) · `policy`(1) · `least-privilege`(1) · `silent-degradation`(1) · `memory`(1) · `semantic-search`(1) · `local-model`(1) · `privacy`(1) · `fail-closed`(1) · `indexing`(1) · `tavily`(1) · `tools-profile`(1) · `web-search`(1) · `git`(1) · `github`(1) · `compaction`(1) · `model-switch`(1) · `ark-code-latest`(1) · `longcat`(1) · `ark`(1) · `glm`(1) · `minimax`(1) · `probe`(1) · `empirical`(1) · `automations`(1) · `wecom`(1) · `proactive-messaging`(1) · `platform-limit`(1) · `compatibility`(1) · `peer-dependency`(1) · `weixin`(1) · `third-party`(1) · `adr-003`(1) · `evaluation`(1) · `yagni`(1) · `documentation-drift`(1) · `adr`(1) · `confirmation-bias`(1) · `plugins-allow`(1) · `self-learning`(1) · `verification`(1) · `dry-run`(1) · `false-positive`(1) · `entitlement`(1) · `false-memory`(1)
+`openclaw`(5) · `knowledge-base`(5) · `secretref`(4) · `governance`(3) · `channel`(3) · `migration`(2) · `observability`(2) · `cross-cutting`(2) · `credentials`(2) · `security`(2) · `memory-search`(2) · `embedding`(2) · `tooling`(2) · `markdown`(2) · `plugin`(2) · `context-window`(2) · `volcengine`(2) · `cron`(2) · `delivery`(2) · `adr-003`(2) · `review`(2) · `evidence`(2) · `methodology`(2) · `architecture`(1) · `layering`(1) · `foundation`(1) · `taxonomy`(1) · `organization`(1) · `self-hosted`(1) · `strategy`(1) · `logging`(1) · `tracing`(1) · `monitoring`(1) · `secrets`(1) · `persistence`(1) · `sqlite`(1) · `repository`(1) · `database`(1) · `config`(1) · `snapshot`(1) · `drift-detection`(1) · `secret-redaction`(1) · `tools`(1) · `policy`(1) · `least-privilege`(1) · `silent-degradation`(1) · `memory`(1) · `semantic-search`(1) · `local-model`(1) · `privacy`(1) · `fail-closed`(1) · `indexing`(1) · `tavily`(1) · `tools-profile`(1) · `web-search`(1) · `git`(1) · `github`(1) · `compaction`(1) · `model-switch`(1) · `ark-code-latest`(1) · `longcat`(1) · `ark`(1) · `glm`(1) · `minimax`(1) · `probe`(1) · `empirical`(1) · `automations`(1) · `wecom`(1) · `proactive-messaging`(1) · `platform-limit`(1) · `compatibility`(1) · `peer-dependency`(1) · `weixin`(1) · `third-party`(1) · `evaluation`(1) · `yagni`(1) · `documentation-drift`(1) · `adr`(1) · `confirmation-bias`(1) · `plugins-allow`(1) · `self-learning`(1) · `verification`(1) · `dry-run`(1) · `false-positive`(1) · `entitlement`(1) · `false-memory`(1) · `readiness`(1) · `export`(1) · `render`(1) · `portability`(1) · `goodhart`(1)
 
 ### 三维分布 (layer × stage)
 
 | layer | design | develop | manage |
 |---|---|---|---|
 | L1 | 5 | 1 | 10 |
-| L2 | 8 | 3 | 8 |
+| L2 | 9 | 3 | 8 |
 | L3 | 4 | 0 | 0 |
 | L4 | 3 | 0 | 0 |
 

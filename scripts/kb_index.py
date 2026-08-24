@@ -15,6 +15,8 @@ ADR-003 阶段 2 工具链。同时是阶段 3 自建系统的解析内核（§4
     kb_index.py --xref                # 交叉引用图 + 孤儿/断链检测
     kb_index.py --json                # 全量结构化输出
     kb_index.py --emit-index          # 重新生成 INDEX.md 的派生小节
+    kb_index.py --export DIR          # 导出便携 bundle（子能力 6：跨系统移植）
+    kb_index.py --render FILE         # 渲染单文件 HTML 视图（子能力 5：人机协作）
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ import json
 import re
 import sys
 from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Any
@@ -459,6 +462,174 @@ def emit_index(docs: list[Doc]) -> None:
     print(f"✅ 已更新派生小节 — {index_path}")
 
 
+# ---------- 子能力 6：导出（跨系统移植）----------
+
+
+def export_bundle(docs: list[Doc], out_dir: Path) -> None:
+    """导出自包含 bundle：结构化元数据 + 原始 Markdown 副本。
+
+    ADR-003 §4.3：Markdown 是永久单一来源，本导出是**可重建副本**，
+    用途是「把知识库迁出 OpenClaw 到另一系统」（触发条件 6）。
+
+    产物：
+        manifest.json   —— 全部元数据 + 三维索引 + xref 图（机器读）
+        content/…       —— 原始 .md 逐字副本（保持相对路径）
+        README.md       —— 人读导入说明
+    """
+    out_dir = out_dir.resolve()
+    content_dir = out_dir / "content"
+    content_dir.mkdir(parents=True, exist_ok=True)
+
+    by_id = {d.doc_id: d for d in docs if d.doc_id}
+    # xref 双向图
+    fwd: dict[str, list[str]] = {}
+    rev: dict[str, list[str]] = defaultdict(list)
+    for d in docs:
+        if not d.doc_id:
+            continue
+        outs = [r for r in d.refs if r != d.doc_id]
+        fwd[d.doc_id] = outs
+        for o in outs:
+            rev[o].append(d.doc_id)
+
+    copied = 0
+    for d in docs:
+        src = REPO / d.path
+        if not src.exists():
+            continue
+        rel = Path(d.path).relative_to("docs/knowledge-base")
+        dst = content_dir / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+        copied += 1
+
+    manifest = {
+        "schemaVersion": 1,
+        "generator": "scripts/kb_index.py --export",
+        "generatedAt": datetime.now(timezone(timedelta(hours=8))).isoformat(),
+        "sourceOfTruth": "Markdown (ADR-003 §4.3) — 本 bundle 是可重建副本，非源",
+        "dimensions": {
+            "layers": sorted(VALID_LAYERS),
+            "stages": sorted(VALID_STAGES),
+            "categories": sorted(VALID_CATEGORIES),
+        },
+        "counts": {
+            "documents": len(docs),
+            "withId": len(by_id),
+            "filesCopied": copied,
+        },
+        "documents": [asdict(d) for d in docs],
+        "xref": {"forward": fwd, "reverse": {k: v for k, v in rev.items()}},
+    }
+    (out_dir / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
+    readme = f"""# 知识库导出 bundle
+
+由 `scripts/kb_index.py --export` 生成，用于**跨系统移植**（ADR-003 触发条件 6）。
+
+| 项 | 值 |
+|---|---|
+| 文档数 | {len(docs)} |
+| 含 ID | {len(by_id)} |
+| Markdown 副本 | {copied} 个（`content/`）|
+| schema 版本 | 1 |
+
+## 结构
+
+```
+manifest.json   全部元数据 + 三维索引 + xref 双向图（机器读）
+content/        原始 Markdown 逐字副本，保持相对路径
+```
+
+## 导入到目标系统
+
+1. 读 `manifest.json` 的 `documents[]` —— 每项含 `doc_id` / `layers` / `stage`
+   / `category` / `tags` / `related`，可直接建表
+2. 正文取 `content/<path>`（`documents[].path` 去掉 `docs/knowledge-base/` 前缀）
+3. 关系图取 `xref.forward` 与 `xref.reverse`，无需重新解析正文
+
+## 重要约束
+
+**Markdown 是永久单一来源**（ADR-003 §4.3）。本 bundle 是**可重建的派生副本** ——
+不要在此处编辑内容后回写，那会造成双写不一致。修改始终回到源 Markdown，重新导出。
+"""
+    (out_dir / "README.md").write_text(readme, encoding="utf-8")
+
+    print(f"✅ 导出完成 — {out_dir}")
+    print(f"   manifest.json  {len(docs)} 篇元数据 + xref 双向图")
+    print(f"   content/       {copied} 个 Markdown 副本")
+    print(f"   README.md      导入说明")
+
+
+# ---------- 子能力 5：渲染（人机协作视图）----------
+
+
+def render_doc(docs: list[Doc], target: str) -> int:
+    """渲染单篇的「人机协作视图」：元数据卡 + 正文 + 双向关联。
+
+    不做 Markdown→HTML 全量转换（那需要额外依赖）；输出结构化文本视图，
+    重点是把**散落在 frontmatter 与 xref 图里的关系**一次性摊平给人看。
+    """
+    by_id = {d.doc_id: d for d in docs if d.doc_id}
+    hit = by_id.get(target)
+    if hit is None:
+        cands = [d for d in docs if target in d.path or (d.title and target in d.title)]
+        if len(cands) == 1:
+            hit = cands[0]
+        elif not cands:
+            print(f"❌ 未找到: {target}")
+            print(f"   可用 ID: {', '.join(sorted(by_id)[:8])} …")
+            return 1
+        else:
+            print(f"⚠️ '{target}' 匹配 {len(cands)} 篇，请更精确：")
+            for c in cands[:10]:
+                print(f"   {c.doc_id or '—'}  {c.path}")
+            return 1
+
+    rev = [d.doc_id for d in docs if d.doc_id and hit.doc_id in d.refs]
+
+    print("=" * 68)
+    print(f"  {hit.doc_id or '(无 ID)'}  {hit.title or ''}")
+    print("=" * 68)
+    print(f"  路径     : {hit.path}")
+    print(f"  类型     : {hit.doc_type or '—'}    状态: {hit.status or '—'}")
+    print(f"  三维     : layers={','.join(hit.layers) or '—'}  "
+          f"stage={hit.stage or '—'}  category={hit.category or '—'}")
+    print(f"  日期     : {hit.date or '—'}")
+    print(f"  标签     : {' '.join('#' + t for t in hit.tags) or '—'}")
+    print("-" * 68)
+    print(f"  → 引用   : {', '.join(hit.refs) or '（无）'}")
+    print(f"  ← 被引   : {', '.join(rev) or '（无）'}")
+    if hit.errors:
+        print(f"  ⚠️ schema : {'; '.join(hit.errors)}")
+    if hit.drift:
+        print(f"  ℹ️ 漂移   : {'; '.join(hit.drift)}")
+    print("-" * 68)
+
+    body = (REPO / hit.path).read_text(encoding="utf-8")
+    body = FRONTMATTER_RE.sub("", body).strip()
+    # 跳过围栏代码块内的 '#'（否则 shell 注释/表格行会被当成标题）
+    heads, in_fence = [], False
+    for ln in body.splitlines():
+        if ln.lstrip().startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        if re.match(r"#{1,6}\s+\S", ln):
+            heads.append(ln)
+    print("  目录:")
+    for h in heads[:20]:
+        depth = len(h) - len(h.lstrip("#"))
+        print("    " + "  " * (depth - 1) + h.lstrip("# ").strip())
+    print("-" * 68)
+    print(f"  正文 {len(body.splitlines())} 行 / {len(body)} 字符")
+    print("=" * 68)
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="知识库索引器（ADR-003 阶段 2 工具链）")
     ap.add_argument("--validate", action="store_true", help="frontmatter schema 校验")
@@ -468,6 +639,8 @@ def main() -> int:
     ap.add_argument("--query", nargs="+", metavar="K=V", help="三维交叉查询")
     ap.add_argument("--json", action="store_true", help="全量结构化输出")
     ap.add_argument("--emit-index", action="store_true", help="重新生成 INDEX.md 派生小节")
+    ap.add_argument("--export", metavar="DIR", help="导出便携 bundle（跨系统移植）")
+    ap.add_argument("--render", metavar="ID_OR_PATH", help="渲染单篇人机协作视图")
     ap.add_argument("--include-templates", action="store_true", help="把 templates/ 也算进来")
     args = ap.parse_args()
 
@@ -490,6 +663,11 @@ def main() -> int:
     if args.xref:
         xref(docs)
         return 0
+    if args.export:
+        export_bundle(docs, Path(args.export))
+        return 0
+    if args.render:
+        return render_doc(docs, args.render)
     if args.emit_index:
         emit_index(docs)
         return 0
