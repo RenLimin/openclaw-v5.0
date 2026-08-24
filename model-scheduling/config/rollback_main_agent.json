@@ -1,0 +1,12 @@
+{
+  "agents": {
+    "entries": {
+      "main": {
+        "model": {
+          "primary": "longcat/LongCat-2.0",
+          "fallbacks": ["coding-plan/deepseek-v4-flash"]
+        }
+      }
+    }
+  }
+}

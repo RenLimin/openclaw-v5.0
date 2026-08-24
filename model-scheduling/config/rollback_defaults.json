@@ -1,0 +1,10 @@
+{
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "coding-plan/ark-code-latest",
+        "fallbacks": ["coding-plan/deepseek-v4-flash"]
+      }
+    }
+  }
+}
