@@ -96,7 +96,7 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 | [ADR-202608-008](./by-category/project-experience/adr/ADR-202608-008-tool-policy-governance.md) | L2 工具策略治理 — 「允许」与「可用」分离审计 | L1,L2 | manage | accepted |
 | [ADR-202608-009](./by-category/project-experience/adr/ADR-202608-009-memory-embedding-provider.md) | L2 记忆语义检索 — 本地 GGUF embedding 为主 provider | L1,L2 | design | accepted |
 | [ADR-202608-010](./by-category/project-experience/adr/ADR-202608-010-knowledge-base-tooling.md) | L2 知识库工具链组件 — Markdown 解析/索引/三维查询/schema 治理 | L2 | develop | accepted |
-| [ADR-202608-011](./by-category/project-experience/adr/ADR-202608-011-unified-error-contract.md) | 统一错误契约 (Unified Error Contract) | L1,L2,L3,L4 | — | accepted |
+| [ADR-202608-011](./by-category/project-experience/adr/ADR-202608-011-unified-error-contract.md) | 统一错误契约 (Unified Error Contract) | L1,L2,L3,L4 | develop | accepted |
 | [ADR-202608-012](./by-category/project-experience/adr/ADR-202608-012-agent-runtime-as-variable.md) | Agent 运行时作为可变因素 — 架构范式转换 | L1,L2 | design | accepted |
 | [EXP-20260821-001](./by-category/project-experience/correct/EXP-20260821-001-tavily-tools-also-allow.md) | Tavily plugin 显式工具通过 tools.alsoAllow 解锁（绕过 tools.profile=coding 的 deny） | L1,L2 | develop | active |
 | [EXP-20260821-002](./by-category/project-experience/correct/EXP-20260821-002-github-file-credential-helper.md) | GitHub token 用 file-based credential helper 配置（避免明文入 git config） | L2 | develop | active |
@@ -119,9 +119,9 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 
 | layer | design | develop | manage |
 |---|---|---|---|
-| L1 | 6 | 1 | 10 |
-| L2 | 10 | 3 | 8 |
-| L3 | 4 | 0 | 0 |
-| L4 | 3 | 0 | 0 |
+| L1 | 6 | 2 | 10 |
+| L2 | 10 | 4 | 8 |
+| L3 | 4 | 1 | 0 |
+| L4 | 3 | 1 | 0 |
 
 <!-- kb_index:auto:end -->

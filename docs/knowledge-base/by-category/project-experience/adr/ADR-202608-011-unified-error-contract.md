@@ -6,6 +6,7 @@ title: 统一错误契约 (Unified Error Contract)
 status: accepted
 deciders: [Rex]
 layers: [L1, L2, L3, L4]
+stage: develop
 tags: [error-handling, cross-layer, contract, observability]
 supersedes: null
 superseded_by: null
