@@ -132,7 +132,7 @@ L1 → 任何上层         (反向依赖，禁止)
 | 能力 | 原因 |
 |---|---|
 | 20+ IM 通道（Telegram/Slack/Discord/Matrix/…） | 无业务需求；仅 WeCom 满足团队协作。**非缺口**，按需启用即可 |
-| `tools.sandbox` | **配置项不存在于当前 schema**；且 Docker/openshell/ssh backend 均不可用 ⇒ 设了会破坏 WeCom 会话（2026-08-23 暂缓决定） |
+| **沙箱隔离** `agents.defaults.sandbox.mode` | 官方**默认 `off`**（opt-in）。三个 backend 全不可用：docker **未安装**（无 docker/colima/orbstack）、ssh **无 `~/.ssh/config` 远程机**、openshell **插件未启用**。⚠️ 2026-08-24 纠正：此前写「配置项不存在于 schema」是**查错了键**（查的 `tools.sandbox`，真键是 `agents.defaults.sandbox.*`）—— 配置项存在，缺的是 backend 运行时 |
 | `remote.batch` embedding API | 仅支持 gemini/openai/voyage；本系统用本地 llama-cpp |
 | MCP / 1Password 等 plugin | 无需求；`plugins.allow` 白名单外 |
 
