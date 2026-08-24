@@ -1,0 +1,29 @@
+{
+  "last_updated": "2026-08-24T13:51:44.624923+00:00",
+  "providers": {
+    "coding-plan": {
+      "provider": "coding-plan",
+      "status": "unknown",
+      "note": "火山方舟用量 API 需根据官方文档配置",
+      "last_checked": "2026-08-24T13:51:44.625407+00:00",
+      "health": {
+        "status": "error",
+        "latency_ms": 74,
+        "http_code": 401,
+        "error": "HTTP Error 401: Unauthorized",
+        "last_checked": "2026-08-24T13:53:46.269743+00:00"
+      }
+    },
+    "longCat": {
+      "provider": "longCat",
+      "status": "unsupported",
+      "note": "Provider longCat 暂不支持用量获取",
+      "health": {
+        "status": "healthy",
+        "latency_ms": 100,
+        "last_checked": "2026-08-24T13:53:46.370588+00:00"
+      }
+    }
+  },
+  "last_health_check": "2026-08-24T13:53:46.373891+00:00"
+}

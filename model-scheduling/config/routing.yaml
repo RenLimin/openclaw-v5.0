@@ -1,0 +1,97 @@
+# 路由规则 — model-scheduling
+# 定义任务→模型的映射关系,支持多级 fallback 和 token 压缩规则
+# 修改此文件不会影响 openclaw.json(只用于 model-scheduling 路由决策)
+#
+# 多级 fallback 策略:
+#   L1 优先: 用户指定的主模型
+#   L2 降级: 同 provider 的其他模型(上下文更大或更快)
+#   L3 保底: 免费/便宜模型(确保任务不中断)
+#
+# token 压缩规则:
+#   对匹配的工具输出做截断/摘要,减少 token 消耗
+
+# 任务分类 → 模型选择策略
+task_routing:
+  # 编码任务: 优先 code 模型,降级到 reasoning 模型
+  coding:
+    description: "代码生成、调试、重构、代码审查"
+    fallback_chain:
+      - "coding-plan/ark-code-latest"      # L1: 主 code 模型
+      - "coding-plan/deepseek-v4-flash"     # L2: 大 ctx reasoning
+      - "coding-plan/doubao-seed-2.0-lite"  # L3: 便宜保底
+    preferred_context: 200000               # 偏好上下文窗口 ≥ 200k
+
+  # 推理任务: 优先 reasoning 模型
+  reasoning:
+    description: "复杂推理、架构设计、深度分析"
+    fallback_chain:
+      - "coding-plan/deepseek-v4-flash"     # L1: 大 ctx reasoning
+      - "coding-plan/glm-5.3"               # L2: 大 ctx 备用
+      - "coding-plan/ark-code-latest"       # L3: code 模型保底
+    preferred_context: 500000
+
+  # 搜索/研究任务: 优先多模态模型
+  research:
+    description: "网络搜索、信息收集、文档分析"
+    fallback_chain:
+      - "coding-plan/doubao-seed-2.1-turbo" # L1: 多模态
+      - "coding-plan/ark-code-latest"       # L2: 文本模型
+      - "coding-plan/doubao-seed-2.0-lite"  # L3: 便宜保底
+    preferred_context: 200000
+
+  # 闲聊/日常: 优先便宜模型
+  chat:
+    description: "日常对话、简单问答、状态查询"
+    fallback_chain:
+      - "coding-plan/doubao-seed-2.0-lite"  # L1: 便宜
+      - "coding-plan/ark-code-latest"       # L2: 主模型
+    preferred_context: 100000
+
+  # 嵌入任务: 专用 embedding 模型
+  embedding:
+    description: "记忆检索、语义搜索"
+    provider: "local"                       # 本地 GGUF embedding
+    model: "embeddinggemma-300m"
+    fallback: "none"                        # embedding 不 fallback
+
+# Token 压缩规则(参考 9router RTK)
+# 对匹配的工具输出做截断,减少注入上下文的 token 数
+compress_rules:
+  # git diff 输出: 超过 200 行截断为前 100 行 + 摘要
+  git_diff:
+    tools: ["exec"]
+    match: "git diff"
+    max_lines: 200
+    action: "truncate"
+    truncate_to: 100
+    suffix: "\n... [截断: 输出超过 {max_lines} 行,已截断为前 {truncate_to} 行]"
+
+  # grep/find 输出: 超过 100 行截断
+  grep_output:
+    tools: ["exec"]
+    match: "grep|find|ls -la"
+    max_lines: 100
+    action: "truncate"
+    truncate_to: 50
+    suffix: "\n... [截断: 命令输出超过 {max_lines} 行]"
+
+  # 文件读取: 超过 500 行截断
+  file_read:
+    tools: ["read"]
+    max_lines: 500
+    action: "truncate"
+    truncate_to: 200
+    suffix: "\n... [截断: 文件超过 {max_lines} 行,已读取前 {truncate_to} 行]"
+
+# 网络健康阈值
+health_thresholds:
+  latency_warn_ms: 5000      # 延迟 > 5s 警告
+  latency_crit_ms: 15000     # 延迟 > 15s 标记不可用
+  error_rate_warn: 0.1       # 错误率 > 10% 警告
+  error_rate_crit: 0.3       # 错误率 > 30% 标记不可用
+  cooldown_seconds: 60       # 标记不可用后的冷却时间
+
+# 用量阈值(触发降级)
+usage_thresholds:
+  daily_token_limit: 1000000  # 每日 token 上限(超过后降级到便宜模型)
+  monthly_cost_limit: 50     # 每月成本上限(美元)

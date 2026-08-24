@@ -1,0 +1,142 @@
+# 模型注册表 — model-scheduling
+# 此文件由 sync_models.py 从 openclaw.json 自动同步,也可手动编辑
+# 修改此文件不会影响 openclaw.json(只用于 model-scheduling 路由决策)
+#
+# status: active | disabled | exhausted
+# tags: coding | reasoning | cheap | fast | image | embedding
+#
+# 生成时间: 2026-08-24T21:50:15+0800
+# 模型总数: 10
+
+models:
+  # Provider: coding-plan
+  - id: "coding-plan/ark-code-latest"
+    provider: "coding-plan"
+    model_id: "ark-code-latest"
+    name: "ark-code-latest"
+    context_window: 229376
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-2-1-turbo"
+    provider: "coding-plan"
+    model_id: "doubao-seed-2-1-turbo"
+    name: "doubao-seed-2-1-turbo"
+    context_window: 262144
+    max_tokens: 262144
+    input_types: ["text", "image", "video"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-2.0-lite"
+    provider: "coding-plan"
+    model_id: "doubao-seed-2.0-lite"
+    name: "doubao-seed-2.0-lite"
+    context_window: 262144
+    max_tokens: 131072
+    input_types: ["text", "image", "video", "audio"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/glm-5.3"
+    provider: "coding-plan"
+    model_id: "glm-5.3"
+    name: "glm-5.3"
+    context_window: 1048576
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/deepseek-v4-flash"
+    provider: "coding-plan"
+    model_id: "deepseek-v4-flash"
+    name: "deepseek-v4-flash"
+    context_window: 1048576
+    max_tokens: 393216
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/glm-5.2"
+    provider: "coding-plan"
+    model_id: "glm-5.2"
+    name: "glm-5.2"
+    context_window: 1048576
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/kimi-k2.7-code"
+    provider: "coding-plan"
+    model_id: "kimi-k2.7-code"
+    name: "kimi-k2.7-code"
+    context_window: 262144
+    max_tokens: 262144
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/minimax-m3"
+    provider: "coding-plan"
+    model_id: "minimax-m3"
+    name: "minimax-m3"
+    context_window: 1048576
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/deepseek-v4-pro"
+    provider: "coding-plan"
+    model_id: "deepseek-v4-pro"
+    name: "deepseek-v4-pro"
+    context_window: 1048576
+    max_tokens: 393216
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  # Provider: longCat
+  - id: "longCat/LongCat-2.0"
+    provider: "longCat"
+    model_id: "LongCat-2.0"
+    name: "LongCat-2.0"
+    context_window: 1048576
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []

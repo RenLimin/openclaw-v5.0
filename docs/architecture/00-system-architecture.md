@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.1 (2026-08-24 — 补齐 L2 缺失能力:会话生命周期管理 + 错误自动处理,ADR-013/014 accepted) |
+| 文档版本 | 2.2 (2026-08-24 — 建设模型调度组件 model-scheduling:智能路由 + 多级 fallback + token 压缩 + 用量感知) |
 | 文档状态 | active |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001) |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -281,6 +281,7 @@ adapters/
 | **沙箱隔离** | Docker 后端 + 加固基线 | 已上线 | ✅ |
 | **会话生命周期管理** | 自动清理过期会话(分级策略 + cron + deleteAfterRun) | 已上线 | ✅ |
 | **错误自动处理** | 检测→分级→自愈闭环(Error Contract + cron 扫描) | 已上线 | ✅ |
+| **模型调度** | 智能模型路由(多级 fallback + token 压缩 + 用量感知) | 已上线 | ✅ |
 | **工具/技能封装** | domain-specific skills、工具二次封装 | 复用 + 自建 | 🚧 |
 | **调度/任务编排** | 定时任务、隔离运行、心跳 | 复用 L1 | 📋 |
 
@@ -390,7 +391,25 @@ adapters/
     - ADR: ADR-014
     - 设计: `components/error-handling/DESIGN.md`
 
-**L2 组件建设状态**: **10 个组件四件套齐备**(7 个治理组件 + 沙箱 + 会话生命周期 + 错误自动处理)。
+11. **模型调度** (2026-08-24)
+    - 组件 ID: `model-scheduling/`
+    - 功能: 智能模型路由 — 按任务类型、用量、网络健康选择最优模型
+    - 核心能力:
+      - 模型注册表: `config/models.yaml`(从 openclaw.json 自动同步)
+      - 路由规则: `config/routing.yaml`(多级 fallback + token 压缩)
+      - 用量追踪: `config/usage.json`(每周从 provider API 获取)
+      - 健康探测: 每小时 ping provider,标记不可用
+      - 任务分类: coding / reasoning / research / chat → 不同模型策略
+    - 多级 fallback: L1 优先 → L2 降级 → L3 保底
+    - Token 压缩: 参考 9router RTK,对超大工具输出截断(git diff > 200 行 → 100 行)
+    - 设计约束:
+      - 只读 openclaw.json(通过 `config get`),绝不写入
+      - 外部文件存储所有状态,故障不影响系统运行
+      - 变更前必须 dry-run + 读回验证
+    - 脚本: `sync_models.py` / `fetch_usage.py` / `router.py` / `health_check.py`
+    - 设计: `model-scheduling/DESIGN.md`
+
+**L2 组件建设状态**: **11 个组件四件套齐备**(7 个治理组件 + 沙箱 + 会话生命周期 + 错误自动处理 + 模型调度)。
 
 **预留位**:
 - 知识库**自建系统**(服务形态: DB + Web 渲染) — 与上方「知识库能力」组件区分
@@ -561,8 +580,9 @@ L4 专有业务
 | L3 / L4 暂未启动 | 架构预留 | 📋 |
 | 知识库轻量方案(Markdown + 元数据) | 已上线 | ✅ |
 | 工作区基础文件(AGENTS / IDENTITY / SOUL / USER / MEMORY) | 已上线 | ✅ |
-| 10 个 L2 组件四件套齐备 | 已上线 | ✅ |
+| 11 个 L2 组件四件套齐备 | 已上线 | ✅ |
 | 14 份 ADR accepted | 已上线 | ✅ |
+| 模型调度(智能路由 + 多级 fallback + token 压缩) | 已上线 | ✅ |
 | 上下文溢出防护状态机 | 已上线 | ✅ |
 | 运行时抽象层(L1) | 已上线 | ✅ |
 | 会话生命周期管理(cron + 分级策略) | 已上线 | ✅ |
@@ -717,7 +737,8 @@ L4 专有业务
 | 2026-08-24 | 1.2 | 沙箱隔离方案 B 落地 |
 | 2026-08-24 | 1.3 | v4.0 对比优化: 状态机 + 六态标记 + Error Contract |
 | 2026-08-24 | **2.0** | **范式转换: Agent 运行时作为可变因素。新增 L0 安装层 + L1 运行时抽象层。4 层 → 5 层。L2 解耦(68 处运行时硬耦合 → 抽象接口)。§5 从"OpenClaw 契约边界"改为"运行时契约边界"。ADR-012 accepted。** |
-| 2026-08-24 | 2.1 | 补齐 L2 缺失能力: ① 会话生命周期管理(cron 每日清理 + deleteAfterRun + 分级策略,ADR-013); ② 错误自动处理(检测→分级→自愈闭环,ADR-014)。14 份 ADR accepted。10 个 L2 组件齐备。** |
+| 2026-08-24 | 2.1 | 补齐 L2 缺失能力: ① 会话生命周期管理(cron 每日清理 + deleteAfterRun + 分级策略,ADR-013); ② 错误自动处理(检测→分级→自愈闭环,ADR-014)。14 份 ADR accepted。10 个 L2 组件齐备。 |
+| 2026-08-24 | 2.2 | 建设模型调度组件 model-scheduling: ① 模型注册表(从 openclaw.json 自动同步); ② 智能路由(任务分类 + 多级 fallback); ③ token 压缩(参考 9router RTK); ④ 用量追踪(每周从 provider API 获取); ⑤ 健康探测(每小时 ping)。11 个 L2 组件齐备。** |
 
 ---
 
