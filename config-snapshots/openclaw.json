@@ -2,7 +2,10 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "longcat/LongCat-2.0"
+        "primary": "coding-plan/ark-code-latest",
+        "fallbacks": [
+          "coding-plan/deepseek-v4-flash"
+        ]
       },
       "models": {
         "coding-plan/ark-code-latest": {},
@@ -18,7 +21,7 @@
       "workspace": "/Users/bangcle/.openclaw/workspace",
       "compaction": {
         "memoryFlush": {
-          "model": "longcat/LongCat-2.0"
+          "model": "coding-plan/deepseek-v4-flash"
         },
         "notifyUser": true,
         "enabled": true,
@@ -28,7 +31,7 @@
           "enabled": true
         },
         "mode": "safeguard",
-        "model": "longcat/LongCat-2.0"
+        "model": "coding-plan/deepseek-v4-flash"
       },
       "contextPruning": {
         "mode": "cache-ttl",
@@ -419,5 +422,10 @@
     "ownerAllowFrom": [
       "<REDACTED>"
     ]
+  },
+  "session": {
+    "maintenance": {
+      "pruneAfter": "48h"
+    }
   }
 }
