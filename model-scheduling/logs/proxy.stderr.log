@@ -1,0 +1,45 @@
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+/Library/Developer/CommandLineTools/usr/bin/python3: can't open file '/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py': [Errno 2] No such file or directory
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py", line 67, in <module>
+    def select_model(task_type: str) -> dict | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py", line 67, in <module>
+    def select_model(task_type: str) -> dict | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py", line 67, in <module>
+    def select_model(task_type: str) -> dict | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+2026-08-25 09:37:51,714 [INFO] model-scheduling.config: 热更新监听已启动
+2026-08-25 09:37:51,714 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-08-25 09:38:06,299 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-08-25 09:38:06,299 [WARNING] model-scheduling.config: 配置文件不存在: /Users/bangcle/.openclaw/workspace/model-scheduling/config/providers.yaml
+2026-08-25 09:38:42,185 [INFO] model-scheduling.config: 热更新: providers.yaml
+2026-08-25 09:38:49,884 [INFO] model-scheduling.config: 热更新监听已启动
+2026-08-25 09:38:49,885 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-08-25 09:38:52,592 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-08-25 09:39:06,623 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest

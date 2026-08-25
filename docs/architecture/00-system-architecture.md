@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.2 (2026-08-24 — 建设模型调度组件 model-scheduling:智能路由 + 多级 fallback + token 压缩 + 用量感知) |
+| 文档版本 | 2.3 (2026-08-25 — model-scheduling 完善:代理服务自动启动 + 热更新 + 端到端验证) |
 | 文档状态 | active |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001) |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -406,7 +406,11 @@ adapters/
       - 只读 openclaw.json(通过 `config get`),绝不写入
       - 外部文件存储所有状态,故障不影响系统运行
       - 变更前必须 dry-run + 读回验证
-    - 脚本: `sync_models.py` / `fetch_usage.py` / `router.py` / `health_check.py`
+    - 脚本: `sync_models.py` / `fetch_usage.py` / `router.py` / `health_check.py` / `proxy.py` / `config_watcher.py`
+    - 代理服务: `proxy.py`(:3000,自动任务路由 + 模型选择)
+    - 热更新: `config_watcher.py`(文件变更 → ≤ 10 秒自动生效)
+    - 自动启动: LaunchAgent `ai.openclaw.model-scheduling`(开机自启 + 崩溃重启)
+    - 回退方案: `config/rollback_main_agent.json` + `config/rollback_defaults.json` + `config/rollback_provider.json`
     - 设计: `model-scheduling/DESIGN.md`
 
 **L2 组件建设状态**: **11 个组件四件套齐备**(7 个治理组件 + 沙箱 + 会话生命周期 + 错误自动处理 + 模型调度)。

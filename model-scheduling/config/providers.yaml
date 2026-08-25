@@ -1,0 +1,31 @@
+# 供应商配置 — model-scheduling
+# 修改此文件 → 热更新(无需重启 Gateway,无需修改 openclaw.json)
+
+providers:
+  coding-plan:
+    base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+    api_type: "openai-completions"
+    auth_type: "bearer"
+    api_key_ref: "coding-plan"
+    enabled: true
+    health_check:
+      endpoint: "/models"
+      timeout_ms: 5000
+    rate_limit:
+      requests_per_minute: 60
+      tokens_per_minute: 100000
+    notes: "火山方舟 Coding Plan,主力 provider"
+
+  longcat:
+    base_url: "https://api.longcat.chat/openai/v1"
+    api_type: "openai-completions"
+    auth_type: "bearer"
+    api_key_ref: "longcat"
+    enabled: true
+    health_check:
+      endpoint: "/models"
+      timeout_ms: 5000
+    rate_limit:
+      requests_per_minute: 30
+      tokens_per_minute: 50000
+    notes: "LongCat,备用 provider"

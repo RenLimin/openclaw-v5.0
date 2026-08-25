@@ -4,7 +4,8 @@
       "model": {
         "primary": "coding-plan/ark-code-latest",
         "fallbacks": [
-          "coding-plan/deepseek-v4-flash"
+          "coding-plan/deepseek-v4-flash",
+          "coding-plan/doubao-seed-2.0-lite"
         ]
       },
       "models": {
@@ -69,8 +70,65 @@
         "model": {
           "primary": "longcat/LongCat-2.0",
           "fallbacks": [
-            "coding-plan/deepseek-v4-flash"
+            "coding-plan/ark-code-latest",
+            "coding-plan/deepseek-v4-flash",
+            "coding-plan/doubao-seed-2.0-lite"
           ]
+        }
+      },
+      "ms-coding": {
+        "name": "ms-coding",
+        "workspace": "/Users/bangcle/.openclaw/workspace",
+        "model": {
+          "primary": "coding-plan/ark-code-latest",
+          "fallbacks": [
+            "coding-plan/deepseek-v4-flash",
+            "coding-plan/doubao-seed-2.0-lite"
+          ]
+        },
+        "identity": {
+          "name": "ms-coding"
+        }
+      },
+      "ms-research": {
+        "name": "ms-research",
+        "workspace": "/Users/bangcle/.openclaw/workspace",
+        "model": {
+          "primary": "coding-plan/doubao-seed-2.1-turbo",
+          "fallbacks": [
+            "coding-plan/ark-code-latest",
+            "coding-plan/doubao-seed-2.0-lite"
+          ]
+        },
+        "identity": {
+          "name": "ms-research"
+        }
+      },
+      "ms-reasoning": {
+        "name": "ms-reasoning",
+        "workspace": "/Users/bangcle/.openclaw/workspace",
+        "model": {
+          "primary": "coding-plan/deepseek-v4-flash",
+          "fallbacks": [
+            "coding-plan/glm-5.3",
+            "coding-plan/ark-code-latest"
+          ]
+        },
+        "identity": {
+          "name": "ms-reasoning"
+        }
+      },
+      "ms-chat": {
+        "name": "ms-chat",
+        "workspace": "/Users/bangcle/.openclaw/workspace",
+        "model": {
+          "primary": "coding-plan/doubao-seed-2.0-lite",
+          "fallbacks": [
+            "coding-plan/ark-code-latest"
+          ]
+        },
+        "identity": {
+          "name": "ms-chat"
         }
       }
     }
@@ -300,6 +358,29 @@
             "compat": {
               "maxTokensField": "max_tokens"
             }
+          }
+        ]
+      },
+      "model-scheduling": {
+        "baseUrl": "http://127.0.0.1:3000",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "auto",
+            "name": "Auto (智能调度)",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 131072,
+            "maxTokens": 8192
           }
         ]
       }
