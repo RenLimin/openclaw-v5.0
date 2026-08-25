@@ -1,3 +1,15 @@
+---
+last_reviewed: "2026-08-25"
+title: "L3 通用业务层 — 业务知识库总索引"
+description: "L3 业务知识库的总索引，按业务维度组织"
+source: "L3 架构设计 v1.3"
+version: "1.3"
+category: "business"
+dimension: "methodology"
+type: "index"
+tags: ["l3", "index", "business-knowledge"]
+---
+
 # L3 通用业务层 — 业务知识库
 
 > L3 层的业务知识库，按业务维度组织。

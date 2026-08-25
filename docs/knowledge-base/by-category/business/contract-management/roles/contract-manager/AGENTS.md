@@ -1,3 +1,13 @@
+---
+last_reviewed: "2026-08-25"
+title: "合同经理 — 业务能力"
+description: "合同经理的工作流程、交付物和决策树"
+source: "Agiloft CLM / Harvey AI / Sirion"
+version: "CLM 2026"
+dimension: "contract-management"
+sub_area: "roles"
+tags: [contract-management, role, agents]
+---
 # 合同经理 — 业务能力
 
 ## 工作流程

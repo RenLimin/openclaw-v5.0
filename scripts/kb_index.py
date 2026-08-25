@@ -8,15 +8,16 @@ ADR-003 阶段 2 工具链。同时是阶段 3 自建系统的解析内核（§4
     绝不反向写内容文件（唯一例外：--emit-index 生成 INDEX.md，且它是纯派生视图）。
 
 用法：
-    kb_index.py --validate            # frontmatter schema 校验（CI 友好，异常退出码）
-    kb_index.py --stats               # 三维分布统计
+    kb_index.py --validate            # frontmatter schema 校验（含业务知识库）
+    kb_index.py --stats               # 分布统计（含业务知识库维度分布）
     kb_index.py --query layer=L2 stage=manage
+    kb_index.py --query dimension=project-management
     kb_index.py --tags                # tag 聚合
-    kb_index.py --xref                # 交叉引用图 + 孤儿/断链检测
+    kb_index.py --xref                # 交叉引用图（含业务 xref）
     kb_index.py --json                # 全量结构化输出
     kb_index.py --emit-index          # 重新生成 INDEX.md 的派生小节
-    kb_index.py --export DIR          # 导出便携 bundle（子能力 6：跨系统移植）
-    kb_index.py --render FILE         # 渲染单文件 HTML 视图（子能力 5：人机协作）
+    kb_index.py --export DIR          # 导出便携 bundle（子能力 6）
+    kb_index.py --render FILE         # 渲染单篇人机协作视图（子能力 5）
 """
 
 from __future__ import annotations
@@ -38,6 +39,17 @@ except ImportError:
 
 REPO = Path(__file__).resolve().parent.parent
 KB_ROOT = REPO / "docs" / "knowledge-base"
+BUSINESS_KB_ROOT = KB_ROOT / "by-category" / "business"
+
+# --- 业务知识库合法值 ---
+VALID_DIMENSIONS = {
+    "project-management", "contract-management", "after-sales", "implementation",
+    "family-finance", "product-design", "system-architecture", "frontend-dev",
+    "backend-dev", "testing", "devops-sre", "data-engineering",
+    "security-engineering", "software-development", "methodology",
+}
+VALID_BUSINESS_CATEGORIES = {"industry-practice", "theoretical-knowledge", "project-experience"}
+VALID_XREF_RELATIONS = {"implements", "extends", "referenced_by", "related", "depends_on"}
 
 # --- 三维模型合法值（ADR-002）---
 VALID_LAYERS = {"L1", "L2", "L3", "L4"}
@@ -87,6 +99,13 @@ class Doc:
     is_template: bool = False
     errors: list[str] = field(default_factory=list)
     drift: list[str] = field(default_factory=list)
+    # 业务知识库扩展字段
+    dimension: str | None = None        # 业务维度
+    sub_area: str | None = None         # 子领域
+    xref: list[dict] = field(default_factory=list)  # 交叉引用 [{path, relation}]
+    last_reviewed: str | None = None    # 最后审查日期
+    source: str | None = None           # 权威来源
+    version: str | None = None          # 知识体系版本
 
     @property
     def refs(self) -> list[str]:
@@ -185,6 +204,21 @@ def parse_doc(path: Path) -> Doc:
         doc.tags = _as_list(meta.get("tags"))
         doc.related = _as_list(meta.get("related"))
 
+        # 业务知识库扩展字段
+        doc.dimension = str(meta["dimension"]).strip() if meta.get("dimension") else None
+        doc.sub_area = str(meta["sub_area"]).strip() if meta.get("sub_area") else None
+        doc.last_reviewed = str(meta["last_reviewed"]).strip() if meta.get("last_reviewed") else None
+        doc.source = str(meta["source"]).strip() if meta.get("source") else None
+        doc.version = str(meta["version"]).strip() if meta.get("version") else None
+        raw_xref = meta.get("xref", [])
+        if isinstance(raw_xref, list):
+            for item in raw_xref:
+                if isinstance(item, dict) and "path" in item:
+                    doc.xref.append({
+                        "path": str(item["path"]).strip(),
+                        "relation": str(item.get("relation", "related")).strip(),
+                    })
+
     placeholders = set(PLACEHOLDER_RE.findall(body))
     doc.body_refs = [
         i for i in ID_PATTERN.findall(body)
@@ -228,14 +262,19 @@ def validate(docs: list[Doc]) -> int:
             soft.append(f"{d.path}: 缺 id")
         if not d.title:
             hard.append(f"{d.path}: 缺 title")
-        if not d.layers:
-            soft.append(f"{d.path}: 缺 layers")
-        for lay in d.layers:
-            if lay not in VALID_LAYERS:
-                hard.append(f"{d.path}: 非法 layer `{lay}`（合法: {sorted(VALID_LAYERS)}）")
-        if d.stage and d.stage not in VALID_STAGES:
-            hard.append(f"{d.path}: 非法 stage `{d.stage}`（合法: {sorted(VALID_STAGES)}）")
-        if d.category and d.category not in VALID_CATEGORIES | {"correct", "wrong"}:
+        # 业务知识库不需要 layers/stage（有自己的维度体系）
+        if not d.dimension:
+            if not d.layers:
+                soft.append(f"{d.path}: 缺 layers")
+            for lay in d.layers:
+                if lay not in VALID_LAYERS:
+                    hard.append(f"{d.path}: 非法 layer `{lay}`（合法: {sorted(VALID_LAYERS)}）")
+            if d.stage and d.stage not in VALID_STAGES:
+                hard.append(f"{d.path}: 非法 stage `{d.stage}`（合法: {sorted(VALID_STAGES)}）")
+        # 业务知识库（有 dimension）不受三维 category 约束
+        if d.dimension:
+            pass  # 业务知识库有自己的 frontmatter 规范
+        elif d.category and d.category not in VALID_CATEGORIES | {"correct", "wrong"}:
             hard.append(f"{d.path}: 非法 category `{d.category}`")
         if not d.tags:
             soft.append(f"{d.path}: 无 tags（检索会变差）")
@@ -272,15 +311,58 @@ def validate(docs: list[Doc]) -> int:
     dump("警告", soft, "⚠️ ")
     dump("schema 漂移", drift, "🔀")
 
-    if not hard and not soft and not drift:
+    # 业务知识库校验
+    biz_hard: list[str] = []
+    biz_soft: list[str] = []
+    for d in docs:
+        if not d.dimension:
+            continue
+        if d.dimension not in VALID_DIMENSIONS:
+            biz_hard.append(f"{d.path}: 非法 dimension `{d.dimension}`")
+        if not d.title:
+            biz_hard.append(f"{d.path}: 缺 title")
+        if not d.source:
+            biz_soft.append(f"{d.path}: 缺 source（业务知识必须标注权威来源）")
+        if not d.tags:
+            biz_soft.append(f"{d.path}: 无 tags")
+        if len(d.tags or []) < 3:
+            biz_soft.append(f"{d.path}: tags 仅 {len(d.tags or [])} 个（建议 ≥ 3）")
+        if not d.last_reviewed:
+            biz_soft.append(f"{d.path}: 缺 last_reviewed")
+        # 交叉引用校验
+        for xr in d.xref:
+            target = (REPO / Path(d.path).parent / xr["path"]).resolve()
+            if not target.exists():
+                biz_soft.append(f"{d.path}: xref 指向不存在的文件 `{xr['path']}`")
+            if xr.get("relation") not in VALID_XREF_RELATIONS:
+                biz_soft.append(f"{d.path}: xref 非法 relation `{xr.get('relation')}`")
+
+    if biz_hard or biz_soft:
+        print()
+        print("---")
+        print("业务知识库校验")
+        dump("阻断性错误", biz_hard, "❌")
+        dump("警告", biz_soft, "⚠️ ")
+
+    if not hard and not soft and not drift and not biz_hard and not biz_soft:
         print("\n✅ 全部通过")
-    return 1 if hard else 0
+    return 1 if (hard or biz_hard) else 0
 
 
 # ---------- 统计 ----------
 
 def stats(docs: list[Doc]) -> None:
     print(f"知识库统计 — {len(docs)} 篇（不含模板）\n")
+
+    # 业务知识库统计
+    biz_docs = [d for d in docs if d.dimension]
+    if biz_docs:
+        print(f"## 业务知识库（{len(biz_docs)} 篇）")
+        dim_c: Counter = Counter(d.dimension or "(未标注)" for d in biz_docs)
+        for k, v in dim_c.most_common():
+            bar = "█" * max(1, round(v / max(len(biz_docs), 1) * 24))
+            print(f"  {k:<28} {v:>3}  {bar}")
+        print()
 
     def table(title: str, counter: Counter, total: int) -> None:
         print(f"## {title}")
@@ -364,6 +446,15 @@ def xref(docs: list[Doc]) -> None:
     for d_ in dangling:
         print(f"  {d_}")
 
+    # 业务知识库交叉引用
+    biz_xref = [d for d in docs if d.xref]
+    if biz_xref:
+        print(f"\n## 业务知识库交叉引用（{len(biz_xref)} 篇有 xref）")
+        for d in biz_xref:
+            print(f"  {d.doc_id or Path(d.path).name} [{d.dimension or '—'}]")
+            for xr in d.xref:
+                print(f"    → {xr['relation']}: {xr['path']}")
+
 
 # ---------- 查询 ----------
 
@@ -388,13 +479,23 @@ def query(docs: list[Doc], exprs: list[str]) -> None:
             return d.doc_type == v
         if k == "status":
             return d.status == v
-        sys.exit(f"不支持的查询键 `{k}`（支持: layer/stage/category/tag/type/status）")
+        # 业务知识库查询
+        if k == "dimension":
+            return d.dimension == v
+        if k == "sub_area":
+            return d.sub_area == v
+        if k == "source":
+            return d.source == v if d.source else False
+        sys.exit(f"不支持的查询键 `{k}`（支持: layer/stage/category/tag/type/status/dimension/sub_area/source）")
 
     hits = [d for d in docs if all(match(d, k, v) for k, v in filters)]
     print(f"查询 {' '.join(exprs)} — 命中 {len(hits)}/{len(docs)}\n")
     for d in hits:
         print(f"  [{d.doc_id or '—'}] {d.title or Path(d.path).name}")
-        print(f"      layers={d.layers or '—'} stage={d.stage or '—'} tags={','.join(d.tags) or '—'}")
+        if d.dimension:
+            print(f"      dimension={d.dimension} sub_area={d.sub_area or '—'} source={d.source or '—'}")
+        else:
+            print(f"      layers={d.layers or '—'} stage={d.stage or '—'} tags={','.join(d.tags) or '—'}")
         print(f"      {d.path}")
 
 
@@ -636,7 +737,7 @@ def main() -> int:
     ap.add_argument("--stats", action="store_true", help="三维分布统计")
     ap.add_argument("--tags", action="store_true", help="tag 聚合")
     ap.add_argument("--xref", action="store_true", help="交叉引用图")
-    ap.add_argument("--query", nargs="+", metavar="K=V", help="三维交叉查询")
+    ap.add_argument("--query", nargs="+", metavar="K=V", help="交叉查询（支持: layer/stage/category/tag/type/status/dimension/sub_area/source）")
     ap.add_argument("--json", action="store_true", help="全量结构化输出")
     ap.add_argument("--emit-index", action="store_true", help="重新生成 INDEX.md 派生小节")
     ap.add_argument("--export", metavar="DIR", help="导出便携 bundle（跨系统移植）")

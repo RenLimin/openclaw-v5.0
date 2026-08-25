@@ -3,7 +3,9 @@ title: "CLM 阶段 1：需求受理与分类"
 description: "合同生命周期的起点，接收合同需求并进行分类、编号和优先级排序"
 source: "Agiloft CLM Best Practices / Sirion CLM Guide"
 version: "CLM 2026"
-category: "contract-management"
+category: "industry-practice"
+dimension: "contract-management"
+sub_area: "clm-lifecycle"
 tags: ["clm", "intake", "classification", "triage"]
 last_reviewed: "2026-08-25"
 ---

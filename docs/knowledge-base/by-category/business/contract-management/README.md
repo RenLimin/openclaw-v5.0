@@ -1,3 +1,15 @@
+---
+last_reviewed: "2026-08-25"
+title: "合同管理维度"
+description: "L3 通用业务层 — 合同全生命周期管理（CLM）"
+source: "Agiloft / Harvey AI / Sirion CLM"
+version: "CLM 2026"
+category: "business"
+dimension: "contract-management"
+type: "dimension-index"
+tags: ["contract-management", "clm", "lifecycle"]
+---
+
 # 合同管理维度
 
 > L3 通用业务层 — 合同全生命周期管理（CLM）

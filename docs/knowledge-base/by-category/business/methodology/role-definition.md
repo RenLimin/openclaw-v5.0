@@ -1,3 +1,12 @@
+---
+last_reviewed: "2026-08-25"
+title: "角色定义规范"
+description: "L3 业务角色的标准化定义流程和质量标准"
+source: "agency-agents-zh / L3 架构设计"
+version: "1.0"
+dimension: "methodology"
+tags: [l3, methodology, role-definition]
+---
 # 角色定义规范
 
 > L3 业务角色的标准化定义流程和质量标准。

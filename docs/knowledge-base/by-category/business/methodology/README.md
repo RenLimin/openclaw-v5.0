@@ -1,3 +1,12 @@
+---
+last_reviewed: "2026-08-25"
+title: "L3 建设方法论"
+description: "L3 通用业务层的建设指南和标准规范"
+source: "L3 架构设计 v1.3"
+version: "1.3"
+dimension: "methodology"
+tags: [l3, methodology, guide]
+---
 # L3 建设方法论
 
 > L3 通用业务层的建设指南和标准规范。

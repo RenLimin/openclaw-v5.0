@@ -1,3 +1,12 @@
+---
+title: "知识文档编写指南"
+description: "L3 业务知识文档的标准化编写规范"
+source: "L3 知识库体系架构 v1.0"
+version: "1.0"
+dimension: "methodology"
+tags: [l3, methodology, knowledge-authoring]
+last_reviewed: "2026-08-25"
+---
 # 知识文档编写指南
 
 > L3 业务知识文档的标准化编写规范。

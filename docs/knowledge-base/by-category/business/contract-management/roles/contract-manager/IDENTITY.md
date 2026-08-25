@@ -1,3 +1,13 @@
+---
+last_reviewed: "2026-08-25"
+title: "合同经理 — 简介"
+description: "合同全生命周期管理专家的角色简介"
+source: "Agiloft CLM / Harvey AI"
+version: "CLM 2026"
+dimension: "contract-management"
+sub_area: "roles"
+tags: [contract-management, role, identity]
+---
 # 合同经理 — 简介
 
 ## 一句话定位

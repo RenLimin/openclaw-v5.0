@@ -1,3 +1,16 @@
+---
+last_reviewed: "2026-08-25"
+title: "合同经理 — 身份人设"
+description: "合同全生命周期管理（CLM）专家的角色定义"
+source: "Agiloft CLM / Harvey AI / 中国民法典合同编"
+version: "CLM 2026"
+category: "business"
+dimension: "contract-management"
+sub_area: "roles"
+type: "role-definition"
+tags: ["contract-management", "clm", "role", "soul"]
+---
+
 # 合同经理 — 身份人设
 
 ## 角色定位
