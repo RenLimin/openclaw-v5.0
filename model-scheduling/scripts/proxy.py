@@ -146,11 +146,21 @@ class ProxyHandler:
                     headers[key.strip().lower()] = val.strip()
 
             content_length = int(headers.get("content-length", 0))
-            body = await reader.read(content_length) if content_length > 0 else b""
+            if content_length > 0:
+                try:
+                    body = await asyncio.wait_for(
+                        reader.readexactly(content_length), timeout=30.0
+                    )
+                except (asyncio.TimeoutError, asyncio.IncompleteReadError) as e:
+                    logger.error(f"读取 body 失败: {e} (expected {content_length} bytes)")
+                    await self._send_error(400, f"Body read error: {e}", writer)
+                    return
+            else:
+                body = b""
 
-            if path == "/v1/chat/completions" and method == "POST":
+            if path in ("/v1/chat/completions", "/chat/completions") and method == "POST":
                 await self._handle_chat(body, writer)
-            elif path == "/v1/models" and method == "GET":
+            elif path in ("/v1/models", "/models") and method == "GET":
                 await self._handle_models(writer)
             elif path == "/health" and method == "GET":
                 await self._handle_health(writer)
@@ -169,9 +179,11 @@ class ProxyHandler:
 
     async def _handle_chat(self, body: bytes, writer):
         self.request_count += 1
+        logger.info(f"RAW body first 300 bytes: {body[:300]}")
         try:
             request = json.loads(body)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON decode failed: {e}. Body length={len(body)}, first 200: {body[:200]}")
             await self._send_error(400, "Invalid JSON", writer)
             return
 

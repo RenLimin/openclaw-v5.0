@@ -60,20 +60,20 @@
     },
     "entries": {
       "main": {
-        "agentDir": "/Users/bangcle/.openclaw/agents/main/agent",
         "default": true,
-        "identity": {
-          "name": "main"
-        },
         "name": "main",
         "workspace": "/Users/bangcle/.openclaw/workspace",
+        "agentDir": "/Users/bangcle/.openclaw/agents/main/agent",
         "model": {
-          "primary": "longcat/LongCat-2.0",
+          "primary": "model-scheduling/auto",
           "fallbacks": [
             "coding-plan/ark-code-latest",
             "coding-plan/deepseek-v4-flash",
             "coding-plan/doubao-seed-2.0-lite"
           ]
+        },
+        "identity": {
+          "name": "main"
         }
       },
       "ms-coding": {
@@ -379,8 +379,8 @@
               "cacheRead": 0,
               "cacheWrite": 0
             },
-            "contextWindow": 131072,
-            "maxTokens": 8192
+            "contextWindow": 229376,
+            "maxTokens": 131072
           }
         ]
       }
