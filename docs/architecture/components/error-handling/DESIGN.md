@@ -1,6 +1,6 @@
 # L2 错误自动处理组件 — 设计
 
-> **状态**: 阶段 1 建设中
+> **状态**: ✅ 已上线 (2026-08-24) — ADR-014 已实现,会话错误自动处理 + provider 健康探测两个 cron 在跑
 > **ADR**: [ADR-202608-014](../../../knowledge-base/by-category/project-experience/adr/ADR-202608-014-error-auto-handling.md)
 > **层级**: L2 基础设施层
 > **创建**: 2026-08-24

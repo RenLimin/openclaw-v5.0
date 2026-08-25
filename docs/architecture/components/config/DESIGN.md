@@ -1,6 +1,6 @@
 # L2 配置管理组件 — 设计
 
-> **状态**: 阶段 1 已实现
+> **状态**: ✅ 已上线 (2026-08-22) — ADR-007 已实现,快照 + 四步流程 + 漂移检测
 > **ADR**: [ADR-202608-007](../../../knowledge-base/by-category/project-experience/adr/ADR-202608-007-config-management.md)
 > **层级**: L2 基础设施层
 > **创建**: 2026-08-22

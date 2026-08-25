@@ -9,6 +9,7 @@ owner: Rex + Jerry
 
 # L2 记忆语义检索 — embedding provider 设计
 
+> **状态**: ✅ 已上线 (2026-08-22) — ADR-009 已实现,本地 GGUF embedding,509 chunks 语义检索验证通过
 > **ADR**: [ADR-202608-009](../../../knowledge-base/by-category/project-experience/adr/ADR-202608-009-memory-embedding-provider.md)
 > **Rex 授权**: 2026-08-22 — 1) 安装本地 GGUF  2) 读官方文档，需要时自动启用火山 embedding
 > **官方文档**: `docs/concepts/memory-builtin.md` · `docs/reference/memory-config.md`

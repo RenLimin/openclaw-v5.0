@@ -9,6 +9,7 @@ owner: Rex + Jerry
 
 # L2 工具策略治理 — 设计
 
+> **状态**: ✅ 已上线 (2026-08-23) — ADR-008 已实现,三态模型 + 六项审计,工具策略治理落地
 > **ADR**: [ADR-202608-008](../../../knowledge-base/by-category/project-experience/adr/ADR-202608-008-tool-policy-governance.md)
 > **架构文档**: `00-system-architecture.md` §3.2 / §5.4
 

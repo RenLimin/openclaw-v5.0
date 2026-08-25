@@ -7,7 +7,7 @@
 
 **层级**: L2 基础设施层
 **类型**: 横切关注点 (Cross-Cutting Concern)
-**状态**: 设计阶段 (待 ADR-005 锁定)
+**状态**: ✅ 已上线 (2026-08-23) — ADR-005 已实现,SecretRef 落地,secrets audit plaintext=0
 
 凭据管理通用化是把 EXP-001（Tavily SecretRef）和 EXP-002（GitHub credential helper）的**经验沉淀为 L2 通用能力**——任何新服务接入凭据时，有标准流程可遵循。
 
