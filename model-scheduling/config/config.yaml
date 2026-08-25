@@ -1,0 +1,53 @@
+# 系统配置 — model-scheduling
+# 修改此文件 → 热更新
+
+# 代理服务监听地址
+proxy:
+  host: "127.0.0.1"
+  port: 3000
+
+# 热更新配置
+hot_reload:
+  enabled: true
+  interval_seconds: 10
+  watch_files:
+    - "providers.yaml"
+    - "models.yaml"
+    - "routing.yaml"
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "logs/model-scheduling.log"
+  max_size_mb: 10
+  backup_count: 5
+
+# 路由配置
+routing:
+  default_task_type: "chat"
+  cache_ttl_seconds: 300
+
+# 健康检查配置
+health_check:
+  interval_seconds: 3600
+  timeout_ms: 5000
+  unhealthy_threshold: 3
+
+# 用量追踪
+usage_tracking:
+  enabled: true
+  fetch_interval_seconds: 604800  # 每周获取一次
+  providers:
+    coding-plan:
+      # 火山方舟用量 API
+      # 文档: https://console.volcengine.com/ark/region:ark+cn-beijing/overview
+      usage_url: "https://ark.cn-beijing.volces.com/api/coding/v3/dashboard/billing/overview"
+      billing_url: "https://ark.cn-beijing.volces.com/api/coding/v3/dashboard/billing/detail"
+      # ⚠️ 火山方舟 Coding Plan 没有公开用量 API(所有端点返回 404)
+      # 用量需通过控制台查看: https://console.volcengine.com/ark/region:ark+cn-beijing/overview
+      # 未来如果火山开放 API,在此配置 URL
+      api_available: false
+    longcat:
+      usage_url: ""
+      billing_url: ""
+      api_available: false

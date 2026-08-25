@@ -21,14 +21,6 @@
     <key>WorkingDirectory</key>
     <string>/Users/bangcle/.openclaw/workspace/model-scheduling</string>
 
-    <key>EnvironmentVariables</key>
-    <dict>
-      <key>PATH</key>
-      <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
-      <key>HOME</key>
-      <string>/Users/bangcle</string>
-    </dict>
-
     <key>RunAtLoad</key>
     <true/>
 
