@@ -179,7 +179,7 @@ class ProxyHandler:
 
     async def _handle_chat(self, body: bytes, writer):
         self.request_count += 1
-        logger.info(f"RAW body first 300 bytes: {body[:300]}")
+        logger.debug(f"RAW body first 300 bytes: {body[:300]}")
         try:
             request = json.loads(body)
         except json.JSONDecodeError as e:
