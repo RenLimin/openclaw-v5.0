@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.3 (2026-08-25 — model-scheduling 完善:代理服务自动启动 + 热更新 + 端到端验证) |
+| 文档版本 | 2.3 (2026-08-25 — model-scheduling 完善:代理服务自动启动 + 热更新 + 端到端验证 + 文档补齐) |
 | 文档状态 | active |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001) |
 | 配套文档 | `../knowledge-base/README.md` |
@@ -742,7 +742,8 @@ L4 专有业务
 | 2026-08-24 | 1.3 | v4.0 对比优化: 状态机 + 六态标记 + Error Contract |
 | 2026-08-24 | **2.0** | **范式转换: Agent 运行时作为可变因素。新增 L0 安装层 + L1 运行时抽象层。4 层 → 5 层。L2 解耦(68 处运行时硬耦合 → 抽象接口)。§5 从"OpenClaw 契约边界"改为"运行时契约边界"。ADR-012 accepted。** |
 | 2026-08-24 | 2.1 | 补齐 L2 缺失能力: ① 会话生命周期管理(cron 每日清理 + deleteAfterRun + 分级策略,ADR-013); ② 错误自动处理(检测→分级→自愈闭环,ADR-014)。14 份 ADR accepted。10 个 L2 组件齐备。 |
-| 2026-08-24 | 2.2 | 建设模型调度组件 model-scheduling: ① 模型注册表(从 openclaw.json 自动同步); ② 智能路由(任务分类 + 多级 fallback); ③ token 压缩(参考 9router RTK); ④ 用量追踪(每周从 provider API 获取); ⑤ 健康探测(每小时 ping)。11 个 L2 组件齐备。** |
+| 2026-08-24 | 2.2 | 建设模型调度组件 model-scheduling: ① 模型注册表(从 openclaw.json 自动同步); ② 智能路由(任务分类 + 多级 fallback); ③ token 压缩(参考 9router RTK); ④ 用量追踪(每周从 provider API 获取); ⑤ 健康探测(每小时 ping)。11 个 L2 组件齐备。 |
+| 2026-08-25 | 2.3 | model-scheduling 完善: ① 代理服务(proxy.py,自动启动+热更新); ② 自动启动(LaunchAgent,开机自启+崩溃重启); ③ 热更新(config_watcher.py,文件变更→≤10秒生效); ④ 端到端验证(闲聊→doubao-lite,编码→ark-code,推理→deepseek); ⑤ 回退方案(3份rollback文件)。** |
 
 ---
 
