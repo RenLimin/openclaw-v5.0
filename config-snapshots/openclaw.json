@@ -65,7 +65,7 @@
         "workspace": "/Users/bangcle/.openclaw/workspace",
         "agentDir": "/Users/bangcle/.openclaw/agents/main/agent",
         "model": {
-          "primary": "model-scheduling/auto",
+          "primary": "longcat/LongCat-2.0",
           "fallbacks": [
             "coding-plan/ark-code-latest",
             "coding-plan/deepseek-v4-flash",
