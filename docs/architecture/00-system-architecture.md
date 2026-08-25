@@ -97,6 +97,7 @@
 │  L1  运行时抽象层 (Runtime Abstraction Layer)                │
 │      · 定义 Agent 运行时的最小能力契约                       │
 │      · 当前实现: OpenClaw (适配层: adapters/openclaw/)       │
+│      · 适配层: adapter.py / config.py / health.py            │
 │      · 可替换: Claude Code / CrewAI / LangGraph / 自研       │
 ├─────────────────────────────────────────────────────────────┤
 │  L0  系统安装层 (Installation Layer)                         │
