@@ -29,6 +29,9 @@
 
 set -euo pipefail
 
+# launchd/cron 环境 PATH 精简，显式补齐 Homebrew bin（含 openclaw CLI）
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # 备份根目录放 ~/Backups/openclaw（官方 backup 拒绝写入 ~/.openclaw 源路径内）
 BACKUP_ROOT="${OPENCLAW_BACKUP_ROOT:-$HOME/Backups/openclaw}"
