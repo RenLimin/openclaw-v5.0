@@ -456,7 +456,7 @@ adapters/
 
 #### 3.4.2 通用业务层状态
 
-**当前**: 📐 设计中 — [L3 架构设计](./02-generic-business-layer.md) v0.1 已提交，待 Rex 评审确认后启动建设
+**当前**: 📐 设计中 — [L3 架构设计](./02-generic-business-layer.md) v1.3 + [知识库体系架构](./03-knowledge-base-architecture.md) v1.0 已提交，待 Rex 评审确认后启动建设
 
 **预留位**(待启动时填充):
 - L3 第一个维度的选型理由
