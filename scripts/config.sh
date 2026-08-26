@@ -202,34 +202,89 @@ cmd_apply() {
     log_step "[3/4] 读回确认 ★"
     if ! openclaw config validate; then
         log_err "校验失败！配置可能已损坏，检查 ~/.openclaw/openclaw.json.bak"
+        log_err "自动回退中..."
+        # 自动回退到最新 .bak
+        LATEST_BAK=$(ls -t ~/.openclaw/openclaw.json.bak* 2>/dev/null | head -1)
+        if [[ -n "$LATEST_BAK" ]]; then
+            cp "$LATEST_BAK" ~/.openclaw/openclaw.json
+            log_ok "已回退到: $LATEST_BAK"
+        fi
         return 1
     fi
-    # 逐个读回 patch 中出现的顶层路径
+    # 深层读回：逐键验证 patch 中的每个路径
     python3 - "$patch_file" <<'PY'
 import json, re, subprocess, sys
+def extract_paths(obj, prefix=""):
+    """递归提取所有叶子路径"""
+    paths = []
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            full = f"{prefix}.{k}" if prefix else k
+            paths.extend(extract_paths(v, full))
+    else:
+        paths.append(prefix)
+    return paths
+
 raw = open(sys.argv[1]).read()
-# 提取 json5 里的键路径（粗粒度：顶层两层）
-keys = re.findall(r'^\s*([A-Za-z_][\w-]*)\s*:', raw, re.M)
-seen, order = set(), []
-for k in keys:
-    if k not in seen:
-        seen.add(k); order.append(k)
-top = order[:2]
-if not top:
-    print("  (无法解析 patch 路径，跳过逐项读回)")
+# 尝试解析 JSON5（去掉注释和尾逗号）
+cleaned = re.sub(r'//[^\n]*', '', raw)
+cleaned = re.sub(r',\s*([}\]])', r'\1', cleaned)
+try:
+    patch = json.loads(cleaned)
+except json.JSONDecodeError:
+    print("  (patch 解析失败，跳过逐键读回)")
     sys.exit(0)
-path = ".".join(top)
-r = subprocess.run(["openclaw", "config", "get", path],
-                   capture_output=True, text=True)
-label = "✅" if r.returncode == 0 else "⚠️ "
-print(f"  {label} openclaw config get {path}")
-for line in (r.stdout or r.stderr).strip().splitlines()[:20]:
-    print(f"      {line}")
+
+all_paths = extract_paths(patch)
+if not all_paths:
+    print("  (无叶子路径，跳过读回)")
+    sys.exit(0)
+
+ok_count = 0
+fail_count = 0
+for path in all_paths[:20]:  # 最多检查 20 条
+    r = subprocess.run(["openclaw", "config", "get", path],
+                       capture_output=True, text=True)
+    label = "✅" if r.returncode == 0 else "❌"
+    if r.returncode == 0:
+        ok_count += 1
+    else:
+        fail_count += 1
+    val_preview = (r.stdout or r.stderr).strip().splitlines()[:1]
+    val_str = val_preview[0][:60] if val_preview else "(空)"
+    print(f"  {label} {path} = {val_str}")
+
+print(f"\n  读回结果: {ok_count} ✅ / {fail_count} ❌ (共 {ok_count + fail_count} 项)")
+if fail_count > 0:
+    sys.exit(1)
 PY
+    if [[ $? -ne 0 ]]; then
+        log_err "读回验证失败！部分路径写入未生效"
+        log_err "自动回退中..."
+        LATEST_BAK=$(ls -t ~/.openclaw/openclaw.json.bak* 2>/dev/null | head -1)
+        if [[ -n "$LATEST_BAK" ]]; then
+            cp "$LATEST_BAK" ~/.openclaw/openclaw.json
+            log_ok "已回退到: $LATEST_BAK"
+        fi
+        return 1
+    fi
     echo ""
 
-    log_step "[4/4] 快照入库"
+    log_step "[4/4] 快照入库 + 保存回退点"
     python3 scripts/snapshot_config.py
+    # 保存带时间戳的 rollback 快照（用于精确回退到此变更前）
+    ROLLBACK_TS=$(date +%Y%m%d%H%M%S)
+    ROLLBACK_FILE="config-snapshots/rollback_${ROLLBACK_TS}.json"
+    python3 -c "
+import json, shutil
+from pathlib import Path
+cfg_text = Path.home().joinpath('.openclaw/openclaw.json').read_text()
+Path('$ROLLBACK_FILE').write_text(cfg_text)
+" 2>/dev/null
+    if [[ -f "$ROLLBACK_FILE" ]]; then
+        log_ok "回退点已保存: $ROLLBACK_FILE"
+        log_ok "精确回退命令: cp $ROLLBACK_FILE ~/.openclaw/openclaw.json && openclaw gateway restart"
+    fi
     echo ""
 
     log_ok "四步流程完成"

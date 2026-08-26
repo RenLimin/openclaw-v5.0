@@ -21,12 +21,35 @@
 """
 
 import json, os, sys, urllib.request, urllib.error
+from pathlib import Path
 
 MODEL = sys.argv[1]
 NTOK = int(sys.argv[2])
 
-d = json.load(open(os.path.expanduser("~/.openclaw/openclaw.json")))
-pr = d["models"]["providers"]["coding-plan"]
+# 容错加载 openclaw.json：损坏时优雅降级
+_cfg_path = Path.home() / ".openclaw" / "openclaw.json"
+try:
+    d = json.loads(_cfg_path.read_text())
+except (json.JSONDecodeError, FileNotFoundError) as e:
+    print(f"❌ 无法加载 openclaw.json: {e}", file=sys.stderr)
+    print("   尝试从 .bak 恢复最新配置...", file=sys.stderr)
+    import glob
+    baks = sorted(glob.glob(str(_cfg_path) + ".bak*"), reverse=True)
+    if baks:
+        try:
+            d = json.loads(Path(baks[0]).read_text())
+            print(f"   已使用备份: {baks[0]}", file=sys.stderr)
+        except Exception:
+            print("❌ 备份也不可用，中止", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("❌ 无备份可用，中止", file=sys.stderr)
+        sys.exit(1)
+
+pr = d.get("models", {}).get("providers", {}).get("coding-plan")
+if not pr:
+    print("❌ 未找到 coding-plan provider 配置", file=sys.stderr)
+    sys.exit(1)
 KEY = pr.get("apiKey") or pr.get("api_key")
 BASE = pr["baseUrl"].rstrip("/")
 

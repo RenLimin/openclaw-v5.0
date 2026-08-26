@@ -8,6 +8,9 @@ OpenClaw 运行时适配层 - L1 最小能力契约实现
 from typing import Any, Dict, List, Optional, Tuple, Union
 import json
 import subprocess
+import glob
+import shutil
+from pathlib import Path
 from dataclasses import dataclass
 
 # L1 最小能力契约接口
@@ -144,13 +147,53 @@ class OpenClawAdapter:
             return None
 
     def config_set(self, path: str, val: Any) -> bool:
-        """写入配置"""
-        cmd = ["openclaw", "config", "set", path, json.dumps(val)]
+        """写入配置（带保护：dry-run → 写入 → 校验 → 读回）
+        
+        保护机制（基于 EXP-010/011 教训）：
+        1. dry-run 预检，失败则中止（不触碰文件）
+        2. 写入后 validate，失败则回退到 .bak
+        3. 读回确认写入值与期望一致
+        """
+        # 1. dry-run 预检
+        dry_cmd = ["openclaw", "config", "patch", "--stdin", "--dry-run"]
+        patch_data = json.dumps({path: val})
         try:
-            subprocess.run(cmd, check=True, capture_output=True)
-            return True
+            subprocess.run(dry_cmd, input=patch_data, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            # dry-run 失败 = 配置 schema 不合法，中止
+            return False
+
+        # 2. 正式写入（使用 patch 而非 set，支持嵌套路径）
+        patch_cmd = ["openclaw", "config", "patch", "--stdin"]
+        try:
+            subprocess.run(patch_cmd, input=patch_data, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError:
             return False
+
+        # 3. 写入后校验
+        valid, errors = self.config_validate()
+        if not valid:
+            # 校验失败 → 尝试回退
+            self._auto_rollback()
+            return False
+
+        # 4. 读回确认
+        actual = self.config_get(path)
+        if actual != val:
+            # 写入值与期望不符 → 回退
+            self._auto_rollback()
+            return False
+
+        return True
+
+    def _auto_rollback(self) -> None:
+        """自动回退：恢复最新的 .bak 文件"""
+        import glob, shutil
+        bak_dir = Path.home() / ".openclaw"
+        baks = sorted(glob.glob(str(bak_dir / "openclaw.json.bak*")), reverse=True)
+        if baks:
+            # 用 .bak（最新一份）恢复
+            shutil.copy2(baks[0], bak_dir / "openclaw.json")
 
     def config_validate(self) -> Tuple[bool, List[str]]:
         """验证配置合法性"""

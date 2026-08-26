@@ -21,6 +21,7 @@ log_ok()   { echo -e "${GREEN}✅${NC} $*"; }
 log_warn() { echo -e "${YELLOW}⚠️${NC} $*"; }
 log_err()  { echo -e "${RED}❌${NC} $*"; }
 log_step() { echo -e "${BLUE}▶${NC} $*"; }
+log_skip() { echo -e "${YELLOW}⏭${NC} $*"; }
 
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
@@ -34,6 +35,49 @@ if $DRY_RUN; then
     echo "  --dry-run 模式,仅预览,不写入"
     echo ""
 fi
+
+# ─── Step 0: 幂等检查 ───
+log_step "[0/4] 幂等检查（是否已注册）..."
+
+EXISTING_AGENTS=$(openclaw config get agents.entries 2>/dev/null | python3 -c "
+import json, sys
+try:
+    entries = json.load(sys.stdin)
+    ms_agents = [k for k in entries if k.startswith('ms-')]
+    if ms_agents:
+        print(','.join(ms_agents))
+    else:
+        print('')
+except:
+    print('')
+" 2>/dev/null || echo "")
+
+if [[ -n "$EXISTING_AGENTS" ]]; then
+    log_warn "  已检测到注册的 agent: $EXISTING_AGENTS"
+    log_skip "  跳过注册（已初始化过，重复执行会覆盖现有配置）"
+    log_skip "  如需重新注册，先手动清除: openclaw config patch --stdin '{\"agents\":{\"entries\":{...}}}')"
+    exit 0
+fi
+log_ok "  未检测到 ms-* agent，继续注册"
+echo ""
+
+# ─── Step 0.5: 保存当前配置快照（动态 rollback）───
+log_step "[0.5/4] 保存当前配置快照（用于回退）..."
+ROLLBACK_TIMESTAMP=$(date +%Y%m%d%H%M%S)
+ROLLBACK_FILE="${CONFIG_DIR}/rollback_${ROLLBACK_TIMESTAMP}.json"
+python3 -c "
+import json, sys
+from pathlib import Path
+cfg = json.loads(subprocess.run(['openclaw', 'config', 'get'], capture_output=True, text=True).stdout)
+Path('${ROLLBACK_FILE}').write_text(json.dumps(cfg, indent=2))
+" 2>/dev/null || true
+if [[ -f "$ROLLBACK_FILE" ]]; then
+    log_ok "  配置快照已保存: $ROLLBACK_FILE"
+    log_ok "  回退命令: openclaw config patch --file $ROLLBACK_FILE"
+else
+    log_warn "  快照保存失败，继续执行（依赖 .bak 轮转恢复）"
+fi
+echo ""
 
 # ─── Step 1: 确认路由规则 ───
 log_step "[1/4] 确认路由规则 ..."
