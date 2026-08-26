@@ -56,6 +56,12 @@
             "ALL"
           ]
         }
+      },
+      "heartbeat": {
+        "every": "30m"
+      },
+      "systemAgent": {
+        "agentId": "<REDACTED>"
       }
     },
     "entries": {
@@ -74,6 +80,9 @@
         },
         "identity": {
           "name": "main"
+        },
+        "heartbeat": {
+          "every": "30m"
         }
       },
       "ms-coding": {
@@ -88,6 +97,9 @@
         },
         "identity": {
           "name": "ms-coding"
+        },
+        "heartbeat": {
+          "every": "0m"
         }
       },
       "ms-research": {
@@ -102,6 +114,9 @@
         },
         "identity": {
           "name": "ms-research"
+        },
+        "heartbeat": {
+          "every": "0m"
         }
       },
       "ms-reasoning": {
@@ -116,6 +131,9 @@
         },
         "identity": {
           "name": "ms-reasoning"
+        },
+        "heartbeat": {
+          "every": "0m"
         }
       },
       "ms-chat": {
@@ -129,6 +147,9 @@
         },
         "identity": {
           "name": "ms-chat"
+        },
+        "heartbeat": {
+          "every": "0m"
         }
       }
     }
@@ -454,8 +475,8 @@
     }
   },
   "wizard": {
-    "lastRunAt": "2026-08-21T02:25:08.646Z",
-    "lastRunCommand": "onboard",
+    "lastRunAt": "2026-08-26T06:50:28.512Z",
+    "lastRunCommand": "doctor",
     "lastRunMode": "local",
     "lastRunVersion": "2026.7.2-beta.7"
   },
@@ -543,5 +564,17 @@
     "maintenance": {
       "pruneAfter": "48h"
     }
+  },
+  "bindings": [
+    {
+      "agentId": "<REDACTED>",
+      "match": {
+        "channel": "wecom",
+        "accountId": "*"
+      }
+    }
+  ],
+  "talk": {
+    "agentId": "<REDACTED>"
   }
 }
