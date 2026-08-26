@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTD/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.service-guardian</string>
+
+    <key>Comment</key>
+    <string>Gateway ↔ 自定义服务生命周期同步守护 (v1.0.0) — 纯 sh，零依赖，OpenClaw 升级不破坏</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/sh</string>
+      <string>/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/service_guardian.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/bangcle/.openclaw/workspace/model-scheduling</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>ExitTimeOut</key>
+    <integer>5</integer>
+
+    <key>ThrottleInterval</key>
+    <integer>3</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/model-scheduling/logs/guardian.stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/model-scheduling/logs/guardian.stderr.log</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+  </dict>
+</plist>
