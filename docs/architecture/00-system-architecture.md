@@ -12,8 +12,9 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.3 (2026-08-25 — model-scheduling 完善:代理服务自动启动 + 热更新 + 端到端验证 + 文档补齐) |
+| 文档版本 | 2.4 (2026-08-26 — agent 重建 + cron 全清 + 心跳重建 + 架构文档与运行时对齐) |
 | 文档状态 | active |
+| 运行时 cron | 仅 heartbeat:main(30m),所有业务 cron 已清除(2026-08-26) |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001) |
 | 配套文档 | `../knowledge-base/README.md` |
 | 待办 | 无(L3 启动待 Rex 拍板,见 §6.2) |
@@ -247,7 +248,7 @@ adapters/
 | Agent Loop | ✅ 全量使用 | 主 agent + 定时任务隔离运行 |
 | 工具执行 | ✅ 使用 | 通过 ToolPolicy 控制可见工具集 |
 | 记忆 | ✅ 全量使用 + 自建监控 | 语义检索 + 健康监控 |
-| 定时调度 | ✅ 使用 | 4 个 enabled 调度任务 |
+| 定时调度 | ✅ 使用 | 1 个 enabled 调度任务(heartbeat:main, 30m) |
 | 通道接入 | ⚠️ 部分使用 | 当前: WeCom + webchat |
 | 配置管理 | ✅ 全量使用 | + 自建变更治理(ADR-007) |
 | 凭据管理 | ✅ 全量使用 | 集中式凭据存储 |
@@ -280,8 +281,8 @@ adapters/
 | **上下文管理** | 自动压缩 + 溢出防护状态机 | 已上线 | ✅ |
 | **记忆语义检索** | 本地 embedding + 向量索引 + 健康监控 | 已上线 | ✅ |
 | **沙箱隔离** | Docker 后端 + 加固基线 | 已上线 | ✅ |
-| **会话生命周期管理** | 自动清理过期会话(分级策略 + cron + deleteAfterRun) | 已上线 | ✅ |
-| **错误自动处理** | 检测→分级→自愈闭环(Error Contract + cron 扫描) | 已上线 | ✅ |
+| **会话生命周期管理** | 自动清理过期会话(分级策略 + deleteAfterRun),cron 已清除,待重建 | 设计完备 / cron 未启用 | 📋 |
+| **错误自动处理** | 检测→分级→自愈闭环(Error Contract),cron 已清除,待重建 | 设计完备 / cron 未启用 | 📋 |
 | **模型调度** | 智能模型路由(多级 fallback + token 压缩 + 用量感知) | 已上线 | ✅ |
 | **工具/技能封装** | domain-specific skills、工具二次封装 | 复用 + 自建 | 🚧 |
 | **调度/任务编排** | 定时任务、隔离运行、心跳 | 复用 L1 | 📋 |
@@ -369,8 +370,8 @@ adapters/
    - 基线: `workspaceAccess=ro` / `readOnlyRoot` / `network:none` / `capDrop:ALL`
    - 验证: 子会话 uid=1000(sandbox) + 写拦截 + 断网 + 上层通道正常
 
-9. **会话生命周期管理** (2026-08-24)
-   - 组件 ID: cron「会话生命周期管理」+ `pruneAfter=48h` + `deleteAfterRun`
+9. **会话生命周期管理** (2026-08-24, 08-26 状态更新)
+   - 组件 ID: `pruneAfter=48h` + `deleteAfterRun` + 分级策略 (cron 已清除,待重建)
    - 功能: 自动清理过期会话,保持会话存储健康
    - 分级策略:
      - 主会话: 永不清理
@@ -379,16 +380,18 @@ adapters/
      - 探测会话: 24h 后清理
      - 每日 02:00 自动执行 `sessions cleanup --enforce`
    - 保护: `--active-key agent:main:main` 保护主会话
+   - **当前状态**: 设计 + ADR + DESIGN.md 齐备,cron 任务已于 08-26 清除,待 Rex 决定是否重建
    - ADR: ADR-013
    - 设计: `components/session-lifecycle/DESIGN.md`
 
-10. **错误自动处理** (2026-08-24)
-    - 组件 ID: cron「会话错误自动处理」+ Error Contract 分级
+10. **错误自动处理** (2026-08-24, 08-26 状态更新)
+    - 组件 ID: Error Contract 分级 + cron 扫描 (cron 已清除,待重建)
     - 功能: 检测→分级→自愈闭环
     - 检测: 每 2h 扫描 cron runs 失败 + 上下文水位 + 记忆检索健康
     - 分级: Sev1-4(对齐 ADR-011 Error Contract)
     - 自愈: 记忆降级→重建索引 / 上下文溢出→分流 / cron 失败→记录模式
     - 通知: Sev1 立即通知 / Sev2 下次 heartbeat / Sev3-4 日志
+    - **当前状态**: 设计 + ADR + DESIGN.md 齐备,cron 任务已于 08-26 清除,待 Rex 决定是否重建
     - ADR: ADR-014
     - 设计: `components/error-handling/DESIGN.md`
 
@@ -414,7 +417,7 @@ adapters/
     - 回退方案: `config/rollback_main_agent.json` + `config/rollback_defaults.json` + `config/rollback_provider.json`
     - 设计: `model-scheduling/DESIGN.md`
 
-**L2 组件建设状态**: **11 个组件四件套齐备**(7 个治理组件 + 沙箱 + 会话生命周期 + 错误自动处理 + 模型调度)。
+**L2 组件建设状态**: **11 个组件设计齐备**,其中 9 个已上线(7 个治理组件 + 沙箱 + 模型调度),2 个 cron 驱动型(会话生命周期管理 + 错误自动处理)设计完备但 cron 已清除、待重建。
 
 **预留位**:
 - 知识库**自建系统**(服务形态: DB + Web 渲染) — 与上方「知识库能力」组件区分
@@ -744,7 +747,8 @@ L4 专有业务
 | 2026-08-24 | **2.0** | **范式转换: Agent 运行时作为可变因素。新增 L0 安装层 + L1 运行时抽象层。4 层 → 5 层。L2 解耦(68 处运行时硬耦合 → 抽象接口)。§5 从"OpenClaw 契约边界"改为"运行时契约边界"。ADR-012 accepted。** |
 | 2026-08-24 | 2.1 | 补齐 L2 缺失能力: ① 会话生命周期管理(cron 每日清理 + deleteAfterRun + 分级策略,ADR-013); ② 错误自动处理(检测→分级→自愈闭环,ADR-014)。14 份 ADR accepted。10 个 L2 组件齐备。 |
 | 2026-08-24 | 2.2 | 建设模型调度组件 model-scheduling: ① 模型注册表(从 openclaw.json 自动同步); ② 智能路由(任务分类 + 多级 fallback); ③ token 压缩(参考 9router RTK); ④ 用量追踪(每周从 provider API 获取); ⑤ 健康探测(每小时 ping)。11 个 L2 组件齐备。 |
-| 2026-08-25 | 2.3 | model-scheduling 完善: ① 代理服务(proxy.py,自动启动+热更新); ② 自动启动(LaunchAgent,开机自启+崩溃重启); ③ 热更新(config_watcher.py,文件变更→≤10秒生效); ④ 端到端验证(闲聊→doubao-lite,编码→ark-code,推理→deepseek); ⑤ 回退方案(3份rollback文件)。** |
+| 2026-08-25 | 2.3 | model-scheduling 完善: ① 代理服务(proxy.py,自动启动+热更新); ② 自动启动(LaunchAgent,开机自启+崩溃重启); ③ 热更新(config_watcher.py,文件变更→≤10秒生效); ④ 端到端验证(闲聊→doubao-lite,编码→ark-code,推理→deepseek); ⑤ 回退方案(3份rollback文件)。 |
+| 2026-08-26 | **2.4** | **agent 重建(SQLite 损坏) + cron 全清 + 心跳重建。L2 状态更新: 会话生命周期管理 + 错误自动处理 cron 已清除(设计保留,📋 待重建)。资产清单与运行时对齐。AGENTS.md 新增 L1 长任务隔离章节。** |
 
 ---
 
