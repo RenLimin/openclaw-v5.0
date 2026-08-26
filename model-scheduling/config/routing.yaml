@@ -95,3 +95,14 @@ health_thresholds:
 usage_thresholds:
   daily_token_limit: 1000000  # 每日 token 上限(超过后降级到便宜模型)
   monthly_cost_limit: 50     # 每月成本上限(美元)
+
+# 压缩模型路由规则(compaction.model 动态选择)
+# 策略:
+#   same_provider_largest_ctx: 优先选择与主模型同 provider 且上下文窗口最大的模型
+#                            避免跨 provider 单点故障
+compaction_routing:
+  strategy: "same_provider_largest_ctx"    # 核心策略
+  fallback_chain:                          # 同 provider 找不到时的保底 fallback
+    - "coding-plan/deepseek-v4-flash"      # L1: coding-plan 大 ctx reasoning
+    - "coding-plan/glm-5.3"                # L2: coding-plan 大 ctx 备用
+    - "coding-plan/ark-code-latest"       # L3: coding-plan 主模型保底

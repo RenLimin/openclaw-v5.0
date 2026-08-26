@@ -163,11 +163,80 @@ def select_model(task_type: str, models: list[dict], routing: dict, usage: dict)
     return None
 
 
+def select_compaction_model(main_model_id: str, models: list[dict], routing: dict, usage: dict) -> dict:
+    """根据当前主会话模型选择最优压缩模型。
+    
+    策略: 同 provider → 最大上下文窗口 → fallback chain
+    """
+    compaction_routing = routing.get("compaction_routing", {})
+    strategy = compaction_routing.get("strategy", "same_provider_largest_ctx")
+    fallback_chain = compaction_routing.get("fallback_chain", [])
+    
+    # 找到主模型信息
+    main_model = None
+    for m in models:
+        if m.get("id") == main_model_id:
+            main_model = m
+            break
+    
+    provider_usage = usage.get("providers", {})
+    selected = None
+    
+    if strategy == "same_provider_largest_ctx" and main_model:
+        main_provider = main_model.get("provider")
+        # 收集同 provider 所有 active 且未耗尽的模型
+        candidates = []
+        for m in models:
+            if m.get("provider") != main_provider:
+                continue
+            if m.get("status") != "active":
+                continue
+            provider = m.get("provider", "")
+            pu = provider_usage.get(provider, {})
+            if pu.get("status") == "exhausted":
+                continue
+            candidates.append(m)
+        
+        if candidates:
+            # 按上下文窗口降序排序,选最大的
+            candidates.sort(key=lambda x: x.get("context_window", 0), reverse=True)
+            selected = candidates[0]
+    
+    # 如果同 provider 没找到,走全局 fallback chain
+    if not selected and fallback_chain:
+        for model_ref in fallback_chain:
+            model = None
+            for m in models:
+                if m.get("id") == model_ref:
+                    model = m
+                    break
+            if not model:
+                continue
+            if model.get("status") != "active":
+                continue
+            provider = model.get("provider", "")
+            pu = provider_usage.get(provider, {})
+            if pu.get("status") == "exhausted":
+                continue
+            selected = model
+            break
+    
+    # 如果还是没找到,返回第一个 active 模型
+    if not selected:
+        for m in models:
+            if m.get("status") == "active":
+                selected = m
+                break
+    
+    return selected
+
+
 def main():
     parser = argparse.ArgumentParser(description="智能路由引擎")
     parser.add_argument("message", nargs="?", help="任务消息(用于分类)")
     parser.add_argument("--task-type", choices=["coding", "reasoning", "research", "chat", "embedding"],
                         help="直接指定任务类型(跳过自动分类)")
+    parser.add_argument("--compaction-for", help="为指定主模型选择压缩模型")
     parser.add_argument("--dry-run", action="store_true", help="预览路由决策")
     parser.add_argument("--json", action="store_true", help="JSON 输出")
     args = parser.parse_args()
@@ -195,27 +264,52 @@ def main():
 
     # 3. 选择模型
     print("[3/3] 选择模型 ...")
-    selected = select_model(task_type, models, routing, usage)
-
-    if not selected:
-        print("  ❌ 无可用模型!")
-        sys.exit(1)
-
-    result = {
-        "task_type": task_type,
-        "selected_model": selected.get("id"),
-        "provider": selected.get("provider"),
-        "context_window": selected.get("context_window"),
-        "reason": f"任务类型 {task_type} → fallback chain 第 1 个可用模型",
-    }
-
-    if args.json:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+    
+    if args.compaction_for:
+        # 为指定主模型选择压缩模型
+        selected = select_compaction_model(args.compaction_for, models, routing, usage)
+        if not selected:
+            print("  ❌ 无可用压缩模型!")
+            sys.exit(1)
+        
+        result = {
+            "main_model": args.compaction_for,
+            "selected_compaction_model": selected.get("id"),
+            "provider": selected.get("provider"),
+            "context_window": selected.get("context_window"),
+            "reason": f"主模型 {args.compaction_for} → same provider → largest ctx → fallback",
+        }
+        
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"  主模型: {result['main_model']}")
+            print(f"  推荐压缩模型: {result['selected_compaction_model']}")
+            print(f"  Provider: {result['provider']}")
+            print(f"  上下文窗口: {result['context_window']}")
+            print(f"  原因: {result['reason']}")
     else:
-        print(f"  推荐模型: {result['selected_model']}")
-        print(f"  Provider: {result['provider']}")
-        print(f"  上下文窗口: {result['context_window']}")
-        print(f"  原因: {result['reason']}")
+        # 常规任务路由
+        selected = select_model(task_type, models, routing, usage)
+        if not selected:
+            print("  ❌ 无可用模型!")
+            sys.exit(1)
+        
+        result = {
+            "task_type": task_type,
+            "selected_model": selected.get("id"),
+            "provider": selected.get("provider"),
+            "context_window": selected.get("context_window"),
+            "reason": f"任务类型 {task_type} → fallback chain 第 1 个可用模型",
+        }
+        
+        if args.json:
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+        else:
+            print(f"  推荐模型: {result['selected_model']}")
+            print(f"  Provider: {result['provider']}")
+            print(f"  上下文窗口: {result['context_window']}")
+            print(f"  原因: {result['reason']}")
 
     print()
     print("=== 路由完成 ===")
