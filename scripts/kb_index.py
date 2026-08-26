@@ -44,8 +44,8 @@ BUSINESS_KB_ROOT = KB_ROOT / "by-category" / "business"
 # --- 业务知识库合法值 ---
 VALID_DIMENSIONS = {
     "project-management", "contract-management", "after-sales", "implementation",
-    "family-finance", "product-design", "system-architecture", "frontend-dev",
-    "backend-dev", "testing", "devops-sre", "data-engineering",
+    "family-finance", "finance", "product-design", "system-architecture",
+    "frontend-dev", "backend-dev", "testing", "devops-sre", "data-engineering",
     "security-engineering", "software-development", "methodology",
 }
 VALID_BUSINESS_CATEGORIES = {"industry-practice", "theoretical-knowledge", "project-experience"}
