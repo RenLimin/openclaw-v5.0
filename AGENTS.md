@@ -114,6 +114,23 @@ Example placeholders (replace or remove them):
 - On Discord, wrap multiple links in `<>` to suppress embeds (`<https://example.com>`).
 - On WhatsApp, use **bold** or CAPS instead of headers.
 
+## 长任务隔离（L1 防压缩冲突）
+
+长任务（>5 步 exec / 大量文件读写 / 批量操作 / KB 文档生成）必须用 `sessions_spawn(mode="run")` 隔离到 subagent，主会话只做调度和汇总。
+
+**为什么**：主会话跑长任务会快速累积 token，触发 auto-compaction，正在执行的 exec 被中断 → 会话状态不一致。subagent 有独立上下文，完成后自动回报结果，主会话不累积执行 token。
+
+**判断标准**：
+- ✅ 主会话直接做：查询、单步操作、简短回复、配置读取
+- ✅ subagent 隔离：多步骤构建、批量文件写入、KB 文档生成、代码重构、跨文件编辑
+
+**三层防护**：
+| 层级 | 机制 | 作用 |
+|---|---|---|
+| L1 预防 | 长任务 subagent 隔离 | 主会话不累积 token |
+| L2 降级 | compaction 模型同 provider | 共享网络/鉴权命运 |
+| L3 兜底 | keepRecentTokens=30k | 压缩不丢关键上下文 |
+
 ## Heartbeats - Be Proactive
 
 When you receive a heartbeat poll (message matches the configured heartbeat prompt), don't just reply `HEARTBEAT_OK` every time. Keep a short checklist or reminders in the heartbeat monitor's cron scratch; use `openclaw cron list --all` to find the monitor job, then `openclaw cron scratch <jobId> --set "..."` to update it. Keep it small to limit token burn.
