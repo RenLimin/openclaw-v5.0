@@ -78,11 +78,11 @@
             "coding-plan/doubao-seed-2.0-lite"
           ]
         },
-        "identity": {
-          "name": "main"
-        },
         "heartbeat": {
           "every": "30m"
+        },
+        "identity": {
+          "name": "main"
         }
       },
       "ms-coding": {
@@ -95,11 +95,11 @@
             "coding-plan/doubao-seed-2.0-lite"
           ]
         },
-        "identity": {
-          "name": "ms-coding"
-        },
         "heartbeat": {
           "every": "0m"
+        },
+        "identity": {
+          "name": "ms-coding"
         }
       },
       "ms-research": {
@@ -112,11 +112,11 @@
             "coding-plan/doubao-seed-2.0-lite"
           ]
         },
-        "identity": {
-          "name": "ms-research"
-        },
         "heartbeat": {
           "every": "0m"
+        },
+        "identity": {
+          "name": "ms-research"
         }
       },
       "ms-reasoning": {
@@ -129,11 +129,11 @@
             "coding-plan/ark-code-latest"
           ]
         },
-        "identity": {
-          "name": "ms-reasoning"
-        },
         "heartbeat": {
           "every": "0m"
+        },
+        "identity": {
+          "name": "ms-reasoning"
         }
       },
       "ms-chat": {
@@ -145,11 +145,11 @@
             "coding-plan/ark-code-latest"
           ]
         },
-        "identity": {
-          "name": "ms-chat"
-        },
         "heartbeat": {
           "every": "0m"
+        },
+        "identity": {
+          "name": "ms-chat"
         }
       }
     }
