@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-27 13:57 UTC+08:00
+最后生成：2026-08-28 23:18 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,7 +23,7 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 78 个（启用 5） · bundled 74 · global 4
+**总计** 79 个（启用 6） · bundled 74 · global 5
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
@@ -31,19 +31,20 @@
 |---|---|---|---|
 | `llama-cpp` | global | — | — |
 | `longcat` | global | — | model-provider: longcat |
+| `openclaw-weixin` | global | — | channel: openclaw-weixin |
 | `tavily` | global | — | web-search: tavily |
 | `wecom-openclaw-plugin` | global | — | channel: wecom |
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 115 个（可用 103）
+**总计** 116 个（可用 104）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 23 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 24 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -71,6 +72,7 @@
 | `openclaw-cron-delivery-triage` | Cron/automation job shows status=error but its output files are fine — diagnose deliver... |
 | `openclaw-debug-missing-tool` | Diagnose OpenClaw "documented tool not callable" via tools.profile and plugin capabilit... |
 | `openclaw-generated-asset-inventory` | Generate a self-updating OpenClaw asset/inventory doc from CLI JSON sources with drift ... |
+| `openmaic` | OpenMAIC assistant for setting up, generating, and extending OpenMAIC. Use when the use... |
 | `probe-model-context-window-limit` | Measure a provider model's real input-token limit by binary-search probe before setting... |
 
 ## L2 — Agent 资产
@@ -124,6 +126,9 @@
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
+| Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
+| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 
 ## 文档资产
 
@@ -175,8 +180,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `c0209a9` |
-| Commit 数 | 97 |
+| HEAD | `56b9376` |
+| Commit 数 | 98 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

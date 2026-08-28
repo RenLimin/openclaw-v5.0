@@ -31,3 +31,14 @@ model-scheduling/config/usage.json
 
 # dreaming 产物（个人化内容，不入版本控制）
 DREAMS.md
+
+# OCR virtualenv（大量第三方包，不提交）
+.venv-ocr/
+
+# 业务数据（本地持久化，不提交）
+data/
+*.db
+*.sqlite3
+
+# 导出文件
+exports/
