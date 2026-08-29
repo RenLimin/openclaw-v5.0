@@ -188,3 +188,36 @@ scripts/l4/delivery_center/
 | 日期 | 版本 | 变更 |
 |------|------|------|
 | 2026-08-28 | v1.0 | 重新设计（回退后） |
+
+---
+
+## 九、端到端实测结果（2026-08-29）
+
+### 9.1 连通性测试
+
+| 系统 | URL | 结果 | 说明 |
+|------|-----|------|------|
+| IAM | https://iam.bangcle.com | ✅ | 直接登录成功 |
+| ONES | https://ones.bangcle.com | ✅ | Cookie 注入后正常访问 |
+| OA 工时门户 | https://oa.bangcle.com/spa/custom/static/... | ✅ | 直接访问子页面成功 |
+| OA 合同台账 | 待确认 SPA 路由 | ⏳ | 需确认实际路径 |
+
+### 9.2 Cookie 策略
+
+1. 登录 IAM 获取 JSESSIONID + x-access-token
+2. 注入到所有 `.bangcle.com` 子域名
+3. OA 域名有独立 Cookie（ecology_JSessionid）
+4. Cookie 有效期 12 小时，自动刷新
+
+### 9.3 OA 采集注意事项
+
+- **不要访问 OA 首页**（SSO 回调在 Playwright 中会卡住）
+- **直接访问目标子页面**（SPA 路由）
+- 合同台账的 SPA 路由路径待确认
+
+### 9.4 IAM 登录页面结构
+
+- 用户名：`input[type=text]`（placeholder 含"用户名"）
+- 密码：`input[type=password]`（placeholder 含"密码"）
+- 登录按钮：`button`（text_content 含"登录"）
+- 无 name 属性，用 type 定位

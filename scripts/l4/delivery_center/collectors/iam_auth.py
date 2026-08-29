@@ -79,8 +79,8 @@ def login_iam(username: str, password: str) -> bool:
             page.wait_for_load_state("networkidle", timeout=15000)
 
             # 填写登录表单（具体选择器需根据实际页面调整）
-            page.fill("input[placeholder*='用户名']", username)
-            page.fill("input[placeholder*='密码']", password)
+            page.locator("input[type=text]").first.fill(username)
+            page.locator("input[type=password]").first.fill(password)
             # 点击登录按钮
             buttons = page.locator("button").all()
             for btn in buttons:
@@ -90,12 +90,25 @@ def login_iam(username: str, password: str) -> bool:
 
             page.wait_for_load_state("networkidle", timeout=15000)
 
-            # 获取 Cookie
+            # 获取所有 Cookie（包括所有域名）
             all_cookies = context.cookies()
-            cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
-
+            
+            # 按域名分组保存
+            domain_cookies = {}
+            for c in all_cookies:
+                d = c.get("domain", "").lstrip(".")
+                if d not in domain_cookies:
+                    domain_cookies[d] = []
+                domain_cookies[d].append(f"{c['name']}={c['value']}")
+            
+            # 保存每个域名的 Cookie
+            for d, pairs in domain_cookies.items():
+                set_cookie(d, "; ".join(pairs))
+            
+            # 同时保存全量 Cookie 到所有目标域名
+            full_cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
             for domain in DOMAINS:
-                set_cookie(domain, cookie_str)
+                set_cookie(domain, full_cookie_str)
 
             print("IAM 登录成功，Cookie 已保存")
             return True
@@ -115,4 +128,35 @@ def ensure_logged_in() -> bool:
             return False
     return True
 
-
+def inject_cookies_to_context(context):
+    """将保存的 Cookie 注入到 Playwright context
+    
+    Args:
+        context: Playwright browser context
+    """
+    cookies = _load_cookies()
+    if not cookies:
+        return False
+    
+    # 获取任意域名的 Cookie 字符串
+    cookie_str = None
+    for domain in DOMAINS:
+        if domain in cookies and cookies[domain].get("cookie"):
+            cookie_str = cookies[domain]["cookie"]
+            break
+    
+    if not cookie_str:
+        return False
+    
+    # 注入到所有域名
+    for item in cookie_str.split("; "):
+        if "=" in item:
+            k, v = item.split("=", 1)
+            for domain in DOMAINS:
+                try:
+                    context.add_cookies([{"name": k, "value": v, "domain": domain, "path": "/"}])
+                    context.add_cookies([{"name": k, "value": v, "domain": ".bangcle.com", "path": "/"}])
+                except Exception:
+                    pass
+    
+    return True
