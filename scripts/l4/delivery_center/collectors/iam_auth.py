@@ -79,9 +79,14 @@ def login_iam(username: str, password: str) -> bool:
             page.wait_for_load_state("networkidle", timeout=15000)
 
             # 填写登录表单（具体选择器需根据实际页面调整）
-            page.fill('input[name="username"]', username)
-            page.fill('input[name="password"]', password)
-            page.click('button[type="submit"]')
+            page.fill("input[placeholder*='用户名']", username)
+            page.fill("input[placeholder*='密码']", password)
+            # 点击登录按钮
+            buttons = page.locator("button").all()
+            for btn in buttons:
+                if "登录" in (btn.text_content() or ""):
+                    btn.click()
+                    break
 
             page.wait_for_load_state("networkidle", timeout=15000)
 
@@ -109,3 +114,5 @@ def ensure_logged_in() -> bool:
             print(f"{domain} Cookie 已过期，需要重新登录")
             return False
     return True
+
+
