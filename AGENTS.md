@@ -131,6 +131,38 @@ Example placeholders (replace or remove them):
 | L2 降级 | compaction 模型同 provider | 共享网络/鉴权命运 |
 | L3 兜底 | keepRecentTokens=30k | 压缩不丢关键上下文 |
 
+## 异常自动处置（L1 防压缩冲突之上）
+
+### LLM Request Timeout 自动恢复
+触发条件：回复中出现 `LLM Request time out` / `request timeout` / `Gateway timeout`
+
+处置流程（按顺序尝试）：
+1. **检测 Gateway 状态** → `openclaw gateway status`
+   - 如果 Gateway 不健康 → `openclaw gateway restart`，等待 5s 后重试
+   - 如果 Gateway 健康 → 进入步骤 2
+2. **检测模型 Provider 网络** → `curl` 测试 provider endpoint
+   - 如果 provider 不可达 → 通过 `/model` 切换到 fallback 模型
+   - 如果 provider 可达 → 进入步骤 3
+3. **检测会话上下文** → 如果会话上下文过大（>80% ctx window）
+   - 执行 `/compact` 压缩后重试
+   - 或 `/reset` 后重新执行任务
+4. **重试原任务** → 从上一步中断处继续
+
+### Cron 错误自动处置
+触发条件：cron 运行状态含 `error` 或 `timeout`
+
+处置流程：
+1. `openclaw cron runs <id> --limit 3` 查看最近错误
+2. 如果是 Connection timeout → 手动 `openclaw cron run <id>` 重跑
+3. 如果是脚本错误 → 修复脚本后重跑
+4. 连续 3 次失败 → 通知 Rex
+
+### 统一扫描入口
+- 脚本：`scripts/l2/error_handler/scan_errors.sh`（调用 scan_errors.py）
+- 覆盖：cron 错误 + LLM 超时 + Provider 健康
+- 输出：`memory/error-scan-latest.json`（结构化结果）
+- 自动处置：`handle_timeout.sh`（Gateway 重启 + 模型切换建议）
+
 ## Heartbeats - Be Proactive
 
 When you receive a heartbeat poll (message matches the configured heartbeat prompt), don't just reply `HEARTBEAT_OK` every time. Keep a short checklist or reminders in the heartbeat monitor's cron scratch; use `openclaw cron list --all` to find the monitor job, then `openclaw cron scratch <jobId> --set "..."` to update it. Keep it small to limit token burn.
