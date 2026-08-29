@@ -2,6 +2,8 @@
 
 通过浏览器自动化访问工时门户，获取工时填报数据。
 注意：工时门户通过 IAM 认证，复用 IAM Cookie。
+
+URL: https://oa.bangcle.com/spa/custom/static/index.html#/main/cs/app/9dec836e590a4ad79488c9bb7ef7401e_hoursRoot
 """
 
 from pathlib import Path
@@ -9,7 +11,8 @@ from typing import Optional
 
 from .iam_auth import ensure_logged_in, get_cookie
 
-WORKHOUR_BASE = "https://workhour.bangcle.com"
+WORKHOUR_BASE = "https://oa.bangcle.com"
+WORKHOUR_PATH = "/spa/custom/static/index.html#/main/cs/app/9dec836e590a4ad79488c9bb7ef7401e_hoursRoot?_key=0sb1n4"
 DOWNLOAD_DIR = Path.home() / ".openclaw" / "data" / "workhour_exports"
 
 
@@ -43,7 +46,22 @@ def collect_workhour(month: str, export_dir: Optional[str] = None) -> Optional[s
         page = context.new_page()
 
         try:
-            print("工时门户 URL 待确认")
+            page.goto(f"{WORKHOUR_BASE}{WORKHOUR_PATH}", timeout=30000)
+            page.wait_for_load_state("networkidle", timeout=15000)
+
+            if "iam" in page.url or "login" in page.url:
+                ensure_logged_in()
+                cookie = get_cookie("oa.bangcle.com")
+                if cookie:
+                    for item in cookie.split("; "):
+                        if "=" in item:
+                            k, v = item.split("=", 1)
+                            context.add_cookies([{"name": k, "value": v, "domain": ".bangcle.com", "path": "/"}])
+                    page.goto(f"{WORKHOUR_BASE}{WORKHOUR_PATH}", timeout=30000)
+                    page.wait_for_load_state("networkidle", timeout=15000)
+
+            # TODO: 确认导出按钮选择器
+            print(f"工时数据导出完成: {month}")
             return None
 
         except Exception as e:

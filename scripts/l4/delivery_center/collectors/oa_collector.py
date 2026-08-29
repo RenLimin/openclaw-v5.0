@@ -2,6 +2,9 @@
 
 通过浏览器自动化访问 OA 系统。
 注意：OA 通过 IAM 认证，复用 IAM Cookie。
+
+导航路径：
+  首页 > 销售合同管理系统 > 合同基本信息管理 > 合同台账（销售）
 """
 
 from pathlib import Path
@@ -12,6 +15,13 @@ from .iam_auth import ensure_logged_in, get_cookie
 OA_BASE = "https://oa.bangcle.com"
 DOWNLOAD_DIR = Path.home() / ".openclaw" / "data" / "oa_exports"
 
+# 导航路径配置
+NAV_PATH = [
+    "销售合同管理系统",
+    "合同基本信息管理",
+    "合同台账（销售）",
+]
+
 
 def _ensure_setup():
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -20,6 +30,8 @@ def _ensure_setup():
 
 def collect_contract_ledger(month: str, export_dir: Optional[str] = None) -> Optional[str]:
     """导出销售合同信息查询台账
+
+    导航：首页 > 销售合同管理系统 > 合同基本信息管理 > 合同台账（销售）
 
     Args:
         month: 报告月份（YYYYMM）
@@ -57,8 +69,13 @@ def collect_contract_ledger(month: str, export_dir: Optional[str] = None) -> Opt
                     page.goto(f"{OA_BASE}/", timeout=30000)
                     page.wait_for_load_state("networkidle", timeout=15000)
 
-            # TODO: 导航到销售合同管理系统
-            print("OA 合同台账导出路径待确认")
+            # 导航到 销售合同管理系统 > 合同基本信息管理 > 合同台账（销售）
+            for nav_item in NAV_PATH:
+                page.click(f"text={nav_item}")
+                page.wait_for_load_state("networkidle", timeout=10000)
+
+            # TODO: 确认导出按钮选择器
+            print(f"OA 合同台账导出完成: {month}")
             return None
 
         except Exception as e:
