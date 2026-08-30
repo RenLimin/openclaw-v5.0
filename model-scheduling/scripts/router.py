@@ -86,6 +86,19 @@ def classify_task(message: str) -> str:
     """
     message_lower = message.lower()
 
+    # 多模态任务关键词(优先级最高,含图片/视频/视觉)
+    multimodal_keywords = [
+        "图片", "图像", "image", "picture", "photo", "截图", "看图",
+        "视频", "video", "帧", "frame", "画面",
+        "识别", "识别图片", "ocr", "OCR", "文字识别",
+        "描述图片", "描述图", "图里有", "这张图", "这张照片",
+        "视觉", "vision", "多模态", "multimodal",
+        "看图", "读图", "看一下图", "看看图",
+    ]
+    for kw in multimodal_keywords:
+        if kw in message_lower:
+            return "multimodal"
+
     # 编码任务关键词
     coding_keywords = [
         "代码", "code", "函数", "function", "类", "class", "debug", "调试",
@@ -134,8 +147,9 @@ def select_model(task_type: str, models: list[dict], routing: dict, usage: dict)
                 return m
         return models[0] if models else None
 
-    # 按 fallback chain 顺序,选择第一个 active 且未耗尽的模型
+    # 按 fallback chain 顺序,选择第一个 active 且未耗尽且能力匹配的模型
     provider_usage = usage.get("providers", {})
+    required_input_types = config.get("requires_input_types", [])
     for model_ref in fallback_chain:
         # 在 models 中查找
         model = None
@@ -146,6 +160,12 @@ def select_model(task_type: str, models: list[dict], routing: dict, usage: dict)
         if not model:
             continue
         if model.get("status") != "active":
+            continue
+
+        # 检查输入类型能力(任务需要图片/视频时,模型必须支持)
+        model_input_types = set(model.get("input_types", ["text"]))
+        missing = [t for t in required_input_types if t not in model_input_types]
+        if missing:
             continue
 
         # 检查用量(如果 provider 已耗尽,跳过)

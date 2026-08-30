@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-29 17:12 UTC+08:00
+最后生成：2026-08-30 22:02 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -79,7 +79,7 @@
 
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
-| `main` | 🦞 Jerry | `longcat/LongCat-2.0` | `/Users/bangcle/.openclaw/workspace` | ✅ |
+| `main` | 🦞 Jerry | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | ✅ |
 | `ms-coding` | 🦞 Jerry | `coding-plan/ark-code-latest` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-research` | 🦞 Jerry | `coding-plan/doubao-seed-2.1-turbo` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-reasoning` | 🦞 Jerry | `coding-plan/deepseek-v4-flash` | `/Users/bangcle/.openclaw/workspace` | — |
@@ -180,8 +180,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `4f231c0` |
-| Commit 数 | 112 |
+| HEAD | `4d08ce9` |
+| Commit 数 | 113 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

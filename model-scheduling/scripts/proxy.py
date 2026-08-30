@@ -34,6 +34,11 @@ watcher = ConfigWatcher(str(SCRIPT_DIR.parent / "config"))
 
 # ─── 任务分类 ───
 TASK_KEYWORDS = {
+    "multimodal": ["图片","图像","image","picture","photo","截图","看图","读图",
+                   "视频","video","帧","frame","画面",
+                   "识别","ocr","OCR","文字识别",
+                   "描述图片","描述图","图里有","这张图","这张照片",
+                   "视觉","vision","多模态","multimodal"],
     "coding": ["代码","code","函数","function","class","debug","调试","重构","refactor",
                "修复","fix","bug","编程","git","commit","review","python","javascript",
                "typescript","java","sql","api","接口","测试","test","deploy","写一个","实现"],
@@ -56,8 +61,30 @@ def classify_task(messages: list[dict]) -> str:
                     if isinstance(part, dict) and part.get("type") == "text":
                         last_user_msg += part.get("text", "")
             break
+    # 检查消息中是否包含图片/视频附件(多模态输入检测)
+    has_media = False
+    for msg in messages:
+        content = msg.get("content", "")
+        if isinstance(content, list):
+            for part in content:
+                if isinstance(part, dict):
+                    if part.get("type") in ("image_url", "image", "video", "video_url"):
+                        has_media = True
+                        break
+                    # 检查 base64 或 data URL 形式的图片
+                    if part.get("type") == "text" and "data:image" in str(part.get("text", "")):
+                        has_media = True
+                        break
+        if has_media:
+            break
+
     msg_lower = last_user_msg.lower()
-    for task_type in ["coding", "reasoning", "research"]:
+    
+    # 有媒体附件时,优先判定为 multimodal
+    if has_media:
+        return "multimodal"
+    
+    for task_type in ["multimodal", "coding", "reasoning", "research"]:
         for kw in TASK_KEYWORDS[task_type]:
             if kw in msg_lower:
                 return task_type
@@ -71,10 +98,16 @@ def select_model(task_type: str) -> dict | None:
     config = task_routing.get(task_type, task_routing.get("chat", {}))
     fallback_chain = config.get("fallback_chain", [])
     models = {m["id"]: m for m in models_config.get("models", [])}
+    required_input_types = config.get("requires_input_types", [])
     for model_ref in fallback_chain:
         model = models.get(model_ref)
-        if model and model.get("status") == "active":
-            return model
+        if not model or model.get("status") != "active":
+            continue
+        # 能力匹配检查: 模型必须支持任务需要的输入类型
+        model_input_types = set(model.get("input_types", ["text"]))
+        if any(t not in model_input_types for t in required_input_types):
+            continue
+        return model
     for model in sorted(models.values(), key=lambda m: m.get("priority", 99)):
         if model.get("status") == "active":
             return model

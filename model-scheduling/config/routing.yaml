@@ -12,6 +12,16 @@
 
 # 任务分类 → 模型选择策略
 task_routing:
+  # 多模态任务: 图片识别、视频分析、OCR
+  multimodal:
+    description: "图片识别、视频分析、OCR、视觉理解"
+    fallback_chain:
+      - "coding-plan/doubao-seed-2-1-turbo" # L1: 支持 image+video 多模态
+      - "coding-plan/doubao-seed-2.0-lite"  # L2: 支持 image+video+audio
+      - "coding-plan/ark-code-latest"       # L3: 纯文本保底(需说明不能读图)
+    preferred_context: 200000
+    requires_input_types: ["image"]        # 任务需要图片输入能力
+
   # 编码任务: 优先 code 模型,降级到 reasoning 模型
   coding:
     description: "代码生成、调试、重构、代码审查"
@@ -34,7 +44,7 @@ task_routing:
   research:
     description: "网络搜索、信息收集、文档分析"
     fallback_chain:
-      - "coding-plan/doubao-seed-2.1-turbo" # L1: 多模态
+      - "coding-plan/doubao-seed-2-1-turbo" # L1: 多模态
       - "coding-plan/ark-code-latest"       # L2: 文本模型
       - "coding-plan/doubao-seed-2.0-lite"  # L3: 便宜保底
     preferred_context: 200000

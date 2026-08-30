@@ -82,7 +82,8 @@
           "every": "30m"
         },
         "identity": {
-          "name": "main"
+          "name": "main",
+          "avatar": "avatars/jerry-emoji/default.png"
         }
       },
       "ms-coding": {
@@ -447,6 +448,13 @@
       },
       "trello": {
         "enabled": false
+      },
+      "openmaic": {
+        "enabled": true,
+        "config": {
+          "repoDir": "/Users/bangcle/OpenMAIC",
+          "url": "http://localhost:3002"
+        }
       }
     },
     "workshop": {
@@ -472,6 +480,9 @@
           "tavily_extract"
         ]
       }
+    },
+    "exec": {
+      "host": "gateway"
     }
   },
   "wizard": {
@@ -502,6 +513,9 @@
       },
       "llama-cpp": {
         "enabled": true
+      },
+      "openclaw-weixin": {
+        "enabled": true
       }
     },
     "enabled": true,
@@ -512,7 +526,9 @@
       "llama-cpp",
       "longcat",
       "tavily",
-      "wecom-openclaw-plugin"
+      "wecom-openclaw-plugin",
+      "openclaw-weixin",
+      "memory-core"
     ]
   },
   "secrets": {
