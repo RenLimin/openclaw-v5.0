@@ -43,3 +43,6 @@ data/
 # 导出文件
 exports/
 .venv-bdms/
+gfpgan/
+facefusion/
+scripts/tmp/
