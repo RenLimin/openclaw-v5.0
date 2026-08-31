@@ -117,6 +117,21 @@ scripts/l4/delivery_center/
 
 - 方式：Playwright 浏览器自动化
 - 数据：工时填报数据 + 按项目汇总
+- 登录流程（已验证）：
+  1. IAM 登录 → 首页渲染完成
+  2. 点击"工时门户"面板 → 打开新标签页
+  3. 关键：用 `context.expect_event("page")` 监听新页面（不能手动检查 context.pages）
+  4. 工时门户 URL：`/spa/custom/static/index.html#/main/cs/app/...hoursRoot`
+- 页面内容：工时迁移汇总表格（项目名、总工时、迁移工时、剩余工时）
+- 导出功能：待探索（页面有"更多"和"刷新"按钮）
+
+### 3.6 IAM 面板点击注意事项
+
+- IAM 首页的应用面板（OA/ONES/工时/CRM/EHR）点击后打开新标签页
+- **不稳定**：有时 click() 不触发跳转，需要多次尝试或 force=True
+- **正确方式**：用 `context.expect_event("page", timeout=15000)` 监听
+- **错误方式**：`mouse.click(center)` 不触发，`context.pages` 手动检查可能遗漏
+- 只有"OA协同办公平台"面板有实际 SSO 跳转，其他系统需要独立认证
 
 ---
 

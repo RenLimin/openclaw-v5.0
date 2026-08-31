@@ -8,8 +8,8 @@
   3. 登录成功后保存 cookie 供后续复用
 
 ONES 认证方式：
-  - ONES 不支持 IAM SSO 直接跳转（前端路由可跳，但后端 API 需要独立认证）
-  - 需要通过 ONES 自己的登录页（邮箱+密码）完成认证
+  - IAM SSO 不生效（headless/headful 均测试确认）
+  - 通过 ONES 自己的登录页（邮箱+密码）完成认证
   - 认证成功后 ONES 设置 ones-lt cookie（= token）
 
 3 个筛选器：
