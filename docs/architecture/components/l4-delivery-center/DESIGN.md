@@ -110,8 +110,14 @@ scripts/l4/delivery_center/
 
 ### 3.4 企业微信采集
 
-- 方式：OpenClaw WeCom channel API
+- 方式：OpenClaw WeCom channel API（wecom_mcp tool）
 - 数据：确收凭证、验收凭证
+- 文档 URL：待确认
+- 路由规则：
+  - `/doc/*` 和 `/smartsheet/*` → `get_doc_content`
+  - `/smartpage/*` → `smartpage_export_task` → `smartpage_get_export_result`
+- 前置：首次调用需 wecom-preflight 检查白名单
+- 状态：待落地（缺文档 URL 和字段定义）
 
 ### 3.5 工时采集
 
