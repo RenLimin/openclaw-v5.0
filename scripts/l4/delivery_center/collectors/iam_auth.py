@@ -2,6 +2,13 @@
 
 Cookie 池复用：登录一次 IAM，ONES/OA/工时门户共享 Cookie。
 有效期 12 小时，自动刷新。
+
+IAM 面板点击跳转说明：
+  - IAM 首页的应用面板（OA/ONES/工时等）点击后会打开新标签页
+  - 但点击事件不稳定，需要用 context.expect_event("page") 监听新页面
+  - 直接 context.pages 检查可能遗漏（事件循环延迟）
+  - 面板点击方式：locator.click() 或 locator.click(force=True)
+  - mouse.click(center) 不触发跳转
 """
 
 import json
