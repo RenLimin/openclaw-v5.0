@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.6 (2026-08-27 — L3 全量完成 14 维度 + 跨境电商 + 全量盘点) |
+| 文档版本 | 2.7 (2026-08-31 — 新增 L2 Office 文档生成组件,6 库实测通过) |
 | 文档状态 | active |
 | 运行时 cron | 仅 heartbeat:main(30m),所有业务 cron 已清除(2026-08-26) |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001) |
@@ -284,6 +284,7 @@ adapters/
 | **会话生命周期管理** | 自动清理过期会话(分级策略 + deleteAfterRun),cron 已清除,待重建 | 设计完备 / cron 未启用 | 📋 |
 | **错误自动处理** | 检测→分级→自愈闭环(Error Contract),cron 已清除,待重建 | 设计完备 / cron 未启用 | 📋 |
 | **模型调度** | 智能模型路由(多级 fallback + token 压缩 + 用量感知) | 已上线 | ✅ |
+| **Office 文档生成** | Word/Excel/PPT 文件生成（python-docx/openpyxl/xlsxwriter/pptxgenjs） | 已上线 | ✅ |
 | **工具/技能封装** | domain-specific skills、工具二次封装 | 复用 + 自建 | 🚧 |
 | **调度/任务编排** | 定时任务、隔离运行、心跳 | 复用 L1 | 📋 |
 
@@ -300,6 +301,7 @@ adapters/
 | 工具策略 | 008 | `components/tool-policy/` | `scripts/tool_policy_audit.sh` | 六项审计 |
 | 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态 + `scripts/observability/memory_search_monitor.py` | 行为探针三态判据 |
 | 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py`(六项子能力全备) | pre-commit 阻塞实测 |
+| Office 文档生成 | 011 | `components/office-generation/` | 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
 
 **已建设组件清单**(详细):
 
@@ -417,7 +419,25 @@ adapters/
     - 回退方案: `config/rollback_main_agent.json` + `config/rollback_defaults.json` + `config/rollback_provider.json`
     - 设计: `model-scheduling/DESIGN.md`
 
-**L2 组件建设状态**: **11 个组件设计齐备**,其中 9 个已上线(7 个治理组件 + 沙箱 + 模型调度),2 个 cron 驱动型(会话生命周期管理 + 错误自动处理)设计完备但 cron 已清除、待重建。
+12. **Office 文档生成** (2026-08-31)
+    - 组件 ID: 011
+    - 功能: 按需求 + 原始数据生成 Word/Excel/PPT 文件
+    - 工具链:
+      - Word: python-docx(主力) + docxtpl(模板渲染)
+      - Excel: openpyxl(读写+格式) + xlsxwriter(大数据写入) + pandas(快导出)
+      - PPT: pptxgenjs(高质量,已有技能 pptxgenjs-pro) + python-pptx(Python原生批量)
+    - 实测验证: 6/6 库全部通过实测
+      - sample_word.docx (38KB) — 标题/表格/样式/页眉页脚
+      - rendered_working.docx (37KB) — 模板渲染/段落循环/条件
+      - sample_excel.xlsx (9.7KB) — 多sheet/公式/条件格式/图表
+      - sample_xlsxwriter.xlsx (273KB) — 10000行/0.05s/数据条/图表
+      - sample_pandas.xlsx (6.6KB) — DataFrame导出/多sheet
+      - sample_ppt.pptx (42KB) — 3页/表格/柱状图/备注
+    - 已知限制: docxtpl表格循环bug / xlsxwriter只写不改 / openpyxl number_format需单独赋值
+    - ADR: ADR-016
+    - 设计: `components/office-generation/DESIGN.md`
+
+**L2 组件建设状态**: **12 个组件设计齐备**,其中 10 个已上线(7 个治理组件 + 沙箱 + 模型调度),2 个 cron 驱动型(会话生命周期管理 + 错误自动处理)设计完备但 cron 已清除、待重建。
 
 **配置安全保护** (横切关注点,2026-08-26):
 - **问题**：自定义资产直接写入 openclaw.json 无任何保护,可能导致系统 crash(参考 08-26 SQLite 损坏事故)
@@ -595,13 +615,14 @@ L4 专有业务
 | L3 / L4 暂未启动 | 架构预留 | 📋 |
 | 知识库轻量方案(Markdown + 元数据) | 已上线 | ✅ |
 | 工作区基础文件(AGENTS / IDENTITY / SOUL / USER / MEMORY) | 已上线 | ✅ |
-| 11 个 L2 组件四件套齐备 | 已上线 | ✅ |
-| 14 份 ADR accepted | 已上线 | ✅ |
+| 12 个 L2 组件四件套齐备 | 已上线 | ✅ |
+| 16 份 ADR accepted | 已上线 | ✅ |
 | 模型调度(智能路由 + 多级 fallback + token 压缩) | 已上线 | ✅ |
 | 上下文溢出防护状态机 | 已上线 | ✅ |
 | 运行时抽象层(L1) | 已上线 | ✅ |
 | 会话生命周期管理(cron + 分级策略) | 已上线 | ✅ |
 | 错误自动处理(检测→分级→自愈闭环) | 已上线 | ✅ |
+| Office 文档生成(Word/Excel/PPT,6库实测) | 已上线 | ✅ |
 
 **目标**: 跑通分层,验证契约 ✅
 
@@ -678,6 +699,8 @@ L4 专有业务
 | ADR-012 | Agent 运行时作为可变因素 | 高 | ✅ accepted (2026-08-24) |
 | ADR-013 | L2 会话生命周期管理 | 中 | ✅ accepted (2026-08-24) |
 | ADR-014 | L2 错误自动处理(检测→分级→自愈闭环) | 高 | ✅ accepted (2026-08-24) |
+| ADR-015 | L2 动态压缩模型路由 | 中 | ✅ accepted (2026-08-25) |
+| ADR-016 | L2 Office 文档生成能力(Word/Excel/PPT,6库实测) | 高 | ✅ accepted (2026-08-31) |
 
 ---
 
@@ -756,6 +779,7 @@ L4 专有业务
 | 2026-08-24 | 2.2 | 建设模型调度组件 model-scheduling: ① 模型注册表(从 openclaw.json 自动同步); ② 智能路由(任务分类 + 多级 fallback); ③ token 压缩(参考 9router RTK); ④ 用量追踪(每周从 provider API 获取); ⑤ 健康探测(每小时 ping)。11 个 L2 组件齐备。 |
 | 2026-08-25 | 2.3 | model-scheduling 完善: ① 代理服务(proxy.py,自动启动+热更新); ② 自动启动(LaunchAgent,开机自启+崩溃重启); ③ 热更新(config_watcher.py,文件变更→≤10秒生效); ④ 端到端验证(闲聊→doubao-lite,编码→ark-code,推理→deepseek); ⑤ 回退方案(3份rollback文件)。 |
 | 2026-08-26 | **2.4** | **agent 重建(SQLite 损坏) + cron 全清 + 心跳重建。L2 状态更新: 会话生命周期管理 + 错误自动处理 cron 已清除(设计保留,📋 待重建)。资产清单与运行时对齐。AGENTS.md 新增 L1 长任务隔离章节。** |
+| 2026-08-31 | 2.7 | 新增 L2 Office 文档生成组件(011): python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx 6库实测 + pptxgenjs-pro 技能协同,ADR-016 accepted。12 个 L2 组件齐备,10 个已上线。 |
 
 ---
 
