@@ -120,6 +120,76 @@ def login_iam(username: str, password: str) -> bool:
             browser.close()
 
 
+def login_ones(email: str, password: ***) -> bool:
+    """登录 ONES（邮箱+密码）
+    
+    Args:
+        email: ONES 邮箱
+        password: ONES 密码
+    
+    Returns:
+        登录成功返回 True
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("Playwright 未安装")
+        return False
+    
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
+        page = context.new_page()
+        
+        try:
+            page.goto("https://ones.bangcle.com/project/#/auth/login", timeout=30000)
+            page.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(3)
+            
+            # 填写邮箱
+            email_input = page.locator('input[placeholder*="邮箱"]')
+            if email_input.count() == 0:
+                email_input = page.locator('input[type="text"]').first
+            email_input.first.fill(email)
+            
+            # 填写密码
+            pwd_input = page.locator('input[type="password"]')
+            pwd_input.first.fill(password)
+            
+            # 点击登录
+            login_btn = page.locator('button').filter(has_text='登录')
+            if login_btn.count() == 0:
+                login_btn = page.locator('button.ones-button-primary')
+            login_btn.first.click()
+            
+            # 等待跳转
+            try:
+                page.wait_for_url('**/workspace**', timeout=30000)
+            except:
+                time.sleep(10)
+            
+            # 保存 cookie
+            cookies = context.cookies()
+            cookie_file = Path.home() / ".openclaw" / "data" / "oa_exports" / "ones_auth.json"
+            cookie_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(cookie_file, 'w') as f:
+                json.dump({"timestamp": time.time(), "url": page.url, "cookies": cookies}, f, indent=2, ensure_ascii=False)
+            
+            # 同时更新 cookie 池
+            ones_cookies = context.cookies("https://ones.bangcle.com")
+            cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in ones_cookies)
+            set_cookie("ones.bangcle.com", cookie_str)
+            
+            print(f"ONES 登录成功，Cookie 已保存")
+            return True
+            
+        except Exception as e:
+            print(f"ONES 登录失败: {e}")
+            return False
+        finally:
+            browser.close()
+
+
 def ensure_logged_in() -> bool:
     """确保已登录（Cookie 有效）"""
     for domain in DOMAINS:
