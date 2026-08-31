@@ -7,10 +7,11 @@
   2. Cookie 过期时，用邮箱密码自动登录（limin.ren@bangcle.com）
   3. 登录成功后保存 cookie 供后续复用
 
-ONES 认证方式：
-  - IAM SSO 不生效（headless/headful 均测试确认）
-  - 通过 ONES 自己的登录页（邮箱+密码）完成认证
+ONES 认证方式（两种方案）：
+  1. IAM SSO（推荐）：IAM 登录后点击 ONES 面板 → 打开新标签页 → 经过 OA shell 中转 → ONES 自动认证
+  2. 邮箱密码（备用）：直接访问 ONES 登录页，输入 limin.ren@bangcle.com / March-123
   - 认证成功后 ONES 设置 ones-lt cookie（= token）
+  - 注意：面板点击用 context.on('page') 监听，不能手动检查 context.pages
 
 3 个筛选器：
   1. 2026周报-签约项目统计

@@ -5,10 +5,12 @@ Cookie 池复用：登录一次 IAM，ONES/OA/工时门户共享 Cookie。
 
 IAM 面板点击跳转说明：
   - IAM 首页的应用面板（OA/ONES/工时等）点击后会打开新标签页
-  - 但点击事件不稳定，需要用 context.expect_event("page") 监听新页面
+  - 用 context.on("page", callback) 监听新页面事件
   - 直接 context.pages 检查可能遗漏（事件循环延迟）
   - 面板点击方式：locator.click() 或 locator.click(force=True)
   - mouse.click(center) 不触发跳转
+  - ONES 面板点击后先打开 OA 标签页，再跳转到 ONES（经过 OA shell SSO 中转）
+  - 工时门户面板点击后直接打开 OA 工时系统标签页
 """
 
 import json
