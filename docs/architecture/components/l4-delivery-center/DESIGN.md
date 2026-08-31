@@ -96,8 +96,17 @@ scripts/l4/delivery_center/
 
 ### 3.3 OA 采集
 
-- 方式：Playwright 浏览器自动化
+- 方式：Playwright 浏览器自动化（headful 模式）
 - 数据：销售合同信息查询台账、待审批流程、合同 PDF
+- 导出方案（已验证 2026-08-31）：
+  - **主方案**：OA 自带导出功能 → headful 浏览器 + `page.expect_download()` 拦截下载
+  - **备用方案**：API `getList` 接口直接获取 JSON（客户名称等字段为 ID 值）
+  - 导出 API 调用链：`getList`（获取 dataKey）→ `doExcelExpost`（触发导出）→ `getExcelExpProgress`（轮询进度）
+  - 关键：下载链接只能通过浏览器 JS 事件获取，requests 无法替代
+  - 导出按钮位置：cube iframe 内 `button.ant-btn-primary`（文本"导 出"）
+  - 页面 URL：`/spa/cube/index.html#/main/cube/search?customid=179`
+  - 产出：XLSX 文件（64 列业务格式，~11,178 条，~4.2 MB）
+- 产出文件：`~/.openclaw/data/oa_exports/contract_ledger_YYYYMM.xlsx`
 
 ### 3.4 企业微信采集
 
@@ -187,6 +196,7 @@ scripts/l4/delivery_center/
 
 | 日期 | 版本 | 变更 |
 |------|------|------|
+| 2026-08-31 | v1.1 | OA 采集器落地：headful 浏览器导出方案（doExcelExpost API）+ API 备用方案 |
 | 2026-08-28 | v1.0 | 重新设计（回退后） |
 
 ---
