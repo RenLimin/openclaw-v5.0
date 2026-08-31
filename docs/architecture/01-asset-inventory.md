@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-08-30 22:10 UTC+08:00
+最后生成：2026-08-31 15:46 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -37,14 +37,14 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 116 个（可用 104）
+**总计** 117 个（可用 105）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 24 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 25 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -73,6 +73,7 @@
 | `openclaw-debug-missing-tool` | Diagnose OpenClaw "documented tool not callable" via tools.profile and plugin capabilit... |
 | `openclaw-generated-asset-inventory` | Generate a self-updating OpenClaw asset/inventory doc from CLI JSON sources with drift ... |
 | `openmaic` | OpenMAIC assistant for setting up, generating, and extending OpenMAIC. Use when the use... |
+| `pptxgenjs-pro` | Generate professional PowerPoint slides with PptxGenJS. Use for creating slides with ca... |
 | `probe-model-context-window-limit` | Measure a provider model's real input-token limit by binary-search probe before setting... |
 
 ## L2 — Agent 资产
@@ -125,8 +126,8 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 
@@ -134,7 +135,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 15 |
+| ADR（架构决策记录） | 16 |
 | EXP（经验卡片） | 12 |
 | 模板 | 4 |
 
@@ -157,6 +158,7 @@
 | [`ADR-202608-013-session-lifecycle-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-013-session-lifecycle-management.md) | accepted |
 | [`ADR-202608-014-error-auto-handling`](../knowledge-base/by-category/project-experience/adr/ADR-202608-014-error-auto-handling.md) | accepted |
 | [`ADR-202608-015-dynamic-compaction-model-routing`](../knowledge-base/by-category/project-experience/adr/ADR-202608-015-dynamic-compaction-model-routing.md) | accepted |
+| [`ADR-202608-016-office-document-generation`](../knowledge-base/by-category/project-experience/adr/ADR-202608-016-office-document-generation.md) | accepted |
 
 ### 经验卡片清单
 
@@ -180,8 +182,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `6764476` |
-| Commit 数 | 115 |
+| HEAD | `4929d40` |
+| Commit 数 | 116 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
