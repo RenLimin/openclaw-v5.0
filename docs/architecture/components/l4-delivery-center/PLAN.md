@@ -26,6 +26,7 @@
 |------|------|------|----------|
 | M0 基础设施 | 架构设计 + 公式分析 + 图例提取 | PLAN.md + DESIGN.md + 公式分析 | 1 天 |
 | M1 数据层 | 4 个采集器 + 清洗 + SQLite | collectors/ + data_cleaner.py | 2-3 天 |
+| M1a OA 采集器 | ✅ 已完成 — headful 浏览器导出 XLSX + API 备用方案 | oa_collector.py | 2026-08-31 |
 | M2 业务逻辑 | 关联查询/状态判定/考核/统计 | engines/ | 3-5 天 |
 | M3 报告生成 | 交付月报 + 确收月报 | generators/ | 2-3 天 |
 | M4 审批流程 | OA 审批 + 合同解析 | 工作流引擎 | 2-3 天 |
