@@ -29,7 +29,7 @@
 | 维度 | 方案 |
 |---|---|
 | **频率** | 每 24 小时自动执行 |
-| **存储** | `~/.openclaw/backups/auto-git`（本地 Git 仓库） |
+| **存储** | `~/backups/openclaw-auto`（外部 Git 仓库，不在 ~/.openclaw 下） |
 | **类型** | `openclaw backup enable` Gateway automation |
 | **格式** | Git 版本化 SQLite dump |
 | **保留** | 无限（Git 历史） |
@@ -98,3 +98,4 @@ openclaw cron list --all | grep backup
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-09-01 | v1.0 | 初始化：启用每日自动备份 + 手动备份机制 |
+| 2026-09-01 | v1.1 | 修复：备份仓库移到 ~/.openclaw 外部（避免符号链接问题） |
