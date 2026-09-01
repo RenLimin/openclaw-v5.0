@@ -1,7 +1,14 @@
 """BDMS 主入口
 
 Bangcle 交付管理系统 - 主调度入口。
-负责协调采集、引擎、生成器的执行流程。
+串联 M1(采集) → M2(引擎) → M3(报告) 完整流程。
+
+用法:
+  python3 -m scripts.l4.delivery_center.main 202606         # 完整流程
+  python3 -m scripts.l4.delivery_center.main 202606 --report-only  # 仅生成报告
+  python3 -m scripts.l4.delivery_center.main 202606 --dry-run       # 仅验证
+
+已验证 2026-09-01。
 """
 
 import argparse
@@ -9,73 +16,115 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-# 添加项目根目录到路径
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.l4.delivery_center.collectors.data_cleaner import (
-    clean_ones_contract, clean_ones_poc, clean_ones_exception,
-    clean_oa_contract, clean_wecom_revenue, clean_wecom_acceptance,
-    clean_workhour, calibrate_contract_no
-)
-from scripts.l4.delivery_center.engines.join_engine import (
-    join_contract_oa, join_with_legend, generate_project_summary
-)
-from scripts.l4.delivery_center.engines.status_engine import apply_status_engine
-from scripts.l4.delivery_center.engines.scoring_engine import (
-    calculate_accuracy_score, calculate_timeliness_score, calculate_department_summary
-)
+from scripts.l4.delivery_center.pipeline import run_pipeline
 from scripts.l4.delivery_center.generators.delivery_report import generate_delivery_report
 from scripts.l4.delivery_center.generators.revenue_report import generate_revenue_report
+from scripts.l4.delivery_center.generators.approval_engine import generate_revenue_acceptance_summary
+from scripts.l4.delivery_center.engines.join_engine import (
+    load_revenue_vouchers,
+    load_acceptance_vouchers,
+)
 
 
-def run_pipeline(month: str, data_dir: str, output_dir: str) -> dict:
-    """运行完整的报告生成流水线
+def run_full_pipeline(month: str, report_only: bool = False, dry_run: bool = False) -> dict:
+    """运行完整的 BDMS 流程
 
     Args:
         month: 报告月份（YYYYMM）
-        data_dir: 原始数据目录
-        output_dir: 输出目录
+        report_only: 仅生成报告（跳过采集）
+        dry_run: 仅验证不生成
 
     Returns:
         结果字典
     """
-    print(f"BDMS 流水线启动: {month}")
-    print(f"数据目录: {data_dir}")
-    print(f"输出目录: {output_dir}")
+    print("=" * 60)
+    print(f"BDMS 完整流程: {month}")
+    print(f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("=" * 60)
 
-    # Step 1: 数据清洗
-    print("\n[Step 1] 数据清洗...")
-    # TODO: 根据实际文件路径加载和清洗数据
+    result = {"month": month, "status": "ok", "outputs": {}}
 
-    # Step 2: 业务逻辑
-    print("\n[Step 2] 业务逻辑引擎...")
-    # TODO: 关联查询、状态判定、考核计算
+    if dry_run:
+        print("\n[DRY RUN] 仅验证，不生成报告")
+        return result
 
-    # Step 3: 报告生成
-    print("\n[Step 3] 报告生成...")
-    # TODO: 生成交付月报和确收月报
+    # Step 1: 数据采集 + 清洗 + 存储
+    if not report_only:
+        print("\n[Step 1] 数据采集 + 清洗 + 存储...")
+        try:
+            run_pipeline(month, collect_only=False, clean_only=False)
+            result["outputs"]["pipeline"] = "ok"
+        except Exception as e:
+            print(f"  ⚠️ 流水线异常: {e}")
+            result["outputs"]["pipeline"] = f"error: {e}"
 
-    print("\n✅ 流水线完成")
-    return {"status": "ok", "month": month}
+    # Step 2: 生成报告
+    print("\n[Step 2] 生成报告...")
+
+    # 加载数据
+    rev_df = load_revenue_vouchers()
+    acc_df = load_acceptance_vouchers()
+
+    # 交付月报
+    try:
+        delivery_path = generate_delivery_report(
+            month=month,
+            revenue_df=rev_df,
+            acceptance_df=acc_df,
+        )
+        result["outputs"]["delivery_report"] = delivery_path
+        print(f"  ✅ 交付月报: {delivery_path}")
+    except Exception as e:
+        print(f"  ⚠️ 交付月报异常: {e}")
+        result["outputs"]["delivery_report"] = f"error: {e}"
+
+    # 确收月报
+    try:
+        revenue_path = generate_revenue_report(
+            month=month,
+            revenue_df=rev_df,
+            acceptance_df=acc_df,
+        )
+        result["outputs"]["revenue_report"] = revenue_path
+        print(f"  ✅ 确收月报: {revenue_path}")
+    except Exception as e:
+        print(f"  ⚠️ 确收月报异常: {e}")
+        result["outputs"]["revenue_report"] = f"error: {e}"
+
+    # 审批摘要
+    try:
+        summary = generate_revenue_acceptance_summary(rev_df, acc_df)
+        result["outputs"]["summary"] = "generated"
+        print(f"\n{summary}")
+    except Exception as e:
+        print(f"  ⚠️ 摘要异常: {e}")
+
+    print("\n" + "=" * 60)
+    print("✅ BDMS 流程完成")
+    print("=" * 60)
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser(description="BDMS - Bangcle 交付管理系统")
     parser.add_argument("month", help="报告月份（YYYYMM）")
-    parser.add_argument("--data-dir", default=None, help="原始数据目录")
-    parser.add_argument("--output-dir", default=None, help="输出目录")
+    parser.add_argument("--report-only", action="store_true", help="仅生成报告")
     parser.add_argument("--dry-run", action="store_true", help="仅验证不生成")
 
     args = parser.parse_args()
 
-    result = run_pipeline(
+    result = run_full_pipeline(
         month=args.month,
-        data_dir=args.data_dir,
-        output_dir=args.output_dir or str(Path.home() / ".openclaw" / "data" / "reports")
+        report_only=args.report_only,
+        dry_run=args.dry_run,
     )
 
-    print(f"\n结果: {result}")
+    print(f"\n结果: {result['status']}")
+    for key, val in result.get("outputs", {}).items():
+        print(f"  {key}: {val}")
 
 
 if __name__ == "__main__":

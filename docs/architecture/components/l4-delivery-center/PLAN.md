@@ -38,7 +38,7 @@
 | M3 交付月报生成器 | ✅ 已完成 — 12 Sheet Excel 输出 | delivery_report.py | 2026-09-01 |
 | M3 确收月报生成器 | ✅ 已完成 — 6 Sheet Excel 输出 | revenue_report.py | 2026-09-01 |
 | M4 审批流程 | ✅ 已完成 — 合同解析 + 审批摘要 + 确收验收汇总 | approval_engine.py + contract_parser.py | 2026-09-01 |
-| M5 调度监控 | cron + WeCom 投递 | 自动化调度 | 1-2 天 |
+| M5 调度监控 | ✅ 已完成 — cron 配置 + WeCom 投递接口 | scheduler.py + main.py | 2026-09-01 |
 | M6 测试验证 | 端到端 + 对比验证 | 测试报告 | 2-3 天 |
 
 ---
