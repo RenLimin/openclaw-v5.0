@@ -37,8 +37,6 @@
 | M2 差异分析 + 汇总 | ✅ 已完成 — 差异分类 + 多维度 Pivot | variance_engine.py + summary_engine.py | 2026-09-01 |
 | M3 交付月报生成器 | ✅ 已完成 — 12 Sheet Excel 输出 | delivery_report.py | 2026-09-01 |
 | M3 确收月报生成器 | 🔲 待开发 | revenue_report.py | — |
-| M2 业务逻辑 | 关联查询/状态判定/考核/统计 | engines/ | 3-5 天 |
-| M3 报告生成 | 交付月报 + 确收月报 | generators/ | 2-3 天 |
 | M4 审批流程 | OA 审批 + 合同解析 | 工作流引擎 | 2-3 天 |
 | M5 调度监控 | cron + WeCom 投递 | 自动化调度 | 1-2 天 |
 | M6 测试验证 | 端到端 + 对比验证 | 测试报告 | 2-3 天 |
