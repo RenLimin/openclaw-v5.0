@@ -29,7 +29,7 @@
 | M1a OA 采集器 | ✅ 已完成 — headful 浏览器导出 XLSX + API 备用方案 | oa_collector.py | 2026-08-31 |
 | M1b ONES 采集器 | ✅ 已完成 — 邮箱密码登录 + cookie 复用 | ones_collector.py | 2026-08-31 |
 | M1c 工时采集器 | ✅ 已完成 — DOM 提取 + CSV/JSON 输出 | workhour_collector.py | 2026-08-31 |
-| M1d WeCom 采集器 | 🔲 待落地（缺文档 URL 和字段定义） | wecom_collector.py | 待确认 |
+| M1d WeCom 采集器 | ✅ 已完成 — 本地 CSV + 在线 wecom_mcp 方案 | wecom_collector.py | 2026-09-01 |
 | M1e 数据清洗 + SQLite | 🟡 框架就绪（db.py + data_cleaner.py），缺集成 | db.py + data_cleaner.py | 待开发 |
 | M2 业务逻辑 | 关联查询/状态判定/考核/统计 | engines/ | 3-5 天 |
 | M3 报告生成 | 交付月报 + 确收月报 | generators/ | 2-3 天 |

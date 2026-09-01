@@ -110,14 +110,17 @@ scripts/l4/delivery_center/
 
 ### 3.4 企业微信采集
 
-- 方式：OpenClaw WeCom channel API（wecom_mcp tool）
-- 数据：确收凭证、验收凭证
-- 文档 URL：待确认
-- 路由规则：
-  - `/doc/*` 和 `/smartsheet/*` → `get_doc_content`
-  - `/smartpage/*` → `smartpage_export_task` → `smartpage_get_export_result`
-- 前置：首次调用需 wecom-preflight 检查白名单
-- 状态：待落地（缺文档 URL 和字段定义）
+- 方式：wecom_mcp tool（MCP）+ 本地 CSV 备选
+- 数据：确收凭证（514行）、验收凭证（531行）
+- 文档 URL：`https://doc.weixin.qq.com/sheet/e3_AewA9wbYAJkCNWXLLXtMASV6kFQG5?scode=AD8AYAehAA801jsTMu`
+- 品类：智能表格（smartsheet, doc_type=10）
+- 核心字段：
+  - 确收：标题、ID、BI履约ID、合同编号、客户名称、销售部门、项目经理、交接日期、财务、是否接收
+  - 验收：合同名称、标题、ID、BI履约ID、验收单编号、合同编号、客户名称、项目经理、交接日期、验收方式
+- 采集方式：
+  1. 在线：wecom_mcp → get_doc_content / smartsheet_get_records（需 MCP tool 权限）
+  2. 本地：Rex 导出 CSV → 脚本读取（当前方案）
+- 状态：✅ 本地采集已落地，在线采集待解锁 wecom_mcp
 
 ### 3.5 工时采集
 
