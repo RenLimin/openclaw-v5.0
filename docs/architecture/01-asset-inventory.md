@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-01 21:15 UTC+08:00
+最后生成：2026-09-01 21:45 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -16,14 +16,14 @@
 
 | 资产 | 值 |
 |---|---|
-| OpenClaw | OpenClaw 2026.7.2-beta.7 (dabe191) |
+| OpenClaw | OpenClaw 2026.8.1 (ea80657) |
 | Node.js | v26.7.0 |
 
 > L1 不可修改，升级跟随官方版本。breaking changes 需走 ADR。
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 79 个（启用 6） · bundled 74 · global 5
+**总计** 64 个（启用 6） · bundled 59 · global 5
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
@@ -31,17 +31,19 @@
 |---|---|---|---|
 | `llama-cpp` | global | — | — |
 | `longcat` | global | — | model-provider: longcat |
+| `memory-core` | bundled | `intent`, `memory_get`, `memory_search` | — |
 | `openclaw-weixin` | global | — | channel: openclaw-weixin |
-| `tavily` | global | — | web-search: tavily |
-| `wecom-openclaw-plugin` | global | — | channel: wecom |
+| `tavily` | global | `tavily_search`, `tavily_extract` | web-search: tavily |
+| `wecom-openclaw-plugin` | global | `wecom_mcp` | channel: wecom |
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 118 个（可用 106）
+**总计** 122 个（可用 110）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
+| `openclaw-custodian` | 4 | — |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
 | `openclaw-workspace` | 26 | **本 workspace 自建**（受版本控制） |
@@ -81,7 +83,7 @@
 
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
-| `main` | 🦞 Jerry | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | ✅ |
+| `main` | 🦞 Jerry | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-coding` | 🦞 Jerry | `coding-plan/ark-code-latest` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-research` | 🦞 Jerry | `coding-plan/doubao-seed-2.1-turbo` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-reasoning` | 🦞 Jerry | `coding-plan/deepseek-v4-flash` | `/Users/bangcle/.openclaw/workspace` | — |
@@ -125,7 +127,12 @@
 
 ## L2 — 调度资产 (Cron)
 
-⚠️ 数据源不可用
+| 名称 | 启用 | 调度 | 目标 |
+|---|---|---|---|
+| Heartbeat (main) | ✅ | 每 1800s | `main` |
+| Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
+| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 
 ## 文档资产
 
@@ -180,8 +187,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `6e17351` |
-| Commit 数 | 139 |
+| HEAD | `1490b4b` |
+| Commit 数 | 140 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
