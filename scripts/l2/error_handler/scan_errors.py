@@ -31,12 +31,18 @@ def scan_cron_errors():
         return [{"error": f"cron list failed: {output}"}]
 
     errors = []
+    # 自排除：获取当前 cron job 的 ID（通过环境变量或脚本路径识别）
+    self_job_id = "e776e653-6fa0-48e4-8338-536af3ce1f0a"  # 错误扫描 cron 的 jobId
+
     for line in output.split("\n"):
         parts = line.split()
         if not parts:
             continue
         job_id = parts[0]
         if not job_id.startswith(("a", "b", "c", "d", "e", "f")):
+            continue
+        # 排除自己
+        if job_id == self_job_id:
             continue
 
         # 获取最近运行状态
