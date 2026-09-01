@@ -20,11 +20,16 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-WORKSPACE = Path(__file__).parent.parent.parent.parent
+WORKSPACE = Path(__file__).resolve().parent.parent.parent.parent / "workspace"
 DATA_DIR = Path.home() / ".openclaw" / "data"
 BACKUP_DIR = Path.home() / ".openclaw" / "backups"
 DOCS_DIR = WORKSPACE / "docs" / "architecture"
 L4_SCRIPTS = WORKSPACE / "scripts" / "l4" / "delivery_center"
+
+# 验证路径存在
+assert WORKSPACE.exists(), f"WORKSPACE 不存在: {WORKSPACE}"
+assert DOCS_DIR.exists(), f"DOCS_DIR 不存在: {DOCS_DIR}"
+assert L4_SCRIPTS.exists(), f"L4_SCRIPTS 不存在: {L4_SCRIPTS}"
 
 
 def run(cmd: str, timeout: int = 15) -> tuple[int, str, str]:
