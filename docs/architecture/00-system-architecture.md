@@ -523,15 +523,18 @@ L4 专有业务
 | **流程扩展** | 继承 L3 流程,插入专有步骤 | `checkout` L3 + `risk_assessment` L4 |
 | **接口扩展** | L4 暴露专有 API,不影响 L3 | `/api/proprietary/*` |
 
-**当前**: 🚧 建设中 — 首个 L4 组件 [Bangcle PPT 模板系统](./components/bangcle-ppt-template/DESIGN.md) 已注册 (CPT-012, ADR-017)
+**当前**: ✅ 已上线 — 2 个 L4 组件全部完成
 
 **已建设组件**:
 
 | 组件 ID | 名称 | 职责 | ADR | DESIGN.md | 状态 |
 |---|---|---|---|---|---|
-| CPT-012 | Bangcle PPT 模板系统 | Bangcle 官方 VI 设计规范 + 页面类型模板 + pptxgenjs 代码模板 | ADR-017 | `components/bangcle-ppt-template/` | 🚧 (技能已建,待实测) |
+| CPT-012 | Bangcle PPT 模板系统 | Bangcle 官方 VI 设计规范 + 页面类型模板 + pptxgenjs 代码模板 | ADR-017 | `components/bangcle-ppt-template/` | ✅ 已上线 |
+| BDMS-001 | 交付中心运营引擎 (BDMS) | 数据采集 + 业务引擎 + 报告生成 + 审批流程 + 调度监控 | — | `components/l4-delivery-center/` | ✅ 已上线 |
 
-> **与 L2 协同**: Bangcle PPT 模板系统(L4)调用 pptxgenjs-pro(L2, CPT-004)通用生成能力,叠加 Bangcle 专属设计规范。
+> **BDMS 详情**: 24 个 Python 文件，3157 行代码。5 个采集器 + 4 个业务引擎 + 2 个报告生成器 + 审批流程 + 调度监控。数据库 514+531 行。
+
+> **与 L2 协同**: BDMS(L4) 调用持久化适配(L2, SQLite) + Office 文档生成(L2, openpyxl) + 知识库工具链(L2)。
 
 ---
 
@@ -649,19 +652,18 @@ L4 专有业务
 - ✅ 沙箱隔离(Docker + non-main,实测 uid=1000)
 - ✅ 运行时抽象层(L1 契约 + OpenClaw 适配层)
 
-### 6.2 阶段二:业务能力沉淀(**已满足入口条件,待 Rex 定夺**)
+### 6.2 阶段二:业务能力沉淀(**L4 已启动,L3 待 Rex 定夺**)
 
 | 项 | 状态 | 标记 |
 |---|---|---|
 | L3 按业务维度逐步建设 | 架构预留 | 📋 |
-| L4 开始引入 | 架构预留 | 📋 |
+| L4 交付中心运营引擎(BDMS) | **已上线** | ✅ |
+| L4 Bangcle PPT 模板系统 | **已上线** | ✅ |
 | 知识库继续以文件形式承载,增加工具链 | 已上线 | ✅ |
 
 **目标**: 验证 L3 维度划分、L4 继承机制
 
-**入口条件**: 阶段一 ADR 全部完成、L2 最小可用稳固
-
-**入口条件已满足**。阶段二未启动的原因是 Rex 要求暂缓 L3 建设。
+**入口条件已满足**。L4 已启动并交付首个组件(BDMS)。L3 建设待 Rex 定夺。
 
 ### 6.3 阶段三:自建知识库系统(**暂缓** — 触发条件 0/7)
 
@@ -791,6 +793,7 @@ L4 专有业务
 | 2026-08-26 | **2.4** | **agent 重建(SQLite 损坏) + cron 全清 + 心跳重建。L2 状态更新: 会话生命周期管理 + 错误自动处理 cron 已清除(设计保留,📋 待重建)。资产清单与运行时对齐。AGENTS.md 新增 L1 长任务隔离章节。** |
 | 2026-08-31 | 2.7 | 新增 L2 Office 文档生成组件(011): python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx 6库实测 + pptxgenjs-pro 技能协同,ADR-016 accepted。12 个 L2 组件齐备,10 个已上线。 |
 | 2026-09-01 | 2.8 | 新增 L4 Bangcle PPT 模板系统(CPT-012,ADR-017): 深度解析官方模板设计规范(VI色/思源黑体/页面类型),创建 DESIGN.md + skills/bangcle-ppt 技能。首个 L4 组件。 |
+| 2026-09-01 | **2.9** | **L4 交付中心运营引擎(BDMS v1.0)完整发布: 24 个 Python 文件,3157 行代码。M1 数据采集(5个采集器) + M2 业务引擎(4个) + M3 报告生成(2个) + M4 审批流程 + M5 调度监控。端到端验证通过。** |
 
 ---
 
