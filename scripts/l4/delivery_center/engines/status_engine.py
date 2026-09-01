@@ -9,23 +9,35 @@ from datetime import datetime
 from typing import Optional
 
 
+def _parse_date(val) -> Optional[datetime]:
+    """解析日期字符串为 datetime"""
+    if pd.isna(val) or val is None or val == "":
+        return None
+    if isinstance(val, datetime):
+        return val
+    try:
+        return pd.to_datetime(val)
+    except (ValueError, TypeError):
+        return None
+
+
 def determine_delivery_status(row: pd.Series, report_date: datetime) -> str:
     """判定履约项状态（对应 Excel BD 列的 IFS 公式）"""
     impl_status = str(row.get("状态", ""))
-    delivery_mail_date = row.get("交付邮件发送日期", None)
+    delivery_mail_date = _parse_date(row.get("交付邮件发送日期", None))
     exception_type = str(row.get("履约项异常/变更类型", ""))
 
     normal_impl = ["实施未开始", "义务已拆分", "实施进行中", "实施已完成", "交付邮件交接中"]
 
     # 条件 1: 正常交付
     if (impl_status in normal_impl and
-        (pd.isna(delivery_mail_date) or delivery_mail_date == "" or delivery_mail_date >= report_date) and
+        (delivery_mail_date is None or delivery_mail_date >= report_date) and
         exception_type != "履约项交付异常"):
         return "1：正常交付"
 
     # 条件 2: 应交未交
     if (impl_status in normal_impl and
-        pd.notna(delivery_mail_date) and delivery_mail_date != "" and delivery_mail_date < report_date and
+        delivery_mail_date is not None and delivery_mail_date < report_date and
         exception_type != "履约项交付异常"):
         return "2：应交未交"
 
