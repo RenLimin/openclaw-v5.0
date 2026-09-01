@@ -129,7 +129,7 @@ def login_iam(username: str, password: str) -> bool:
             browser.close()
 
 
-def login_ones(email: str, password: ***) -> bool:
+def login_ones(email: str, password: str) -> bool:
     """登录 ONES（邮箱+密码）
     
     Args:
