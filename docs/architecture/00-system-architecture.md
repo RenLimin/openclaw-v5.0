@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.7 (2026-08-31 — 新增 L2 Office 文档生成组件,6 库实测通过) |
+| 文档版本 | 2.8 (2026-09-01 — 新增 L4 Bangcle PPT 模板系统) |
 | 文档状态 | active |
 | 运行时 cron | 仅 heartbeat:main(30m),所有业务 cron 已清除(2026-08-26) |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001) |
@@ -523,7 +523,15 @@ L4 专有业务
 | **流程扩展** | 继承 L3 流程,插入专有步骤 | `checkout` L3 + `risk_assessment` L4 |
 | **接口扩展** | L4 暴露专有 API,不影响 L3 | `/api/proprietary/*` |
 
-**当前**: 📋 架构预留(依赖 L3 启动)
+**当前**: 🚧 建设中 — 首个 L4 组件 [Bangcle PPT 模板系统](./components/bangcle-ppt-template/DESIGN.md) 已注册 (CPT-012, ADR-017)
+
+**已建设组件**:
+
+| 组件 ID | 名称 | 职责 | ADR | DESIGN.md | 状态 |
+|---|---|---|---|---|---|
+| CPT-012 | Bangcle PPT 模板系统 | Bangcle 官方 VI 设计规范 + 页面类型模板 + pptxgenjs 代码模板 | ADR-017 | `components/bangcle-ppt-template/` | 🚧 (技能已建,待实测) |
+
+> **与 L2 协同**: Bangcle PPT 模板系统(L4)调用 pptxgenjs-pro(L2, CPT-004)通用生成能力,叠加 Bangcle 专属设计规范。
 
 ---
 
@@ -623,6 +631,7 @@ L4 专有业务
 | 会话生命周期管理(cron + 分级策略) | 已上线 | ✅ |
 | 错误自动处理(检测→分级→自愈闭环) | 已上线 | ✅ |
 | Office 文档生成(Word/Excel/PPT,6库实测) | 已上线 | ✅ |
+| L4 Bangcle PPT 模板系统(VI规范,ADR-017) | 建设中 | 🚧 |
 
 **目标**: 跑通分层,验证契约 ✅
 
@@ -701,6 +710,7 @@ L4 专有业务
 | ADR-014 | L2 错误自动处理(检测→分级→自愈闭环) | 高 | ✅ accepted (2026-08-24) |
 | ADR-015 | L2 动态压缩模型路由 | 中 | ✅ accepted (2026-08-25) |
 | ADR-016 | L2 Office 文档生成能力(Word/Excel/PPT,6库实测) | 高 | ✅ accepted (2026-08-31) |
+| ADR-017 | L4 Bangcle PPT 模板系统(VI规范+页面类型模板) | 中 | ✅ accepted (2026-09-01) |
 
 ---
 
@@ -780,6 +790,7 @@ L4 专有业务
 | 2026-08-25 | 2.3 | model-scheduling 完善: ① 代理服务(proxy.py,自动启动+热更新); ② 自动启动(LaunchAgent,开机自启+崩溃重启); ③ 热更新(config_watcher.py,文件变更→≤10秒生效); ④ 端到端验证(闲聊→doubao-lite,编码→ark-code,推理→deepseek); ⑤ 回退方案(3份rollback文件)。 |
 | 2026-08-26 | **2.4** | **agent 重建(SQLite 损坏) + cron 全清 + 心跳重建。L2 状态更新: 会话生命周期管理 + 错误自动处理 cron 已清除(设计保留,📋 待重建)。资产清单与运行时对齐。AGENTS.md 新增 L1 长任务隔离章节。** |
 | 2026-08-31 | 2.7 | 新增 L2 Office 文档生成组件(011): python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx 6库实测 + pptxgenjs-pro 技能协同,ADR-016 accepted。12 个 L2 组件齐备,10 个已上线。 |
+| 2026-09-01 | 2.8 | 新增 L4 Bangcle PPT 模板系统(CPT-012,ADR-017): 深度解析官方模板设计规范(VI色/思源黑体/页面类型),创建 DESIGN.md + skills/bangcle-ppt 技能。首个 L4 组件。 |
 
 ---
 
