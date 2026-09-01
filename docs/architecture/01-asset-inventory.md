@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-01 10:54 UTC+08:00
+最后生成：2026-09-01 10:56 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -37,19 +37,20 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 117 个（可用 105）
+**总计** 118 个（可用 106）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 51 | OpenClaw 内置（随版本升级） |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 25 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 26 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
 | 名称 | 描述 |
 |---|---|
+| `bangcle-ppt` | Generate professional PowerPoint slides following the official Bangcle (梆梆安全) brand tem... |
 | `config-snapshot-redaction-and-drift-check` | Committing sanitized config snapshots to git: exact-key redaction, secret scan, and --c... |
 | `config-snapshot-redaction-verification` | Sanitized config snapshot leaks a secret/ID before commit: fix key-list redaction and v... |
 | `config-snapshot-tenant-identifier-leak-audit` | Auditing config snapshots for leaked tenant IDs (botId/corpId/appId) before committing ... |
@@ -135,7 +136,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 16 |
+| ADR（架构决策记录） | 17 |
 | EXP（经验卡片） | 12 |
 | 模板 | 4 |
 
@@ -159,6 +160,7 @@
 | [`ADR-202608-014-error-auto-handling`](../knowledge-base/by-category/project-experience/adr/ADR-202608-014-error-auto-handling.md) | accepted |
 | [`ADR-202608-015-dynamic-compaction-model-routing`](../knowledge-base/by-category/project-experience/adr/ADR-202608-015-dynamic-compaction-model-routing.md) | accepted |
 | [`ADR-202608-016-office-document-generation`](../knowledge-base/by-category/project-experience/adr/ADR-202608-016-office-document-generation.md) | accepted |
+| [`ADR-202608-017-bangcle-ppt-template`](../knowledge-base/by-category/project-experience/adr/ADR-202608-017-bangcle-ppt-template.md) | accepted |
 
 ### 经验卡片清单
 
@@ -182,8 +184,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `8809e58` |
-| Commit 数 | 129 |
+| HEAD | `41060d9` |
+| Commit 数 | 130 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
