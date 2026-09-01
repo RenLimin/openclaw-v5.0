@@ -1,6 +1,6 @@
 # L2 会话生命周期管理组件 — 设计
 
-> **状态**: ✅ 已上线 (2026-08-25) — ADR-013 已实现,pruneAfter=48h + 每日自动归档 cron + 官方 sessions.patch RPC
+> **状态**: ✅ 已上线 (2026-09-01) — cron 已重建（每日 02:00 清理）
 > **ADR**: [ADR-202608-013](../../../knowledge-base/by-category/project-experience/adr/ADR-202608-013-session-lifecycle-management.md)
 > **层级**: L2 基础设施层
 > **创建**: 2026-08-24

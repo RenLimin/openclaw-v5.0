@@ -282,8 +282,8 @@ adapters/
 | **上下文管理** | 自动压缩 + 溢出防护状态机 | 已上线 | ✅ |
 | **记忆语义检索** | 本地 embedding + 向量索引 + 健康监控 | 已上线 | ✅ |
 | **沙箱隔离** | Docker 后端 + 加固基线 | 已上线 | ✅ |
-| **会话生命周期管理** | 自动清理过期会话(分级策略 + deleteAfterRun),cron 已清除,待重建 | 设计完备 / cron 未启用 | 📋 |
-| **错误自动处理** | 检测→分级→自愈闭环(Error Contract),cron 已清除,待重建 | 设计完备 / cron 未启用 | 📋 |
+| **会话生命周期管理** | 自动清理过期会话(分级策略 + deleteAfterRun),每日 02:00 cron | 已上线 | ✅ |
+| **错误自动处理** | 检测→分级→自愈闭环(Error Contract),每 2h cron + provider 探测 | 已上线 | ✅ |
 | **模型调度** | 智能模型路由(多级 fallback + token 压缩 + 用量感知) | 已上线 | ✅ |
 | **Office 文档生成** | Word/Excel/PPT 文件生成（python-docx/openpyxl/xlsxwriter/pptxgenjs） | 已上线 | ✅ |
 | **工具/技能封装** | domain-specific skills、工具二次封装 | 复用 + 自建 | 🚧 |
