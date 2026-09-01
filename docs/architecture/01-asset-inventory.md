@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-01 22:56 UTC+08:00
+最后生成：2026-09-01 23:05 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -129,10 +129,10 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
-| provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
+| Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
+| provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
@@ -142,7 +142,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 17 |
+| ADR（架构决策记录） | 22 |
 | EXP（经验卡片） | 13 |
 | 模板 | 4 |
 
@@ -167,6 +167,11 @@
 | [`ADR-202608-015-dynamic-compaction-model-routing`](../knowledge-base/by-category/project-experience/adr/ADR-202608-015-dynamic-compaction-model-routing.md) | accepted |
 | [`ADR-202608-016-office-document-generation`](../knowledge-base/by-category/project-experience/adr/ADR-202608-016-office-document-generation.md) | accepted |
 | [`ADR-202608-017-bangcle-ppt-template`](../knowledge-base/by-category/project-experience/adr/ADR-202608-017-bangcle-ppt-template.md) | accepted |
+| [`ADR-202608-018-context-management`](../knowledge-base/by-category/project-experience/adr/ADR-202608-018-context-management.md) | accepted |
+| [`ADR-202608-019-sandbox-isolation`](../knowledge-base/by-category/project-experience/adr/ADR-202608-019-sandbox-isolation.md) | accepted |
+| [`ADR-202608-020-model-scheduling`](../knowledge-base/by-category/project-experience/adr/ADR-202608-020-model-scheduling.md) | accepted |
+| [`ADR-202608-021-system-backup`](../knowledge-base/by-category/project-experience/adr/ADR-202608-021-system-backup.md) | accepted |
+| [`ADR-202608-022-bdms-delivery-center`](../knowledge-base/by-category/project-experience/adr/ADR-202608-022-bdms-delivery-center.md) | accepted |
 
 ### 经验卡片清单
 
@@ -191,8 +196,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `2d9aa75` |
-| Commit 数 | 145 |
+| HEAD | `0625e03` |
+| Commit 数 | 146 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
