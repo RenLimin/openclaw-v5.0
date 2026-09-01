@@ -33,7 +33,7 @@
 | M1e 数据清洗 + SQLite | ✅ 已完成 — pipeline.py + bdms.db | db.py + data_cleaner.py + pipeline.py | 2026-09-01 |
 | M2 关联查询引擎 | ✅ 已完成 — 跨系统 merge + 图例关联 | join_engine.py | 2026-09-01 |
 | M2 状态判定引擎 | ✅ 已完成 — 9 种履约状态判定 | status_engine.py | 2026-09-01 |
-| M2 考核计算引擎 | 🔲 待开发 | scoring_engine.py | — |
+| M2 考核计算引擎 | ✅ 已完成 — 个人考核卡 + 部门汇总 | scoring_engine.py | 2026-09-01 |
 | M2 差异分析 + 汇总 | 🔲 待开发 | variance_engine.py + summary_engine.py | — |
 | M3 报告生成器 | 🔲 待开发 | generators/ | — |
 | M2 业务逻辑 | 关联查询/状态判定/考核/统计 | engines/ | 3-5 天 |
