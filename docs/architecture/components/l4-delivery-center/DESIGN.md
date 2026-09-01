@@ -205,14 +205,15 @@ scripts/l4/delivery_center/
 
 ### 5.1 交付月报
 
-- 15 Sheet（详见 report_structure_analysis.md）
+- 12 Sheet（已验证 2026-09-01）
 - openpyxl 生成 Excel
-- 公式可计算性验证
+- Sheet 列表：签约、POC&提前实施、异常项目、确收交接、验收交接、交付效率统计、签约统计、POC统计、异常统计、异常台账、交接统计、图例
+- 输出：`~/.openclaw/data/reports/交付月报-YYYYMM.xlsx`
 
 ### 5.2 确收月报
 
-- 10 Sheet
 - 预算执行表 + 差异分析
+- 待开发
 
 ---
 
