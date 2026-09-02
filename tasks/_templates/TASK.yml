@@ -1,0 +1,41 @@
+# TASK.yml — 任务协议模板
+# 用法: 复制到 tasks/in-progress/<task_id>/TASK.yml 并填写
+# 字段规范:
+#   status: pending | in-progress | blocked | done | cancelled
+#   scope: 项目/组件/版本三级定位
+#   goals: 结构化目标清单(status: pending | in-progress | done)
+#   blockers: 当前阻塞点,空数组表示无阻塞
+#   context: 任务启动时 AI 应读取的上下文文件(相对 workspace 根)
+#   artifacts: 产出物清单(status: pending | in-progress | done)
+
+id: task-YYYYMMDD-NNN        # 唯一ID: 任务日期-序号
+name: <任务名称>
+status: pending              # pending | in-progress | blocked | done | cancelled
+priority: medium             # low | medium | high | urgent
+created_at: YYYY-MM-DDTHH:MM:SS+08:00
+updated_at: YYYY-MM-DDTHH:MM:SS+08:00
+owner: <负责人: main-agent / subagent-xxx / rex>
+
+scope:
+  project: <项目名>
+  component: <组件名>
+  version: <版本号>
+
+goals:
+  - id: g1
+    description: <目标1描述>
+    status: pending
+  - id: g2
+    description: <目标2描述>
+    status: pending
+
+blockers: []
+
+context:
+  - path: <相对 workspace 的上下文文件路径>
+  - path: tasks/<task_id>/CONTEXT.md
+
+artifacts:
+  - name: <产出物名称>
+    path: <产出物路径>
+    status: pending
