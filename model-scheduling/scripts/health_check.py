@@ -10,7 +10,6 @@
 
 import argparse
 import json
-import subprocess
 import sys
 import time
 import urllib.request
@@ -23,16 +22,22 @@ USAGE_FILE = CONFIG_DIR / "usage.json"
 
 
 def get_openclaw_config(path: str) -> dict:
-    """只读获取 openclaw.json。"""
-    result = subprocess.run(
-        ["openclaw", "config", "get", path],
-        capture_output=True, text=True
-    )
-    if result.returncode != 0:
-        return {}
+    """只读获取 openclaw.json。
+    
+    直接读取文件而非 openclaw config get，因为后者对 apiKey 脱敏。
+    """
+    config_path = Path.home() / ".openclaw" / "openclaw.json"
     try:
-        return json.loads(result.stdout)
-    except json.JSONDecodeError:
+        cfg = json.loads(config_path.read_text())
+        # 按 path 路径提取子树
+        parts = path.split(".")
+        for part in parts:
+            if isinstance(cfg, dict) and part in cfg:
+                cfg = cfg[part]
+            else:
+                return {}
+        return cfg if isinstance(cfg, dict) else {}
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         return {}
 
 
