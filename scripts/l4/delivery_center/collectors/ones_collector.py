@@ -300,6 +300,79 @@ def collect_all(export_dir: Optional[str] = None) -> list[str]:
     return results
 
 
+def load_ones_abnormal_projects() -> "pd.DataFrame":
+    """加载 ONES 异常项目数据
+
+    优先从已保存的 JSON 文件加载（快速），
+    如果文件不存在则通过 ONES API 采集。
+
+    Returns:
+        异常项目 DataFrame
+    """
+    import urllib.request
+    import urllib.error
+    import pandas as pd
+
+    # 方案1: 从已保存的 JSON 文件加载
+    json_file = EXPORT_DIR / "ones_projects_api.json"
+    if json_file.exists():
+        all_projects = json.loads(json_file.read_text(encoding="utf-8"))
+    else:
+        # 方案2: 通过 ONES API 采集
+        AUTH_FILE = Path.home() / ".openclaw" / "data" / "oa_exports" / "ones_auth.json"
+        data = json.loads(AUTH_FILE.read_text(encoding="utf-8"))
+        cookies = data.get("cookies", [])
+        cookie_str = "; ".join(f'{c["name"]}={c["value"]}' for c in cookies)
+
+        url = "https://ones.bangcle.com/project/api/project/auth/login"
+        payload = json.dumps({"email": "limin.ren@bangcle.com", "password": "March-123"}).encode()
+        req = urllib.request.Request(url, data=payload, method="POST")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Cookie", cookie_str)
+        resp = urllib.request.urlopen(req, timeout=10)
+        result = json.loads(resp.read().decode())
+        token = result["user"]["token"]
+        user_id = result["user"]["uuid"]
+
+        headers = {
+            "Ones-User-Id": user_id,
+            "Ones-Auth-Token": token,
+            "Referer": "https://ones.bangcle.com/",
+            "Content-Type": "application/json",
+        }
+        graphql_url = "https://ones.bangcle.com/project/api/project/team/RZxvwUZ8/items/graphql"
+
+        all_projects = []
+        offset = 0
+        page_size = 200
+        while True:
+            query = f'{{ projects(limit: {page_size}, offset: {offset}) {{ uuid name type status {{ name }} owner {{ name }} createTime }} }}'
+            gq = json.dumps({"query": query}).encode()
+            req = urllib.request.Request(graphql_url, data=gq, method="POST", headers=headers)
+            resp = urllib.request.urlopen(req, timeout=30)
+            body = json.loads(resp.read().decode())
+            projects = body.get("data", {}).get("projects", [])
+            if not projects:
+                break
+            all_projects.extend(projects)
+            offset += page_size
+            if len(projects) < page_size:
+                break
+
+    # 筛选异常项目
+    abnormal = [p for p in all_projects if p.get("status", {}).get("name") == "项目异常"]
+
+    # 转换为 DataFrame
+    df = pd.DataFrame(abnormal)
+    if not df.empty:
+        df["status_name"] = df["status"].apply(lambda x: x.get("name", "") if isinstance(x, dict) else "")
+        df["owner_name"] = df["owner"].apply(lambda x: x.get("name", "") if isinstance(x, dict) else "")
+        df = df.drop(columns=["status", "owner"], errors="ignore")
+        df = df.rename(columns={"status_name": "状态", "owner_name": "项目经理", "uuid": "项目UUID", "name": "项目名称", "type": "类型", "createTime": "创建时间"})
+
+    return df
+
+
 if __name__ == "__main__":
     import sys
     filter_name = sys.argv[1] if len(sys.argv) > 1 else "2026周报-签约项目统计"
