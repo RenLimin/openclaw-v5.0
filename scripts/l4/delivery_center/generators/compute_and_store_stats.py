@@ -241,99 +241,255 @@ def write_df(ws, df, start_row=1):
             cell.border = THIN_BORDER
 
 
+def write_df_with_summary(ws, df, date_str=REPORT_DATE):
+    """写入 DataFrame 到 worksheet，首行加汇总信息（日期+排序占位）
+    
+    参考报表结构：
+    - 行0: 日期(0) + 排序(40) + 统计数字(52+)
+    - 行1: 列名
+    - 行2+: 数据
+    """
+    if df.empty:
+        ws.cell(row=1, column=1, value="无数据")
+        return
+    
+    # 行0: 汇总行 - 日期在第1列，"排序"在第41列
+    ws.cell(row=1, column=1, value=date_str)
+    # 第41列（index 40）写"排序"
+    sort_col = 41
+    if sort_col <= len(df.columns):
+        ws.cell(row=1, column=sort_col, value="排序")
+    
+    # 行2+: 列名 + 数据
+    write_df(ws, df, start_row=2)
+
+
+def reorder_abnormal_columns(abnormal_df):
+    """重新排列异常项目 Sheet 的列顺序，匹配参考报表
+    
+    参考报表前几列顺序：
+    销售合同编号(0)、合同归档日期(1)、最终用户名称(2)、客户名称(3)、
+    责任销售（履约项）(4)、责任销售所属团队(5)、负责人(6)、所属项目(7)、
+    项目类型(概览)(8)、合同起始日期(9)、合同结束日期(10)...
+    
+    ONES CSV 原始顺序从 BI履约ID 开始，销售合同编号在第12列。
+    """
+    # 参考报表的列顺序（与 ONES CSV 中存在的列对应）
+    ref_order = [
+        '销售合同编号',
+        '合同归档日期',
+        '最终用户名称',
+        '客户名称',
+        '责任销售（履约项）',
+        '责任销售所属团队',
+        '负责人',
+        '所属项目',
+        '项目类型(概览)',
+        '合同开始日期',    # 参考叫"合同起始日期"，ONES 叫"合同开始日期"
+        '合同结束日期',
+        '交付服务开始日期',
+        '交付服务结束日期',
+        '合同验收条款',
+        '验收时点',
+        '验收方式',
+        '标题',
+        '状态',
+        '备注',
+        'PMO备注',
+        'ID',
+    ]
+    
+    # 获取 DataFrame 中实际存在的列
+    existing_cols = list(abnormal_df.columns)
+    
+    # 按参考顺序排列存在的列
+    ordered_cols = [c for c in ref_order if c in existing_cols]
+    
+    # 剩余列保持原始顺序，追加到后面
+    remaining_cols = [c for c in existing_cols if c not in ordered_cols]
+    final_cols = ordered_cols + remaining_cols
+    
+    # 重命名"合同开始日期"为"合同起始日期"以匹配参考报表
+    result_df = abnormal_df[final_cols].copy()
+    if '合同开始日期' in result_df.columns:
+        result_df = result_df.rename(columns={'合同开始日期': '合同起始日期'})
+    
+    return result_df
+
+
+def map_revenue_columns(rev_df):
+    """映射确收交接 Sheet 列名，匹配参考报表
+    
+    BDMS 确收表 → 参考报表列名映射：
+    - id → 不显示
+    - voucher_id → ID
+    - bi_id → BI履约ID
+    - 合同编号 → 合同编号1
+    - 合同名称 → 标题
+    - 客户名称 → 客户名称
+    - 销售部门 → 销售部门
+    - 项目经理 → 项目经理
+    - 交接日期 → 交接日期
+    - 财务 → 财务接收人
+    - 是否接收 → 财务是否接收
+    
+    参考报表完整列顺序：
+    月份、标题、ID、BI履约ID、合同编号1、邮件编号、合同编号、客户名称、
+    销售部门、项目经理、备注、交接日期、财务接收人、财务是否接收、
+    财务反馈、交付邮件是否跨月、PMO提交人、PMO反馈、是否修改ONES状态、
+    项目经理所属区域、跨月交接、跨月交接原因、是否合格
+    """
+    column_mapping = {
+        'voucher_id': 'ID',
+        'bi_id': 'BI履约ID',
+        '合同编号': '合同编号1',
+        '合同名称': '标题',
+        '客户名称': '客户名称',
+        '销售部门': '销售部门',
+        '项目经理': '项目经理',
+        '交接日期': '交接日期',
+        '财务': '财务接收人',
+        '是否接收': '财务是否接收',
+    }
+    
+    # 参考报表列顺序（严格按照此顺序输出）
+    ref_order = [
+        '月份', '标题', 'ID', 'BI履约ID', '合同编号1', '邮件编号', '合同编号',
+        '客户名称', '销售部门', '项目经理', '备注', '交接日期', '财务接收人',
+        '财务是否接收', '财务反馈', '交付邮件是否跨月', 'PMO提交人', 'PMO反馈',
+        '是否修改ONES状态', '项目经理所属区域', '跨月交接', '跨月交接原因', '是否合格'
+    ]
+    
+    # 重命名原始数据列
+    result_df = rev_df.copy()
+    rename_map = {k: v for k, v in column_mapping.items() if k in result_df.columns}
+    result_df = result_df.rename(columns=rename_map)
+    
+    # 按参考报表顺序构建列：有数据的用数据，没数据的填空列
+    final_cols = []
+    for col in ref_order:
+        if col not in result_df.columns:
+            result_df[col] = ''
+        final_cols.append(col)
+    
+    result_df = result_df[final_cols]
+    return result_df
+
+
+def map_acceptance_columns(acc_df):
+    """映射验收交接 Sheet 列名，匹配参考报表
+    
+    BDMS 验收表 → 参考报表列名映射：
+    - id → 不显示
+    - voucher_id → ID
+    - bi_id → BI履约ID
+    - 合同编号 → 合同编号1
+    - 合同名称 → 合同名称
+    - 客户名称 → 客户名称
+    - 项目经理 → 项目经理
+    - 验收单编号 → 验收单编号
+    - 交接日期 → 交接日期
+    - 验收方式 → 验收方式
+    - 全部或部分 → 截至目前全部/部分验收（第1个）
+    - 财务 → 财务接收人
+    - 财务是否接收 → 是否接收
+    
+    参考报表完整列顺序（含重复列名）：
+    月份、合同名称、标题、ID、BI履约ID、验收单编号-财务端、合同编号1、
+    验收单编号、合同编号、客户名称、销售部门、项目经理、备注、交接日期、
+    验收方式、截至目前全部/部分验收、是否为渠道、财务接收人、是否接收、
+    实际验收方式、财务反馈、截至目前全部/部分验收、PMO提交人、PMO反馈、
+    是否修改ones及OA状态、项目经理所属区域、是否合格
+    """
+    column_mapping = {
+        'voucher_id': 'ID',
+        'bi_id': 'BI履约ID',
+        '合同编号': '合同编号1',
+        '合同名称': '合同名称',
+        '客户名称': '客户名称',
+        '项目经理': '项目经理',
+        '验收单编号': '验收单编号',
+        '交接日期': '交接日期',
+        '验收方式': '验收方式',
+        '全部或部分': '截至目前全部/部分验收',
+        '财务': '财务接收人',
+        '财务是否接收': '是否接收',
+    }
+    
+    # 参考报表列顺序（严格按照此顺序输出，包含重复列名）
+    ref_order = [
+        '月份', '合同名称', '标题', 'ID', 'BI履约ID', '验收单编号-财务端',
+        '合同编号1', '验收单编号', '合同编号', '客户名称', '销售部门',
+        '项目经理', '备注', '交接日期', '验收方式', '截至目前全部/部分验收',
+        '是否为渠道', '财务接收人', '是否接收', '实际验收方式', '财务反馈',
+        '截至目前全部/部分验收', 'PMO提交人', 'PMO反馈',
+        '是否修改ones及OA状态', '项目经理所属区域', '是否合格'
+    ]
+    
+    # 重命名原始数据列
+    result_df = acc_df.copy()
+    rename_map = {k: v for k, v in column_mapping.items() if k in result_df.columns}
+    result_df = result_df.rename(columns=rename_map)
+    
+    # 按参考报表顺序构建：处理重复列名的情况
+    # 第一个"截至目前全部/部分验收"用数据列，第二个留空
+    seen_counts = {}
+    final_data = {}
+    for i, col in enumerate(ref_order):
+        if col not in seen_counts:
+            seen_counts[col] = 0
+        seen_counts[col] += 1
+        
+        if col in result_df.columns and seen_counts[col] == 1:
+            # 第一次出现且有数据，用实际数据
+            final_data[i] = result_df[col].values
+        else:
+            # 重复出现或无数据，填空
+            final_data[i] = [''] * len(result_df)
+    
+    # 构建新的 DataFrame，使用整数列索引避免重名冲突
+    out_df = pd.DataFrame({i: final_data[i] for i in range(len(ref_order))})
+    out_df.columns = ref_order
+    return out_df
+
+
 def generate_excel_from_stats(conn, sign_df, poc_df, abnormal_df, rev_rows, acc_rows):
     """从 BDMS 统计结果生成 Excel"""
     print("  生成 Excel...")
     wb = Workbook()
     wb.remove(wb.active)
     
-    # Sheet 1: 签约
+    # Sheet 1: 签约（带汇总行 + 计算列）
+    from compute_columns import compute_sign_columns, reorder_sign_columns, compute_poc_columns, reorder_poc_columns
     ws = wb.create_sheet("签约")
-    write_df(ws, sign_df)
+    sign_full = reorder_sign_columns(compute_sign_columns(sign_df))
+    write_df_with_summary(ws, sign_full)
     
-    # Sheet 2: POC&提前实施
+    # Sheet 2: POC&提前实施（带汇总行 + 计算列）
     ws = wb.create_sheet("POC&提前实施")
-    write_df(ws, poc_df)
+    poc_full = reorder_poc_columns(compute_poc_columns(poc_df))
+    write_df_with_summary(ws, poc_full)
     
-    # Sheet 3: 异常项目
+    # Sheet 3: 异常项目（重排列顺序）
     ws = wb.create_sheet("异常项目")
-    write_df(ws, abnormal_df)
+    abnormal_reordered = reorder_abnormal_columns(abnormal_df)
+    write_df(ws, abnormal_reordered)
     
-    # Sheet 4: 确收交接
+    # Sheet 4: 确收交接（中文列名映射）
     ws = wb.create_sheet("确收交接")
     rev_df = pd.DataFrame(rev_rows)
-    write_df(ws, rev_df)
+    rev_mapped = map_revenue_columns(rev_df)
+    write_df(ws, rev_mapped)
     
-    # Sheet 5: 验收交接
+    # Sheet 5: 验收交接（中文列名映射）
     ws = wb.create_sheet("验收交接")
     acc_df = pd.DataFrame(acc_rows)
-    write_df(ws, acc_df)
+    acc_mapped = map_acceptance_columns(acc_df)
+    write_df(ws, acc_mapped)
     
-    # Sheet 6-15: 从 BDMS 统计结果生成
-    stat_sheets = [
-        ('交付效率统计', '交付效率统计'),
-        ('签约统计', '签约统计'),
-        ('POC&提前实施统计', 'POC&提前实施统计'),
-        ('异常统计', '异常统计'),
-        ('异常台账', '异常台账'),
-        ('交接统计', '交接统计'),
-        ('产品-授权&维保统计', '产品-授权&维保统计'),
-        ('提前实施分事业部统计', '提前实施分事业部统计'),
-        ('交付异常分事业部统计', '交付异常分事业部统计'),
-    ]
-    
-    for sheet_name, stat_sheet in stat_sheets:
-        ws = wb.create_sheet(sheet_name)
-        # 读取统计结果
-        c = conn.cursor()
-        c.execute('''SELECT stat_type, row_key, col_key, value_num, value_text
-            FROM report_statistics 
-            WHERE report_month=? AND sheet_name=?
-            ORDER BY stat_type, row_key, col_key''',
-            (REPORT_MONTH, stat_sheet))
-        rows = c.fetchall()
-        
-        if not rows:
-            ws.cell(row=1, column=1, value="无统计数据")
-            continue
-        
-        # 按 stat_type 分组
-        stat_types = set(r[0] for r in rows)
-        current_row = 1
-        for st in sorted(stat_types):
-            type_rows = [r for r in rows if r[0] == st]
-            # 写入 stat_type 作为小标题
-            ws.cell(row=current_row, column=1, value=st)
-            ws.cell(row=current_row, column=1).font = Font(bold=True, size=11)
-            current_row += 1
-            
-            # 构建 DataFrame
-            df_data = {}
-            for _, row_key, col_key, val_num, val_text in type_rows:
-                if row_key not in df_data:
-                    df_data[row_key] = {}
-                df_data[row_key][col_key] = val_num if val_num is not None else val_text
-            
-            if df_data:
-                df = pd.DataFrame(df_data).T
-                df.index.name = '类别'
-                for ci, col in enumerate(df.columns, 1):
-                    ws.cell(row=current_row, column=ci + 1, value=col)
-                    ws.cell(row=current_row, column=ci + 1).font = HEADER_FONT_WHITE
-                    ws.cell(row=current_row, column=ci + 1).fill = HEADER_FILL
-                ws.cell(row=current_row, column=1, value='类别')
-                ws.cell(row=current_row, column=1).font = HEADER_FONT_WHITE
-                ws.cell(row=current_row, column=1).fill = HEADER_FILL
-                current_row += 1
-                
-                for idx, row_data in df.iterrows():
-                    ws.cell(row=current_row, column=1, value=str(idx))
-                    for ci, val in enumerate(row_data, 2):
-                        v = "" if pd.isna(val) else val
-                        ws.cell(row=current_row, column=ci, value=v)
-                    current_row += 1
-            
-            current_row += 1  # 空行分隔
+    # Sheet 6-15: 从 BDMS 统计结果生成（透视表格式）
+    from build_stat_sheets import build_all_stat_sheets
+    build_all_stat_sheets(wb, conn)
     
     # 图例 Sheet
     ws = wb.create_sheet("图例")
