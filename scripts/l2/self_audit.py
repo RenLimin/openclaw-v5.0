@@ -196,8 +196,11 @@ def audit_file(path: Path) -> dict:
         result["status"] = "❌"
         return result
     
-    # TODO 检查
-    result["todos"] = check_todos(path)
+    # TODO/FIXME 检测（排除自身）
+    if path.resolve() != Path(__file__).resolve():
+        result["todos"] = check_todos(path)
+    else:
+        result["todos"] = []
     
     # 空函数检查
     result["empty_functions"] = check_empty_functions(path)
@@ -283,13 +286,13 @@ if __name__ == "__main__":
             component = sys.argv[idx + 1]
     
     if component:
-        # 单组件审计
-        target = SCRIPTS_L4 / f"{component}_collector.py"
-        if not target.exists():
-            target = SCRIPTS_L4 / f"{component}_engine.py"
-        if not target.exists():
-            target = SCRIPTS_L4 / f"{component}_report.py"
-        if not target.exists():
+        # 单组件审计（搜索所有子目录）
+        target = None
+        for f in SCRIPTS_L4.rglob(f"{component}*.py"):
+            if f.name != "__init__.py":
+                target = f
+                break
+        if target is None:
             print(f"  ❌ 未找到组件: {component}")
             sys.exit(1)
         

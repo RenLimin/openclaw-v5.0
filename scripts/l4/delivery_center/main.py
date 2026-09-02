@@ -23,6 +23,7 @@ from scripts.l4.delivery_center.pipeline import run_pipeline
 from scripts.l4.delivery_center.generators.delivery_report import generate_delivery_report
 from scripts.l4.delivery_center.generators.revenue_report import generate_revenue_report
 from scripts.l4.delivery_center.generators.approval_engine import generate_revenue_acceptance_summary
+from scripts.l4.delivery_center.engines.join_engine import load_oa_contracts
 from scripts.l4.delivery_center.engines.join_engine import (
     load_revenue_vouchers,
     load_acceptance_vouchers,
@@ -67,11 +68,13 @@ def run_full_pipeline(month: str, report_only: bool = False, dry_run: bool = Fal
     # 加载数据
     rev_df = load_revenue_vouchers()
     acc_df = load_acceptance_vouchers()
+    oa_df = load_oa_contracts()
 
     # 交付月报
     try:
         delivery_path = generate_delivery_report(
             month=month,
+            contract_df=oa_df,
             revenue_df=rev_df,
             acceptance_df=acc_df,
         )
