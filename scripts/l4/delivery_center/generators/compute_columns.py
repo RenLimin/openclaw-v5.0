@@ -9,6 +9,12 @@ def compute_sign_columns(df):
     """为签约 Sheet 添加计算列，匹配参考报表的 83 列"""
     df = df.copy()
     
+    # 按立项日期降序排序（匹配参考报表排序逻辑）
+    df['_sort_date'] = pd.to_datetime(df['立项日期'], errors='coerce')
+    df = df.sort_values('_sort_date', ascending=False, na_position='last')
+    df = df.drop(columns=['_sort_date'])
+    df = df.reset_index(drop=True)
+    
     # 列40: 项目编号 → 从"所属项目"提取 SSXM-XXXX-XXXX-XXXX
     df['项目编号'] = df['所属项目'].str.extract(r'(SSXM-[^】]+)', expand=False)
     

@@ -13,7 +13,7 @@ ONES_DIR = Path.home() / ".openclaw" / "data" / "ones_exports"
 BDMS_DB = Path.home() / ".openclaw" / "data" / "bdms.db"
 REF_DIR = Path.home() / "Bangcle Workspace" / "01. Management" / "2026" / "2026团队报告" / "202606"
 REPORT_MONTH = "202606"
-REPORT_DATE = "2026-06-30"
+REPORT_DATE = "2026-07-08"  # 参考报表导出日期
 
 # 全局数据缓存
 _sign_df = None
@@ -163,34 +163,27 @@ def _compute_poc_duration(df, sign_df=None):
 # 1. 签约统计
 # ============================================================
 def build_sign_stats(ws):
-    """签约统计：左表=按年份，右表=状态×年份交叉表"""
+    """签约统计：左表=按年份，右表=状态×年份交叉表
+    精确匹配参考报表的 16行×15列 透视表格式"""
     _load_data()
     df = _sign_df.copy()
     
     df['立项年份'] = pd.to_datetime(df['立项日期'], errors='coerce').dt.year
     df['履约项统计状态'] = _compute_status_category(df)
     
-    # === 筛选器行 ===
-    ws.cell(row=1, column=1, value="项目经理所属部门")
-    ws.cell(row=1, column=2, value="(全部)")
-    ws.cell(row=1, column=6, value="项目经理所属部门")
-    ws.cell(row=1, column=7, value="(全部)")
+    # === 筛选器行（行1-3）===
+    for row in range(1, 4):
+        ws.cell(row=row, column=1, value=["项目经理所属部门", "统计项目编号", "项目状态"][row-1])
+        ws.cell(row=row, column=2, value="(全部)")
+        ws.cell(row=row, column=6, value=["项目经理所属部门", "统计项目编号", "项目状态"][row-1])
+        ws.cell(row=row, column=7, value="(全部)")
     
-    ws.cell(row=2, column=1, value="统计项目编号")
-    ws.cell(row=2, column=2, value="(全部)")
-    ws.cell(row=2, column=6, value="统计项目编号")
-    ws.cell(row=2, column=7, value="(全部)")
-    
-    ws.cell(row=3, column=1, value="项目状态")
-    ws.cell(row=3, column=2, value="(全部)")
-    ws.cell(row=3, column=6, value="项目状态")
-    ws.cell(row=3, column=7, value="(全部)")
-    
-    # 行5：列名行
+    # 行5：列名行（参考报表列5留空，与参考一致）
     ws.cell(row=5, column=1, value="行标签")
     ws.cell(row=5, column=2, value="计数项:ID")
-    ws.cell(row=5, column=6, value="计数项:ID")
-    ws.cell(row=5, column=7, value="列标签")
+    # 列3-4留空（参考报表结构）
+    ws.cell(row=5, column=5, value="计数项:ID")
+    ws.cell(row=5, column=6, value="列标签")
     
     # === 左表：按立项年份统计 ===
     year_counts = df.groupby('立项年份')['ID'].nunique()
@@ -199,7 +192,7 @@ def build_sign_stats(ws):
     for i, year in enumerate(years):
         row = 6 + i
         ws.cell(row=row, column=1, value=f"{year}年")
-        ws.cell(row=row, column=2, value=int(year_counts[year]))
+        ws.cell(row=row, column=2, value=int(year_counts.get(year, 0)))
     
     # 左表总计行
     total_row = 6 + len(years)
@@ -207,6 +200,7 @@ def build_sign_stats(ws):
     ws.cell(row=total_row, column=2, value=int(df['ID'].nunique()))
     
     # === 右表：履约项统计状态 × 立项年份 交叉表 ===
+    # 参考报表列顺序：2026, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 总计
     valid_df = df[df['履约项统计状态'] != '']
     
     status_order = [
@@ -214,9 +208,12 @@ def build_sign_stats(ws):
         '5：应验未验', '6：验收异常', '7：正常服务', '8：应结未结', '9：已结项'
     ]
     
-    year_labels = [f"{y}年" for y in years]
+    # 参考报表的列顺序：当前年份(2026)在前，然后从2019到2025
+    current_year = 2026
+    ordered_years = [current_year] + [y for y in years if y != current_year]
+    year_labels = [f"{y}年" for y in ordered_years]
     
-    # 右表表头
+    # 右表表头（行6）
     ws.cell(row=6, column=6, value="行标签")
     for ci, yl in enumerate(year_labels):
         ws.cell(row=6, column=7 + ci, value=yl)
@@ -232,21 +229,23 @@ def build_sign_stats(ws):
         row = 7 + ri
         ws.cell(row=row, column=6, value=status)
         row_total = 0
-        for ci, year in enumerate(years):
+        for ci, year in enumerate(ordered_years):
             val = int(pivot.loc[status, year]) if status in pivot.index and year in pivot.columns else 0
-            ws.cell(row=row, column=7 + ci, value=val)
+            if val > 0:
+                ws.cell(row=row, column=7 + ci, value=val)
             row_total += val
-        ws.cell(row=row, column=7 + len(years), value=row_total)
+        ws.cell(row=row, column=7 + len(ordered_years), value=row_total)
     
     # 右表总计行
     total_row_r = 7 + len(status_order)
     ws.cell(row=total_row_r, column=6, value="总计")
     col_totals = []
-    for ci, year in enumerate(years):
+    for ci, year in enumerate(ordered_years):
         val = int(pivot[year].sum()) if year in pivot.columns else 0
-        ws.cell(row=total_row_r, column=7 + ci, value=val)
+        if val > 0:
+            ws.cell(row=total_row_r, column=7 + ci, value=val)
         col_totals.append(val)
-    ws.cell(row=total_row_r, column=7 + len(years), value=sum(col_totals))
+    ws.cell(row=total_row_r, column=7 + len(ordered_years), value=sum(col_totals))
 
 
 # ============================================================
