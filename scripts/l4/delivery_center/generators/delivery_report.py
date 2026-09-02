@@ -96,19 +96,62 @@ def _fill_efficiency_sheet(ws, df: pd.DataFrame):
 
 
 def _fill_contract_stats_sheet(ws, df: pd.DataFrame):
-    """填充签约统计 Sheet（按部门统计）"""
+    """填充签约统计 Sheet（按部门统计）
+
+    支持两种数据源：
+    1. ONES 数据：项目经理所属部门 + 项目编号
+    2. OA 合同数据：项目经理 + htbh（合同编号）+ legend_pm_dept 映射
+    """
     if df.empty:
         ws.cell(row=1, column=1, value="无数据")
         return
 
-    if "项目经理所属部门" in df.columns:
+    from pathlib import Path
+    import json
+
+    config_dir = Path(__file__).parent.parent / "config"
+
+    # ONES 数据源
+    if "项目经理所属部门" in df.columns and "项目编号" in df.columns:
         stats = df.groupby("项目经理所属部门").agg({
             "项目编号": "nunique",
         }).reset_index()
         stats.columns = ["部门", "项目数"]
         _write_df_to_sheet(ws, stats)
-    else:
+        return
+
+    # OA 合同数据源：用项目经理→部门映射
+    pm_col = None
+    for candidate in ["项目经理", "项目管理部负责人"]:
+        if candidate in df.columns and df[candidate].notna().sum() > 10:
+            pm_col = candidate
+            break
+    if pm_col is None:
+        for candidate in ["项目经理", "项目管理部负责人"]:
+            if candidate in df.columns:
+                pm_col = candidate
+                break
+
+    if not pm_col or "htbh" not in df.columns:
         ws.cell(row=1, column=1, value="无部门数据")
+        return
+
+    # 加载项目经理→部门映射
+    legend_path = config_dir / "legend_pm_dept.json"
+    if legend_path.exists():
+        legend = json.loads(legend_path.read_text(encoding="utf-8"))
+    else:
+        legend = {}
+
+    # 映射项目经理到部门
+    df["_dept"] = df[pm_col].map(lambda x: legend.get(str(x).strip(), "未知") if pd.notna(x) else "未知")
+
+    stats = df.groupby("_dept").agg({
+        "htbh": "nunique",
+    }).reset_index()
+    stats.columns = ["部门", "项目数"]
+    stats = stats.sort_values("项目数", ascending=False)
+    _write_df_to_sheet(ws, stats)
 
 
 def _fill_poc_stats_sheet(ws, df: pd.DataFrame):
@@ -127,8 +170,24 @@ def _fill_exception_ledger_sheet(ws, df: pd.DataFrame):
 
 
 def _fill_handover_stats_sheet(ws, df: pd.DataFrame):
-    """填充交接统计 Sheet"""
-    _write_df_to_sheet(ws, df)
+    """填充交接统计 Sheet（按部门汇总确收/验收）"""
+    if df.empty:
+        ws.cell(row=1, column=1, value="无数据")
+        return
+
+    # 按部门汇总
+    dept_col = None
+    for candidate in ["部门", "销售部门", "所属分部"]:
+        if candidate in df.columns:
+            dept_col = candidate
+            break
+
+    if dept_col:
+        stats = df.groupby(dept_col).size().reset_index(name="数量")
+        stats.columns = ["部门", "数量"]
+        _write_df_to_sheet(ws, stats)
+    else:
+        _write_df_to_sheet(ws, df)
 
 
 def _fill_legend_sheet(ws):
