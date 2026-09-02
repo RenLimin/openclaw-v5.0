@@ -36,10 +36,26 @@ def get_openclaw_config(path: str) -> dict:
         return {}
 
 
+def _resolve_api_key(provider_conf: dict) -> str:
+    """解析 apiKey，支持 SecretRef(file source)。"""
+    api_key = provider_conf.get("apiKey", "")
+    if isinstance(api_key, dict) and api_key.get("source") == "file":
+        # SecretRef file source: 从 ~/.openclaw/secrets/ 读取
+        provider = api_key.get("provider", "")
+        # 尝试多种文件名拼法
+        secrets_dir = Path.home() / ".openclaw" / "secrets"
+        for fname in [f"{provider}", f"{provider}.apiKey", f"{provider.replace('key', '')}.apiKey"]:
+            fpath = secrets_dir / fname
+            if fpath.exists():
+                return fpath.read_text().strip()
+        return ""  # 找不到文件
+    return str(api_key) if api_key else ""
+
+
 def ping_provider(provider_id: str, provider_conf: dict) -> dict:
     """轻量探测 provider 健康状态。"""
     base_url = provider_conf.get("baseUrl", "")
-    api_key = provider_conf.get("apiKey", "")
+    api_key = _resolve_api_key(provider_conf)
     api_type = provider_conf.get("api", "openai-completions")
 
     if not base_url:
