@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-01 23:05 UTC+08:00
+最后生成：2026-09-02 10:25 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -38,7 +38,7 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 122 个（可用 110）
+**总计** 124 个（可用 112）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
@@ -46,7 +46,7 @@
 | `openclaw-custodian` | 4 | — |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 26 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 28 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -56,6 +56,7 @@
 | `config-snapshot-redaction-and-drift-check` | Committing sanitized config snapshots to git: exact-key redaction, secret scan, and --c... |
 | `config-snapshot-redaction-verification` | Sanitized config snapshot leaks a secret/ID before commit: fix key-list redaction and v... |
 | `config-snapshot-tenant-identifier-leak-audit` | Auditing config snapshots for leaked tenant IDs (botId/corpId/appId) before committing ... |
+| `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 |
 | `edit-stale-state-break-loop` | Breaking edit-tool retry loops when prior mutations already changed the target text |
 | `edit-tool-exact-whitespace-recovery` | Edit-tool "oldText not found" usually means a whitespace mismatch. On macOS, use `od -c... |
 | `git-https-token-file-credential-helper` | Push to GitHub over HTTPS with a token file, no plaintext token in git config, plus fir... |
@@ -78,6 +79,7 @@
 | `openmaic` | OpenMAIC assistant for setting up, generating, and extending OpenMAIC. Use when the use... |
 | `pptxgenjs-pro` | Generate professional PowerPoint slides with PptxGenJS. Use for creating slides with ca... |
 | `probe-model-context-window-limit` | Measure a provider model's real input-token limit by binary-search probe before setting... |
+| `role-library` | 标准化 Agent 角色库。支持按角色执行任务，覆盖数据分析、报告生成、系统运维、文档管理等场景。 |
 
 ## L2 — Agent 资产
 
@@ -131,12 +133,12 @@
 |---|---|---|---|
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
 | Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
-| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
+| openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
-| openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 
 ## 文档资产
 
@@ -196,8 +198,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `0625e03` |
-| Commit 数 | 146 |
+| HEAD | `790daeb` |
+| Commit 数 | 147 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
