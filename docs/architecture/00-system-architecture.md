@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.10 (2026-09-02 — 新增 L4 销售合同审批模块 SCA-001) |
+| 文档版本 | 2.11 (2026-09-02 — 新增 L2 OCR 文档数字化组件 OCR-001) |
 | 文档状态 | active |
 | 运行时 cron | 仅 heartbeat:main(30m),所有业务 cron 已清除(2026-08-26) |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001); SCA-001 已上线(ADR-018 accepted) |
@@ -286,6 +286,7 @@ adapters/
 | **错误自动处理** | 检测→分级→自愈闭环(Error Contract),每 2h cron + provider 探测 | 已上线 | ✅ |
 | **模型调度** | 智能模型路由(多级 fallback + token 压缩 + 用量感知) | 已上线 | ✅ |
 | **Office 文档生成** | Word/Excel/PPT 文件生成（python-docx/openpyxl/xlsxwriter/pptxgenjs） | 已上线 | ✅ |
+| **文档数字化(OCR)** | 扫描件/图片→高精度文本（多引擎+预处理+版面分析+纠错） | 已上线 | ✅ |
 | **工具/技能封装** | domain-specific skills、工具二次封装 | 复用 + 自建 | 🚧 |
 | **调度/任务编排** | 定时任务、隔离运行、心跳 | 复用 L1 | 📋 |
 
@@ -303,6 +304,7 @@ adapters/
 | 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态 + `scripts/observability/memory_search_monitor.py` | 行为探针三态判据 |
 | 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py`(六项子能力全备) | pre-commit 阻塞实测 |
 | Office 文档生成 | 011 | `components/office-generation/` | 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
+| 文档数字化(OCR) | 023 | `components/ocr-digitalization/` | `contract_ocr.py`(RapidOCR主+Paddle可选+8版本预处理+40+规则纠错) | 10页扫描件合同实测通过 |
 
 **已建设组件清单**(详细):
 
@@ -798,6 +800,7 @@ L4 专有业务
 | 2026-08-31 | 2.7 | 新增 L2 Office 文档生成组件(011): python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx 6库实测 + pptxgenjs-pro 技能协同,ADR-016 accepted。12 个 L2 组件齐备,10 个已上线。 |
 | 2026-09-01 | 2.8 | 新增 L4 Bangcle PPT 模板系统(CPT-012,ADR-017): 深度解析官方模板设计规范(VI色/思源黑体/页面类型),创建 DESIGN.md + skills/bangcle-ppt 技能。首个 L4 组件。 |
 | 2026-09-02 | 2.10 | 新增 L4 销售合同审批模块(SCA-001,ADR-018): 分级审批流程(按金额4级) + 风险扫描(基于民法典13项) + 合同生成(docx) + 审计追踪。Skill 形式交付,可独立使用。端到端验证通过。 |
+| 2026-09-02 | 2.11 | 新增 L2 OCR 文档数字化组件(OCR-001,ADR-023): 扫描件/图片→高精度文本。RapidOCR主引擎+Paddle可选+600DPI+8版本预处理+版面分析+合同场景40+规则纠错。与Office文档生成(ADR-016)形成一读一写对偶。10页扫描件合同实测通过。 |
 | 2026-09-01 | **2.9** | **L4 交付中心运营引擎(BDMS v1.0)完整发布: 24 个 Python 文件,3157 行代码。M1 数据采集(5个采集器) + M2 业务引擎(4个) + M3 报告生成(2个) + M4 审批流程 + M5 调度监控。端到端验证通过。** |
 
 ---
