@@ -70,11 +70,21 @@ def run_full_pipeline(month: str, report_only: bool = False, dry_run: bool = Fal
     acc_df = load_acceptance_vouchers()
     oa_df = load_oa_contracts()
 
+    # ONES API 数据采集（异常项目）
+    ones_abnormal_df = pd.DataFrame()
+    try:
+        from scripts.l4.delivery_center.collectors.ones_collector import load_ones_abnormal_projects
+        ones_abnormal_df = load_ones_abnormal_projects()
+        print(f"  ✅ ONES 异常项目: {len(ones_abnormal_df)} 个")
+    except Exception as e:
+        print(f"  ⚠️ ONES 异常项目加载失败: {e}")
+
     # 交付月报
     try:
         delivery_path = generate_delivery_report(
             month=month,
             contract_df=oa_df,
+            exception_df=ones_abnormal_df,
             revenue_df=rev_df,
             acceptance_df=acc_df,
         )
