@@ -15,7 +15,7 @@ OUTPUT_DIR = Path.home() / ".openclaw" / "data" / "reports"
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 
 REPORT_MONTH = "202606"
-REPORT_DATE = "2026-06-30"
+REPORT_DATE = "2026-07-08"  # 参考报表导出日期（月报数据截止日期）
 
 HEADER_FILL = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
 HEADER_FONT_WHITE = Font(bold=True, size=10, color="FFFFFF")
