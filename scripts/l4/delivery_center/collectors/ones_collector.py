@@ -95,8 +95,76 @@ def _ensure_ones_logged_in(context, page):
     return False
 
 
+def _extract_table_data(page) -> list[dict]:
+    """从 ONES 项目列表页面提取表格数据（DOM 提取）"""
+    data = page.evaluate("""() => {
+        // 获取表头
+        const headers = [];
+        document.querySelectorAll('th, .ones-table-header-cell, [class*=header] [class*=cell]').forEach(th => {
+            const text = th.textContent.trim();
+            if (text && !headers.includes(text)) headers.push(text);
+        });
+
+        // 获取数据行
+        const rows = [];
+        document.querySelectorAll('tr, .ones-table-row, [class*=row]').forEach(tr => {
+            const cells = tr.querySelectorAll('td, [class*=cell]');
+            if (cells.length >= 5) {
+                const row = {};
+                cells.forEach((cell, i) => {
+                    const key = headers[i] || `col_${i}`;
+                    row[key] = cell.textContent.trim();
+                });
+                rows.push(row);
+            }
+        });
+
+        return {headers, rows};
+    }""")
+    return data.get("rows", [])
+
+
+def _navigate_to_filter(page, filter_name: str) -> bool:
+    """导航到指定筛选器"""
+    filter_map = {
+        "2026周报-签约项目统计": {"project_type": "签约项目"},
+        "2026周报-POC&提前实施统计": {"project_type": "POC、提前实施"},
+        "2026-签约项目异常处置": {"project_type": "签约项目", "status": "异常"},
+    }
+    config = filter_map.get(filter_name, {})
+    if not config:
+        print(f"[ONES] 未知筛选器: {filter_name}")
+        return False
+
+    # 导航到项目列表
+    page.goto(f"{ONES_BASE}/project/#/home/project", timeout=30000)
+    time.sleep(8)
+
+    # 如果有项目类型筛选
+    if "project_type" in config:
+        try:
+            # 点击"筛选"按钮
+            filter_btn = page.locator('text=筛选').first
+            if filter_btn.count() > 0:
+                filter_btn.click()
+                time.sleep(2)
+                # 选择项目类型
+                type_input = page.locator('[placeholder*="项目类型"], [placeholder*="类型"]').first
+                if type_input.count() > 0:
+                    type_input.click()
+                    time.sleep(1)
+                    type_input.fill(config["project_type"])
+                    time.sleep(1)
+                    page.keyboard.press("Enter")
+                    time.sleep(3)
+        except Exception as e:
+            print(f"[ONES] 筛选设置异常: {e}")
+
+    return True
+
+
 def collect(filter_name: str, export_dir: Optional[str] = None) -> Optional[str]:
-    """导出指定筛选器的数据
+    """导出指定筛选器的数据（DOM 提取 + 分页遍历）
 
     Args:
         filter_name: 筛选器名称
@@ -107,16 +175,22 @@ def collect(filter_name: str, export_dir: Optional[str] = None) -> Optional[str]
     """
     _ensure_setup()
     output_dir = Path(export_dir) if export_dir else EXPORT_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         from playwright.sync_api import sync_playwright
-    except ImportError:
-        print("Playwright 未安装")
+        import csv
+    except ImportError as e:
+        print(f"依赖未安装: {e}")
         return None
+
+    all_rows = []
+    page_num = 1
+    max_pages = 50  # 安全上限
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(accept_downloads=True)
+        context = browser.new_context(accept_downloads=True, viewport={"width": 1920, "height": 1080})
         page = context.new_page()
 
         try:
@@ -125,15 +199,55 @@ def collect(filter_name: str, export_dir: Optional[str] = None) -> Optional[str]
                 print("❌ ONES 登录失败")
                 return None
 
-            # TODO: 导航到筛选器并导出
-            print(f"[ONES] 导出路径待确认: {filter_name}")
-            return None
+            # 导航到筛选器
+            print(f"[ONES] 导航到筛选器: {filter_name}")
+            if not _navigate_to_filter(page, filter_name):
+                return None
+
+            # 分页提取数据
+            while page_num <= max_pages:
+                print(f"[ONES] 提取第 {page_num} 页...")
+                time.sleep(3)
+
+                rows = _extract_table_data(page)
+                if not rows:
+                    print(f"[ONES] 第 {page_num} 页无数据，停止")
+                    break
+
+                all_rows.extend(rows)
+                print(f"[ONES] 累计 {len(all_rows)} 行")
+
+                # 尝试翻页
+                next_btn = page.locator('[class*=next], [class*=pagination] [class*=next], text=下一页').first
+                if next_btn.count() > 0 and next_btn.is_enabled():
+                    next_btn.click()
+                    time.sleep(3)
+                    page_num += 1
+                else:
+                    print(f"[ONES] 无更多页")
+                    break
 
         except Exception as e:
-            print(f"❌ ONES 导出失败: {e}")
-            return None
+            print(f"❌ ONES 采集异常: {e}")
+            if not all_rows:
+                return None
         finally:
             browser.close()
+
+    if not all_rows:
+        print("❌ ONES 未采集到数据")
+        return None
+
+    # 保存 CSV
+    output_path = output_dir / f"{filter_name}.csv"
+    headers = list(all_rows[0].keys())
+    with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(all_rows)
+
+    print(f"✅ ONES 采集完成: {len(all_rows)} 行 → {output_path}")
+    return str(output_path)
 
 
 def collect_all(export_dir: Optional[str] = None) -> list[str]:

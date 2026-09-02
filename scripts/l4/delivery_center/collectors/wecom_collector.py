@@ -137,16 +137,18 @@ def collect_from_wecom(
     _ensure_setup()
     output_dir = Path(export_dir) if export_dir else EXPORT_DIR
 
-    # TODO: 通过 wecom_mcp tool 调用
-    # 1. wecom-preflight 检查白名单
-    # 2. get_doc_content 或 smartsheet_get_records 读取数据
-    # 3. 解析并保存
+    """在线采集（预留接口，当前使用本地 CSV 方案）
 
-    print("[WeCom] 在线采集需要 wecom_mcp tool")
-    print("  当前未配置，请使用 collect_from_local() 作为备选")
+    wecom_mcp 是 MCP tool，无法在 exec 环境中直接调用。
+    当前方案：Rex 从企业微信导出 CSV → 脚本读取本地文件。
+    未来方案：通过 cron agentTurn 调用 wecom_mcp tool 实现在线采集。
+    """
+    print(f"[WeCom] 在线采集预留接口（当前使用本地 CSV 方案）")
     print(f"  文档 URL: {WECOM_DOC_URL}")
+    print(f"  提示：在线采集请通过 cron agentTurn 调用 wecom_mcp tool")
 
-    return None
+    # 回退到本地 CSV
+    return collect_from_local(month, output_dir)
 
 
 if __name__ == "__main__":

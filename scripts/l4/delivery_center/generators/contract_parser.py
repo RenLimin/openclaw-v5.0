@@ -28,9 +28,10 @@ def parse_contract_pdf(pdf_path: str) -> Optional[dict]:
         for page in pdf.pages:
             text += page.extract_text() or ""
 
-    # TODO: 提取关键信息（合同编号、金额、日期等）
-    contract_info = {"raw_text": text, "pages": len(pdf.pages)}
-    print(f"合同 PDF 解析: {len(pdf.pages)} 页")
+    # 提取关键信息
+    contract_info = extract_contract_fields(text)
+    contract_info["pages"] = len(pdf.pages)
+    print(f"合同 PDF 解析: {len(pdf.pages)} 页, 字段: {list(contract_info.keys())}")
     return contract_info
 
 

@@ -35,6 +35,27 @@ def _ensure_setup():
     EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def extract_table_data(page) -> list[dict]:
+    """从工时门户页面提取表格数据"""
+    table_data = page.evaluate("""() => {
+        const rows = document.querySelectorAll('table tbody tr');
+        const results = [];
+        for (const r of rows) {
+            const cells = r.querySelectorAll('td');
+            if (cells.length >= 4) {
+                results.push({
+                    work_item: cells[0].textContent.trim(),
+                    total_hours: cells[1].textContent.trim(),
+                    migrated_hours: cells[2].textContent.trim(),
+                    remaining_hours: cells[3].textContent.trim(),
+                });
+            }
+        }
+        return results;
+    }""")
+    return table_data
+
+
 def collect_workhour_data(
     month: str,
     export_dir: Optional[str] = None,
