@@ -276,5 +276,40 @@ class OpenClawAdapter:
                 details=None
             )
 
+    # 11. 会话隔离与共享（ADR-202609-024）
+    def session_create(self, scope: str) -> Optional[str]:
+        """创建一个隔离会话，返回新会话 key"""
+        # 通过 sessions_spawn RPC 创建
+        result = self.call_tool("sessions_spawn", {
+            "task": "隔离任务",
+            "label": f"{scope} 隔离任务",
+            "context": "isolated",
+            "visible": True
+        })
+        if not result.success:
+            return None
+        # 返回新会话 sessionKey
+        return result.output.get("sessionKey")
+
+    def session_send(self, session_key: str, message: str) -> bool:
+        """发送消息到目标会话"""
+        # 通过 sessions_send RPC 发送
+        result = self.call_tool("sessions_send", {
+            "sessionKey": session_key,
+            "message": message
+        })
+        return result.success
+
+    def session_history(self, session_key: str, limit: int = 100) -> Optional[List[Dict[str, Any]]]:
+        """读取目标会话历史"""
+        # 通过 sessions_history RPC 获取
+        result = self.call_tool("sessions_history", {
+            "sessionKey": session_key,
+            "limit": limit
+        })
+        if not result.success:
+            return None
+        return result.output.get("history")
+
 # 导出单例实例供 L2 使用
 adapter = OpenClawAdapter()
