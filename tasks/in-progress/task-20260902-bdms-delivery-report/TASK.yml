@@ -1,0 +1,44 @@
+id: task-20260902-bdms-delivery-report
+name: BDMS 交付月报生成与验证（202606）
+status: in-progress
+priority: high
+created_at: 2026-09-02T20:00:00+08:00
+updated_at: 2026-09-02T23:20:00+08:00
+owner: main-agent
+
+scope:
+  project: bdms
+  component: delivery-center
+  version: v1.0
+
+goals:
+  - id: g1
+    description: ONES 数据采集（签约 16,612 + POC 5,030 + 异常 362 行）
+    status: done
+  - id: g2
+    description: 月报 15 Sheet 生成（确收/验收/异常项目 3 Sheet 完全匹配）
+    status: done
+  - id: g3
+    description: 剩余 Sheet 数据核对与修复（对比手工报表逐项差异）
+    status: in-progress
+  - id: g4
+    description: 全量生成验证 + commit 最终代码
+    status: pending
+
+blockers:
+  - coding-plan provider 401 Unauthorized（API Key 过期，未达 3 次失败阈值）
+
+context:
+  - path: docs/architecture/components/l4-delivery-center/DESIGN.md
+  - path: tasks/in-progress/task-20260902-bdms-delivery-report/CONTEXT.md
+
+artifacts:
+  - name: ONES 数据采集导出
+    path: ~/.openclaw/data/ones_exports/
+    status: done
+  - name: 交付月报 15 Sheet
+    path: scripts/l4/delivery_center/generators/
+    status: in-progress
+  - name: 最终 commit
+    path: (git commit)
+    status: pending

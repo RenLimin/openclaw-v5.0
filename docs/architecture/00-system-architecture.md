@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 2.11 (2026-09-02 — 新增 L2 OCR 文档数字化组件 OCR-001) |
+| 文档版本 | 2.12 (2026-09-02 — 新增 L2 会话隔离与共享组件 SIS-001) |
 | 文档状态 | active |
 | 运行时 cron | 仅 heartbeat:main(30m),所有业务 cron 已清除(2026-08-26) |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001); SCA-001 已上线(ADR-018 accepted) |
@@ -440,6 +440,24 @@ adapters/
     - ADR: ADR-016
     - 设计: `components/office-generation/DESIGN.md`
 
+
+13. **会话隔离与共享** (2026-09-02)
+    - 组件 ID: 013 (ADR-202609-024)
+    - 功能: 跨会话状态协作 — 默认隔离 + 显式共享
+    - 协议层(零耦合,纯文件/数据结构):
+      - Task Protocol: `tasks/<task_id>/TASK.yml`(任务定义 + goals + blockers)
+      - State Protocol: `state/` 命名空间(scope: session/task/project/user/global)
+      - Event Protocol: `tasks/<task_id>/events.jsonl`(审计日志)
+    - 分层约束: L2 服务层只依赖 L1 抽象契约(ADR-012);OpenClaw hooks 仅在适配层
+    - 与现有组件正交:
+      - 会话生命周期(ADR-013): 管清理,本组件管共享 → 不冲突
+      - 上下文管理(ADR-018): 管溢出,本组件管共享 → 不冲突
+      - 错误自动处理(ADR-014): 管故障,supervisor 归其管 → 范围不膨胀
+    - 当前状态: 📐 设计态(DESIGN.md + ADR + P0 手动版任务卡已建)
+    - ADR: ADR-202609-024
+    - 设计: `components/session-isolation-sharing/DESIGN.md`
+
+**L2 组件建设状态**: **13 个组件设计齐备**,其中 10 个已上线(7 个治理组件 + 沙箱 + 模型调度),2 个 cron 驱动型(会话生命周期管理 + 错误自动处理)设计完备但 cron 已清除、待重建,1 个设计态(会话隔离与共享,ADR-202609-024)。
 **L2 组件建设状态**: **12 个组件设计齐备**,其中 10 个已上线(7 个治理组件 + 沙箱 + 模型调度),2 个 cron 驱动型(会话生命周期管理 + 错误自动处理)设计完备但 cron 已清除、待重建。
 
 **配置安全保护** (横切关注点,2026-08-26):
