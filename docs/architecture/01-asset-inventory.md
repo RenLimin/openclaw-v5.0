@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-02 12:02 UTC+08:00
+最后生成：2026-09-02 12:34 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -38,7 +38,7 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 124 个（可用 112）
+**总计** 125 个（可用 113）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
@@ -46,7 +46,7 @@
 | `openclaw-custodian` | 4 | — |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 28 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 29 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -56,6 +56,7 @@
 | `config-snapshot-redaction-and-drift-check` | Committing sanitized config snapshots to git: exact-key redaction, secret scan, and --c... |
 | `config-snapshot-redaction-verification` | Sanitized config snapshot leaks a secret/ID before commit: fix key-list redaction and v... |
 | `config-snapshot-tenant-identifier-leak-audit` | Auditing config snapshots for leaked tenant IDs (botId/corpId/appId) before committing ... |
+| `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。可独立使用，也可整合至自建系统。 |
 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 |
 | `edit-stale-state-break-loop` | Breaking edit-tool retry loops when prior mutations already changed the target text |
 | `edit-tool-exact-whitespace-recovery` | Edit-tool "oldText not found" usually means a whitespace mismatch. On macOS, use `od -c... |
@@ -131,11 +132,11 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
 | Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
+| 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
@@ -144,7 +145,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 22 |
+| ADR（架构决策记录） | 23 |
 | EXP（经验卡片） | 13 |
 | 模板 | 4 |
 
@@ -174,6 +175,7 @@
 | [`ADR-202608-020-model-scheduling`](../knowledge-base/by-category/project-experience/adr/ADR-202608-020-model-scheduling.md) | accepted |
 | [`ADR-202608-021-system-backup`](../knowledge-base/by-category/project-experience/adr/ADR-202608-021-system-backup.md) | accepted |
 | [`ADR-202608-022-bdms-delivery-center`](../knowledge-base/by-category/project-experience/adr/ADR-202608-022-bdms-delivery-center.md) | accepted |
+| [`ADR-202609-018-sales-contract-approval`](../knowledge-base/by-category/project-experience/adr/ADR-202609-018-sales-contract-approval.md) | accepted |
 
 ### 经验卡片清单
 
@@ -198,8 +200,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `85cd388` |
-| Commit 数 | 150 |
+| HEAD | `94c1298` |
+| Commit 数 | 151 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
