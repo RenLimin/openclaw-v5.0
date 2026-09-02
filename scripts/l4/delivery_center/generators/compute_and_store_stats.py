@@ -25,9 +25,18 @@ THIN_BORDER = Border(
 )
 
 
-def load_csv(path):
+def load_csv(path, filter_date=None):
+    """加载 CSV，可选按立项日期过滤"""
     with open(path, 'r', encoding='utf-8-sig') as f:
-        return pd.DataFrame(csv.DictReader(f))
+        df = pd.DataFrame(csv.DictReader(f))
+    
+    if filter_date and '立项日期' in df.columns:
+        before = len(df)
+        dt = pd.to_datetime(df['立项日期'], errors='coerce')
+        df = df[dt <= filter_date].copy()
+        print(f"    日期过滤({filter_date}): {before} → {len(df)} (移除 {before - len(df)} 行)")
+    
+    return df
 
 
 def load_bdms_table(table):
@@ -491,20 +500,9 @@ def generate_excel_from_stats(conn, sign_df, poc_df, abnormal_df, rev_rows, acc_
     from build_stat_sheets import build_all_stat_sheets
     build_all_stat_sheets(wb, conn)
     
-    # 图例 Sheet
-    ws = wb.create_sheet("图例")
-    legend_path = CONFIG_DIR / "legend_pm_dept.json"
-    if legend_path.exists():
-        legend = json.loads(legend_path.read_text(encoding="utf-8"))
-        ws.cell(row=1, column=1, value="项目经理")
-        ws.cell(row=1, column=2, value="部门")
-        ws.cell(row=1, column=1).font = HEADER_FONT_WHITE
-        ws.cell(row=1, column=1).fill = HEADER_FILL
-        ws.cell(row=1, column=2).font = HEADER_FONT_WHITE
-        ws.cell(row=1, column=2).fill = HEADER_FILL
-        for ri, (pm, dept) in enumerate(legend.items(), 2):
-            ws.cell(row=ri, column=1, value=pm)
-            ws.cell(row=ri, column=2, value=dept)
+    # 图例 Sheet（完整 48 列混合表）
+    from build_legend_sheet import build_legend_sheet
+    build_legend_sheet(wb)
     
     # 保存
     output_path = OUTPUT_DIR / f"交付月报-{REPORT_MONTH}.xlsx"
@@ -519,11 +517,21 @@ def main():
     
     # 1. 加载数据
     print("1. 加载数据...")
-    sign_df = load_csv(ONES_DIR / "签约项目统计.csv")
-    poc_df = load_csv(ONES_DIR / "poc_提前实施.csv")
+    sign_df = load_csv(ONES_DIR / "签约项目统计.csv", filter_date=REPORT_DATE)
+    poc_df = load_csv(ONES_DIR / "poc_提前实施.csv", filter_date=REPORT_DATE)
+    # 异常处置 CSV 立项日期为空，不过滤（362 行 vs 参考 353 行，差异小）
     abnormal_df = load_csv(ONES_DIR / "异常处置.csv")
     rev_cols, rev_rows = load_bdms_table("revenue_vouchers")
     acc_cols, acc_rows = load_bdms_table("acceptance_vouchers")
+    # 过滤 BI履约ID 为空的行
+    for name, df in [('签约', sign_df), ('POC', poc_df), ('异常', abnormal_df)]:
+        if 'BI履约ID' in df.columns:
+            before = len(df)
+            df.dropna(subset=['BI履约ID'], inplace=True)
+            df.reset_index(drop=True, inplace=True)
+            if len(df) != before:
+                print(f"    {name}: 移除 {before - len(df)} 行空BI履约ID")
+    
     print(f"   签约: {len(sign_df)}, POC: {len(poc_df)}, 异常: {len(abnormal_df)}")
     print(f"   确收: {len(rev_rows)}, 验收: {len(acc_rows)}")
     
