@@ -95,76 +95,143 @@ def _ensure_ones_logged_in(context, page):
     return False
 
 
-def _extract_table_data(page) -> list[dict]:
-    """从 ONES 项目列表页面提取表格数据（DOM 提取）"""
-    data = page.evaluate("""() => {
-        // 获取表头
-        const headers = [];
-        document.querySelectorAll('th, .ones-table-header-cell, [class*=header] [class*=cell]').forEach(th => {
-            const text = th.textContent.trim();
-            if (text && !headers.includes(text)) headers.push(text);
-        });
-
-        // 获取数据行
-        const rows = [];
-        document.querySelectorAll('tr, .ones-table-row, [class*=row]').forEach(tr => {
-            const cells = tr.querySelectorAll('td, [class*=cell]');
-            if (cells.length >= 5) {
-                const row = {};
-                cells.forEach((cell, i) => {
-                    const key = headers[i] || `col_${i}`;
-                    row[key] = cell.textContent.trim();
-                });
-                rows.push(row);
-            }
-        });
-
-        return {headers, rows};
-    }""")
-    return data.get("rows", [])
-
-
 def _navigate_to_filter(page, filter_name: str) -> bool:
-    """导航到指定筛选器"""
-    filter_map = {
-        "2026周报-签约项目统计": {"project_type": "签约项目"},
-        "2026周报-POC&提前实施统计": {"project_type": "POC、提前实施"},
-        "2026-签约项目异常处置": {"project_type": "签约项目", "status": "异常"},
+    """导航到指定筛选器（通过 我的工作台 → 筛选器 tab）
+
+    操作步骤：
+    1. 点击左侧菜单 '我的工作台'
+    2. 点击右侧 '筛选器' tab
+    3. 点击对应筛选器子 tab（如 '2026周报-签约项目'）
+    """
+    # 筛选器名称 → tab 显示名称映射
+    filter_tab_map = {
+        "2026周报-签约项目统计": "2026周报-签约项目",
+        "2026周报-POC&提前实施统计": "2026周报-POC&提前实施",
+        "2026-签约项目异常处置": "2026-签约项目异常处置",
     }
-    config = filter_map.get(filter_name, {})
-    if not config:
-        print(f"[ONES] 未知筛选器: {filter_name}")
-        return False
+    tab_name = filter_tab_map.get(filter_name, filter_name)
 
-    # 导航到项目列表
-    page.goto(f"{ONES_BASE}/project/#/home/project", timeout=30000)
-    time.sleep(8)
+    # Step 1: 点击左侧 '我的工作台'
+    print(f"  [导航] 点击 '我的工作台'...")
+    try:
+        workspace_link = page.locator('a, span, div').filter(has_text='我的工作台').first
+        if workspace_link.count() > 0:
+            workspace_link.click()
+            time.sleep(3)
+        else:
+            # 直接导航
+            page.goto(f"{ONES_BASE}/project/#/workspace", timeout=20000)
+            time.sleep(5)
+    except Exception as e:
+        print(f"  [警告] 点击工作台失败: {e}，尝试直接导航")
+        page.goto(f"{ONES_BASE}/project/#/workspace", timeout=20000)
+        time.sleep(5)
 
-    # 如果有项目类型筛选
-    if "project_type" in config:
-        try:
-            # 点击"筛选"按钮
-            filter_btn = page.locator('text=筛选').first
-            if filter_btn.count() > 0:
-                filter_btn.click()
-                time.sleep(2)
-                # 选择项目类型
-                type_input = page.locator('[placeholder*="项目类型"], [placeholder*="类型"]').first
-                if type_input.count() > 0:
-                    type_input.click()
-                    time.sleep(1)
-                    type_input.fill(config["project_type"])
-                    time.sleep(1)
-                    page.keyboard.press("Enter")
-                    time.sleep(3)
-        except Exception as e:
-            print(f"[ONES] 筛选设置异常: {e}")
+    # Step 2: 点击 '筛选器' tab
+    print(f"  [导航] 点击 '筛选器' tab...")
+    try:
+        filter_tab = page.locator('[role=tab], [class*=tab], a, span, div').filter(has_text='筛选器').first
+        if filter_tab.count() > 0:
+            filter_tab.click()
+            time.sleep(3)
+        else:
+            print("  [警告] 未找到 '筛选器' tab")
+    except Exception as e:
+        print(f"  [警告] 点击筛选器失败: {e}")
+
+    # Step 3: 点击具体筛选器子 tab
+    print(f"  [导航] 点击 '{tab_name}'...")
+    try:
+        sub_tab = page.locator('[role=tab], [class*=tab], a, span, div, li').filter(has_text=tab_name).first
+        if sub_tab.count() > 0:
+            sub_tab.click()
+            time.sleep(5)
+        else:
+            print(f"  [警告] 未找到 '{tab_name}'，尝试部分匹配")
+            sub_tab = page.locator('a, span, div, li').filter(has_text=tab_name[:6]).first
+            if sub_tab.count() > 0:
+                sub_tab.click()
+                time.sleep(5)
+    except Exception as e:
+        print(f"  [警告] 点击子 tab 失败: {e}")
 
     return True
 
 
+def _click_export(page, timeout: int = 30) -> Optional[str]:
+    """点击导出按钮并等待下载
+
+    操作步骤：
+    1. 点击 ONES 功能菜单中的 '导出原始数据'
+    2. 等待弹窗出现
+    3. 点击 '确认' 按钮
+    4. 等待下载完成
+
+    Returns:
+        下载文件路径或 None
+    """
+    print("  [导出] 点击 '导出原始数据'...")
+
+    # 尝试多种方式找到导出按钮
+    export_selectors = [
+        'text=导出原始数据',
+        'text=导出',
+        '[class*=export]',
+        '[class*=Export]',
+        'button:has-text("导出")',
+        'span:has-text("导出")',
+        'div:has-text("导出")',
+    ]
+
+    for selector in export_selectors:
+        try:
+            btn = page.locator(selector).first
+            if btn.count() > 0 and btn.is_visible():
+                print(f"  [导出] 找到按钮: {selector}")
+                with page.expect_download(timeout=timeout * 1000) as download_info:
+                    btn.click()
+                download = download_info.value
+                suggested = download.suggested_filename
+                download_path = EXPORT_DIR / suggested
+                download.save_as(str(download_path))
+                print(f"  [导出] 下载完成: {download_path}")
+                return str(download_path)
+        except Exception:
+            continue
+
+    # 如果上面的选择器都没找到，尝试通过功能菜单
+    print("  [导出] 尝试通过功能菜单导出...")
+    try:
+        # 点击更多/功能菜单
+        menu_btn = page.locator('[class*=more], [class*=menu], [class*=action]').first
+        if menu_btn.count() > 0:
+            menu_btn.click()
+            time.sleep(1)
+            # 再次查找导出按钮
+            export_btn = page.locator('text=导出原始数据, text=导出').first
+            if export_btn.count() > 0:
+                with page.expect_download(timeout=timeout * 1000) as download_info:
+                    export_btn.click()
+                download = download_info.value
+                download.save_as(str(EXPORT_DIR / download.suggested_filename))
+                return str(EXPORT_DIR / download.suggested_filename)
+    except Exception as e:
+        print(f"  [导出] 导出失败: {e}")
+
+    return None
+
+
 def collect(filter_name: str, export_dir: Optional[str] = None) -> Optional[str]:
-    """导出指定筛选器的数据（DOM 提取 + 分页遍历）
+    """导出指定筛选器的数据（通过 ONES 自带导出功能）
+
+    操作流程（基于人工操作截图）：
+    1. 登录 ONES
+    2. 点击左侧 '我的工作台'
+    3. 点击右侧 '筛选器' tab
+    4. 点击具体筛选器子 tab（如 '2026周报-签约项目'）
+    5. 点击 '导出原始数据'
+    6. 点击弹窗 '确认'
+    7. 等待下载完成
 
     Args:
         filter_name: 筛选器名称
@@ -179,14 +246,9 @@ def collect(filter_name: str, export_dir: Optional[str] = None) -> Optional[str]
 
     try:
         from playwright.sync_api import sync_playwright
-        import csv
     except ImportError as e:
         print(f"依赖未安装: {e}")
         return None
-
-    all_rows = []
-    page_num = 1
-    max_pages = 50  # 安全上限
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -194,60 +256,34 @@ def collect(filter_name: str, export_dir: Optional[str] = None) -> Optional[str]
         page = context.new_page()
 
         try:
-            # 确保 ONES 登录
+            # Step 1: 登录
+            print(f"[ONES] Step 1: 登录...")
             if not _ensure_ones_logged_in(context, page):
                 print("❌ ONES 登录失败")
                 return None
 
-            # 导航到筛选器
-            print(f"[ONES] 导航到筛选器: {filter_name}")
+            # Step 2-4: 导航到筛选器
+            print(f"[ONES] Step 2-4: 导航到筛选器...")
             if not _navigate_to_filter(page, filter_name):
                 return None
 
-            # 分页提取数据
-            while page_num <= max_pages:
-                print(f"[ONES] 提取第 {page_num} 页...")
-                time.sleep(3)
-
-                rows = _extract_table_data(page)
-                if not rows:
-                    print(f"[ONES] 第 {page_num} 页无数据，停止")
-                    break
-
-                all_rows.extend(rows)
-                print(f"[ONES] 累计 {len(all_rows)} 行")
-
-                # 尝试翻页
-                next_btn = page.locator('[class*=next], [class*=pagination] [class*=next], text=下一页').first
-                if next_btn.count() > 0 and next_btn.is_enabled():
-                    next_btn.click()
-                    time.sleep(3)
-                    page_num += 1
-                else:
-                    print(f"[ONES] 无更多页")
-                    break
+            # Step 5-7: 点击导出并等待下载
+            print(f"[ONES] Step 5-7: 导出数据...")
+            download_path = _click_export(page, timeout=60)
+            if download_path:
+                print(f"✅ ONES 采集完成: {download_path}")
+                return download_path
+            else:
+                print("❌ 导出失败")
+                return None
 
         except Exception as e:
             print(f"❌ ONES 采集异常: {e}")
-            if not all_rows:
-                return None
+            import traceback
+            traceback.print_exc()
+            return None
         finally:
             browser.close()
-
-    if not all_rows:
-        print("❌ ONES 未采集到数据")
-        return None
-
-    # 保存 CSV
-    output_path = output_dir / f"{filter_name}.csv"
-    headers = list(all_rows[0].keys())
-    with open(output_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=headers)
-        writer.writeheader()
-        writer.writerows(all_rows)
-
-    print(f"✅ ONES 采集完成: {len(all_rows)} 行 → {output_path}")
-    return str(output_path)
 
 
 def collect_all(export_dir: Optional[str] = None) -> list[str]:
