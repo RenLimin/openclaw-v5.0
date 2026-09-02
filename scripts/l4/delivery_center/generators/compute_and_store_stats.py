@@ -232,6 +232,20 @@ def read_stats(conn, month, sheet_name, stat_type):
     return c.fetchall()
 
 
+def normalize_date(val):
+    """将日期值统一格式化为 YYYY-MM-DD"""
+    if val is None or pd.isna(val):
+        return val
+    s = str(val).strip()
+    # 匹配 2026/6/9 或 2026-06-09 或 2026-06-09 00:00:00
+    import re
+    m = re.match(r'^(\d{4})[/-](\d{1,2})[/-](\d{1,2})', s)
+    if m:
+        y, mo, d = m.groups()
+        return f"{y}-{int(mo):02d}-{int(d):02d}"
+    return val
+
+
 def write_df(ws, df, start_row=1):
     """写入 DataFrame 到 worksheet"""
     if df.empty:
@@ -246,6 +260,7 @@ def write_df(ws, df, start_row=1):
     for ri, (_, row) in enumerate(df.iterrows(), start_row + 1):
         for ci, val in enumerate(row, 1):
             v = "" if pd.isna(val) else val
+            v = normalize_date(v)
             cell = ws.cell(row=ri, column=ci, value=v)
             cell.border = THIN_BORDER
 
@@ -374,6 +389,10 @@ def map_revenue_columns(rev_df):
     rename_map = {k: v for k, v in column_mapping.items() if k in result_df.columns}
     result_df = result_df.rename(columns=rename_map)
     
+    # 自动填充"月份"列
+    if '月份' in ref_order:
+        result_df['月份'] = '202606'
+    
     # 按参考报表顺序构建列：有数据的用数据，没数据的填空列
     final_cols = []
     for col in ref_order:
@@ -439,6 +458,10 @@ def map_acceptance_columns(acc_df):
     result_df = acc_df.copy()
     rename_map = {k: v for k, v in column_mapping.items() if k in result_df.columns}
     result_df = result_df.rename(columns=rename_map)
+    
+    # 自动填充"月份"列
+    if '月份' in ref_order:
+        result_df['月份'] = '202606'
     
     # 按参考报表顺序构建：处理重复列名的情况
     # 第一个"截至目前全部/部分验收"用数据列，第二个留空
