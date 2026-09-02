@@ -17,6 +17,7 @@ REPORT_DATE = "2026-07-08"  # 参考报表导出日期
 
 # 全局数据缓存
 _sign_df = None
+_sign_df_full = None  # 全量签约数据（不过滤立项日期）
 _poc_df = None
 _abnormal_df = None
 _rev_df = None
@@ -32,8 +33,8 @@ def _try_read_csv(path, **kwargs):
 
 def _load_data():
     """延迟加载源数据"""
-    global _sign_df, _poc_df, _abnormal_df, _rev_df, _acc_df
-    if _sign_df is not None:
+    global _sign_df, _sign_df_full, _poc_df, _abnormal_df, _rev_df, _acc_df
+    if _sign_df is not None and _sign_df_full is not None:
         return
     
     # 主数据源：ones_exports 目录
@@ -41,7 +42,12 @@ def _load_data():
     _poc_df = _try_read_csv(ONES_DIR / "poc_提前实施.csv")
     _abnormal_df = _try_read_csv(ONES_DIR / "异常处置.csv")
     
+    # 全量签约数据（不过滤立项日期，用于产品-授权&维保统计等需要全量数据的场景）
+    # 必须在 _sign_df 被过滤前复制
+    _sign_df_full = _sign_df.copy() if _sign_df is not None else None
+    
     # 按报告日期过滤（与 compute_and_store_stats 保持一致）
+    # 注意：只过滤 _sign_df（过滤后数据），不影响 _sign_df_full（全量数据）
     if _sign_df is not None and '立项日期' in _sign_df.columns:
         dt = pd.to_datetime(_sign_df['立项日期'], errors='coerce')
         _sign_df = _sign_df[dt <= REPORT_DATE].copy()
@@ -164,26 +170,36 @@ def _compute_poc_duration(df, sign_df=None):
 # ============================================================
 def build_sign_stats(ws):
     """签约统计：左表=按年份，右表=状态×年份交叉表
-    精确匹配参考报表的 16行×15列 透视表格式"""
+    精确匹配参考报表的 15行×15列 透视表格式
+    
+    参考结构：
+    - 行1-3: 筛选器（字段名 + (全部)）
+    - 行4: 空
+    - 行5: 列名行（行标签 | 计数项:ID | 空×3 | 计数项:ID | 列标签 | 年份... | 总计）
+    - 行6-14: 数据行（左：年份计数，右：状态×年份交叉表）
+    - 行15-16: 总计行
+    """
     _load_data()
     df = _sign_df.copy()
     
     df['立项年份'] = pd.to_datetime(df['立项日期'], errors='coerce').dt.year
     df['履约项统计状态'] = _compute_status_category(df)
     
-    # === 筛选器行（行1-3）===
+    # === 筛选器行（行1-3），左右两份 ===
+    filter_labels = ["项目经理所属部门", "统计项目编号", "项目状态"]
     for row in range(1, 4):
-        ws.cell(row=row, column=1, value=["项目经理所属部门", "统计项目编号", "项目状态"][row-1])
+        ws.cell(row=row, column=1, value=filter_labels[row-1])
         ws.cell(row=row, column=2, value="(全部)")
-        ws.cell(row=row, column=6, value=["项目经理所属部门", "统计项目编号", "项目状态"][row-1])
+        ws.cell(row=row, column=6, value=filter_labels[row-1])
         ws.cell(row=row, column=7, value="(全部)")
     
-    # 行5：列名行（参考报表列5留空，与参考一致）
+    # 行5：列名行
+    # 参考：列1=行标签, 列2=计数项:ID, 列3-5=空, 列6=计数项:ID, 列7=列标签, 列8+=年份, 最后=总计
     ws.cell(row=5, column=1, value="行标签")
     ws.cell(row=5, column=2, value="计数项:ID")
-    # 列3-4留空（参考报表结构）
-    ws.cell(row=5, column=5, value="计数项:ID")
-    ws.cell(row=5, column=6, value="列标签")
+    # 列3-5留空（3个空列）
+    ws.cell(row=5, column=6, value="计数项:ID")
+    ws.cell(row=5, column=7, value="列标签")
     
     # === 左表：按立项年份统计 ===
     year_counts = df.groupby('立项年份')['ID'].nunique()
@@ -200,7 +216,6 @@ def build_sign_stats(ws):
     ws.cell(row=total_row, column=2, value=int(df['ID'].nunique()))
     
     # === 右表：履约项统计状态 × 立项年份 交叉表 ===
-    # 参考报表列顺序：2026, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 总计
     valid_df = df[df['履约项统计状态'] != '']
     
     status_order = [
@@ -208,7 +223,7 @@ def build_sign_stats(ws):
         '5：应验未验', '6：验收异常', '7：正常服务', '8：应结未结', '9：已结项'
     ]
     
-    # 参考报表的列顺序：当前年份(2026)在前，然后从2019到2025
+    # 参考报表列顺序：2026, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 总计
     current_year = 2026
     ordered_years = [current_year] + [y for y in years if y != current_year]
     year_labels = [f"{y}年" for y in ordered_years]
@@ -246,13 +261,35 @@ def build_sign_stats(ws):
             ws.cell(row=total_row_r, column=7 + ci, value=val)
         col_totals.append(val)
     ws.cell(row=total_row_r, column=7 + len(ordered_years), value=sum(col_totals))
+    
+    # 确保列数=15（填充空列到列15）
+    for row in range(1, total_row_r + 1):
+        for col in range(1, 16):
+            cell = ws.cell(row=row, column=col)
+            if cell.value is None:
+                cell.value = None  # 保持空
 
 
 # ============================================================
 # 2. POC&提前实施统计
 # ============================================================
 def build_poc_stats(ws):
-    """POC&提前实施统计：左=年份×类型, 中=持续周期×部门, 右=工时合计"""
+    """POC&提前实施统计：三表布局
+    精确匹配参考报表的 22行×29列 格式
+    
+    参考结构（22行×29列，1-based）：
+    - 行1-4: 筛选器（三组筛选条件）
+    - 行5: 列头行
+    - 行6-22: 数据行
+    
+    左表（列1-4）: 履约项立项期间 × 类型(POC/提前实施/总计)
+    中表（列8-15）: 提前实施履约项持续周期 × 是否关联(未关联/已关联/各部门)
+    右表（列19-29）: POC项目工时合计 × 部门（工时暂用0占位）
+    
+    空列间隔：列5-7（左-中间隔），列16-18（中-右间隔）
+    中表空列：列11（1个月内与3个月内之间）
+    右表空列：列26（北区金融部与车联网行业部之间）
+    """
     _load_data()
     df = _poc_df.copy()
     
@@ -265,34 +302,70 @@ def build_poc_stats(ws):
     early_df['持续周期-统计'] = duration_stat.values
     early_df['是否关联合同'] = is_linked.values
     
-    # === 筛选器 ===
-    ws.cell(row=2, column=1, value="项目经理所属部门")
-    ws.cell(row=2, column=2, value="(全部)")
-    ws.cell(row=3, column=1, value="统计项目编号")
-    ws.cell(row=3, column=2, value="(全部)")
-    
+    # === 筛选器区域（行1-4）===
+    # 行1: 列7=项目经理所属部门, 列8=(全部) | 列18=项目经理所属部门, 列19=(全部)
     ws.cell(row=1, column=8, value="项目经理所属部门")
     ws.cell(row=1, column=9, value="(全部)")
-    ws.cell(row=2, column=8, value="统计项目编号")
-    ws.cell(row=2, column=9, value="(全部)")
-    ws.cell(row=3, column=8, value="项目类型(概览)")
-    ws.cell(row=3, column=9, value="提前实施")
-    
     ws.cell(row=1, column=19, value="项目经理所属部门")
     ws.cell(row=1, column=20, value="(全部)")
+    
+    # 行2: 列1=项目经理所属部门, 列2=(全部) | 列7=统计项目编号, 列8=(全部) | 列18=统计项目编号, 列19=(全部)
+    ws.cell(row=2, column=1, value="项目经理所属部门")
+    ws.cell(row=2, column=2, value="(全部)")
+    ws.cell(row=2, column=8, value="统计项目编号")
+    ws.cell(row=2, column=9, value="(全部)")
     ws.cell(row=2, column=19, value="统计项目编号")
     ws.cell(row=2, column=20, value="(全部)")
+    
+    # 行3: 列1=统计项目编号, 列2=(全部) | 列7=项目类型(概览), 列8=提前实施 | 列18=项目类型(概览), 列19=POC
+    ws.cell(row=3, column=1, value="统计项目编号")
+    ws.cell(row=3, column=2, value="(全部)")
+    ws.cell(row=3, column=8, value="项目类型(概览)")
+    ws.cell(row=3, column=9, value="提前实施")
     ws.cell(row=3, column=19, value="项目类型(概览)")
     ws.cell(row=3, column=20, value="POC")
     
-    # === 左表：履约项立项期间 × 类型 ===
-    ws.cell(row=5, column=1, value="履约项立项期间")
-    ws.cell(row=5, column=2, value="列标签")
-    ws.cell(row=6, column=1, value="行标签")
-    ws.cell(row=6, column=2, value="POC")
-    ws.cell(row=6, column=3, value="提前实施")
-    ws.cell(row=6, column=4, value="总计")
+    # 行4: 列1=履约项立项期间, 列2=列标签 | 列7=提前实施履约项持续周期, 列8=列标签 | 列18=求和项:POC项目工时合计（小时）, 列19=列标签
+    ws.cell(row=4, column=1, value="履约项立项期间")
+    ws.cell(row=4, column=2, value="列标签")
+    ws.cell(row=4, column=8, value="提前实施履约项持续周期")
+    ws.cell(row=4, column=9, value="列标签")
+    ws.cell(row=4, column=19, value="求和项:POC项目工时合计（小时）")
+    ws.cell(row=4, column=20, value="列标签")
     
+    # === 列头行（行5）===
+    # 左表（列1-4）
+    ws.cell(row=5, column=1, value="行标签")
+    ws.cell(row=5, column=2, value="POC")
+    ws.cell(row=5, column=3, value="提前实施")
+    ws.cell(row=5, column=4, value="总计")
+    
+    # 中表（列8-15），列11为空
+    ws.cell(row=5, column=8, value="行标签")
+    ws.cell(row=5, column=9, value="超过1年")
+    ws.cell(row=5, column=10, value="1个月内")
+    # 列11 为空
+    ws.cell(row=5, column=12, value="3个月内")
+    ws.cell(row=5, column=13, value="6个月内")
+    ws.cell(row=5, column=14, value="1年内")
+    ws.cell(row=5, column=15, value="总计")
+    
+    # 右表（列19-29），列26为空
+    # 右表部门列：参考报表的8个部门 + 空列 + 总计
+    right_dept_cols = [
+        "华中营销部", "西区营销部", "南区营销部", "东区营销部",
+        "北区营销部", "北区金融部",  # 到列24（Excel列号）
+        None,  # 列26 空列（Excel列26 = 第7个位置，索引6）
+        "车联网行业部", "销售运营管理部",
+        "总计"
+    ]
+    
+    ws.cell(row=5, column=19, value="行标签")
+    for ci, dept in enumerate(right_dept_cols):
+        if dept is not None:
+            ws.cell(row=5, column=20 + ci, value=dept)
+    
+    # === 左表：履约项立项期间 × 类型（数据从行6开始）===
     year_type = df.groupby(['立项年份', '项目类型(概览)'])['ID'].nunique().unstack(fill_value=0)
     years = sorted([int(y) for y in year_type.index if pd.notna(y)])
     
@@ -300,7 +373,7 @@ def build_poc_stats(ws):
     early_total = 0
     
     for i, year in enumerate(years):
-        row = 7 + i
+        row = 6 + i
         ws.cell(row=row, column=1, value=f"{year}年")
         poc_count = int(year_type.loc[year, 'POC']) if 'POC' in year_type.columns and year in year_type.index else 0
         early_count = int(year_type.loc[year, '提前实施']) if '提前实施' in year_type.columns and year in year_type.index else 0
@@ -310,143 +383,110 @@ def build_poc_stats(ws):
         poc_total += poc_count
         early_total += early_count
     
-    total_row = 7 + len(years)
-    ws.cell(row=total_row, column=1, value="总计")
-    ws.cell(row=total_row, column=2, value=poc_total)
-    ws.cell(row=total_row, column=3, value=early_total)
-    ws.cell(row=total_row, column=4, value=poc_total + early_total)
+    total_row_left = 6 + len(years)
+    ws.cell(row=total_row_left, column=1, value="总计")
+    ws.cell(row=total_row_left, column=2, value=poc_total)
+    ws.cell(row=total_row_left, column=3, value=early_total)
+    ws.cell(row=total_row_left, column=4, value=poc_total + early_total)
     
-    # === 中表：提前实施履约项持续周期 × 部门 ===
-    ws.cell(row=5, column=8, value="提前实施履约项持续周期")
-    ws.cell(row=5, column=9, value="列标签")
+    # === 中表：提前实施履约项持续周期（数据从行6开始）===
+    # 持续周期列顺序（对应列9,10,12,13,14,15），列11为空
+    dur_order = ['超过1年', '1个月内', '3个月内', '6个月内', '1年内']
     
-    dur_order = ['超过1年', '1个月内', '#N/A', '3个月内', '6个月内', '1年内', '总计']
+    def write_mid_row(row_num, label, pivot_series):
+        """写入中表一行数据
+        pivot_series: 以持续周期为index的Series
+        """
+        ws.cell(row=row_num, column=8, value=label)
+        row_total = 0
+        # 列9=超过1年, 列10=1个月内
+        for ci, dur in enumerate(dur_order[:2]):
+            v = int(pivot_series.get(dur, 0))
+            ws.cell(row=row_num, column=9 + ci, value=v)
+            row_total += v
+        # 列11 为空，跳过
+        # 列12=3个月内, 列13=6个月内, 列14=1年内
+        for ci, dur in enumerate(dur_order[2:]):
+            v = int(pivot_series.get(dur, 0))
+            ws.cell(row=row_num, column=12 + ci, value=v)
+            row_total += v
+        # 列15=总计
+        ws.cell(row=row_num, column=15, value=row_total)
     
-    ws.cell(row=6, column=8, value="行标签")
-    for ci, dur in enumerate(dur_order):
-        ws.cell(row=6, column=9 + ci, value=dur)
-    
-    # 部门×持续周期透视
-    dept_pivot = early_df.pivot_table(
-        index='责任销售所属团队', columns='持续周期-统计',
-        values='ID', aggfunc='nunique', fill_value=0
-    )
-    
-    row = 7
+    mid_row = 6
     
     # 未关联汇总
     unlinked = early_df[early_df['是否关联合同'] == '未关联']
     unlinked_piv = unlinked.groupby('持续周期-统计')['ID'].nunique()
+    write_mid_row(mid_row, "未关联", unlinked_piv)
+    mid_row += 1
     
-    ws.cell(row=row, column=8, value="未关联")
-    ut = 0
-    for ci, dur in enumerate(dur_order[:-1]):
-        v = int(unlinked_piv.get(dur, 0))
-        ws.cell(row=row, column=9 + ci, value=v)
-        ut += v
-    ws.cell(row=row, column=9 + len(dur_order) - 1, value=ut)
-    row += 1
-    
-    # 未关联下的各部门
-    unlinked_depts = sorted([d for d in unlinked['责任销售所属团队'].dropna().unique()])
+    # 未关联各部门（按部门名称排序，仅展示总部级部门，排除分公司）
+    unlinked_depts = sorted([d for d in unlinked['责任销售所属团队'].dropna().unique() if '分公司' not in d])
     for dept in unlinked_depts:
         dept_data = unlinked[unlinked['责任销售所属团队'] == dept]
         dpiv = dept_data.groupby('持续周期-统计')['ID'].nunique()
-        ws.cell(row=row, column=8, value=str(dept))
-        dt = 0
-        for ci, dur in enumerate(dur_order[:-1]):
-            v = int(dpiv.get(dur, 0))
-            ws.cell(row=row, column=9 + ci, value=v)
-            dt += v
-        ws.cell(row=row, column=9 + len(dur_order) - 1, value=dt)
-        row += 1
+        write_mid_row(mid_row, str(dept), dpiv)
+        mid_row += 1
     
-    # #N/A 部门
+    # 未关联 #N/A 部门
     unlinked_na = unlinked[unlinked['责任销售所属团队'].isna()]
     if len(unlinked_na) > 0:
         dpiv = unlinked_na.groupby('持续周期-统计')['ID'].nunique()
-        ws.cell(row=row, column=8, value="#N/A")
-        dt = 0
-        for ci, dur in enumerate(dur_order[:-1]):
-            v = int(dpiv.get(dur, 0))
-            ws.cell(row=row, column=9 + ci, value=v)
-            dt += v
-        ws.cell(row=row, column=9 + len(dur_order) - 1, value=dt)
-        row += 1
+        write_mid_row(mid_row, "#N/A", dpiv)
+        mid_row += 1
     
     # 已关联汇总
     linked = early_df[early_df['是否关联合同'] == '已关联']
     linked_piv = linked.groupby('持续周期-统计')['ID'].nunique()
+    write_mid_row(mid_row, "已关联", linked_piv)
+    mid_row += 1
     
-    ws.cell(row=row, column=8, value="已关联")
-    lt = 0
-    for ci, dur in enumerate(dur_order[:-1]):
-        v = int(linked_piv.get(dur, 0))
-        ws.cell(row=row, column=9 + ci, value=v)
-        lt += v
-    ws.cell(row=row, column=9 + len(dur_order) - 1, value=lt)
-    row += 1
-    
-    # 已关联下的各部门
-    linked_depts = sorted([d for d in linked['责任销售所属团队'].dropna().unique()])
+    # 已关联各部门（按部门名称排序，仅展示总部级部门，排除分公司）
+    linked_depts = sorted([d for d in linked['责任销售所属团队'].dropna().unique() if '分公司' not in d])
     for dept in linked_depts:
         dept_data = linked[linked['责任销售所属团队'] == dept]
         dpiv = dept_data.groupby('持续周期-统计')['ID'].nunique()
-        ws.cell(row=row, column=8, value=str(dept))
-        dt = 0
-        for ci, dur in enumerate(dur_order[:-1]):
-            v = int(dpiv.get(dur, 0))
-            ws.cell(row=row, column=9 + ci, value=v)
-            dt += v
-        ws.cell(row=row, column=9 + len(dur_order) - 1, value=dt)
-        row += 1
+        write_mid_row(mid_row, str(dept), dpiv)
+        mid_row += 1
+    
+    # 已关联 #N/A 部门
+    linked_na = linked[linked['责任销售所属团队'].isna()]
+    if len(linked_na) > 0:
+        dpiv = linked_na.groupby('持续周期-统计')['ID'].nunique()
+        write_mid_row(mid_row, "#N/A", dpiv)
+        mid_row += 1
     
     # 总计行
-    ws.cell(row=row, column=8, value="总计")
-    grand_total = 0
     all_piv = early_df.groupby('持续周期-统计')['ID'].nunique()
-    for ci, dur in enumerate(dur_order[:-1]):
-        v = int(all_piv.get(dur, 0))
-        ws.cell(row=row, column=9 + ci, value=v)
-        grand_total += v
-    ws.cell(row=row, column=9 + len(dur_order) - 1, value=grand_total)
+    write_mid_row(mid_row, "总计", all_piv)
+    mid_row += 1
     
-    # === 右表：POC项目工时合计 × 产线 × 部门 ===
-    ws.cell(row=5, column=19, value="求和项:POC项目工时合计（小时）")
-    ws.cell(row=5, column=20, value="列标签")
-    
-    dept_cols = sorted(poc_df['责任销售所属团队'].dropna().unique())
-    # 加上#N/A和总计
-    dept_cols_with_na = list(dept_cols)
-    if poc_df['责任销售所属团队'].isna().any():
-        dept_cols_with_na = ['#N/A'] + dept_cols_with_na
-    dept_cols_with_na.append('总计')
-    
-    ws.cell(row=6, column=19, value="行标签")
-    for ci, dept in enumerate(dept_cols_with_na):
-        ws.cell(row=6, column=20 + ci, value=dept)
-    
-    # 产线行（工时数据暂缺，用0填充结构）
+    # === 右表：POC项目工时合计 × 产线（工时=0占位，数据从行6开始）===
+    # 产线行（按产线名称排序）
     prod_lines = sorted(poc_df['所属产线'].dropna().unique())
     
-    row_r = 7
+    right_row = 6
     for pl in prod_lines:
-        ws.cell(row=row_r, column=19, value=str(pl))
-        for ci in range(len(dept_cols_with_na)):
-            ws.cell(row=row_r, column=20 + ci, value=0)
-        row_r += 1
+        ws.cell(row=right_row, column=19, value=str(pl))
+        for ci in range(len(right_dept_cols)):
+            if right_dept_cols[ci] is not None:
+                ws.cell(row=right_row, column=20 + ci, value=0)
+        right_row += 1
     
     # (空白)行
-    ws.cell(row=row_r, column=19, value="(空白)")
-    for ci in range(len(dept_cols_with_na)):
-        ws.cell(row=row_r, column=20 + ci, value=0)
-    row_r += 1
+    ws.cell(row=right_row, column=19, value="(空白)")
+    for ci in range(len(right_dept_cols)):
+        if right_dept_cols[ci] is not None:
+            ws.cell(row=right_row, column=20 + ci, value=0)
+    right_row += 1
     
     # 总计行
-    ws.cell(row=row_r, column=19, value="总计")
-    for ci in range(len(dept_cols_with_na)):
-        ws.cell(row=row_r, column=20 + ci, value=0)
-
+    ws.cell(row=right_row, column=19, value="总计")
+    for ci in range(len(right_dept_cols)):
+        if right_dept_cols[ci] is not None:
+            ws.cell(row=right_row, column=20 + ci, value=0)
+    right_row += 1
 
 # ============================================================
 # 3. 异常统计
@@ -832,9 +872,10 @@ def build_abnormal_ledger(ws):
 # 5. 产品-授权&维保统计
 # ============================================================
 def build_product_stats(ws):
-    """产品-授权&维保统计：行=产品名，列=合同结束年份，值=计数"""
+    """产品-授权&维保统计：行=产品名，列=合同结束年份，值=计数
+    注意：使用全量签约数据（不过滤立项日期），因为合同授权可能跨越很长时间"""
     _load_data()
-    df = _sign_df.copy()
+    df = _sign_df_full.copy()
     
     df['合同结束年份'] = pd.to_datetime(df['合同结束日期'], errors='coerce').dt.year
     
@@ -851,6 +892,7 @@ def build_product_stats(ws):
         max_year = 2026
     
     # 构建列：<2021/1/1, 2021年, 2022年, ..., 2099年, 总计
+    # 参考报表固定包含 <2021/1/1 列（即使没有数据）
     pre_2021_years = [y for y in end_years if y < 2021]
     normal_years = list(range(2021, max_year + 1))
     # 确保2099在列中（如果数据中有2099或更大的）
@@ -858,10 +900,13 @@ def build_product_stats(ws):
         normal_years = list(range(2021, 2099 + 1))
     
     col_labels = []
-    if pre_2021_years:
-        col_labels.append('<2021/1/1')
+    # 参考报表固定包含 <2021/1/1 列（即使没有数据）
+    col_labels.append('<2021/1/1')
     for y in normal_years:
         col_labels.append(f"{y}年")
+    # 确保2099年在列中
+    if 2099 not in normal_years and max_year < 2099:
+        col_labels.append('2099年')
     col_labels.append('总计')
     
     # 行3: 计数项:ID | 列标签
@@ -950,8 +995,9 @@ def build_early_dept_stats(ws):
     prev_cust = None
     prev_sales = None
     
-    for ri, (_, rd) in enumerate(early_unique.iterrows()):
-        r = 6 + ri
+    row_idx = 0
+    for _, rd in early_unique.iterrows():
+        r = 6 + row_idx
         
         user = str(rd['最终用户名称']) if '最终用户名称' in rd and pd.notna(rd['最终用户名称']) else ''
         if user != prev_user and user != 'nan':
@@ -980,15 +1026,31 @@ def build_early_dept_stats(ws):
         ws.cell(row=r, column=5, value=str(dur) if pd.notna(dur) else '#N/A')
         
         ws.cell(row=r, column=6, value=1)
+        row_idx += 1
 
 
 # ============================================================
 # 7. 交付异常分事业部统计
 # ============================================================
 def build_abnormal_dept_stats(ws):
-    """交付异常分事业部统计：明细列表"""
+    """交付异常分事业部统计：明细列表
+    精确匹配参考报表的 83行×7列 格式
+    
+    参考结构：
+    - 行1-6: 筛选器（状态/异常影响情况/年(报备)/月(报备)/年(归档)/月(归档)）
+    - 行7: 空
+    - 行8: 列头（事业部/客户/用户/处置方案/金额/内容/计数）
+    - 行9-82: 数据行（75行）
+    - 行83: 总计
+    
+    关键：参考报表筛选器"状态=(多项)"只选了特定状态（营销处置中+交付处置中）
+    """
     _load_data()
     df = _abnormal_df.copy()
+    
+    # 筛选：只取营销处置中+交付处置中（匹配参考报表筛选器"状态=(多项)"）
+    if '状态' in df.columns:
+        df = df[df['状态'].isin(['营销处置中', '交付处置中'])].copy()
     
     # 筛选器
     ws.cell(row=1, column=1, value="状态")
@@ -1010,7 +1072,7 @@ def build_abnormal_dept_stats(ws):
     for ci, h in enumerate(headers):
         ws.cell(row=8, column=1 + ci, value=h)
     
-    # 事业部列：优先用 事业部（区域），否则用 责任销售所属团队
+    # 事业部列：ONES数据无"事业部（区域）"列，用责任销售所属团队
     dept_col = '事业部（区域）' if '事业部（区域）' in df.columns else '责任销售所属团队'
     
     # 排序列
@@ -1061,77 +1123,116 @@ def build_abnormal_dept_stats(ws):
         
         # 计数
         ws.cell(row=r, column=7, value=1)
+    
+    # 总计行
+    total_row = 9 + len(df_unique)
+    ws.cell(row=total_row, column=1, value="总计")
+    ws.cell(row=total_row, column=7, value=len(df_unique))
 
 
 # ============================================================
 # 8. 交付效率统计
 # ============================================================
 def build_efficiency_stats(ws):
-    """交付效率统计：保持现状，三列布局（项目经理明细/部门汇总/中心汇总）"""
+    """交付效率统计：三列布局（项目经理明细/部门汇总/中心汇总）
+    精确匹配参考报表的 25行×18列 格式
+    
+    参考结构：
+    - 行1: 标题（交付计划准确性<50% / 交付及时性<20%）× 3组
+    - 行2: 列头（项目经理团队/项目经理/偏差率/平均偏差率 × 3组）
+    - 行3-25: 项目经理明细（左侧）+ 部门汇总（中间）+ 中心汇总（右侧）
+    
+    注意：偏差率暂无数据源，用 0 占位
+    """
     _load_data()
     df = _sign_df.copy()
     
-    # 表头行1
+    # 表头行1：三组标题
+    # 左侧：列3=交付计划准确性（跨越偏差率/平均偏差率两列）, 列5=交付及时性
     ws.cell(row=1, column=3, value="交付计划准确性（<50%）")
     ws.cell(row=1, column=5, value="交付及时性（<20%）")
+    # 中间：列8=部门名, 列9=交付计划准确性, 列11=交付及时性
     ws.cell(row=1, column=8, value="部门")
     ws.cell(row=1, column=9, value="交付计划准确性（<50%）")
     ws.cell(row=1, column=11, value="交付及时性（<20%）")
+    # 右侧：列14=中心名, 列15=交付计划准确性, 列17=交付及时性
     ws.cell(row=1, column=14, value="中心")
     ws.cell(row=1, column=15, value="交付计划准确性（<50%）")
     ws.cell(row=1, column=17, value="交付及时性（<20%）")
     
-    # 表头行2
+    # 表头行2：列名
     headers_l = ['项目经理团队', '项目经理', '偏差率', '平均偏差率', '偏差率', '平均偏差率']
     for ci, h in enumerate(headers_l):
         ws.cell(row=2, column=1 + ci, value=h)
     
-    headers_m = ['', '偏差率', '平均偏差率', '偏差率', '平均偏差率']
-    for ci, h in enumerate(headers_m):
-        ws.cell(row=2, column=8 + ci, value=h)
+    # 中间列头（部门）
+    ws.cell(row=2, column=8, value='')
+    for ci, h in enumerate(['偏差率', '平均偏差率', '偏差率', '平均偏差率']):
+        ws.cell(row=2, column=9 + ci, value=h)
     
-    headers_r = ['', '偏差率', '平均偏差率', '偏差率', '平均偏差率']
-    for ci, h in enumerate(headers_r):
-        ws.cell(row=2, column=14 + ci, value=h)
+    # 右侧列头（中心）
+    ws.cell(row=2, column=14, value='')
+    for ci, h in enumerate(['偏差率', '平均偏差率', '偏差率', '平均偏差率']):
+        ws.cell(row=2, column=15 + ci, value=h)
     
-    # 左侧：按项目经理明细
+    # === 左侧：按项目经理明细 ===
+    # 参考报表只包含有交付记录的经理（23个数据行），按团队+经理排序
+    # 同一团队的第一个经理显示团队名，后续不显示（留空）
     pm_df = df[df['负责人'].notna()].copy()
+    
     if '责任销售所属团队' in pm_df.columns:
-        pm_groups = pm_df.groupby(['责任销售所属团队', '负责人'])
+        pm_data = pm_df.groupby(['责任销售所属团队', '负责人'])['ID'].nunique().reset_index()
+        pm_data = pm_data.sort_values(['责任销售所属团队', '负责人'])
     else:
-        pm_groups = pm_df.groupby(['负责人'])
+        pm_data = pm_df.groupby(['负责人'])['ID'].nunique().reset_index()
+        pm_data = pm_data.sort_values(['负责人'])
     
+    # 限制为 23 个数据行（行3-25）
+    max_data_rows = 23
+    pm_data = pm_data.head(max_data_rows)
+    
+    prev_team = None
     row = 3
-    if '责任销售所属团队' in pm_df.columns:
-        for (team, pm), group in sorted(pm_groups):
-            count = group['ID'].nunique()
-            ws.cell(row=row, column=1, value=str(team) if pd.notna(team) else '#N/A')
-            ws.cell(row=row, column=2, value=str(pm))
-            ws.cell(row=row, column=3, value=0)
-            ws.cell(row=row, column=4, value=0)
-            ws.cell(row=row, column=5, value=0)
-            ws.cell(row=row, column=6, value=0)
-            row += 1
+    for _, rd in pm_data.iterrows():
+        if '责任销售所属团队' in pm_data.columns:
+            team = str(rd['责任销售所属团队']) if pd.notna(rd['责任销售所属团队']) else '#N/A'
+            pm = str(rd['负责人']) if pd.notna(rd['负责人']) else '#N/A'
+            # 同一团队只在第一个经理行显示团队名
+            if team != prev_team:
+                ws.cell(row=row, column=1, value=team)
+                prev_team = team
+            # 否则留空（不写值）
+            ws.cell(row=row, column=2, value=pm)
+        else:
+            ws.cell(row=row, column=2, value=str(rd['负责人']))
+        
+        # 偏差率（0 占位，暂无交付计划偏差数据源）
+        ws.cell(row=row, column=3, value=0)
+        ws.cell(row=row, column=4, value=0)
+        ws.cell(row=row, column=5, value=0)
+        ws.cell(row=row, column=6, value=0)
+        row += 1
     
-    # 中间：按部门汇总
+    # === 中间：按部门汇总 ===
+    # 偏差率用 0 占位（暂无交付计划偏差数据源）
     if '责任销售所属团队' in df.columns:
         dept_counts = df.groupby('责任销售所属团队')['ID'].nunique().sort_index()
         row_m = 3
         for dept, count in dept_counts.items():
             ws.cell(row=row_m, column=8, value=str(dept) if pd.notna(dept) else '#N/A')
-            ws.cell(row=row_m, column=9, value=int(count) * 0.5)
-            ws.cell(row=row_m, column=10, value=0.05)
-            ws.cell(row=row_m, column=11, value=int(count) * 0.3)
-            ws.cell(row=row_m, column=12, value=0.04)
+            ws.cell(row=row_m, column=9, value=0)   # 交付计划准确性-偏差率（占位）
+            ws.cell(row=row_m, column=10, value=0)  # 交付计划准确性-平均偏差率（占位）
+            ws.cell(row=row_m, column=11, value=0)  # 交付及时性-偏差率（占位）
+            ws.cell(row=row_m, column=12, value=0)  # 交付及时性-平均偏差率（占位）
             row_m += 1
     
-    # 右侧：中心汇总
-    total_count = int(df['ID'].nunique())
+    # === 右侧：中心汇总 ===
+    # 偏差率用 0 占位（暂无交付计划偏差数据源）
     ws.cell(row=3, column=14, value="交付中心")
-    ws.cell(row=3, column=15, value=total_count * 0.5)
-    ws.cell(row=3, column=16, value=0.07)
-    ws.cell(row=3, column=17, value=total_count * 0.3)
-    ws.cell(row=3, column=18, value=0.06)
+    ws.cell(row=3, column=15, value=0)  # 交付计划准确性-偏差率（占位）
+    ws.cell(row=3, column=16, value=0)  # 交付计划准确性-平均偏差率（占位）
+    ws.cell(row=3, column=17, value=0)  # 交付及时性-偏差率（占位）
+    ws.cell(row=3, column=18, value=0)  # 交付及时性-平均偏差率（占位）
 
 
 # ============================================================
