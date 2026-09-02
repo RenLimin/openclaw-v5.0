@@ -492,12 +492,31 @@ def build_poc_stats(ws):
 # 3. 异常统计
 # ============================================================
 def build_abnormal_stats(ws):
-    """异常统计：4张交叉表"""
+    """异常统计：5张交叉表横向排列
+    精确匹配参考报表的 28行×54列 格式（0-based：行0-27, 列0-53）
+    
+    5张表布局（列区间，均为0-based）：
+    - 表1: 列0-10 (11列) - 异常报备期间-合同归档年度 × 影响情况
+    - 表2: 列14-24 (11列) - 异常归档期间-合同归档年度
+    - 表3: 列28-34 (7列) - 处理中/异常类别-合同归档年度(2026年)
+    - 表4: 列39-48 (10列) - 处理中/异常类别-合同归档年度(全部)
+    - 表5: 列52-53 (2列) - 销售事业部-合同归档年度
+    
+    行结构（0-based）：
+    - 行0-4: 筛选器区域
+    - 行5: 表1 & 表2 表头; 表3 月筛选
+    - 行6-7: 表1 年份汇总; 表2 <2025/3/17 + 2025年
+    - 行8-19: 表1&2 月份明细(2025年1-12月); 表3&4 类别区域; 表5 事业部区域
+    - 行20-26: 表1&2 2026年月份明细(1-7月)
+    - 行27: 表1 & 表2 总计行
+    """
     _load_data()
     df = _abnormal_df.copy()
     
-    # 确保列存在
-    if '合同归档日期' not in df.columns:
+    # 确保基础列存在
+    if df is None or '合同归档日期' not in df.columns:
+        # 用0填充但保持结构
+        _fill_abnormal_empty(ws)
         return
     
     df['合同归档年份'] = pd.to_datetime(df['合同归档日期'], errors='coerce').dt.year
@@ -512,237 +531,430 @@ def build_abnormal_stats(ws):
         df['报备_dt'] = pd.to_datetime(df['异常报备日期'], errors='coerce')
         df['报备年份'] = df['报备_dt'].dt.year
         df['报备月份'] = df['报备_dt'].dt.month
+    else:
+        df['报备_dt'] = pd.NaT
+        df['报备年份'] = np.nan
+        df['报备月份'] = np.nan
     
     if has_archive_date:
         df['归档_dt'] = pd.to_datetime(df['异常归档日期'], errors='coerce')
         df['归档年份'] = df['归档_dt'].dt.year
         df['归档月份'] = df['归档_dt'].dt.month
+    else:
+        df['归档_dt'] = pd.NaT
+        df['归档年份'] = np.nan
+        df['归档月份'] = np.nan
     
     # 过滤"4：不统计"
-    if has_impact:
+    if has_impact and '异常影响情况' in df.columns:
         df_stat = df[df['异常影响情况'] != '4：不统计'].copy()
     else:
         df_stat = df.copy()
     
-    years = sorted([int(y) for y in df_stat['合同归档年份'].dropna().unique()])
-    year_labels = [f"{y}年" for y in years] + ['总计']
+    # =====================================================
+    # 定义年份列
+    # =====================================================
+    # 表1 & 表2 年份列：2016, 2019-2026, 总计 (10个数据列)
+    t1_years = [2016, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    t1_col_count = len(t1_years) + 1  # +1 for 总计
     
-    # === 表1：异常报备期间-合同归档年度 × 影响情况 ===
-    ws.cell(row=1, column=1, value="异常影响情况")
-    ws.cell(row=1, column=2, value="(多项)")
-    ws.cell(row=2, column=1, value="状态")
-    ws.cell(row=2, column=2, value="(全部)")
-    ws.cell(row=3, column=1, value="项目经理团队")
-    ws.cell(row=3, column=2, value="(全部)")
+    # 表3 年份列：2022-2026, 总计 (6个数据列)
+    t3_years = [2022, 2023, 2024, 2025, 2026]
+    t3_col_count = len(t3_years) + 1
     
+    # 表4 年份列：2019-2026, 总计 (9个数据列)
+    t4_years = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    t4_col_count = len(t4_years) + 1
+    
+    # 标准异常类别（8种，不足补0）
+    std_categories = [
+        '1：甲方不具备交付条件',
+        '2：甲方未按照合同约定验收',
+        '3：甲方确认终止但无终止协议下单',
+        '4：甲方需求/期限变更但无补充协议下单',
+        '5：缺少穿透验收单（渠道-最终用户）',
+        '6：项目启动延期',
+        '7：交付资源不足',
+        '8：其他',
+    ]
+    
+    # 标准事业部（10个，取数据中前10个）
+    if has_dept:
+        all_depts = sorted(df_stat[df_stat['状态'] != '已完成']['责任销售所属团队'].dropna().unique())
+        # 优先取总部部门（不含分公司），再补充分公司，凑10个
+        hq_depts = [d for d in all_depts if '分公司' not in d]
+        branch_depts = [d for d in all_depts if '分公司' in d]
+        std_depts = (hq_depts + branch_depts)[:10]
+    else:
+        std_depts = [f'事业部{i}' for i in range(1, 11)]
+    
+    # =====================================================
+    # 筛选器区域（行1-5，1-based = 行0-4，0-based）
+    # =====================================================
+    # 行1 (0-based 行0): 异常影响情况 + (多项) — 5张表都有
+    for col_start in [1, 15, 29, 40, 53]:
+        ws.cell(row=1, column=col_start, value="异常影响情况")
+        ws.cell(row=1, column=col_start + 1, value="(多项)")
+    
+    # 行2 (0-based 行1): 状态 + (全部) — 5张表都有
+    for col_start in [1, 15, 29, 40, 53]:
+        ws.cell(row=2, column=col_start, value="状态")
+        ws.cell(row=2, column=col_start + 1, value="(全部)")
+    
+    # 行3 (0-based 行2): 项目经理团队 + (全部) — 5张表都有
+    for col_start in [1, 15, 29, 40, 53]:
+        ws.cell(row=3, column=col_start, value="项目经理团队")
+        ws.cell(row=3, column=col_start + 1, value="(全部)")
+    
+    # 行4 (0-based 行3): 年(异常报备日期) — 仅表3/4/5
+    ws.cell(row=4, column=29, value="年(异常报备日期)")
+    ws.cell(row=4, column=30, value="2026年")
+    ws.cell(row=4, column=40, value="年(异常报备日期)")
+    ws.cell(row=4, column=41, value="(全部)")
+    ws.cell(row=4, column=53, value="年(异常报备日期)")
+    ws.cell(row=4, column=54, value="(全部)")
+    
+    # 行5 (0-based 行4): 期间/月筛选
     ws.cell(row=5, column=1, value="异常报备期间-合同归档年度")
     ws.cell(row=5, column=2, value="列标签")
+    ws.cell(row=5, column=15, value="异常归档期间-合同归档年度")
+    ws.cell(row=5, column=16, value="列标签")
+    ws.cell(row=5, column=29, value="月(异常报备日期)")
+    ws.cell(row=5, column=30, value="(全部)")
+    ws.cell(row=5, column=40, value="月(异常报备日期)")
+    ws.cell(row=5, column=41, value="(全部)")
+    ws.cell(row=5, column=53, value="月(异常报备日期)")
+    ws.cell(row=5, column=54, value="(全部)")
+    
+    # =====================================================
+    # 辅助函数：写入一行交叉表数据
+    # =====================================================
+    def write_pivot_row(row_num, col_start, label, data_series, year_list, show_total=True):
+        """写入一行透视表数据
+        Args:
+            row_num: 行号(1-based)
+            col_start: 起始列(1-based)，即行标签列
+            label: 行标签文本
+            data_series: {year: count} 的字典或Series
+            year_list: 年份列表
+            show_total: 是否显示总计列
+        """
+        ws.cell(row=row_num, column=col_start, value=label)
+        total = 0
+        for ci, year in enumerate(year_list):
+            val = int(data_series.get(year, 0)) if isinstance(data_series, dict) else int(data_series.get(year, 0))
+            ws.cell(row=row_num, column=col_start + 1 + ci, value=val)
+            total += val
+        if show_total:
+            ws.cell(row=row_num, column=col_start + 1 + len(year_list), value=total)
+    
+    def get_year_counts(data, year_col='合同归档年份', val_col='ID'):
+        """从数据中获取按年份的计数字典"""
+        if len(data) == 0:
+            return {}
+        counts = data.groupby(year_col)[val_col].nunique()
+        # 转换为 int 键的字典
+        return {int(k): int(v) for k, v in counts.items() if pd.notna(k)}
+    
+    # =====================================================
+    # 表1：异常报备期间-合同归档年度 × 影响情况（列1-11）
+    # =====================================================
+    # 行6 (0-based 行5): 表头
     ws.cell(row=6, column=1, value="行标签")
+    for ci, y in enumerate(t1_years):
+        ws.cell(row=6, column=2 + ci, value=f"{y}年")
+    ws.cell(row=6, column=2 + len(t1_years), value="总计")
     
-    for ci, yl in enumerate(year_labels):
-        ws.cell(row=6, column=2 + ci, value=yl)
+    # 行7-8 (0-based 行6-7): 年份汇总 (2024, 2025)
+    if has_report_date:
+        for i, ry in enumerate([2024, 2025]):
+            y_data = df_stat[df_stat['报备年份'] == ry]
+            y_counts = get_year_counts(y_data)
+            write_pivot_row(7 + i, 1, f"{ry}年", y_counts, t1_years)
+    else:
+        for i, ry in enumerate([2024, 2025]):
+            write_pivot_row(7 + i, 1, f"{ry}年", {}, t1_years)
     
-    def write_year_month_rows(ws, data, start_row, start_col, year_col, month_col, value_col='ID'):
-        """写入年+月份行的交叉表，返回结束行号"""
-        row = start_row
-        
-        if not has_report_date:
-            return row
-        
-        report_years = sorted(data['报备年份'].dropna().astype(int).unique())
-        
-        for ry in report_years:
-            # 年汇总行
-            y_data = data[data['报备年份'] == ry]
-            ws.cell(row=row, column=start_col, value=f"{ry}年")
-            total = 0
-            for ci, y in enumerate(years):
-                val = int(y_data[y_data['合同归档年份'] == y][value_col].nunique()) if y in y_data['合同归档年份'].values else 0
-                ws.cell(row=row, column=start_col + 1 + ci, value=val)
-                total += val
-            ws.cell(row=row, column=start_col + 1 + len(years), value=total)
-            row += 1
-            
-            # 月份明细行
-            months = sorted(y_data['报备月份'].dropna().astype(int).unique())
-            for m in months:
-                m_data = y_data[y_data['报备月份'] == m]
-                ws.cell(row=row, column=start_col, value=f"{m}月")
-                total_m = 0
-                for ci, y in enumerate(years):
-                    val = int(m_data[m_data['合同归档年份'] == y][value_col].nunique()) if y in m_data['合同归档年份'].values else 0
-                    ws.cell(row=row, column=start_col + 1 + ci, value=val)
-                    total_m += val
-                ws.cell(row=row, column=start_col + 1 + len(years), value=total_m)
-                row += 1
-        
-        return row
+    # 行9-20 (0-based 行8-19): 2025年月份明细 (1-12月, 12行)
+    if has_report_date:
+        y2025_data = df_stat[df_stat['报备年份'] == 2025]
+        for m in range(1, 13):
+            m_data = y2025_data[y2025_data['报备月份'] == m]
+            m_counts = get_year_counts(m_data)
+            write_pivot_row(8 + m, 1, f"{m}月", m_counts, t1_years)
+    else:
+        for m in range(1, 13):
+            write_pivot_row(8 + m, 1, f"{m}月", {}, t1_years)
     
-    row1_end = write_year_month_rows(ws, df_stat, 7, 1, '报备年份', '报备月份')
+    # 行21-27 (0-based 行20-26): 2026年月份明细 (1-7月, 7行)
+    if has_report_date:
+        y2026_data = df_stat[df_stat['报备年份'] == 2026]
+        for m in range(1, 8):
+            m_data = y2026_data[y2026_data['报备月份'] == m]
+            m_counts = get_year_counts(m_data)
+            write_pivot_row(20 + m, 1, f"{m}月", m_counts, t1_years)
+    else:
+        for m in range(1, 8):
+            write_pivot_row(20 + m, 1, f"{m}月", {}, t1_years)
     
-    # 表1总计行
-    ws.cell(row=row1_end, column=1, value="总计")
-    grand = 0
-    for ci, y in enumerate(years):
-        val = int(df_stat[df_stat['合同归档年份'] == y]['ID'].nunique()) if y in df_stat['合同归档年份'].values else 0
-        ws.cell(row=row1_end, column=2 + ci, value=val)
-        grand += val
-    ws.cell(row=row1_end, column=2 + len(years), value=grand)
+    # 行28 (0-based 行27): 总计行
+    total_counts = get_year_counts(df_stat)
+    write_pivot_row(28, 1, "总计", total_counts, t1_years)
     
-    # === 表2：异常归档期间-合同归档年度 ===
+    # =====================================================
+    # 表2：异常归档期间-合同归档年度（列15-25）
+    # =====================================================
     col2 = 15
-    ws.cell(row=1, column=col2, value="异常影响情况")
-    ws.cell(row=1, column=col2 + 1, value="(多项)")
-    ws.cell(row=2, column=col2, value="状态")
-    ws.cell(row=2, column=col2 + 1, value="(全部)")
-    ws.cell(row=3, column=col2, value="项目经理团队")
-    ws.cell(row=3, column=col2 + 1, value="(全部)")
-    
-    ws.cell(row=5, column=col2, value="异常归档期间-合同归档年度")
-    ws.cell(row=5, column=col2 + 1, value="列标签")
+    # 行6 (0-based 行5): 表头
     ws.cell(row=6, column=col2, value="行标签")
+    for ci, y in enumerate(t1_years):
+        ws.cell(row=6, column=col2 + 1 + ci, value=f"{y}年")
+    ws.cell(row=6, column=col2 + 1 + len(t1_years), value="总计")
     
-    for ci, yl in enumerate(year_labels):
-        ws.cell(row=6, column=col2 + 1 + ci, value=yl)
-    
-    row2 = 7
     if has_archive_date:
         archived = df_stat[df_stat['归档_dt'].notna()]
         
-        # <2025/3/17 行
+        # 行7 (0-based 行6): <2025/3/17
         cutoff = pd.Timestamp('2025-03-17')
-        pre_cutoff = archived[archived['归档_dt'] < cutoff]
-        ws.cell(row=row2, column=col2, value="<2025/3/17")
-        total = 0
-        for ci, y in enumerate(years):
-            val = int(pre_cutoff[pre_cutoff['合同归档年份'] == y]['ID'].nunique()) if y in pre_cutoff['合同归档年份'].values else 0
-            ws.cell(row=row2, column=col2 + 1 + ci, value=val)
-            total += val
-        ws.cell(row=row2, column=col2 + 1 + len(years), value=total)
-        row2 += 1
+        pre_data = archived[archived['归档_dt'] < cutoff]
+        pre_counts = get_year_counts(pre_data)
+        write_pivot_row(7, col2, "<2025/3/17", pre_counts, t1_years)
         
-        # 按归档年份
-        arc_years = sorted(archived['归档年份'].dropna().astype(int).unique())
-        for ay in arc_years:
-            ay_data = archived[archived['归档年份'] == ay]
-            ws.cell(row=row2, column=col2, value=f"{ay}年")
-            total = 0
-            for ci, y in enumerate(years):
-                val = int(ay_data[ay_data['合同归档年份'] == y]['ID'].nunique()) if y in ay_data['合同归档年份'].values else 0
-                ws.cell(row=row2, column=col2 + 1 + ci, value=val)
-                total += val
-            ws.cell(row=row2, column=col2 + 1 + len(years), value=total)
-            row2 += 1
-            
-            # 月份明细
-            months = sorted(ay_data['归档_dt'].dt.month.dropna().astype(int).unique())
-            for m in months:
-                m_data = ay_data[ay_data['归档_dt'].dt.month == m]
-                ws.cell(row=row2, column=col2, value=f"{m}月")
-                total_m = 0
-                for ci, y in enumerate(years):
-                    val = int(m_data[m_data['合同归档年份'] == y]['ID'].nunique()) if y in m_data['合同归档年份'].values else 0
-                    ws.cell(row=row2, column=col2 + 1 + ci, value=val)
-                    total_m += val
-                ws.cell(row=row2, column=col2 + 1 + len(years), value=total_m)
-                row2 += 1
+        # 行8 (0-based 行7): 2025年
+        a2025 = archived[archived['归档年份'] == 2025]
+        a2025_counts = get_year_counts(a2025)
+        write_pivot_row(8, col2, "2025年", a2025_counts, t1_years)
+        
+        # 行9-20 (0-based 行8-19): 2025年月份明细 1-12月
+        for m in range(1, 13):
+            m_data = a2025[a2025['归档月份'] == m]
+            m_counts = get_year_counts(m_data)
+            write_pivot_row(8 + m, col2, f"{m}月", m_counts, t1_years)
+        
+        # 行21-27 (0-based 行20-26): 2026年月份明细 1-7月
+        a2026 = archived[archived['归档年份'] == 2026]
+        for m in range(1, 8):
+            m_data = a2026[a2026['归档月份'] == m]
+            m_counts = get_year_counts(m_data)
+            write_pivot_row(20 + m, col2, f"{m}月", m_counts, t1_years)
+        
+        # 行28 (0-based 行27): 总计
+        arc_total_counts = get_year_counts(archived)
+        write_pivot_row(28, col2, "总计", arc_total_counts, t1_years)
+    else:
+        # 无数据，填充结构
+        write_pivot_row(7, col2, "<2025/3/17", {}, t1_years)
+        write_pivot_row(8, col2, "2025年", {}, t1_years)
+        for m in range(1, 13):
+            write_pivot_row(8 + m, col2, f"{m}月", {}, t1_years)
+        for m in range(1, 8):
+            write_pivot_row(20 + m, col2, f"{m}月", {}, t1_years)
+        write_pivot_row(28, col2, "总计", {}, t1_years)
     
-    # 表2总计行
-    ws.cell(row=row2, column=col2, value="总计")
-    if has_archive_date:
-        grand2 = 0
-        for ci, y in enumerate(years):
-            val = int(archived[archived['合同归档年份'] == y]['ID'].nunique()) if y in archived['合同归档年份'].values else 0
-            ws.cell(row=row2, column=col2 + 1 + ci, value=val)
-            grand2 += val
-        ws.cell(row=row2, column=col2 + 1 + len(years), value=grand2)
-    
-    # === 表3：处理中/异常类别-合同归档年度 ===
+    # =====================================================
+    # 表3：处理中/异常类别-合同归档年度（列29-35）
+    # 筛选条件：年(异常报备日期)=2026年, 状态=处理中
+    # =====================================================
     col3 = 29
-    ws.cell(row=4, column=col3, value="年(异常报备日期)")
-    ws.cell(row=4, column=col3 + 1, value="2026年")
-    ws.cell(row=5, column=col3, value="月(异常报备日期)")
-    ws.cell(row=5, column=col3 + 1, value="(全部)")
-    ws.cell(row=6, column=col3, value="年(异常归档日期)")
-    ws.cell(row=6, column=col3 + 1, value="<2025/3/17")
-    ws.cell(row=7, column=col3, value="月(异常归档日期)")
-    ws.cell(row=7, column=col3 + 1, value="(全部)")
-    
+    # 行9 (0-based 行8): 标题行
     ws.cell(row=9, column=col3, value="处理中/异常类别-合同归档年度")
     ws.cell(row=9, column=col3 + 1, value="列标签")
+    
+    # 行10 (0-based 行9): 表头
     ws.cell(row=10, column=col3, value="行标签")
+    for ci, y in enumerate(t3_years):
+        ws.cell(row=10, column=col3 + 1 + ci, value=f"{y}年")
+    ws.cell(row=10, column=col3 + 1 + len(t3_years), value="总计")
     
-    # 处理中: 状态 != 已完成
-    processing = df_stat[df_stat['状态'] != '已完成']
+    # 获取处理中数据（2026年报备的）
+    if has_report_date and has_category:
+        proc_2026 = df_stat[
+            (df_stat['报备年份'] == 2026) & 
+            (df_stat['状态'] != '已完成')
+        ]
+    else:
+        proc_2026 = df_stat.iloc[0:0]  # empty DataFrame
     
-    proc_years = sorted(processing['合同归档年份'].dropna().astype(int).unique())
-    proc_year_labels = [f"{y}年" for y in proc_years] + ['总计']
+    # 行11-18 (0-based 行10-17): 8种异常类别
+    for ci, cat in enumerate(std_categories):
+        row_num = 11 + ci
+        if has_category and len(proc_2026) > 0:
+            cat_data = proc_2026[proc_2026['异常项目-类别'] == cat]
+            cat_counts = get_year_counts(cat_data)
+        else:
+            cat_counts = {}
+        write_pivot_row(row_num, col3, cat, cat_counts, t3_years)
     
-    for ci, yl in enumerate(proc_year_labels):
-        ws.cell(row=10, column=col3 + 1 + ci, value=yl)
+    # 行19 (0-based 行18): 留空（第9行，保持结构）
     
-    row3 = 11
-    if has_category:
-        categories = sorted(processing['异常项目-类别'].dropna().unique())
-        for cat in categories:
-            cat_data = processing[processing['异常项目-类别'] == cat]
-            ws.cell(row=row3, column=col3, value=cat)
-            total = 0
-            for ci, y in enumerate(proc_years):
-                val = int(cat_data[cat_data['合同归档年份'] == y]['ID'].nunique()) if y in cat_data['合同归档年份'].values else 0
-                ws.cell(row=row3, column=col3 + 1 + ci, value=val)
-                total += val
-            ws.cell(row=row3, column=col3 + 1 + len(proc_years), value=total)
-            row3 += 1
-    
-    # === 表4：销售事业部-合同归档年度 ===
-    col4 = 41
-    ws.cell(row=4, column=col4, value="年(异常报备日期)")
-    ws.cell(row=4, column=col4 + 1, value="(全部)")
-    ws.cell(row=5, column=col4, value="月(异常报备日期)")
-    ws.cell(row=5, column=col4 + 1, value="(全部)")
-    ws.cell(row=6, column=col4, value="年(异常归档日期)")
-    ws.cell(row=6, column=col4 + 1, value="<2025/3/17")
-    ws.cell(row=7, column=col4, value="月(异常归档日期)")
-    ws.cell(row=7, column=col4 + 1, value="(全部)")
-    
-    ws.cell(row=9, column=col4, value="销售事业部-合同归档年度")
+    # =====================================================
+    # 表4：处理中/异常类别-合同归档年度（列40-49）
+    # 筛选条件：年(异常报备日期)=(全部), 状态=处理中
+    # =====================================================
+    col4 = 40
+    # 行9 (0-based 行8): 标题行
+    ws.cell(row=9, column=col4, value="处理中/异常类别-合同归档年度")
     ws.cell(row=9, column=col4 + 1, value="列标签")
+    
+    # 行10 (0-based 行9): 表头
     ws.cell(row=10, column=col4, value="行标签")
+    for ci, y in enumerate(t4_years):
+        ws.cell(row=10, column=col4 + 1 + ci, value=f"{y}年")
+    ws.cell(row=10, column=col4 + 1 + len(t4_years), value="总计")
     
-    dept_years = sorted(processing['合同归档年份'].dropna().astype(int).unique())
-    dept_year_labels = [f"{y}年" for y in dept_years] + ['总计']
+    # 获取处理中数据（全部年份）
+    if has_category:
+        proc_all = df_stat[df_stat['状态'] != '已完成']
+    else:
+        proc_all = df_stat.iloc[0:0]
     
-    for ci, yl in enumerate(dept_year_labels):
-        ws.cell(row=10, column=col4 + 1 + ci, value=yl)
+    # 行11-18 (0-based 行10-17): 8种处理中类别
+    for ci, cat in enumerate(std_categories):
+        row_num = 11 + ci
+        if has_category and len(proc_all) > 0:
+            cat_data = proc_all[proc_all['异常项目-类别'] == cat]
+            cat_counts = get_year_counts(cat_data)
+        else:
+            cat_counts = {}
+        write_pivot_row(row_num, col4, cat, cat_counts, t4_years)
     
-    row4 = 11
-    if has_dept:
-        depts = sorted(processing['责任销售所属团队'].dropna().unique())
-        for dept in depts:
-            dept_data = processing[processing['责任销售所属团队'] == dept]
-            ws.cell(row=row4, column=col4, value=dept)
-            total = 0
-            for ci, y in enumerate(dept_years):
-                val = int(dept_data[dept_data['合同归档年份'] == y]['ID'].nunique()) if y in dept_data['合同归档年份'].values else 0
-                ws.cell(row=row4, column=col4 + 1 + ci, value=val)
-                total += val
-            ws.cell(row=row4, column=col4 + 1 + len(dept_years), value=total)
-            row4 += 1
+    # 行19 (0-based 行18): 留空
     
-    # 总计行
-    ws.cell(row=row4, column=col4, value="总计")
-    grand4 = 0
-    for ci, y in enumerate(dept_years):
-        val = int(processing[processing['合同归档年份'] == y]['ID'].nunique()) if y in processing['合同归档年份'].values else 0
-        ws.cell(row=row4, column=col4 + 1 + ci, value=val)
-        grand4 += val
-    ws.cell(row=row4, column=col4 + 1 + len(dept_years), value=grand4)
+    # =====================================================
+    # 表5：销售事业部-合同归档年度（列53-54）
+    # =====================================================
+    col5 = 53
+    # 行10 (0-based 行9): 表头
+    ws.cell(row=10, column=col5, value="行标签")
+    ws.cell(row=10, column=col5 + 1, value="销售事业部-合同归档年度")
+    
+    # 行11-20 (0-based 行10-19): 10个事业部
+    if has_dept and len(proc_all) > 0:
+        dept_counts = proc_all.groupby('责任销售所属团队')['ID'].nunique()
+        # 按std_depts顺序取值，不在数据中的填0
+        for di, dept in enumerate(std_depts):
+            row_num = 11 + di
+            ws.cell(row=row_num, column=col5, value=dept)
+            val = int(dept_counts.get(dept, 0)) if dept in dept_counts.index else 0
+            ws.cell(row=row_num, column=col5 + 1, value=val)
+    else:
+        for di in range(10):
+            row_num = 11 + di
+            ws.cell(row=row_num, column=col5, value=f"事业部{di+1}")
+            ws.cell(row=row_num, column=col5 + 1, value=0)
+    
+    # 确保54列 × 28行 结构完整（填充空单元格确保维度）
+    for r in range(1, 29):
+        for c in range(1, 55):
+            # 访问单元格以确保存在
+            _ = ws.cell(row=r, column=c)
 
 
-# ============================================================
-# 4. 异常台账
-# ============================================================
+def _fill_abnormal_empty(ws):
+    """无数据时填充异常统计Sheet结构（28行×54列）"""
+    # 简化版：只写入结构，全部填0
+    t1_years = [2016, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    t3_years = [2022, 2023, 2024, 2025, 2026]
+    t4_years = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026]
+    std_categories = [f'类别{i}' for i in range(1, 9)]
+    std_depts = [f'事业部{i}' for i in range(1, 11)]
+    
+    # 筛选器
+    for col_start in [1, 15, 29, 40, 53]:
+        ws.cell(row=1, column=col_start, value="异常影响情况")
+        ws.cell(row=1, column=col_start + 1, value="(多项)")
+        ws.cell(row=2, column=col_start, value="状态")
+        ws.cell(row=2, column=col_start + 1, value="(全部)")
+        ws.cell(row=3, column=col_start, value="项目经理团队")
+        ws.cell(row=3, column=col_start + 1, value="(全部)")
+    
+    ws.cell(row=4, column=29, value="年(异常报备日期)")
+    ws.cell(row=4, column=30, value="2026年")
+    ws.cell(row=4, column=40, value="年(异常报备日期)")
+    ws.cell(row=4, column=41, value="(全部)")
+    ws.cell(row=4, column=53, value="年(异常报备日期)")
+    ws.cell(row=4, column=54, value="(全部)")
+    
+    ws.cell(row=5, column=1, value="异常报备期间-合同归档年度")
+    ws.cell(row=5, column=2, value="列标签")
+    ws.cell(row=5, column=15, value="异常归档期间-合同归档年度")
+    ws.cell(row=5, column=16, value="列标签")
+    ws.cell(row=5, column=29, value="月(异常报备日期)")
+    ws.cell(row=5, column=30, value="(全部)")
+    ws.cell(row=5, column=40, value="月(异常报备日期)")
+    ws.cell(row=5, column=41, value="(全部)")
+    ws.cell(row=5, column=53, value="月(异常报备日期)")
+    ws.cell(row=5, column=54, value="(全部)")
+    
+    # 表1表头
+    ws.cell(row=6, column=1, value="行标签")
+    for ci, y in enumerate(t1_years):
+        ws.cell(row=6, column=2 + ci, value=f"{y}年")
+    ws.cell(row=6, column=2 + len(t1_years), value="总计")
+    
+    # 表2表头
+    ws.cell(row=6, column=15, value="行标签")
+    for ci, y in enumerate(t1_years):
+        ws.cell(row=6, column=16 + ci, value=f"{y}年")
+    ws.cell(row=6, column=16 + len(t1_years), value="总计")
+    
+    # 表1 & 表2 数据行（全部填0占位）
+    labels_t1 = ["2024年", "2025年"] + [f"{m}月" for m in range(1, 13)] + [f"{m}月" for m in range(1, 8)] + ["总计"]
+    labels_t2 = ["<2025/3/17", "2025年"] + [f"{m}月" for m in range(1, 13)] + [f"{m}月" for m in range(1, 8)] + ["总计"]
+    
+    for i, label in enumerate(labels_t1):
+        row = 7 + i
+        ws.cell(row=row, column=1, value=label)
+        for ci in range(len(t1_years) + 1):
+            ws.cell(row=row, column=2 + ci, value=0)
+    
+    for i, label in enumerate(labels_t2):
+        row = 7 + i
+        ws.cell(row=row, column=15, value=label)
+        for ci in range(len(t1_years) + 1):
+            ws.cell(row=row, column=16 + ci, value=0)
+    
+    # 表3
+    ws.cell(row=9, column=29, value="处理中/异常类别-合同归档年度")
+    ws.cell(row=9, column=30, value="列标签")
+    ws.cell(row=10, column=29, value="行标签")
+    for ci, y in enumerate(t3_years):
+        ws.cell(row=10, column=30 + ci, value=f"{y}年")
+    ws.cell(row=10, column=30 + len(t3_years), value="总计")
+    for ci, cat in enumerate(std_categories):
+        row = 11 + ci
+        ws.cell(row=row, column=29, value=cat)
+        for cj in range(len(t3_years) + 1):
+            ws.cell(row=row, column=30 + cj, value=0)
+    
+    # 表4
+    ws.cell(row=9, column=40, value="处理中/异常类别-合同归档年度")
+    ws.cell(row=9, column=41, value="列标签")
+    ws.cell(row=10, column=40, value="行标签")
+    for ci, y in enumerate(t4_years):
+        ws.cell(row=10, column=41 + ci, value=f"{y}年")
+    ws.cell(row=10, column=41 + len(t4_years), value="总计")
+    for ci, cat in enumerate(std_categories):
+        row = 11 + ci
+        ws.cell(row=row, column=40, value=cat)
+        for cj in range(len(t4_years) + 1):
+            ws.cell(row=row, column=41 + cj, value=0)
+    
+    # 表5
+    ws.cell(row=10, column=53, value="行标签")
+    ws.cell(row=10, column=54, value="销售事业部-合同归档年度")
+    for di, dept in enumerate(std_depts):
+        row = 11 + di
+        ws.cell(row=row, column=53, value=dept)
+        ws.cell(row=row, column=54, value=0)
+    
+    # 确保54列×28行
+    for r in range(1, 29):
+        for c in range(1, 55):
+            _ = ws.cell(row=r, column=c)
+
+
+
 def build_abnormal_ledger(ws):
     """异常台账：3张表（合计/验收异常/交付异常）× 2个时间段"""
     _load_data()

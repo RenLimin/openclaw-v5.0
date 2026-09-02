@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-02 22:35 UTC+08:00
+最后生成：2026-09-02 22:51 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -132,9 +132,9 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | Provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
@@ -201,8 +201,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `4857e20` |
-| Commit 数 | 167 |
+| HEAD | `ada6580` |
+| Commit 数 | 168 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
