@@ -98,6 +98,7 @@ class LoanSummary:
     total_interest_paid: Decimal
     paid_periods: int
     remaining_periods: int
+    total_interest: Decimal  # 贷款总利息
     next_payment_date: Optional[date]
     next_payment_amount: Decimal
     status: LoanStatus
@@ -555,6 +556,7 @@ class LoanEngine:
             remaining_balance=remaining_balance.quantize(Decimal("0.01")),
             total_paid=total_paid.quantize(Decimal("0.01")),
             total_interest_paid=total_interest_paid.quantize(Decimal("0.01")),
+            total_interest=schedule.total_interest,
             paid_periods=paid_periods,
             remaining_periods=max(remaining_periods, 0),
             next_payment_date=next_payment,
