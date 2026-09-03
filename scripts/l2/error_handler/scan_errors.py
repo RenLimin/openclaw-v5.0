@@ -4,6 +4,7 @@
 输出结构化 JSON 供自动化处置使用
 """
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -33,6 +34,10 @@ def scan_cron_errors():
     errors = []
     # 自排除：获取当前 cron job 的 ID（通过环境变量或脚本路径识别）
     self_job_id = "e776e653-6fa0-48e4-8338-536af3ce1f0a"  # 错误扫描 cron 的 jobId
+    # 已知已修复/已删除的 cron ID（不再报告）
+    known_resolved_ids = {
+        "63927a5a-721d-45a5-aa5d-9b95357d9453",  # provider 健康探测(agent turn, 已删除)
+    }
 
     for line in output.split("\n"):
         parts = line.split()
@@ -41,13 +46,26 @@ def scan_cron_errors():
         job_id = parts[0]
         if not job_id.startswith(("a", "b", "c", "d", "e", "f")):
             continue
-        # 排除自己
+        # 排除自己和已知已修复的 cron
         if job_id == self_job_id:
+            continue
+        if job_id in known_resolved_ids:
             continue
 
         # 获取最近运行状态
         runs_output, _ = run_cmd(f"openclaw cron runs --id {job_id} --limit 3 2>/dev/null")
-        if '"error"' in runs_output or '"timeout"' in runs_output.lower():
+        # 只报告执行失败（exit code != 0），排除 delivery 失败和偶发网络问题
+        # completionStatus=failed + exitCode!=0 才是真正的执行失败
+        exec_fail_count = 0
+        for entry_block in runs_output.split('"action": "finished"'):
+            if '"exitCode": 0' in entry_block:
+                continue  # 执行成功
+            if '"exitCode"' in entry_block:
+                # 有 exit code 且非 0
+                m = re.search(r'"exitCode":\s*(\d+)', entry_block)
+                if m and int(m.group(1)) != 0:
+                    exec_fail_count += 1
+        if exec_fail_count >= 2:
             # 获取 job 名称
             name_output, _ = run_cmd(f'openclaw cron get {job_id} 2>/dev/null | grep \'"name"\' | head -1')
             name = name_output.split(":")[-1].strip().strip('"').strip() if name_output else job_id
@@ -55,7 +73,7 @@ def scan_cron_errors():
                 "job_id": job_id,
                 "name": name,
                 "type": "cron_error",
-                "detail": "recent runs contain errors or timeouts"
+                "detail": f"recent runs contain {exec_fail_count} execution failures"
             })
 
     return errors
