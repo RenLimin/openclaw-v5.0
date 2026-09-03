@@ -156,6 +156,42 @@ print(res.meta)      # 页数/行数/引擎/置信度
 "
 ```
 
+#### 签名/印章自动检测提取（v5 增强）
+
+自动检测合同中的手写签名和红色公章位置，截图保存：
+
+```bash
+# 扫描件 PDF → 文本 + 签名/印章截图
+python3 scripts/contract_ocr_v5.py <扫描件.pdf> <输出.md>
+
+# 只提取文本，不检测签名
+python3 scripts/contract_ocr_v5.py <扫描件.pdf> <输出.md> --no-signatures
+
+# 指定签名截图保存目录
+python3 scripts/contract_ocr_v5.py <扫描件.pdf> <输出.md> --signature-dir ./signatures
+```
+
+**v5 新增能力**：
+- 🔴 **红色印章检测**：基于红色像素+形态学分析，自动定位公章/合同章
+- ✍️ **手写签名检测**：基于关键词附近墨色密度，定位签名区域
+- 📸 **自动截图保存**：每个签名/印章单独保存为 PNG
+- 🏷️ **智能标注**：关联"甲方/乙方 + 签字/盖章"等上下文标签
+- 📝 **位置标注**：在输出 Markdown 中标注签名/印章位置和置信度
+
+```bash
+# Python API
+python3 -c "
+from contract_ocr_v5 import digitalize_document_v5
+res = digitalize_document_v5('合同.pdf', extract_signatures=True)
+print(res.text)           # 纯文本
+print(res.markdown)       # Markdown（含签名标注）
+print(f'印章 {len(res.seals)} 处')
+print(f'签名 {len(res.signatures)} 处')
+for s in res.seals:
+    print(f'  第{s.page}页: {s.image_path}')
+"
+```
+
 ---
 
 ## 三大核心能力
