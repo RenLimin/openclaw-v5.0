@@ -89,13 +89,13 @@ def ping_provider(provider_id: str, provider_conf: dict) -> dict:
         status_code = response.getcode()
 
         if status_code == 200:
-            return {
+            result = {
                 "status": "healthy",
                 "latency_ms": latency_ms,
                 "last_checked": datetime.now(timezone.utc).isoformat(),
             }
         else:
-            return {
+            result = {
                 "status": "degraded",
                 "latency_ms": latency_ms,
                 "http_code": status_code,
@@ -103,7 +103,7 @@ def ping_provider(provider_id: str, provider_conf: dict) -> dict:
             }
     except urllib.error.HTTPError as e:
         latency_ms = int((time.monotonic() - start) * 1000)
-        return {
+        result = {
             "status": "error",
             "latency_ms": latency_ms,
             "http_code": e.code,
@@ -112,12 +112,69 @@ def ping_provider(provider_id: str, provider_conf: dict) -> dict:
         }
     except Exception as e:
         latency_ms = int((time.monotonic() - start) * 1000)
-        return {
+        result = {
             "status": "unreachable",
             "latency_ms": latency_ms,
             "error": str(e)[:100],
             "last_checked": datetime.now(timezone.utc).isoformat(),
         }
+
+    # ─── model ID 可用性验证 ───
+    # 即使 /models 返回 200，配置的 model ID 也可能已下线（如火山 Ark 模型 ID 更新）
+    # 对每个配置的 model 发最小推理请求（max_tokens=1），验证实际可用性
+    models_list = provider_conf.get("models", [])
+    if models_list and api_key:
+        model_statuses = {}
+        for model_def in models_list:
+            model_id = model_def.get("id", "")
+            if not model_id:
+                continue
+            # 跳过 embedding 模型（不支持 chat/completions）
+            model_name = model_def.get("name", "")
+            if any(kw in model_id.lower() or kw in model_name.lower() for kw in ["embedding", "vision"]):
+                model_statuses[model_id] = {"status": "skipped", "reason": "embedding model"}
+                continue
+            # 发最小推理请求
+            chat_url = base_url.rstrip("/") + "/chat/completions"
+            try:
+                body = json.dumps({
+                    "model": model_id,
+                    "messages": [{"role": "user", "content": "hi"}],
+                    "max_tokens": 1,
+                }).encode()
+                req = urllib.request.Request(
+                    chat_url,
+                    data=body,
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    method="POST",
+                )
+                resp = urllib.request.urlopen(req, timeout=15)
+                model_statuses[model_id] = {
+                    "status": "available",
+                    "http_code": resp.getcode(),
+                }
+            except urllib.error.HTTPError as e:
+                err_body = ""
+                try:
+                    err_body = e.read().decode()[:150]
+                except Exception:
+                    pass
+                model_statuses[model_id] = {
+                    "status": "unavailable",
+                    "http_code": e.code,
+                    "error": err_body,
+                }
+            except Exception as e:
+                model_statuses[model_id] = {
+                    "status": "unreachable",
+                    "error": str(e)[:100],
+                }
+        result["models"] = model_statuses
+
+    return result
 
 
 def main():
@@ -135,14 +192,23 @@ def main():
     providers = providers_config.get("providers", {})
     print(f"  发现 {len(providers)} 个 provider")
 
-    # 2. 逐个探测
-    print("[2/3] 探测 provider 健康状态 ...")
+    # 2. 逐个探测（含 model ID 验证）
+    print("[2/3] 探测 provider 健康状态（含 model ID 验证）...")
     health = {}
     for pid, pconf in providers.items():
         result = ping_provider(pid, pconf)
         health[pid] = result
         status_icon = {"healthy": "✅", "degraded": "⚠️", "error": "❌", "unreachable": "❌"}.get(result["status"], "?")
         print(f"  [{pid}] {status_icon} {result['status']} ({result['latency_ms']}ms)")
+        # 打印 model ID 验证结果
+        model_statuses = result.get("models", {})
+        if model_statuses:
+            for mid, mst in model_statuses.items():
+                ms_icon = {"available": "  ✅", "unavailable": "  ❌", "skipped": "  ⏭️", "unreachable": "  ⚠️"}.get(mst["status"], "  ?")
+                detail = ""
+                if mst["status"] == "unavailable":
+                    detail = f" (HTTP {mst.get('http_code', '?')}: {mst.get('error', '')[:60]})"
+                print(f"    {ms_icon} {mid}{detail}")
 
     # 3. 写入或预览
     if args.dry_run:
