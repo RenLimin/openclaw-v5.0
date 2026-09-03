@@ -16,7 +16,7 @@ OUTPUT_DIR = Path.home() / ".openclaw" / "data" / "reports"
 CONFIG_DIR = Path(__file__).parent.parent / "config"
 
 REPORT_MONTH = "202606"
-REPORT_DATE = "2026-06-30"
+REPORT_DATE = "2026-07-08"  # 与 build_stat_sheets.py 保持一致
 
 # === 样式 ===
 HEADER_FONT = Font(bold=True, size=10)
@@ -351,50 +351,13 @@ def main():
     fill_acceptance_sheet(ws5, acc_cols, acc_rows)
     print("   ✅ 验收交接")
 
-    # Sheet 6: 交付效率统计
-    ws6 = wb.create_sheet("交付效率统计")
-    fill_efficiency_sheet(ws6, sign_df)
-    print("   ✅ 交付效率统计")
-
-    # Sheet 7: 签约统计
-    ws7 = wb.create_sheet("签约统计")
-    fill_sign_stats_sheet(ws7, sign_df)
-    print("   ✅ 签约统计")
-
-    # Sheet 8: POC&提前实施统计
-    ws8 = wb.create_sheet("POC&提前实施统计")
-    fill_poc_stats_sheet(ws8, poc_df)
-    print("   ✅ POC&提前实施统计")
-
-    # Sheet 9: 异常统计
-    ws9 = wb.create_sheet("异常统计")
-    fill_abnormal_stats_sheet(ws9, abnormal_df)
-    print("   ✅ 异常统计")
-
-    # Sheet 10: 异常台账
-    ws10 = wb.create_sheet("异常台账")
-    fill_abnormal_ledger_sheet(ws10, abnormal_df)
-    print("   ✅ 异常台账")
-
-    # Sheet 11: 交接统计
-    ws11 = wb.create_sheet("交接统计")
-    fill_handover_stats_sheet(ws11, rev_rows, acc_rows)
-    print("   ✅ 交接统计")
-
-    # Sheet 12: 产品-授权&维保统计
-    ws12 = wb.create_sheet("产品-授权&维保统计")
-    fill_product_license_sheet(ws12, sign_df)
-    print("   ✅ 产品-授权&维保统计")
-
-    # Sheet 13: 提前实施分事业部统计
-    ws13 = wb.create_sheet("提前实施分事业部统计")
-    fill_poc_dept_sheet(ws13, poc_df)
-    print("   ✅ 提前实施分事业部统计")
-
-    # Sheet 14: 交付异常分事业部统计
-    ws14 = wb.create_sheet("交付异常分事业部统计")
-    fill_abnormal_dept_sheet(ws14, abnormal_df)
-    print("   ✅ 交付异常分事业部统计")
+    # Sheet 6-14: 统计 Sheet（使用 build_stat_sheets.py 的精确透视表逻辑）
+    sys.path.insert(0, str(Path(__file__).parent))
+    from build_stat_sheets import build_all_stat_sheets
+    conn = sqlite3.connect(BDMS_DB)
+    build_all_stat_sheets(wb, conn)
+    conn.close()
+    print("   ✅ 统计 Sheet (9个)")
 
     # Sheet 15: 图例
     ws15 = wb.create_sheet("图例")

@@ -40,7 +40,11 @@ def _load_data():
     # 主数据源：ones_exports 目录
     _sign_df = _try_read_csv(ONES_DIR / "签约项目统计.csv")
     _poc_df = _try_read_csv(ONES_DIR / "poc_提前实施.csv")
-    _abnormal_df = _try_read_csv(ONES_DIR / "异常处置.csv")
+    
+    # 异常数据：优先使用完整版（55列），回退到标准版（40列）
+    _abnormal_df = _try_read_csv(ONES_DIR / "202606-签约项目异常处置.csv")
+    if _abnormal_df is None or '异常影响情况' not in _abnormal_df.columns:
+        _abnormal_df = _try_read_csv(ONES_DIR / "异常处置.csv")
     
     # 全量签约数据（不过滤立项日期，用于产品-授权&维保统计等需要全量数据的场景）
     # 必须在 _sign_df 被过滤前复制
@@ -61,6 +65,12 @@ def _load_data():
         ref_abn = _try_read_csv(REF_DIR / "202606-签约项目异常处置.csv")
         if ref_abn is not None:
             _abnormal_df = ref_abn
+    
+    # 再次确认：如果还是没有完整字段，尝试 ones_exports 下的完整版
+    if _abnormal_df is not None and '异常影响情况' not in _abnormal_df.columns:
+        full_abn = _try_read_csv(ONES_DIR / "202606-签约项目异常处置.csv")
+        if full_abn is not None and '异常影响情况' in full_abn.columns:
+            _abnormal_df = full_abn
     
     # 从 BDMS 读取交接数据
     conn = sqlite3.connect(BDMS_DB)
@@ -168,6 +178,18 @@ def _compute_poc_duration(df, sign_df=None):
 # ============================================================
 # 1. 签约统计
 # ============================================================
+def _cleanup_zeros(wb):
+    """清理所有统计 Sheet 中的 0 值单元格（与 REF 显示风格一致）"""
+    for name in BUILDERS:
+        if name not in wb.sheetnames:
+            continue
+        ws = wb[name]
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value == 0:
+                    cell.value = None
+
+
 def build_sign_stats(ws):
     """签约统计：左表=按年份，右表=状态×年份交叉表
     精确匹配参考报表的 15行×15列 透视表格式
@@ -205,6 +227,15 @@ def build_sign_stats(ws):
     year_counts = df.groupby('立项年份')['ID'].nunique()
     years = sorted([int(y) for y in year_counts.index if pd.notna(y)])
     
+    # 确保包含 2019-2026 所有年份（即使某些年份无数据，也显示为0）
+    if years:
+        full_years = list(range(2019, max(years) + 1))
+        for y in full_years:
+            if y not in years:
+                years.append(y)
+                year_counts[y] = 0
+        years = sorted(years)
+    
     for i, year in enumerate(years):
         row = 6 + i
         ws.cell(row=row, column=1, value=f"{year}年")
@@ -223,7 +254,7 @@ def build_sign_stats(ws):
         '5：应验未验', '6：验收异常', '7：正常服务', '8：应结未结', '9：已结项'
     ]
     
-    # 参考报表列顺序：2026, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 总计
+    # 参考报表列顺序：2026, 2019, 2020, 2021, ..., 2025, 总计
     current_year = 2026
     ordered_years = [current_year] + [y for y in years if y != current_year]
     year_labels = [f"{y}年" for y in ordered_years]
@@ -325,47 +356,50 @@ def build_poc_stats(ws):
     ws.cell(row=3, column=19, value="项目类型(概览)")
     ws.cell(row=3, column=20, value="POC")
     
-    # 行4: 列1=履约项立项期间, 列2=列标签 | 列7=提前实施履约项持续周期, 列8=列标签 | 列18=求和项:POC项目工时合计（小时）, 列19=列标签
-    ws.cell(row=4, column=1, value="履约项立项期间")
-    ws.cell(row=4, column=2, value="列标签")
-    ws.cell(row=4, column=8, value="提前实施履约项持续周期")
-    ws.cell(row=4, column=9, value="列标签")
-    ws.cell(row=4, column=19, value="求和项:POC项目工时合计（小时）")
-    ws.cell(row=4, column=20, value="列标签")
+    # 行4: 空行（与REF一致，REF行4为空）
+    # REF 行4 是空行，行5才是字段名+列标签
+    pass  # 行4留空
     
-    # === 列头行（行5）===
+    # === 行5: 字段名行（与REF一致）===
+    ws.cell(row=5, column=1, value="履约项立项期间")
+    ws.cell(row=5, column=2, value="列标签")
+    ws.cell(row=5, column=8, value="提前实施履约项持续周期")
+    ws.cell(row=5, column=9, value="列标签")
+    ws.cell(row=5, column=19, value="求和项:POC项目工时合计（小时）")
+    ws.cell(row=5, column=20, value="列标签")
+    
+    # === 行6: 列标签行（与REF一致）===
     # 左表（列1-4）
-    ws.cell(row=5, column=1, value="行标签")
-    ws.cell(row=5, column=2, value="POC")
-    ws.cell(row=5, column=3, value="提前实施")
-    ws.cell(row=5, column=4, value="总计")
+    ws.cell(row=6, column=1, value="行标签")
+    ws.cell(row=6, column=2, value="POC")
+    ws.cell(row=6, column=3, value="提前实施")
+    ws.cell(row=6, column=4, value="总计")
     
-    # 中表（列8-15），列11为空
-    ws.cell(row=5, column=8, value="行标签")
-    ws.cell(row=5, column=9, value="超过1年")
-    ws.cell(row=5, column=10, value="1个月内")
-    # 列11 为空
-    ws.cell(row=5, column=12, value="3个月内")
-    ws.cell(row=5, column=13, value="6个月内")
-    ws.cell(row=5, column=14, value="1年内")
-    ws.cell(row=5, column=15, value="总计")
+    # 中表（列8-15），列11=#N/A
+    ws.cell(row=6, column=8, value="行标签")
+    ws.cell(row=6, column=9, value="超过1年")
+    ws.cell(row=6, column=10, value="1个月内")
+    ws.cell(row=6, column=11, value="#N/A")
+    ws.cell(row=6, column=12, value="3个月内")
+    ws.cell(row=6, column=13, value="6个月内")
+    ws.cell(row=6, column=14, value="1年内")
+    ws.cell(row=6, column=15, value="总计")
     
     # 右表（列19-29），列26为空
-    # 右表部门列：参考报表的8个部门 + 空列 + 总计
     right_dept_cols = [
         "华中营销部", "西区营销部", "南区营销部", "东区营销部",
-        "北区营销部", "北区金融部",  # 到列24（Excel列号）
-        None,  # 列26 空列（Excel列26 = 第7个位置，索引6）
+        "北区营销部", "北区金融部",
+        None,  # 列26 空列
         "车联网行业部", "销售运营管理部",
         "总计"
     ]
     
-    ws.cell(row=5, column=19, value="行标签")
+    ws.cell(row=6, column=19, value="行标签")
     for ci, dept in enumerate(right_dept_cols):
         if dept is not None:
-            ws.cell(row=5, column=20 + ci, value=dept)
+            ws.cell(row=6, column=20 + ci, value=dept)
     
-    # === 左表：履约项立项期间 × 类型（数据从行6开始）===
+    # === 左表：履约项立项期间 × 类型（数据从行7开始）===
     year_type = df.groupby(['立项年份', '项目类型(概览)'])['ID'].nunique().unstack(fill_value=0)
     years = sorted([int(y) for y in year_type.index if pd.notna(y)])
     
@@ -373,7 +407,7 @@ def build_poc_stats(ws):
     early_total = 0
     
     for i, year in enumerate(years):
-        row = 6 + i
+        row = 7 + i
         ws.cell(row=row, column=1, value=f"{year}年")
         poc_count = int(year_type.loc[year, 'POC']) if 'POC' in year_type.columns and year in year_type.index else 0
         early_count = int(year_type.loc[year, '提前实施']) if '提前实施' in year_type.columns and year in year_type.index else 0
@@ -383,37 +417,26 @@ def build_poc_stats(ws):
         poc_total += poc_count
         early_total += early_count
     
-    total_row_left = 6 + len(years)
+    total_row_left = 7 + len(years)
     ws.cell(row=total_row_left, column=1, value="总计")
     ws.cell(row=total_row_left, column=2, value=poc_total)
     ws.cell(row=total_row_left, column=3, value=early_total)
     ws.cell(row=total_row_left, column=4, value=poc_total + early_total)
     
-    # === 中表：提前实施履约项持续周期（数据从行6开始）===
-    # 持续周期列顺序（对应列9,10,12,13,14,15），列11为空
-    dur_order = ['超过1年', '1个月内', '3个月内', '6个月内', '1年内']
+    # === 中表：提前实施履约项持续周期（数据从行7开始）===
+    dur_order = ['超过1年', '1个月内', '#N/A', '3个月内', '6个月内', '1年内']
+    dur_col_offset = [9, 10, 11, 12, 13, 14]
     
     def write_mid_row(row_num, label, pivot_series):
-        """写入中表一行数据
-        pivot_series: 以持续周期为index的Series
-        """
         ws.cell(row=row_num, column=8, value=label)
         row_total = 0
-        # 列9=超过1年, 列10=1个月内
-        for ci, dur in enumerate(dur_order[:2]):
+        for ci, dur in enumerate(dur_order):
             v = int(pivot_series.get(dur, 0))
-            ws.cell(row=row_num, column=9 + ci, value=v)
+            ws.cell(row=row_num, column=dur_col_offset[ci], value=v)
             row_total += v
-        # 列11 为空，跳过
-        # 列12=3个月内, 列13=6个月内, 列14=1年内
-        for ci, dur in enumerate(dur_order[2:]):
-            v = int(pivot_series.get(dur, 0))
-            ws.cell(row=row_num, column=12 + ci, value=v)
-            row_total += v
-        # 列15=总计
         ws.cell(row=row_num, column=15, value=row_total)
     
-    mid_row = 6
+    mid_row = 7
     
     # 未关联汇总
     unlinked = early_df[early_df['是否关联合同'] == '未关联']
@@ -462,11 +485,10 @@ def build_poc_stats(ws):
     write_mid_row(mid_row, "总计", all_piv)
     mid_row += 1
     
-    # === 右表：POC项目工时合计 × 产线（工时=0占位，数据从行6开始）===
-    # 产线行（按产线名称排序）
+    # === 右表：POC项目工时合计 × 产线（工时=0占位，数据从行7开始）===
     prod_lines = sorted(poc_df['所属产线'].dropna().unique())
     
-    right_row = 6
+    right_row = 7
     for pl in prod_lines:
         ws.cell(row=right_row, column=19, value=str(pl))
         for ci in range(len(right_dept_cols)):
@@ -999,7 +1021,7 @@ def build_abnormal_ledger(ws):
             row = start_row + 2 + ri
             yd = data[data['合同归档年份'] == year]
             
-            ws.cell(row=row, column=start_col, value=f"{year}年")
+            ws.cell(row=row, column=start_col, value=str(year))
             
             if has_report_date and has_archive_date:
                 # 之前存量：报备 < period_year 且 (归档 >= period_year 或 未归档)
@@ -1028,6 +1050,7 @@ def build_abnormal_ledger(ws):
         # 总计行
         total_row = start_row + 2 + len(years)
         ws.cell(row=total_row, column=start_col, value="总计")
+        # 注意：REF 中总计行也在年份列中显示为"总计"文本
         
         if has_report_date and has_archive_date:
             before_t = len(data[
@@ -1150,14 +1173,16 @@ def build_product_stats(ws):
         # <2021/1/1
         if pre_2021_years:
             pre_val = sum(int(pivot.loc[prod, y]) for y in pre_2021_years if y in pivot.columns)
-            ws.cell(row=row, column=2 + col_idx, value=pre_val)
+            if pre_val > 0:
+                ws.cell(row=row, column=2 + col_idx, value=pre_val)
             total += pre_val
             col_idx += 1
         
-        # 各年份
+        # 各年份（只填有值的列，与REF一致）
         for y in normal_years:
             val = int(pivot.loc[prod, y]) if y in pivot.columns else 0
-            ws.cell(row=row, column=2 + col_idx, value=val)
+            if val > 0:
+                ws.cell(row=row, column=2 + col_idx, value=val)
             total += val
             col_idx += 1
         
@@ -1260,8 +1285,11 @@ def build_abnormal_dept_stats(ws):
     _load_data()
     df = _abnormal_df.copy()
     
-    # 筛选：只取营销处置中+交付处置中（匹配参考报表筛选器"状态=(多项)"）
-    if '状态' in df.columns:
+    # 筛选：按异常影响情况筛选（确收/验收/确收+验收）
+    # 参考报表筛选器"状态=(多项)"实际是按异常影响情况筛选
+    if '异常影响情况' in df.columns:
+        df = df[df['异常影响情况'].isin(['1：确收', '2：验收', '3：确收+验收'])].copy()
+    elif '状态' in df.columns:
         df = df[df['状态'].isin(['营销处置中', '交付处置中'])].copy()
     
     # 筛选器
@@ -1559,6 +1587,8 @@ def build_all_stat_sheets(wb, conn):
         ws = wb.create_sheet(name)
         builder(ws)
         print(f"  ✅ {name}")
+    
+    _cleanup_zeros(wb)
 
 
 if __name__ == "__main__":
