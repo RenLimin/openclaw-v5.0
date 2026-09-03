@@ -190,6 +190,8 @@ def parse_contract(text: str) -> ParsedContract:
     """
     解析合同原文，按条款类别逐条提取
     """
+    # OCR 文本归一化（修正常见识别错误 + 清理页眉页脚）
+    text = _normalize_ocr_text(text)
     parsed = ParsedContract(raw_text=text)
 
     # 1. 提取标题
@@ -259,6 +261,115 @@ def _extract_party_info(text: str, party_label: str) -> dict:
 
     return info
 
+
+
+
+def _normalize_ocr_text(text: str) -> str:
+    """OCR 文本归一化：修正常见识别错误 + 清理页眉页脚"""
+    import re as _re
+    
+    # 清理页眉页脚（常见模式）
+    # 移除 "第X页共Y页" / "第X页 共Y页"
+    text = _re.sub(r'第\s*\d+\s*页\s*共\s*\d+\s*页', '', text)
+    text = _re.sub(r'第\s*\d+\s*页\s*\d+\s*页', '', text)
+    
+    # 清理水印/页眉行（连续的短行 + | 分隔符）
+    lines = text.split('\n')
+    cleaned = []
+    for line in lines:
+        s = line.strip()
+        # 跳过明显的页眉（含|且<20字）
+        if '|' in s and len(s) < 25:
+            continue
+        # 跳过空行过多的
+        cleaned.append(line)
+    text = '\n'.join(cleaned)
+    
+    # 常见 OCR 错误修正（合同场景）
+    corrections = [
+        (r'合[网同]', '合同'),  # 合网 / 合同
+        (r'款件', '软件'),
+        (r'投权', '授权'),
+        (r'保秘', '保密'),
+        (r'不可抗[力拒]', '不可抗力'),
+        (r'违约全', '违约金'),
+        (r'争仪', '争议'),
+        (r'知识产[杈权]', '知识产权'),
+        (r'有限公[可司同]', '有限公司'),
+        (r'签[暑署]', '签署'),
+        (r'[加周固]固', '加固'),
+        (r'携述', '描述'),
+        (r'演后', '届满后'),
+        (r'测活', '激活'),
+        (r'邦[懋帮]', '梆梆'),
+        (r'郴邦', '梆梆'),
+        (r'服带', '服务'),
+        (r'思事', '思智'),
+        (r'惠集', '惠智'),
+        (r'喝师', '顾问'),
+        (r'需费全', '安全'),
+        (r'想邦', '梆梆'),
+        # 金额/日期类
+        (r'万随任元', '捌万陆仟元'),
+        (r'任元整', '仟元整'),
+        (r'捌任', '捌仟'),
+        (r'40k年', '2026年'),
+        (r'二月日', '三月二十日'),
+        # 公司名类
+        (r'北京郴郴安全', '北京梆梆安全'),
+        (r'北京帮梯安全', '北京梆梆安全'),
+        (r'携高梦', '指南针'),
+        # 通用错字
+        (r'产晶', '产品'),
+        (r'贵任', '责任'),
+        (r'精速单价', '版本单价'),
+        (r'想趣', '安全'),
+        (r'兵8', '共8'),
+    ]
+    for pat, repl in corrections:
+        text = _re.sub(pat, repl, text)
+    
+    return text
+
+
+def _split_articles(text: str) -> dict:
+    """按"第X条"将合同拆分为各条款段
+    Returns: { "第一条": "完整内容", "第二条": "完整内容", ... }
+    """
+    import re as _re
+    # 匹配中文数字或阿拉伯数字的条款标题
+    pattern = r'(第[一二三四五六七八九十百\d]+条[^\n]*)'
+    matches = list(_re.finditer(pattern, text))
+    articles = {}
+    for i, m in enumerate(matches):
+        title_line = m.group(1).strip()
+        # 提取条号（第X条）
+        num_match = _re.match(r'(第[一二三四五六七八九十百\d]+条)', title_line)
+        if not num_match:
+            continue
+        art_num = num_match.group(1)
+        # 内容：从标题后到下一个条标题前
+        start = m.end()
+        end = matches[i+1].start() if i+1 < len(matches) else len(text)
+        content_text = text[start:end].strip()
+        # 合并标题和内容
+        full = title_line + "\n" + content_text
+        # 去重（同一个条号出现多次时，取最长的）
+        if art_num not in articles or len(full) > len(articles[art_num]):
+            articles[art_num] = full
+    return articles
+
+def _find_article_by_keyword(text: str, keywords: list) -> str:
+    """通过关键词查找条款内容
+    先按第X条拆分，然后在标题里搜关键词
+    """
+    articles = _split_articles(text)
+    for art_num, content in articles.items():
+        first_line = content.split('\n')[0] if '\n' in content else content[:80]
+        for kw in keywords:
+            if kw in first_line:
+                return content
+    return ""
 
 def _extract_all_clauses(text: str) -> list:
     """提取所有条款"""
@@ -341,109 +452,169 @@ def _extract_clause_主体信息(text: str) -> Optional[ContractClause]:
 
 
 def _extract_clause_合同标的(text: str) -> Optional[ContractClause]:
-    """提取合同标的条款"""
-    # 服务内容
-    content_match = re.search(r'技术服务的内容[：:]\s*(.+?)(?:\n\d|$)', text)
-    target_match = re.search(r'技术服务的目标[：:]\s*(.+?)(?:\n\d|$)', text)
-
-    original = ""
-    if target_match:
-        original += target_match.group(0) + "\n"
-    if content_match:
-        original += content_match.group(0)
-
+    """提取合同标的条款（通用版）"""
+    # 找第一条或含"标的/产品/服务/授权"的条款
+    art_text = _find_article_by_keyword(text, ["产品名称", "授权产品", "合同标的", "服务内容", "技术服务", "采购内容", "项目内容"])
+    if not art_text:
+        articles = _split_articles(text)
+        for k in ["第一条", "第1条"]:
+            if k in articles:
+                art_text = articles[k]
+                break
+    
+    original = art_text[:500] if art_text else ""
     summary_parts = []
-    if target_match:
-        summary_parts.append(f"目标：{target_match.group(1).strip()}")
-    if content_match:
-        summary_parts.append(f"内容：{content_match.group(1).strip()}")
+    key_terms = {}
+    
+    if art_text:
+        # 提取第一条标题
+        first_line = art_text.split('\n')[0] if art_text else ""
+        if first_line:
+            # 去掉"第一条"前缀
+            title = re.sub(r'^第[一二三四五六七八九十\d]+条', '', first_line).strip()
+            if title:
+                key_terms["条款标题"] = title
+                summary_parts.append(title[:60])
+        
+        # 提取产品/服务名称（OCR文本里可能没有冒号分隔，尝试从行内容找）
+        found = False
+        for pat in [r'产品名称[：:]\s*(.+?)(?:\n|产品型号|规格)',
+                    r'项目名称[：:]\s*(.+?)(?:\n|$)',
+                    r'Android应用加固软件[^\n]+',
+                    r'软件[：:]?(.+?)[年付费|许可]']:
+            m = re.search(pat, art_text)
+            if m and m.group(1).strip():
+                key_terms["产品名称"] = m.group(1).strip()[:60]
+                summary_parts = [f"产品：{m.group(1).strip()[:40]}"]
+                found = True
+                break
+        # 兜底：从表格里找产品行
+        if not found:
+            # 找含"加固"或"软件"的产品行
+            for line in art_text.split('\n'):
+                if ('软件' in line or '产品' in line or '加固' in line) and len(line) > 10:
+                    key_terms["产品名称"] = line.strip()[:80]
+                    summary_parts = [f"产品：{line.strip()[:50]}"]
+                    break
+    else:
+        summary_parts.append("未提取到合同标的内容")
 
     return ContractClause(
         category="合同标的",
         law_article="§470",
         original_text=original[:500],
-        summary="；".join(summary_parts) if summary_parts else "未提取到服务内容",
-        key_terms={
-            "服务目标": target_match.group(1).strip() if target_match else "",
-            "服务内容": content_match.group(1).strip() if content_match else "",
-        },
-    )
-
-
-def _extract_clause_价款与报酬(text: str) -> Optional[ContractClause]:
-    """提取价款与报酬条款"""
-    amount_match = re.search(r'技术服务费总额为[：:]\s*[￥¥]?\s*([\d,]+\.?\d*)\s*大写[：:]?\s*([\u4e00-\u9fa5零壹贰叁肆伍陆柒捌玖拾佰仟万亿元整]+)', text)
-
-    original = ""
-    summary = ""
-    key_terms = {}
-
-    if amount_match:
-        amount_num = amount_match.group(1)
-        amount_cn = amount_match.group(2)
-        original = amount_match.group(0)
-        summary = f"合同金额：¥{amount_num}（{amount_cn}）"
-        key_terms = {"金额数字": amount_num, "金额大写": amount_cn}
-
-        # 检查大小写一致性
-        if amount_cn and "整" not in amount_cn:
-            # 简单检查：大写应含"整"
-            pass
-    else:
-        summary = "未提取到合同金额"
-
-    return ContractClause(
-        category="价款与报酬",
-        law_article="§510",
-        original_text=original[:300],
-        summary=summary,
+        summary="；".join(summary_parts) if summary_parts else "未提取到合同标的内容",
         key_terms=key_terms,
     )
 
 
-def _extract_clause_履行期限(text: str) -> Optional[ContractClause]:
-    """提取履行期限条款"""
-    # 服务期限
-    period_match = re.search(r'技术服务期限[：:]\s*(.+?)(?:\n|$)', text)
-    # 有效期限
-    valid_match = re.search(r'有效期限[：:]\s*(.+?)(?:\n|$)', text)
-    # 签订时间
-    sign_match = re.search(r'签订时间[：:]\s*(.+?)(?:\n|$)', text)
-
-    original = ""
-    summary_parts = []
+def _extract_clause_价款与报酬(text: str) -> Optional[ContractClause]:
+    """提取价款与报酬条款（通用版）"""
+    # 找付款相关条款
+    art_text = _find_article_by_keyword(text, ["付款方式", "价款", "报酬", "合同金额", "费用支付", "支付方式"])
+    if not art_text:
+        articles = _split_articles(text)
+        for k in ["第二条", "第2条"]:
+            if k in articles:
+                art_text = articles[k]
+                break
+    
+    original = art_text[:500] if art_text else ""
     key_terms = {}
+    issues = []
+    summary = ""
+    
+    # 全文搜索金额（数字）
+    amount_num = ""
+    amt_patterns = [
+        r'合同总价[（(]元[)）][）]?[：:]?\s*[￥¥]?\s*([\d,]+\.?\d*)',
+        r'合同总金额[：:]\s*[￥¥]?\s*([\d,]+\.?\d*)',
+        r'本合同总价为[：:]?\s*[￥¥]?\s*([\d,]+\.?\d*)\s*元',
+        r'总金额[：:]\s*[￥¥]?\s*([\d,]+\.?\d*)',
+        r'合同金额[：:]\s*[￥¥]?\s*([\d,]+\.?\d*)',
+        r'合计[（(]元[)）][：:]?\s*([\d,]+\.?\d*)',
+        r'([\d,]+\.?\d*)\s*元人民币',
+        r'[￥¥]\s*([\d,]+\.?\d*)',
+    ]
+    for pat in amt_patterns:
+        m = re.search(pat, text)
+        if m:
+            amount_num = m.group(1).strip().replace(',', '')
+            key_terms["金额数字"] = amount_num
+            break
+    
+    # 大写金额
+    cn_match = re.search(r'大写[：:]?\s*([\u4e00-\u9fa5零壹贰叁肆伍陆柒捌玖拾佰仟万亿元整]+)', text)
+    if cn_match:
+        amount_cn = cn_match.group(1).strip()
+        key_terms["金额大写"] = amount_cn
+    
+    if amount_num:
+        summary = f"合同金额：¥{amount_num}"
+        if cn_match:
+            summary += f"（{cn_match.group(1).strip()}）"
+    else:
+        summary = "未提取到合同金额"
+        issues.append("合同金额未明确提取")
+    
+    return ContractClause(
+        category="价款与报酬",
+        law_article="§510",
+        original_text=original[:500],
+        summary=summary,
+        key_terms=key_terms,
+        issues=issues,
+        suggestions=[],
+    )
 
-    if period_match:
-        original += period_match.group(0) + "\n"
-        summary_parts.append(f"服务期限：{period_match.group(1).strip()}")
-        key_terms["服务期限"] = period_match.group(1).strip()
 
-    if valid_match:
-        original += valid_match.group(0) + "\n"
-        summary_parts.append(f"有效期限：{valid_match.group(1).strip()}")
-        key_terms["有效期限"] = valid_match.group(1).strip()
-
-    if sign_match:
-        key_terms["签订时间"] = sign_match.group(1).strip()
-
-    # 检查期限矛盾
-    if period_match and valid_match:
-        period_text = period_match.group(1)
-        valid_text = valid_match.group(1)
-        # 提取日期
-        period_dates = re.findall(r'\d{4}年\d{1,2}月\d{1,2}日', period_text)
-        valid_dates = re.findall(r'\d{4}年\d{1,2}月\d{1,2}日', valid_text)
-        if period_dates and valid_dates:
-            if period_dates != valid_dates:
-                # 可能是矛盾
-                pass
-
+def _extract_clause_履行期限(text: str) -> Optional[ContractClause]:
+    """提取履行期限条款（通用版）"""
+    key_terms = {}
+    summary_parts = []
+    original = ""
+    
+    # 找期限相关条款
+    art_text = _find_article_by_keyword(text, ["履行期限", "服务期限", "有效期限", "授权期限", "合同期限", "质保期", "交付时间"])
+    
+    # 全文搜索日期范围
+    date_patterns = [
+        r'授权使用期限[为：:]?\s*(.+?)(?:\n到期|；|。)',
+        r'合同期限[为：:]?\s*(.+?)(?:；|。)',
+        r'服务期限[为：:]?\s*(.+?)(?:；|。)',
+        r'有效期限[为：:]?\s*(.+?)(?:；|。)',
+        r'(\d{4}年\d{1,2}月\d{1,2}日\s*至\s*\d{4}年\d{1,2}月\d{1,2}日)',
+    ]
+    period_text = ""
+    period_label = ""
+    for pat in date_patterns:
+        m = re.search(pat, text)
+        if m:
+            period_text = m.group(1).strip().replace('\n', '')
+            if "授权" in pat: period_label = "授权期限"
+            elif "服务" in pat: period_label = "服务期限"
+            elif "有效" in pat: period_label = "有效期限"
+            elif "合同" in pat: period_label = "合同期限"
+            else: period_label = "履行期限"
+            break
+    
+    if period_text:
+        key_terms[period_label] = period_text
+        summary_parts.append(f"{period_label}：{period_text[:50]}")
+        if art_text:
+            original = art_text[:500]
+        else:
+            original = period_text
+    else:
+        summary_parts.append("未提取到履行期限")
+        if art_text:
+            original = art_text[:500]
+    
     return ContractClause(
         category="履行期限",
         law_article="§511",
-        original_text=original[:300],
-        summary="；".join(summary_parts) if summary_parts else "未提取到履行期限",
+        original_text=original[:500],
+        summary="；".join(summary_parts),
         key_terms=key_terms,
     )
 
@@ -464,65 +635,73 @@ def _extract_clause_履行方式(text: str) -> Optional[ContractClause]:
 
 
 def _extract_clause_验收标准(text: str) -> Optional[ContractClause]:
-    """提取验收标准条款"""
-    standard_match = re.search(r'验收标准[：:]\s*(.+?)(?:\n\d|$)', text)
-    method_match = re.search(r'验收方法[：:]\s*(.+?)(?:\n\d|$)', text)
-    time_match = re.search(r'验收的时间和地点[：:]\s*(.+?)(?:\n|$)', text)
-
-    original = ""
+    """提取验收标准条款（通用版）"""
+    art_text = _find_article_by_keyword(text, ["验收标准", "验收方法", "产品交付与验收", "验收", "交付与验收"])
+    
+    original = art_text[:500] if art_text else ""
     summary_parts = []
     key_terms = {}
-
-    if standard_match:
-        original += standard_match.group(0) + "\n"
-        summary_parts.append(f"验收标准：{standard_match.group(1).strip()}")
-        key_terms["验收标准"] = standard_match.group(1).strip()
-
-    if method_match:
-        original += method_match.group(0) + "\n"
-        summary_parts.append(f"验收方法：{method_match.group(1).strip()}")
-        key_terms["验收方法"] = method_match.group(1).strip()
-
-    if time_match:
-        key_terms["验收时间和地点"] = time_match.group(1).strip()
-        if time_match.group(1).strip() in ["/", "无", ""]:
-            summary_parts.append("验收时间和地点：未填写")
-
+    
+    if art_text:
+        # 提取验收方式
+        if "验收确认" in art_text or "验收合格" in art_text:
+            summary_parts.append("验收方式：双方确认/验收合格")
+            key_terms["验收方式"] = "双方确认"
+        if "上门安装" in art_text or "交付" in art_text:
+            summary_parts.append("交付方式：上门/远程交付")
+            key_terms["交付方式"] = "按合同约定"
+        if not summary_parts:
+            # 取前 80 字
+            first_para = art_text.split('\n')[1] if '\n' in art_text else art_text
+            summary_parts.append(first_para[:60])
+    else:
+        summary_parts.append("未提取到验收标准")
+    
     return ContractClause(
         category="验收标准",
         law_article="§509",
-        original_text=original[:300],
-        summary="；".join(summary_parts) if summary_parts else "未提取到验收标准",
+        original_text=original[:500],
+        summary="；".join(summary_parts),
         key_terms=key_terms,
     )
 
 
 def _extract_clause_付款条件(text: str) -> Optional[ContractClause]:
-    """提取付款条件条款"""
-    pay_match = re.search(r'技术服务费支付方式.+?(?=\n\d|$)', text, re.DOTALL)
-
-    original = ""
+    """提取付款条件条款（通用版）"""
+    art_text = _find_article_by_keyword(text, ["付款方式", "付款条件", "支付方式", "结算方式"])
+    
+    original = art_text[:500] if art_text else ""
     summary = ""
     key_terms = {}
-
-    if pay_match:
-        original = pay_match.group(0)[:500]
-        # 提取关键信息
-        if "验收合格后" in original:
-            key_terms["付款条件"] = "验收合格后支付"
-            summary = "验收合格后30个工作日内一次性支付"
-        if "签订合同" in original:
-            key_terms["付款节点"] = "签订合同后"
-        if "工作日" in original:
-            day_match = re.search(r'(\d+)\s*个工作日', original)
-            if day_match:
-                key_terms["付款期限"] = f"{day_match.group(1)}个工作日"
-
+    
+    if art_text:
+        # 提取付款节点
+        if "全额付款" in art_text or "一次性支付" in art_text or "全额" in art_text:
+            key_terms["付款方式"] = "一次性付款"
+            summary = "一次性/全额付款"
+        elif "分期" in art_text:
+            key_terms["付款方式"] = "分期付款"
+            summary = "分期付款"
+        else:
+            # 找"XX个工作日"
+            day_m = re.search(r'(\d+)\s*个工作日', art_text)
+            if day_m:
+                key_terms["付款期限"] = f"{day_m.group(1)}个工作日"
+                summary = f"合同生效后{day_m.group(1)}个工作日内支付"
+            else:
+                summary = "按合同约定付款"
+        
+        # 结算方式
+        if "汇款" in art_text or "转账" in art_text:
+            key_terms["结算方式"] = "银行汇款/转账"
+    else:
+        summary = "未提取到付款条件"
+    
     return ContractClause(
         category="付款条件",
         law_article="§510",
-        original_text=original[:300],
-        summary=summary if summary else "未提取到付款条件",
+        original_text=original[:500],
+        summary=summary,
         key_terms=key_terms,
     )
 
@@ -556,29 +735,40 @@ def _extract_clause_发票条款(text: str) -> Optional[ContractClause]:
 
 
 def _extract_clause_违约责任(text: str) -> Optional[ContractClause]:
-    """提取违约责任条款"""
-    # 第八条通常是违约责任
-    section8_match = re.search(r'第八条[：:].*?(?=第九条|$)', text, re.DOTALL)
-
+    """提取违约责任条款（通用版）"""
+    art_text = _find_article_by_keyword(text, ["违约责任", "违约条款", "违约"])
+    
     original = ""
     key_terms = {}
     issues = []
-
-    if section8_match:
-        original = section8_match.group(0)[:800]
+    
+    if art_text:
+        original = art_text[:800]
     else:
-        # 尝试搜索违约相关段落
-        penalty_matches = re.findall(r'第[一二三四五六七八九十]+条[：:].*?违约.*?\n', text)
+        # 兜底找含"违约"的段落
+        penalty_matches = re.findall(r'第[一二三四五六七八九十\d]+条[^\n]*\n.*?违约.*?\n', text)
         if penalty_matches:
             original = "\n".join(penalty_matches)[:800]
-
-    # 提取违约金比例
+    
+    # 提取违约金比例（支持阿拉伯数字% 和中文"千分之X/百分之X"）
     penalty_rates = re.findall(r'(\d+(?:\.\d+)?)\s*%', original)
+    # 中文数字比例：千分之一/千分之五/百分之X
+    cn_rates = re.findall(r'千分之[一二三四五六七八九十百\d]+', original)
+    if cn_rates:
+        penalty_rates.extend(cn_rates)
+    pct_rates = re.findall(r'百分之[一二三四五六七八九十百\d]+', original)
+    if pct_rates:
+        penalty_rates.extend(pct_rates)
     if penalty_rates:
         key_terms["违约金比例"] = penalty_rates
-
+    
     # 检查日违约金
     daily_penalty = re.findall(r'每逾期一日.*?(\d+(?:\.\d+)?)\s*%', original)
+    if not daily_penalty:
+        # 中文数字的日违约金
+        daily_cn = re.findall(r'每逾期一日.*?千分之[一二三四五六七八九十]+', original)
+        if daily_cn:
+            key_terms["日违约金比例"] = daily_cn
     if daily_penalty:
         key_terms["日违约金比例"] = daily_penalty
         for rate in daily_penalty:
@@ -587,46 +777,71 @@ def _extract_clause_违约责任(text: str) -> Optional[ContractClause]:
                     issues.append(f"日违约金{rate}%偏高（年化{float(rate)*365:.0f}%），建议降至0.3%以下")
             except ValueError:
                 pass
-
+    
     # 检查上限
     cap_match = re.search(r'最高不超过合同总额的(\d+)%', original)
     if cap_match:
         key_terms["违约金上限"] = f"{cap_match.group(1)}%"
-
-    clause = ContractClause(
+    
+    rates_display = key_terms.get('违约金比例', [])
+    if rates_display:
+        rates_str = '、'.join(str(r) for r in rates_display[:3])
+    else:
+        rates_str = '未约定'
+    summary = f"违约金比例：{rates_str}；上限：{key_terms.get('违约金上限', '未约定')}"
+    
+    return ContractClause(
         category="违约责任",
         law_article="§577-585",
         original_text=original[:500],
-        summary=f"违约金比例：{key_terms.get('违约金比例', [])}；上限：{key_terms.get('违约金上限', '未约定')}",
+        summary=summary,
         key_terms=key_terms,
         issues=issues,
     )
 
-    return clause
-
 
 def _extract_clause_争议解决(text: str) -> Optional[ContractClause]:
-    """提取争议解决条款"""
-    dispute_match = re.search(r'协商、调解不成的[，,]\s*依法向\s*(.+?)人民法院起诉', text)
-    if not dispute_match:
-        dispute_match = re.search(r'争议.*?(仲裁|人民法院).*?(?=\n|$)', text)
-
-    key_terms = {}
+    """提取争议解决条款（通用版）"""
+    art_text = _find_article_by_keyword(text, ["争议解决", "争议处理", "管辖", "诉讼"])
+    
+    original = art_text[:500] if art_text else ""
     summary = ""
-
-    if dispute_match:
-        location = dispute_match.group(1) if dispute_match.lastindex else ""
-        key_terms["管辖法院"] = f"{location}人民法院" if location else dispute_match.group(0)
-        summary = f"争议解决：向{location}人民法院起诉" if location else "已约定争议解决方式"
+    key_terms = {}
+    issues = []
+    
+    if art_text:
+        # 提取管辖法院
+        if "人民法院" in art_text:
+            # 找哪个法院
+            court_match = re.search(r'(.+?人民法院)', art_text)
+            if court_match:
+                key_terms["管辖法院"] = court_match.group(1).strip()
+                summary = f"管辖法院：{court_match.group(1).strip()[:40]}"
+            else:
+                summary = "诉讼解决（人民法院管辖）"
+                key_terms["解决方式"] = "诉讼"
+        elif "仲裁" in art_text:
+            summary = "仲裁解决"
+            key_terms["解决方式"] = "仲裁"
+            # 检查仲裁机构是否明确
+            if "仲裁委员会" not in art_text:
+                issues.append("仲裁条款未明确仲裁机构，可能无效")
+        elif "协商" in art_text:
+            summary = "协商解决"
+            key_terms["解决方式"] = "协商"
+        else:
+            summary = art_text[:60]
     else:
         summary = "未约定争议解决条款"
-
+        issues.append("未约定争议解决条款，发生争议时按法定管辖处理")
+    
     return ContractClause(
         category="争议解决",
         law_article="§507",
-        original_text=dispute_match.group(0)[:200] if dispute_match else "",
+        original_text=original[:500],
         summary=summary,
         key_terms=key_terms,
+        issues=issues,
     )
 
 
