@@ -362,6 +362,8 @@ class AccountingEngine:
         total_credit = Decimal("0")
 
         for acc in self._accounts.values():
+            if acc.id == "SYS-OPENING-BALANCE":
+                continue
             bal = self.get_account_balance(acc.id, as_of_date)
 
             # 根据账户类型判断正常方向
