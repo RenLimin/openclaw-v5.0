@@ -293,6 +293,11 @@ def detect_signature_page_v2(image: Image.Image, page_num: int, output_dir: str,
                 if ink_ratio > 0.02:  # 有 >2% 墨迹，确认有效
                     sig_bbox = (sig_x1, sig_y1, sig_x2, sig_y2)
                     sig_is_precise = True  # OCR 锚定，范围精确
+                elif ink_ratio < 0.005:
+                    # 墨迹极低，可能是坐标偏移导致裁到空白区，输出告警
+                    import sys
+                    print(f"  ⚠️  [page {page_num}] {col_name} OCR锚定签名区墨迹极低 ({ink_ratio:.4f}), "
+                          f"可能坐标偏移，将回退到像素投影法", file=sys.stderr)
         
         # 4.3 回退：如果 OCR 锚点不全，用印章 + 像素投影法（旧逻辑）
         if sig_bbox is None and seal_bbox:
@@ -443,9 +448,14 @@ def detect_signature_page_v2(image: Image.Image, page_num: int, output_dir: str,
             col_path = os.path.join(output_dir, f"page_{page_num}_{col_name}_column.png")
             image.crop((col_left, col_top, col_right, col_bot)).save(col_path)
         
-        # 输出印章
+        # 输出印章（最小尺寸过滤，排除小红色噪点误检）
         if seal_bbox:
             sx1, sy1, sx2, sy2 = seal_bbox
+            seal_w = sx2 - sx1
+            seal_h = sy2 - sy1
+            # 最小印章尺寸：50px（300DPI下约 4mm），小于这个的视为误检
+            if seal_w < 50 or seal_h < 50:
+                continue
             pad = max(40, int((sx2 - sx1) * 0.4))
             seal_path = os.path.join(output_dir, f"page_{page_num}_seal_{col_name}.png")
             image.crop((
@@ -487,6 +497,29 @@ def detect_signature_page_v2(image: Image.Image, page_num: int, output_dir: str,
                 image_path=sig_path,
                 label=f"{col_name}签字"
             ))
+    
+    # ===== DEBUG: 可视化检测结果（红框印章+绿框签名+蓝框整列） =====
+    try:
+        from PIL import ImageDraw
+        debug_img = image.copy()
+        draw = ImageDraw.Draw(debug_img)
+        
+        # 印章：红框
+        for s in seals_out:
+            x1, y1, x2, y2 = s.bbox
+            draw.rectangle([x1, y1, x2, y2], outline="red", width=4)
+            draw.text((x1, max(0, y1-20)), f"seal: {s.label}", fill="red")
+        
+        # 签名：绿框
+        for s in sigs_out:
+            x1, y1, x2, y2 = s.bbox
+            draw.rectangle([x1, y1, x2, y2], outline="green", width=3)
+            draw.text((x1, max(0, y1-20)), f"sig: {s.label}", fill="green")
+        
+        debug_path = os.path.join(output_dir, f"page_{page_num}_debug.png")
+        debug_img.save(debug_path, quality=80)
+    except Exception:
+        pass  # debug 失败不影响主流程
     
     return seals_out, sigs_out
 
@@ -736,7 +769,7 @@ def detect_signatures(image: Image.Image, page_num: int, output_dir: str,
 # PDF 转图片
 # ============================================================
 
-def pdf_to_images(pdf_path: str, dpi: int = 600) -> List[Image.Image]:
+def pdf_to_images(pdf_path: str, dpi: int = 300) -> List[Image.Image]:
     """PDF 转高分辨率图片"""
     import subprocess
     import tempfile
@@ -967,7 +1000,7 @@ def digitalize_document_v5(
     pdf_path: str,
     output_path: Optional[str] = None,
     engine: str = "auto",
-    dpi: int = 600,
+    dpi: int = 300,
     extract_signatures: bool = True,
     signature_dir: Optional[str] = None
 ) -> OCRResultV5:
@@ -1039,7 +1072,7 @@ def digitalize_document_v5(
         all_signatures = []
         all_seals = []
         
-        # 用 v4 的 pdf_to_images 转图（sips方式，经过验证稳定）
+        # 用 v4 的 pdf_to_images 转图（PyMuPDF 渲染，DPI与像素严格对应）
         try:
             import sys
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1064,21 +1097,17 @@ def digitalize_document_v5(
                 is_scanned=True
             )
             
-            # 签名/印章检测（用高分辨率图片单独渲染，提高检测精度）
+            # 签名/印章检测（直接用 OCR 图，坐标系天然一致，ocr_scale=1.0）
             if extract_signatures:
                 try:
-                    import pymupdf
-                    doc = pymupdf.open(pdf_path)
-                    page = doc[i]
-                    mat = pymupdf.Matrix(3, 3)  # 216 DPI，足够检测印章
-                    pix = page.get_pixmap(matrix=mat, alpha=False)
-                    hi_img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    doc.close()
+                    # 直接用 OCR 图做检测，避免两套坐标系不一致的问题
+                    # v4_pdf_to_images 已改用 PyMuPDF，输出像素与 DPI 严格对应
+                    detect_img = img
                     
                     # 优先用 v2 签署页检测（印章+签名一体化，准确率更高）
-                    # 扫描件：OCR 图是 sips 转的(像素=72DPI尺寸)，hi_img 是 Matrix(3,3)=216DPI，scale = 3.0
-                    ocr_scale_scan = 3.0
-                    seals_v2, sigs_v2 = detect_signature_page_v2(hi_img, page_num, signature_dir, lines, ocr_scale_scan)
+                    # 同图检测，ocr_scale=1.0（坐标系统一）
+                    ocr_scale_scan = 1.0
+                    seals_v2, sigs_v2 = detect_signature_page_v2(detect_img, page_num, signature_dir, lines, ocr_scale_scan)
                     if seals_v2 or sigs_v2:
                         if seals_v2:
                             seals = seals_v2
@@ -1089,11 +1118,9 @@ def digitalize_document_v5(
                             page_result.signatures = sigs_v2
                     else:
                         # v2 没检测到，回退到老方法（只检测印章）
-                        seals = detect_red_seals(hi_img, page_num, signature_dir, lines)
+                        seals = detect_red_seals(detect_img, page_num, signature_dir, lines)
                         all_seals.extend(seals)
                         page_result.seals = seals
-                    
-                    del hi_img, pix
                 except Exception as e:
                     pass  # 静默失败
             
@@ -1176,7 +1203,7 @@ def main():
     parser.add_argument("input", help="输入 PDF 或图片路径")
     parser.add_argument("output", nargs="?", default="output.md", help="输出文件路径 (默认 output.md)")
     parser.add_argument("--engine", default="auto", choices=["rapidocr", "paddle", "auto"], help="OCR 引擎")
-    parser.add_argument("--dpi", type=int, default=600, help="渲染 DPI (默认 600)")
+    parser.add_argument("--dpi", type=int, default=300, help="渲染 DPI (默认 600)")
     parser.add_argument("--no-signatures", action="store_true", help="不提取签名/印章")
     parser.add_argument("--signature-dir", help="签名截图保存目录")
     parser.add_argument("--json", help="额外输出 OCR 检测结果 JSON 路径（供 Excel 报告使用）")
