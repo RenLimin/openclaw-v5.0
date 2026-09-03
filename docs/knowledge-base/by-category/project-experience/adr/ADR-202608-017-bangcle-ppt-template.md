@@ -4,7 +4,7 @@ title: 将 Bangcle 官方 PPT 模板注册为 L4 专有业务层组件
 status: accepted
 date: 2026-09-01
 deciders: Rex
-layer: L4
+layers: [L4]
 component_id: CPT-012
 component_name: Bangcle PPT 模板系统
 tags: [adr, design-system, ppt, bangcle-vi, L4]
