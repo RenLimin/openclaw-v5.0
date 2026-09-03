@@ -239,6 +239,18 @@ def main():
     print()
     print("=== 健康探测完成 ===")
 
+    # 检查是否有 model ID 不可用,有则非零退出触发 cron failure alert
+    unavailable_models = []
+    for pid, h in health.items():
+        for mid, mst in h.get("models", {}).items():
+            if mst["status"] == "unavailable":
+                unavailable_models.append(f"{pid}/{mid}")
+    if unavailable_models:
+        print(f"\n⚠️  {len(unavailable_models)} 个 model ID 不可用:")
+        for m in unavailable_models:
+            print(f"  - {m}")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
