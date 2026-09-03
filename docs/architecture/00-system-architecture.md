@@ -400,7 +400,7 @@ adapters/
     - ADR: ADR-014
     - 设计: `components/error-handling/DESIGN.md`
 
-11. **模型调度** (2026-08-24)
+11. **模型调度** (2026-08-24, 09-03 增强)
     - 组件 ID: `model-scheduling/`
     - 功能: 智能模型路由 — 按任务类型、用量、网络健康选择最优模型
     - 核心能力:
@@ -408,6 +408,7 @@ adapters/
       - 路由规则: `config/routing.yaml`(多级 fallback + token 压缩)
       - 用量追踪: `config/usage.json`(每周从 provider API 获取)
       - 健康探测: 每小时 ping provider,标记不可用
+      - **model ID 验证**: 每次 health_check 对每个配置的 model 发最小推理请求,检测 model ID 是否实际可用(2026-09-03 新增)
       - 任务分类: coding / reasoning / research / chat → 不同模型策略
     - 多级 fallback: L1 优先 → L2 降级 → L3 保底
     - Token 压缩: 参考 9router RTK,对超大工具输出截断(git diff > 200 行 → 100 行)

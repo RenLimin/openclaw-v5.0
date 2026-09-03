@@ -180,7 +180,46 @@ setup.sh → sync_models.py → 读取 openclaw.json → 生成 models.yaml
 - coding-plan /models 端点需要 Bearer token(已在 proxy.py 中实现)
 - Provider Plugin(TS)未实现(当前使用 provider baseUrl 方案,功能等价)
 
-## 12. 风险
+## 12. model ID 验证机制
+
+### 12.1 问题
+
+`/models` 端点返回 200 ≠ 配置的 model ID 可用。
+
+典型案例(2026-09-03):火山 Ark 平台侧模型 ID 更新,旧 ID 全部 404,
+health_check 的 `/models` 探测返回 healthy(因为端点在线),
+但实际推理全部失败,直到心跳报 error 才发现。
+
+### 12.2 设计
+
+在 `ping_provider()` 增加 **model ID 可用性验证**层:
+
+```
+原有: GET /models → 200 = healthy
+新增: POST /chat/completions (max_tokens=1) → 200 = available / 404 = unavailable
+```
+
+**关键规则**:
+- 跳过 embedding 模型(不支持 chat/completions,通过 name/id 关键词判定)
+- 最小消耗: max_tokens=1 的推理请求
+- 结果写入 `usage.json` 的 `health.models[model_id]` 字段
+- 验证失败标记 `unavailable`,包含 HTTP code + error body
+
+### 12.3 告警策略
+
+| 条件 | 动作 |
+|---|---|
+| 任一 model ID unavailable | health_check 输出 ❌ + 写 usage.json |
+| 主模型(all ms-* agent primary)不可用 | 下次 heartbeat 报告 Rex |
+| 全部 model ID 不可用 | 标记 provider error |
+
+### 12.4 限制
+
+- 最小推理请求仍有少量 token 消耗(max_tokens=1,可忽略)
+- 平台如做 model ID 别名兼容,可能被误判为可用
+- 不检测模型性能降级(只检测可用/不可用)
+
+## 13. 风险
 
 | 风险 | 防范 |
 |---|---|
@@ -189,3 +228,4 @@ setup.sh → sync_models.py → 读取 openclaw.json → 生成 models.yaml
 | provider API 不可用 | 用量获取失败不影响路由,使用缓存数据 |
 | token 压缩损失信息 | 仅截断超大输出,保留前 N 行 + 摘要提示 |
 | 代理服务故障 | OpenClaw 自动 fallback 到原生 provider |
+| model ID 静默过期 | model ID 验证层,每次 health_check 实测(§12) |
