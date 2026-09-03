@@ -597,10 +597,22 @@ def extract_contract_info(text: str) -> dict:
     if m:
         info["period"] = m.group(1).strip()
     
-    # 签署日期
-    m = re.search(r'签订日期[：:]\s*(.+?)(?:\n|$)', text)
-    if m:
-        info["sign_date"] = m.group(1).strip()
+    # 签署日期 — 多位置搜索，取最完整的（优先年月日齐全的）
+    sign_date_candidates = []
+    for kw in ["签订日期", "签署日期", "签约日期", "签订时间", "签署时间"]:
+        for m in re.finditer(rf'{kw}[：:]\s*(.+?)(?:\n|$)', text):
+            date_str = m.group(1).strip()
+            score = 0
+            if re.search(r'\d{4}\s*年', date_str): score += 3
+            if re.search(r'\d{1,2}\s*月', date_str): score += 2
+            if re.search(r'\d{1,2}\s*日', date_str): score += 2
+            if len(date_str) > 8: score += 1
+            sign_date_candidates.append((score, date_str))
+    if sign_date_candidates:
+        sign_date_candidates.sort(reverse=True)
+        info["sign_date"] = sign_date_candidates[0][1]
+    else:
+        info["sign_date"] = ""
     
     # 合同类型判断
     if any(k in text for k in ["技术服务", "技术开发", "技术咨询"]):

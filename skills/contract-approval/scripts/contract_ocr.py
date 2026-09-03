@@ -136,6 +136,7 @@ OCR_CORRECTIONS = [
     ('撞自', '擅自'),
     ('维续', '继续'),
     ('郴郴', '梆梆'),
+    ('郴安全', '梆梆安全'),
     ('帮梯', '梆梆'),
     ('帮梆', '梆梆'),
     ('科便限仁', '聚信得仁'),
@@ -242,25 +243,24 @@ def sort_text_lines(results) -> List[tuple]:
 # PDF 转图片
 # ============================================================
 
-def pdf_to_images(pdf_path: str, dpi: int = 600) -> List[tuple]:
-    reader = PdfReader(pdf_path)
+def pdf_to_images(pdf_path: str, dpi: int = 300) -> List[tuple]:
+    """PDF 转图像 — 用 PyMuPDF 渲染（像素尺寸与 DPI 严格对应）
+    
+    修复历史问题：旧版用 sips 转图，-s dpiHeight 只改元数据不改像素尺寸，
+    导致 OCR bbox 坐标与实际图像坐标比例不一致，签名/印章截图偏移。
+    """
+    import pymupdf
+    doc = pymupdf.open(pdf_path)
     images = []
-    tmp_dir = '/tmp/ocr_comp'
-    os.makedirs(tmp_dir, exist_ok=True)
-    for i in range(len(reader.pages)):
-        writer = PdfWriter()
-        writer.add_page(reader.pages[i])
-        sp = f'{tmp_dir}/p{i+1}.pdf'
-        with open(sp, 'wb') as f: writer.write(f)
-        ip = f'{tmp_dir}/p{i+1}.png'
-        r = subprocess.run(
-            ['sips', '-s', 'format', 'png', '-s', 'dpiHeight', str(dpi),
-             '-s', 'dpiWidth', str(dpi), sp, '--out', ip],
-            capture_output=True, text=True
-        )
-        if os.path.exists(ip):
-            images.append((i+1, Image.open(ip)))
-            os.remove(sp); os.remove(ip)
+    # PyMuPDF Matrix 系数 = DPI / 72（PDF 基准 72 DPI）
+    scale = dpi / 72.0
+    mat = pymupdf.Matrix(scale, scale)
+    for i in range(len(doc)):
+        page = doc[i]
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
+        images.append((i+1, img))
+    doc.close()
     return images
 
 # ============================================================
