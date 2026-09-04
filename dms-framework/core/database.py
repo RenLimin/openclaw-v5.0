@@ -116,6 +116,7 @@ class BaseModel:
     updated_at: str = ""
 
     __tablename__: ClassVar[str] = ""
+    search_fields: ClassVar[list[str]] = ["title", "name", "description"]
 
     # -- 生命周期钩子 ------------------------------------------------------
 
@@ -173,16 +174,89 @@ class BaseModel:
         return cls._row_to_instance(row) if row else None
 
     @classmethod
-    def list(cls, db: Database, **filters: Any) -> list["BaseModel"]:
+    def list(
+        cls,
+        db: Database,
+        *,
+        search: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
+        offset: int = 0,
+        limit: int | None = None,
+        **filters: Any,
+    ) -> list["BaseModel"]:
+        """查询列表，支持搜索、排序、分页。
+
+        Args:
+            db: 数据库实例
+            search: 对 search_fields 字段做 LIKE 模糊匹配
+            sort_by: 排序字段名
+            sort_order: 排序方向，"asc" 或 "desc"
+            offset: 跳过的记录数
+            limit: 返回的最大记录数
+            **filters: 精确过滤条件
+
+        Returns:
+            匹配的记录列表
+        """
         table = cls.__tablename__
         where = ["tenant_id = ?"]
         params: list[Any] = [db.get_current_tenant()]
+
+        # 精确过滤
         for k, v in filters.items():
             where.append(f"{k} = ?")
             params.append(v)
-        sql = f"SELECT * FROM {table} WHERE {' AND '.join(where)} ORDER BY created_at DESC"
+
+        # 模糊搜索
+        if search:
+            search_cols = [c for c in cls.search_fields if c in {f.name for f in fields(cls)}]
+            if search_cols:
+                like_conditions = [f"{c} LIKE ?" for c in search_cols]
+                where.append(f"({' OR '.join(like_conditions)})")
+                for _ in search_cols:
+                    params.append(f"%{search}%")
+
+        # 排序
+        valid_sort_fields = {f.name for f in fields(cls)}
+        if sort_by and sort_by in valid_sort_fields:
+            order = "DESC" if sort_order.lower() == "desc" else "ASC"
+            order_clause = f"ORDER BY {sort_by} {order}"
+        else:
+            order_clause = "ORDER BY created_at DESC"
+
+        sql = f"SELECT * FROM {table} WHERE {' AND '.join(where)} {order_clause}"
+
+        # 分页
+        if limit is not None:
+            sql += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+
         cursor = db.execute(sql, tuple(params))
         return [cls._row_to_instance(row) for row in cursor.fetchall()]
+
+    @classmethod
+    def count(cls, db: Database, *, search: str | None = None, **filters: Any) -> int:
+        """返回匹配条件的记录总数。"""
+        table = cls.__tablename__
+        where = ["tenant_id = ?"]
+        params: list[Any] = [db.get_current_tenant()]
+
+        for k, v in filters.items():
+            where.append(f"{k} = ?")
+            params.append(v)
+
+        if search:
+            search_cols = [c for c in cls.search_fields if c in {f.name for f in fields(cls)}]
+            if search_cols:
+                like_conditions = [f"{c} LIKE ?" for c in search_cols]
+                where.append(f"({' OR '.join(like_conditions)})")
+                for _ in search_cols:
+                    params.append(f"%{search}%")
+
+        sql = f"SELECT COUNT(*) FROM {table} WHERE {' AND '.join(where)}"
+        cursor = db.execute(sql, tuple(params))
+        return int(cursor.fetchone()[0])
 
     # -- 内部方法 ----------------------------------------------------------
 
@@ -234,8 +308,25 @@ class Repository(Generic[T]):
         entity.delete(self._db)
         return True
 
-    def list(self, **filters: Any) -> list[T]:
-        return self._model.list(self._db, **filters)
+    def list(
+        self,
+        *,
+        search: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
+        offset: int = 0,
+        limit: int | None = None,
+        **filters: Any,
+    ) -> list[T]:
+        return self._model.list(
+            self._db,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            offset=offset,
+            limit=limit,
+            **filters,
+        )
 
     def get_by_id_ignore_tenant(self, id: str) -> Optional[T]:
         """按 ID 查询，忽略 tenant 隔离（用于管理视图）。"""
@@ -244,15 +335,8 @@ class Repository(Generic[T]):
         row = cursor.fetchone()
         return self._model._row_to_instance(row) if row else None  # type: ignore[return-value]
 
-    def count(self, **filters: Any) -> int:
-        where = ["tenant_id = ?"]
-        params: list[Any] = [self._db.get_current_tenant()]
-        for k, v in filters.items():
-            where.append(f"{k} = ?")
-            params.append(v)
-        sql = f"SELECT COUNT(*) FROM {self._table} WHERE {' AND '.join(where)}"
-        cursor = self._db.execute(sql, tuple(params))
-        return int(cursor.fetchone()[0])
+    def count(self, *, search: str | None = None, **filters: Any) -> int:
+        return self._model.count(self._db, search=search, **filters)
 
 
 # ---------------------------------------------------------------------------

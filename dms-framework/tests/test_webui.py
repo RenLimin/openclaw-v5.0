@@ -38,8 +38,8 @@ class TestWebUI(unittest.TestCase):
         cls.app = create_app(cls.registry, cls.db, {})
         cls.client = TestClient(cls.app)
 
-        cls.user_id = _user_store.create_user("webui", "pass", tenant_id="test-tenant")
-        cls.token = create_access_token(cls.user_id, "test-tenant")
+        cls.user_id = _user_store.create_user("webui", "pass", tenant_id="test-tenant", roles=["admin"])
+        cls.token = create_access_token(cls.user_id, "test-tenant", roles=["admin"])
         cls.headers = {"Authorization": f"Bearer {cls.token}"}
 
     @classmethod
