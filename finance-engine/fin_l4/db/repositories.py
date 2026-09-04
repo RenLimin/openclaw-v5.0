@@ -314,28 +314,51 @@ class LoanRepository(BaseRepository):
         ).fetchone()
         return self._row_to_dict(row)
 
+    def update_principal(self, loan_id: str, new_principal: str):
+        self.conn.execute(
+            f"UPDATE {self.table} SET principal = ? WHERE id = ?",
+            (new_principal, loan_id)
+        )
+        self.conn.commit()
+
+    def update_status(self, loan_id: str, status: str):
+        self.conn.execute(
+            f"UPDATE {self.table} SET status = ? WHERE id = ?",
+            (status, loan_id)
+        )
+        self.conn.commit()
+
 
 class InsuranceRepository(BaseRepository):
     def __init__(self, conn):
         super().__init__(conn, "fin4_insurance_policies")
 
+    def update_status(self, policy_id: str, status: str):
+        self.conn.execute(
+            f"UPDATE {self.table} SET status = ? WHERE id = ?",
+            (status, policy_id)
+        )
+        self.conn.commit()
+
     def create(self, family_id: str, product_name: str, policy_type: str,
                sum_assured: str, annual_premium: str, term_years: int,
                payment_years: int, insured_name: str = None,
                insured_age: int = None, insured_gender: str = None,
-               extra_terms: dict = None) -> str:
+               start_date: str = None, extra_terms: dict = None) -> str:
         uid = _uid()
         self.conn.execute(
             f"INSERT INTO {self.table} (id, family_id, product_name, policy_type, "
             f"sum_assured, annual_premium, term_years, payment_years, "
-            f"insured_name, insured_age, insured_gender, extra_terms) "
-            f"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (uid, family_id, product_name, policy_type, sum_assured, annual_premium,
-             term_years, payment_years, insured_name, insured_age, insured_gender,
+            f"insured_name, insured_age, insured_gender, start_date, extra_terms) "
+            f"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (uid, family_id, product_name, policy_type, sum_assured,
+             annual_premium, term_years, payment_years,
+             insured_name, insured_age, insured_gender, start_date,
              json.dumps(extra_terms) if extra_terms else None)
         )
         self.conn.commit()
         return uid
+
 
     def list_by_family(self, family_id: str) -> List[Dict]:
         rows = self.conn.execute(

@@ -122,6 +122,182 @@ async def import_page(request: Request):
 
 app.include_router(router)
 
+
+# ========== M3 贷款详情 ==========
+
+@app.get("/loans", response_class=HTMLResponse)
+async def loans_page(request: Request):
+    """贷款列表页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.loan_svc import LoanService
+    conn = get_db()
+    svc = LoanService(conn)
+    loans = svc.list_loans("default")
+    return templates.TemplateResponse("loans.html", {
+        "request": request, "active_page": "loans", "loans": loans,
+    })
+
+
+@app.get("/loans/{loan_id}", response_class=HTMLResponse)
+async def loan_detail_page(request: Request, loan_id: str):
+    """贷款详情页"""
+    from datetime import date
+    from fin_l4.db import get_db
+    from fin_l4.services.loan_svc import LoanService
+    conn = get_db()
+    svc = LoanService(conn)
+    loan = svc.repo.get(loan_id)
+    schedule = svc.get_schedule(loan_id)
+    summary = svc.get_summary(loan_id)
+    return templates.TemplateResponse("loan_detail.html", {
+        "request": request, "active_page": "loans",
+        "loan": loan, "schedule": schedule, "summary": summary,
+        "today": str(date.today()), "prepay_result": None,
+    })
+
+
+@app.post("/loans/{loan_id}/prepay")
+async def loan_prepay(request: Request, loan_id: str):
+    """提前还款"""
+    from datetime import date
+    from fin_l4.db import get_db
+    from fin_l4.services.loan_svc import LoanService
+    form = await request.form()
+    amount = form.get("amount", "0")
+    conn = get_db()
+    svc = LoanService(conn)
+    result = svc.execute_prepay(loan_id, amount)
+    loan = svc.repo.get(loan_id)
+    schedule = svc.get_schedule(loan_id)
+    summary = svc.get_summary(loan_id)
+    return templates.TemplateResponse("loan_detail.html", {
+        "request": request, "active_page": "loans",
+        "loan": loan, "schedule": schedule, "summary": summary,
+        "today": str(date.today()), "prepay_result": result,
+    })
+
+
+@app.post("/loans/{loan_id}/close")
+async def loan_close(request: Request, loan_id: str):
+    """结清贷款"""
+    from fin_l4.db import get_db
+    from fin_l4.services.loan_svc import LoanService
+    conn = get_db()
+    svc = LoanService(conn)
+    svc.close_loan(loan_id)
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/loans", status_code=303)
+
+
+# ========== M3 保险详情 ==========
+
+@app.get("/insurance", response_class=HTMLResponse)
+async def insurance_page(request: Request):
+    """保险列表页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    policies = svc.list_policies("default")
+    return templates.TemplateResponse("insurance.html", {
+        "request": request, "active_page": "insurance", "policies": policies,
+    })
+
+
+@app.get("/insurance/{policy_id}", response_class=HTMLResponse)
+async def insurance_detail_page(request: Request, policy_id: str):
+    """保单详情页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    policy = svc.get_policy_detail(policy_id)
+    gaps = svc.get_coverage_gap("default")
+    return templates.TemplateResponse("insurance_detail.html", {
+        "request": request, "active_page": "insurance",
+        "policy": policy, "cash_value_table": policy.get("cash_value_table", []),
+        "coverage_gap": None, "surrender_value": None,
+    })
+
+
+@app.post("/insurance/{policy_id}/surrender")
+async def insurance_surrender(request: Request, policy_id: str):
+    """退保"""
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    result = svc.surrender_policy(policy_id)
+    policy = svc.get_policy_detail(policy_id)
+    return templates.TemplateResponse("insurance_detail.html", {
+        "request": request, "active_page": "insurance",
+        "policy": policy, "cash_value_table": policy.get("cash_value_table", []),
+        "coverage_gap": None, "surrender_value": result["cash_value"],
+    })
+
+
+@app.get("/insurance/coverage-gap", response_class=HTMLResponse)
+async def coverage_gap_page(request: Request):
+    """保障缺口分析页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    gaps = svc.get_coverage_gap("default")
+    total_current = sum(float(g["current"]) for g in gaps)
+    total_recommended = sum(float(g["recommended"]) for g in gaps)
+    total_gap = sum(float(g["gap"]) for g in gaps)
+    return templates.TemplateResponse("coverage_gap.html", {
+        "request": request, "active_page": "insurance",
+        "gaps": gaps,
+        "total_current": f"{total_current:,.2f}",
+        "total_recommended": f"{total_recommended:,.2f}",
+        "total_gap": f"{total_gap:,.2f}",
+    })
+
+
+# ========== M3 投资详情 ==========
+
+@app.get("/portfolio", response_class=HTMLResponse)
+async def portfolio_page(request: Request):
+    """投资列表页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.portfolio_svc import PortfolioService
+    conn = get_db()
+    svc = PortfolioService(conn)
+    portfolios = svc.list_portfolios("default")
+    return templates.TemplateResponse("portfolio.html", {
+        "request": request, "active_page": "portfolio", "portfolios": portfolios,
+    })
+
+
+@app.get("/portfolio/{portfolio_id}", response_class=HTMLResponse)
+async def portfolio_detail_page(request: Request, portfolio_id: str):
+    """组合详情页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.portfolio_svc import PortfolioService
+    conn = get_db()
+    svc = PortfolioService(conn)
+    performance = svc.get_performance(portfolio_id)
+    allocation = svc.get_allocation(portfolio_id)
+    rebalance = svc.get_rebalance(portfolio_id)
+    holdings = svc.get_holdings(portfolio_id)
+
+    # 计算持仓盈亏
+    for h in holdings:
+        gain = (float(h.get("current_price", 0) or 0) - float(h.get("cost_basis_price", 0) or 0)) * float(h.get("shares", 0) or 0)
+        h["gain"] = f"{gain:,.2f}"
+
+    return templates.TemplateResponse("portfolio_detail.html", {
+        "request": request, "active_page": "portfolio",
+        "portfolio": {"id": portfolio_id, "name": ""},
+        "performance": performance,
+        "allocation": allocation.get("allocation", []),
+        "rebalance": rebalance.get("suggestions", []),
+        "holdings": holdings,
+    })
+
+
 @app.get("/health")
 async def health():
     """健康检查"""
