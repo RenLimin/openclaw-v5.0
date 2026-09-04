@@ -138,5 +138,5 @@ models:
     reasoning: false
     cost_input: 0
     cost_output: 0
-    status: "active"
+    status: "disabled"
     tags: []
