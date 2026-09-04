@@ -1,12 +1,32 @@
 {% extends "base.html" %}
-{{% block title %}设置 - FIN-L4{% endblock %}
-% block content %
-<h1 style="margin-bottom: 1.5rem;">设置</h1>
-<div class="card">
-    <div class="card-title">功能开发中</div>
-    <p style="color: var(--text-muted);">设置 模块正在建设中，敬请期待。</p>
-    <p style="margin-top: 1rem;">
-        <a href="/" class="btn btn-primary">返回仪表盘</a>
-    </p>
+{% block title %}系统设置 - FIN-L4{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>系统设置</h1>
+    <p>基础配置和导出功能</p>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title">数据库导出</div>
+        <p class="text-muted">
+            导出 SQLite 数据库文件到本地。所有数据都在本地，隐私安全。
+        </p>
+        <div style="margin-top: 1rem;">
+            <a href="/api/settings/export-db" class="btn btn-primary">导出数据库</a>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">关于 FIN-L4</div>
+        <p class="text-muted">
+            FIN-L4 是本地优先的个人及家庭理财管理系统，<br>
+            完全离线运行，数据全存储在你的电脑上。
+        </p>
+        <ul style="margin-top: 1rem; padding-left: 1.5rem;">
+            <li style="margin-bottom: 0.5rem;">版本: 0.1.0</li>
+            <li style="margin-bottom: 0.5rem;">架构: 分层 L0-L4</li>
+            <li>本地存储: SQLite</li>
+        </ul>
+    </div>
 </div>
 {% endblock %}

@@ -1,12 +1,38 @@
 {% extends "base.html" %}
-{{% block title %}记账 - FIN-L4{% endblock %}
-% block content %
-<h1 style="margin-bottom: 1.5rem;">记账</h1>
+{% block title %}记账 - FIN-L4{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>最近交易</h1>
+    <p>查看所有最近记录的交易</p>
+</div>
+
 <div class="card">
-    <div class="card-title">功能开发中</div>
-    <p style="color: var(--text-muted);">记账 模块正在建设中，敬请期待。</p>
-    <p style="margin-top: 1rem;">
-        <a href="/" class="btn btn-primary">返回仪表盘</a>
-    </p>
+    <div class="card-title">最新 20 笔交易</div>
+    {% if transactions %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>日期</th>
+                <th>摘要</th>
+                <th>分类</th>
+                <th class="num">金额</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for txn in transactions %}
+            <tr>
+                <td>{{ txn.date }}</td>
+                <td>{{ txn.note }}</td>
+                <td>{{ txn.category }}</td>
+                <td class="num {% if txn.amount > 0 %}text-success{% else %}text-danger{% endif %}">
+                    {{ "+" if txn.amount > 0 else "" }}¥{{ txn.amount }}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">暂无交易记录</p>
+    {% endif %}
 </div>
 {% endblock %}

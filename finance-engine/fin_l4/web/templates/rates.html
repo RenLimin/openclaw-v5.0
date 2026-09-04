@@ -1,12 +1,63 @@
 {% extends "base.html" %}
-{{% block title %}利率管理 - FIN-L4{% endblock %}
-% block content %
-<h1 style="margin-bottom: 1.5rem;">利率管理</h1>
+{% block title %}利率管理 - FIN-L4{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>LPR 利率记录</h1>
+    <p>查询最新存贷款基准利率</p>
+</div>
+
 <div class="card">
-    <div class="card-title">功能开发中</div>
-    <p style="color: var(--text-muted);">利率管理 模块正在建设中，敬请期待。</p>
-    <p style="margin-top: 1rem;">
-        <a href="/" class="btn btn-primary">返回仪表盘</a>
-    </p>
+    <div class="card-title">最新贷款利率</div>
+    {% if loan_rates %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>期限</th>
+                <th class="num">利率(%)</th>
+                <th>日期</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for rate in loan_rates %}
+            <tr>
+                <td>{{ rate.term }}</td>
+                <td class="num">{{ rate.rate }}</td>
+                <td>{{ rate.date }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">暂无利率数据，请点击同步按钮同步最新利率</p>
+    {% endif %}
+    <div style="margin-top: 1rem;">
+        <a href="/rates/sync" class="btn btn-primary">同步最新利率</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title">最新存款利率</div>
+    {% if deposit_rates %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>期限</th>
+                <th class="num">利率(%)</th>
+                <th>日期</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for rate in deposit_rates %}
+            <tr>
+                <td>{{ rate.term }}</td>
+                <td class="num">{{ rate.rate }}</td>
+                <td>{{ rate.date }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">暂无存款利率数据</p>
+    {% endif %}
 </div>
 {% endblock %}
