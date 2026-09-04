@@ -2,37 +2,31 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "coding-plan/ark-code-latest",
+        "primary": "coding-plan/doubao-seed-2-1-turbo",
         "fallbacks": [
-          "coding-plan/deepseek-v4-flash",
-          "coding-plan/doubao-seed-2.0-lite"
+          "coding-plan/doubao-seed-code-preview-251028",
+          "coding-plan/doubao-seed-2-0-lite-260215"
         ]
       },
       "models": {
-        "coding-plan/ark-code-latest": {},
-        "coding-plan/deepseek-v4-flash": {},
-        "coding-plan/deepseek-v4-pro": {},
         "coding-plan/doubao-seed-2-1-turbo": {},
-        "coding-plan/doubao-seed-2.0-lite": {},
-        "coding-plan/glm-5.2": {},
-        "coding-plan/glm-5.3": {},
-        "coding-plan/kimi-k2.7-code": {},
-        "coding-plan/minimax-m3": {}
+        "coding-plan/doubao-seed-2-0-lite-260215": {},
+        "coding-plan/doubao-seed-code-preview-251028": {}
       },
       "workspace": "/Users/bangcle/.openclaw/workspace",
       "compaction": {
         "memoryFlush": {
-          "model": "coding-plan/deepseek-v4-flash"
+          "model": "coding-plan/doubao-seed-2-1-turbo"
         },
         "notifyUser": true,
         "enabled": true,
         "keepRecentTokens": 30000,
-        "maxActiveTranscriptBytes": "20mb",
+        "maxActiveTranscriptBytes": "400kb",
         "midTurnPrecheck": {
           "enabled": true
         },
         "mode": "safeguard",
-        "model": "coding-plan/deepseek-v4-flash"
+        "model": "longcat/LongCat-2.0"
       },
       "contextPruning": {
         "mode": "cache-ttl",
@@ -62,20 +56,20 @@
       },
       "systemAgent": {
         "agentId": "<REDACTED>"
-      }
+      },
+      "bootstrapMaxChars": 8000
     },
+    "ownership": "explicit",
     "entries": {
       "main": {
-        "default": true,
         "name": "main",
         "workspace": "/Users/bangcle/.openclaw/workspace",
         "agentDir": "/Users/bangcle/.openclaw/agents/main/agent",
         "model": {
-          "primary": "longcat/LongCat-2.0",
+          "primary": "model-scheduling/auto",
           "fallbacks": [
-            "coding-plan/ark-code-latest",
-            "coding-plan/deepseek-v4-flash",
-            "coding-plan/doubao-seed-2.0-lite"
+            "coding-plan/doubao-seed-2-1-turbo",
+            "coding-plan/doubao-seed-code-preview-251028"
           ]
         },
         "heartbeat": {
@@ -90,10 +84,10 @@
         "name": "ms-coding",
         "workspace": "/Users/bangcle/.openclaw/workspace",
         "model": {
-          "primary": "coding-plan/ark-code-latest",
+          "primary": "coding-plan/doubao-seed-code-preview-251028",
           "fallbacks": [
-            "coding-plan/deepseek-v4-flash",
-            "coding-plan/doubao-seed-2.0-lite"
+            "coding-plan/doubao-seed-2-1-turbo",
+            "coding-plan/doubao-seed-2-0-lite-260215"
           ]
         },
         "heartbeat": {
@@ -107,10 +101,9 @@
         "name": "ms-research",
         "workspace": "/Users/bangcle/.openclaw/workspace",
         "model": {
-          "primary": "coding-plan/doubao-seed-2.1-turbo",
+          "primary": "coding-plan/doubao-seed-2-1-turbo",
           "fallbacks": [
-            "coding-plan/ark-code-latest",
-            "coding-plan/doubao-seed-2.0-lite"
+            "coding-plan/doubao-seed-2-0-lite-260215"
           ]
         },
         "heartbeat": {
@@ -118,39 +111,6 @@
         },
         "identity": {
           "name": "ms-research"
-        }
-      },
-      "ms-reasoning": {
-        "name": "ms-reasoning",
-        "workspace": "/Users/bangcle/.openclaw/workspace",
-        "model": {
-          "primary": "coding-plan/deepseek-v4-flash",
-          "fallbacks": [
-            "coding-plan/glm-5.3",
-            "coding-plan/ark-code-latest"
-          ]
-        },
-        "heartbeat": {
-          "every": "0m"
-        },
-        "identity": {
-          "name": "ms-reasoning"
-        }
-      },
-      "ms-chat": {
-        "name": "ms-chat",
-        "workspace": "/Users/bangcle/.openclaw/workspace",
-        "model": {
-          "primary": "coding-plan/doubao-seed-2.0-lite",
-          "fallbacks": [
-            "coding-plan/ark-code-latest"
-          ]
-        },
-        "heartbeat": {
-          "every": "0m"
-        },
-        "identity": {
-          "name": "ms-chat"
         }
       }
     }
@@ -168,8 +128,7 @@
     "mode": "local",
     "port": 18789,
     "tailscale": {
-      "mode": "off",
-      "resetOnExit": false
+      "mode": "off"
     }
   },
   "hooks": {
@@ -182,7 +141,7 @@
     }
   },
   "meta": {
-    "lastTouchedVersion": "2026.7.2-beta.7",
+    "lastTouchedVersion": "2026.8.1",
     "migrations": {
       "modelPolicyAllowlist": true
     }
@@ -191,30 +150,9 @@
     "providers": {
       "coding-plan": {
         "api": "openai-completions",
-        "apiKey": {
-          "source": "file",
-          "provider": "codingplankey",
-          "id": "value"
-        },
+        "apiKey": "<REDACTED>",
         "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
         "models": [
-          {
-            "id": "ark-code-latest",
-            "name": "ark-code-latest",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "cost": {
-              "input": 0,
-              "output": 0,
-              "cacheRead": 0,
-              "cacheWrite": 0
-            },
-            "contextWindow": 229376,
-            "maxTokens": 8192,
-            "api": "openai-completions"
-          },
           {
             "id": "doubao-seed-2-1-turbo",
             "name": "doubao-seed-2-1-turbo",
@@ -235,13 +173,12 @@
             "api": "openai-completions"
           },
           {
-            "id": "doubao-seed-2.0-lite",
-            "name": "doubao-seed-2.0-lite",
+            "id": "doubao-seed-2-0-lite-260215",
+            "name": "doubao-seed-2-0-lite",
             "input": [
               "text",
               "image",
-              "video",
-              "audio"
+              "video"
             ],
             "contextWindow": 262144,
             "maxTokens": 131072,
@@ -255,98 +192,13 @@
             "api": "openai-completions"
           },
           {
-            "id": "glm-5.3",
-            "name": "glm-5.3",
-            "reasoning": false,
+            "id": "doubao-seed-code-preview-251028",
+            "name": "doubao-seed-code",
             "input": [
               "text"
             ],
-            "cost": {
-              "input": 0,
-              "output": 0,
-              "cacheRead": 0,
-              "cacheWrite": 0
-            },
-            "contextWindow": 1048576,
-            "maxTokens": 131072,
-            "api": "openai-completions"
-          },
-          {
-            "id": "deepseek-v4-flash",
-            "name": "deepseek-v4-flash",
-            "input": [
-              "text"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 393216,
-            "reasoning": false,
-            "cost": {
-              "input": 0,
-              "output": 0,
-              "cacheRead": 0,
-              "cacheWrite": 0
-            },
-            "api": "openai-completions"
-          },
-          {
-            "id": "glm-5.2",
-            "name": "glm-5.2",
-            "input": [
-              "text"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 131072,
-            "reasoning": false,
-            "cost": {
-              "input": 0,
-              "output": 0,
-              "cacheRead": 0,
-              "cacheWrite": 0
-            },
-            "api": "openai-completions"
-          },
-          {
-            "id": "kimi-k2.7-code",
-            "name": "kimi-k2.7-code",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "cost": {
-              "input": 0,
-              "output": 0,
-              "cacheRead": 0,
-              "cacheWrite": 0
-            },
             "contextWindow": 262144,
-            "maxTokens": 262144,
-            "api": "openai-completions"
-          },
-          {
-            "id": "minimax-m3",
-            "name": "minimax-m3",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "cost": {
-              "input": 0,
-              "output": 0,
-              "cacheRead": 0,
-              "cacheWrite": 0
-            },
-            "contextWindow": 1048576,
             "maxTokens": 131072,
-            "api": "openai-completions"
-          },
-          {
-            "id": "deepseek-v4-pro",
-            "name": "deepseek-v4-pro",
-            "input": [
-              "text"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 393216,
             "reasoning": false,
             "cost": {
               "input": 0,
@@ -468,7 +320,8 @@
     "profile": "coding",
     "alsoAllow": [
       "tavily_search",
-      "tavily_extract"
+      "tavily_extract",
+      "wecom_mcp"
     ],
     "sandbox": {
       "tools": {
@@ -486,10 +339,10 @@
     }
   },
   "wizard": {
-    "lastRunAt": "2026-08-26T06:50:28.512Z",
+    "lastRunAt": "2026-09-01T13:26:26.724Z",
     "lastRunCommand": "doctor",
     "lastRunMode": "local",
-    "lastRunVersion": "2026.7.2-beta.7"
+    "lastRunVersion": "2026.8.1"
   },
   "plugins": {
     "entries": {
@@ -565,9 +418,13 @@
   },
   "memory": {
     "search": {
-      "provider": "local",
+      "provider": "openai-compatible",
+      "model": "doubao-embedding-vision-251215",
       "fallback": "none",
-      "local": {},
+      "remote": {
+        "baseUrl": "http://127.0.0.1:3000/v1",
+        "apiKey": "<REDACTED>"
+      },
       "rememberAcrossConversations": false
     }
   },
