@@ -352,3 +352,71 @@ def list_integrations():
     conn = get_db()
     repo = IntegrationRepository(conn)
     return repo.list_by_family("default")
+
+
+# ========== 预算 ==========
+
+class SetBudgetRequest(BaseModel):
+    category_id: str
+    month: str  # "2026-09"
+    amount: str
+
+
+@router.post("/budgets")
+def set_budget(req: SetBudgetRequest):
+    from fin_l4.db import get_db
+    from fin_l4.services.budget_svc import BudgetService
+    conn = get_db()
+    svc = BudgetService(conn)
+    return svc.set_budget("default", req.category_id, req.month, req.amount)
+
+
+@router.get("/budgets")
+def list_budgets(month: str = None):
+    from datetime import date
+    from fin_l4.db import get_db
+    from fin_l4.services.budget_svc import BudgetService
+    if month is None:
+        month = date.today().strftime("%Y-%m")
+    conn = get_db()
+    svc = BudgetService(conn)
+    return svc.list_budgets("default", month)
+
+
+@router.get("/budgets/status")
+def budget_status(month: str = None):
+    from datetime import date
+    from fin_l4.db import get_db
+    from fin_l4.services.budget_svc import BudgetService
+    if month is None:
+        month = date.today().strftime("%Y-%m")
+    conn = get_db()
+    svc = BudgetService(conn)
+    return svc.get_overview("default", month)
+
+
+# ========== 导入 ==========
+
+class ImportRuleRequest(BaseModel):
+    pattern: str  # 逗号分隔关键词
+    category_id: str
+    priority: int = 0
+
+
+@router.post("/import/rules")
+def add_import_rule(req: ImportRuleRequest):
+    from fin_l4.db import get_db
+    from fin_l4.services.import_svc import ImportService
+    conn = get_db()
+    svc = ImportService(conn)
+    rule_id = svc.add_rule("default", req.pattern, req.category_id, req.priority)
+    return {"id": rule_id}
+
+
+@router.get("/import/rules")
+def list_import_rules():
+    from fin_l4.db import get_db
+    from fin_l4.services.import_svc import ImportService
+    conn = get_db()
+    svc = ImportService(conn)
+    return svc.list_rules("default")

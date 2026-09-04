@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}CSV 导入 — FIN-L4{% endblock %}
+{% block content %}
+<h1>📥 CSV 导入</h1>
+
+<div class="card">
+    <h2>上传文件</h2>
+    <form id="import-form" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>CSV 文件</label>
+            <input type="file" name="file" accept=".csv" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>日期列名</label>
+                <input type="text" name="date_col" value="date">
+            </div>
+            <div class="form-group">
+                <label>金额列名</label>
+                <input type="text" name="amount_col" value="amount">
+            </div>
+            <div class="form-group">
+                <label>描述列名</label>
+                <input type="text" name="desc_col" value="description">
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="previewCSV()">预览</button>
+        <button type="button" class="btn btn-primary" onclick="doImport()">导入</button>
+    </form>
+</div>
+
+<div id="preview-section" class="card" style="display:none;">
+    <h2>预览结果</h2>
+    <table id="preview-table">
+        <thead>
+            <tr>
+                <th>行</th>
+                <th>日期</th>
+                <th>金额</th>
+                <th>描述</th>
+                <th>建议分类</th>
+                <th>类型</th>
+            </tr>
+        </thead>
+        <tbody id="preview-body"></tbody>
+    </table>
+</div>
+
+<script>
+function previewCSV() {
+    const form = document.getElementById('import-form');
+    const formData = new FormData(form);
+    formData.set('action', 'preview');
+    fetch('/api/v1/import/preview', {method: 'POST', body: formData})
+        .then(r => r.json())
+        .then(data => {
+            const tbody = document.getElementById('preview-body');
+            tbody.innerHTML = '';
+            data.previews.forEach(p => {
+                tbody.innerHTML += `<tr>
+                    <td>${p.row}</td><td>${p.date}</td><td>${p.amount}</td>
+                    <td>${p.description}</td><td>${p.category_name}</td>
+                    <td>${p.type}</td>
+                </tr>`;
+            });
+            document.getElementById('preview-section').style.display = 'block';
+        });
+}
+
+function doImport() {
+    const form = document.getElementById('import-form');
+    const formData = new FormData(form);
+    formData.set('action', 'import');
+    fetch('/api/v1/import/do', {method: 'POST', body: formData})
+        .then(r => r.json())
+        .then(data => {
+            alert(`导入完成: ${data.imported} 条, 自动分类 ${data.auto_categorized} 条, 错误 ${data.errors.length} 条`);
+            if (data.errors.length > 0) {
+                console.error(data.errors);
+            }
+        });
+}
+</script>
+{% endblock %}
