@@ -296,7 +296,7 @@ class LoanRepository(BaseRepository):
             f"INSERT INTO {self.table} (id, family_id, name, principal, annual_rate, "
             f"term_months, method, start_date, extra_terms) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (uid, family_id, name, principal, annual_rate, term_months,
-             method, start_date, json.dumps(extra_terms) if extra_terms else None)
+             method, start_date, extra_terms if isinstance(extra_terms, str) else (json.dumps(extra_terms) if extra_terms else None))
         )
         self.conn.commit()
         return uid
@@ -354,7 +354,7 @@ class InsuranceRepository(BaseRepository):
             (uid, family_id, product_name, policy_type, sum_assured,
              annual_premium, term_years, payment_years,
              insured_name, insured_age, insured_gender, start_date,
-             json.dumps(extra_terms) if extra_terms else None)
+             extra_terms if isinstance(extra_terms, str) else (json.dumps(extra_terms) if extra_terms else None))
         )
         self.conn.commit()
         return uid

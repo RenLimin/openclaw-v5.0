@@ -91,12 +91,12 @@ def load_opening_balances(txn_svc, accts):
     for code in ["1001", "1002", "1003", "1004", "1005", "1006", "1007"]:
         if balances.get(code) and Decimal(balances[code]) > 0:
             txn_svc.record(FAMILY_ID, opening_date, balances[code],
-                           f"期初余额-{code}", accts[code], accts["3001"])
+                           accts[code], accts["3001"], f"期初余额-{code}")
     # 负债类：贷方增加（用负数借方表示）
     for code in ["2001", "2002", "2003"]:
         if balances.get(code) and Decimal(balances[code]) > 0:
             txn_svc.record(FAMILY_ID, opening_date, balances[code],
-                           f"期初余额-{code}", accts["3001"], accts[code])
+                           accts["3001"], accts[code], f"期初余额-{code}")
 
 
 def load_recent_transactions(txn_svc, accts):
@@ -118,7 +118,7 @@ def load_recent_transactions(txn_svc, accts):
         (today - timedelta(days=25), "3000", "房贷还款", "2003", "1002"),
     ]
     for d, amt, note, debit, credit in transactions:
-        txn_svc.record(FAMILY_ID, str(d), amt, note, accts[debit], accts[credit])
+        txn_svc.record(FAMILY_ID, str(d), amt, accts[debit], accts[credit], note)
 
 
 def load_loans(svc, accts):
@@ -137,41 +137,65 @@ def load_insurance(svc, accts):
     policy1 = svc.add_policy(FAMILY_ID, "重疾险-Rex", "critical_illness",
                                 "500000", "20000", 40, 20,
                                 insured_name="Rex", insured_age=30, insured_gender="M",
-                                start_date="2026-01-01")
+                                start_date="2026-01-01",
+                                extra_terms={"policy_number": "P001"})
     policy2 = svc.add_policy(FAMILY_ID, "定期寿险-Rex", "term_life",
                                 "1000000", "3000", 30, 20,
                                 insured_name="Rex", insured_age=30, insured_gender="M",
-                                start_date="2026-01-01")
+                                start_date="2026-01-01",
+                                extra_terms={"policy_number": "P002"})
     return policy1, policy2
 
 
 def load_portfolio(svc, accts):
     """创建投资组合"""
-    portfolio = svc.create_portfolio(FAMILY_ID, "主投资组合", "mixed")
+    portfolio = svc.create_portfolio(FAMILY_ID, "主投资组合")
     return portfolio
 
 
-def load_budgets(svc, accts):
+def load_categories(conn):
+    """创建分类体系"""
+    from fin_l4.db.repositories import CategoryRepository
+    cat_repo = CategoryRepository(conn)
+    categories = [
+        ("餐饮", "expense"),
+        ("交通", "expense"),
+        ("住房", "expense"),
+        ("保险", "expense"),
+        ("购物", "expense"),
+        ("医疗", "expense"),
+        ("教育", "expense"),
+        ("工资", "income"),
+        ("投资", "income"),
+    ]
+    created = {}
+    for name, cat_type in categories:
+        cid = cat_repo.create(FAMILY_ID, name, cat_type)
+        created[name] = cid
+    return created
+
+
+def load_budgets(svc, cats):
     """设置月度预算"""
     budgets = [
-        ("5001", "3000"),   # 餐饮
-        ("5002", "1500"),   # 交通
-        ("5003", "5000"),   # 住房
-        ("5004", "2000"),   # 保险
-        ("5006", "2000"),   # 购物
-        ("5005", "1000"),   # 医疗
-        ("5007", "1500"),   # 教育
+        ("餐饮", "3000"),
+        ("交通", "1500"),
+        ("住房", "5000"),
+        ("保险", "2000"),
+        ("购物", "2000"),
+        ("医疗", "1000"),
+        ("教育", "1500"),
     ]
     today = date.today()
     month = today.strftime("%Y-%m")
-    for cat_code, amount in budgets:
-        svc.set_budget(FAMILY_ID, accts[cat_code], "monthly", amount, month, month)
+    for cat_name, amount in budgets:
+        svc.set_budget(FAMILY_ID, cats[cat_name], month, amount)
 
 
 def main():
     print("🏠 加载 Rex 家庭模拟数据...")
     conn = get_db()
-    init_db(conn)
+    init_db()
 
     # 清除旧数据
     clear_family_data(conn, FAMILY_ID)
@@ -208,8 +232,12 @@ def main():
     portfolio = load_portfolio(portfolio_svc, accts)
     print(f"  ✅ 创建投资组合")
 
-    # 7. 预算
-    load_budgets(budget_svc, accts)
+    # 7. 分类
+    cats = load_categories(conn)
+    print(f"  ✅ 创建 {len(cats)} 个分类")
+
+    # 8. 预算
+    load_budgets(budget_svc, cats)
     print(f"  ✅ 设置月度预算")
 
     print(f"\n🎉 模拟数据加载完成！家庭 ID: {FAMILY_ID}")
