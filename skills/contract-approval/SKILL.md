@@ -31,6 +31,168 @@ user-invocable: true
 6. **合同金额必须大小写一致**：生成时自动校验
 7. **数据持久化到 SQLite**：复用 L2 持久化适配
 
+---
+
+## 独立使用方式（完整 CLI 调用链）
+
+适用于单份合同快速审核，无需数据库、无需审批流转。
+
+### 方式 A：扫描件 PDF → Excel 报告（一条命令）
+
+```bash
+python skills/contract-approval/scripts/export_unified_report.py \
+  --ocr-pdf 合同扫描件.pdf \
+  --output 合同审批报告.xlsx
+```
+
+内部自动完成：OCR 数字化 → 条款解析 → 逐条审核 → 生成 Excel（4 个 Sheet）。
+
+### 方式 B：分步骤执行（调试用）
+
+```bash
+# Step 1: OCR 数字化（扫描件才需要，原生 PDF/文本可跳过）
+python skills/contract-approval/scripts/contract_ocr_v5.py \
+  合同扫描件.pdf \
+  合同.md \
+  --signature-dir signatures/ \
+  --json ocr_result.json
+
+# Step 2: 仅解析条款（查看解析结果）
+python skills/contract-approval/scripts/contract_auditor.py parse --file 合同.md
+
+# Step 3: 逐条审核（控制台输出）
+python skills/contract-approval/scripts/contract_auditor.py audit-file --file 合同.md
+
+# Step 4: 生成 Excel 报告
+python skills/contract-approval/scripts/export_unified_report.py \
+  --file 合同.md \
+  --ocr-result ocr_result.json \
+  --output 合同审批报告.xlsx
+```
+
+### 方式 C：审批流完整模式（需要数据库）
+
+```bash
+# 1. 初始化数据库（首次运行）
+python skills/contract-approval/scripts/approval_engine.py init
+
+# 2. 创建合同
+python skills/contract-approval/scripts/approval_engine.py create \
+  --title "技术服务合同-XXX项目" \
+  --type tech_service \
+  --party-a "北京梆梆安全科技有限公司" \
+  --party-b "客户公司名称" \
+  --amount 90000 \
+  --effective-date "2026-09-07" \
+  --expiry-date "2027-09-06"
+
+# 3. 提交审批
+python skills/contract-approval/scripts/approval_engine.py submit --contract-id 1
+
+# 4. 风险扫描
+python skills/contract-approval/scripts/risk_scanner.py scan --contract-id 1
+
+# 5. 审批通过/驳回
+python skills/contract-approval/scripts/approval_engine.py approve \
+  --contract-id 1 --approver-name "Rex" --approver-role "销售经理" --comment "同意"
+
+python skills/contract-approval/scripts/approval_engine.py reject \
+  --contract-id 1 --approver-name "Rex" --approver-role "法务审查员" --comment "违约责任不对等"
+
+# 6. 生成合同文档
+python skills/contract-approval/scripts/contract_gen.py generate --contract-id 1
+
+# 7. 签署 & 归档
+python skills/contract-approval/scripts/approval_engine.py sign --contract-id 1
+python skills/contract-approval/scripts/approval_engine.py archive --contract-id 1
+
+# 8. 查看详情
+python skills/contract-approval/scripts/approval_engine.py show --contract-id 1
+```
+
+---
+
+## 与 OCR skill 的集成方式
+
+### 方式一：兼容层调用（推荐，向后兼容）
+
+`scripts/contract_ocr_v5.py` 是 OCR 组件的兼容层，内部 re-export `ocr-digitalization` 的全部公共 API。
+
+**CLI 方式：**
+
+```bash
+python skills/contract-approval/scripts/contract_ocr_v5.py \
+  合同扫描件.pdf output.md --signature-dir signatures/ --json ocr_result.json
+```
+
+**Python API 方式：**
+
+```python
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'scripts'))
+from contract_ocr_v5 import digitalize_document_v5, ocr_image, detect_signature_page_v2
+
+# 端到端数字化
+result = digitalize_document_v5(
+    pdf_path="合同.pdf",
+    output_path="合同.md",
+    extract_signatures=True,
+    signature_dir="./signatures"
+)
+
+print(result.text)          # 纯文本
+print(result.markdown)      # Markdown（含签名标注）
+print(f"印章 {len(result.seals)} 处, 签名 {len(result.signatures)} 处")
+```
+
+**兼容层 re-export 的完整 API：**
+
+| 类 / 函数 | 说明 |
+|---|---|
+| `OCRResultV5` | 端到端结果对象 |
+| `OCRLine` | 单行 OCR 结果 |
+| `SignatureRegion` | 签名/印章区域 |
+| `digitalize_document_v5()` | 端到端数字化（最常用） |
+| `ocr_image()` | 单图 OCR |
+| `pdf_to_images()` | PDF 转图 |
+| `detect_signature_page_v2()` | 签署页签名/印章联检 |
+| `detect_red_seals()` | 红色印章检测 |
+| `correct_contract_text()` | 合同文本纠错 |
+
+### 方式二：直接调用 OCR 组件（性能最优）
+
+跳过兼容层，直接 import `ocr-digitalization/scripts/` 下的模块：
+
+```python
+import sys, os
+
+_ocr_dir = os.path.join(os.path.dirname(__file__),
+                        '..', 'ocr-digitalization', 'scripts')
+if _ocr_dir not in sys.path:
+    sys.path.insert(0, _ocr_dir)
+
+from ocr_engine import digitalize_document_v5, ocr_image
+
+result = digitalize_document_v5("合同.pdf", "合同.md")
+```
+
+**适用场景**：需要深度定制、或想减少一层间接调用时使用。
+**缺点**：OCR 组件路径变更时需要修改调用方代码。
+
+### 方式三：通过 Excel 报告自动集成
+
+`export_unified_report.py` 内置了 OCR 调用，直接传 `--ocr-pdf` 即可自动完成全流程：
+
+```bash
+python skills/contract-approval/scripts/export_unified_report.py \
+  --ocr-pdf 合同扫描件.pdf \
+  --output 合同审批报告.xlsx
+```
+
+这是最省心的方式，OCR 结果直接进入 Sheet 4（签署要素审计）。
+
+---
+
 ## 核心能力
 
 | 能力 | 命令 | 说明 |
@@ -44,58 +206,6 @@ user-invocable: true
 | 风险扫描 | `scan` | 基于民法典 13 类条款扫描 |
 | 合同生成 | `generate` | 基于模板生成 docx |
 | 查询合同 | `list` / `show` | 列表 / 详情 |
-
-## 工作流程
-
-### 1. 创建合同
-
-```bash
-python3 scripts/approval_engine.py create \
-  --title "技术服务合同-XXX项目" \
-  --type tech_service \
-  --party-a "北京梆梆安全科技有限公司" \
-  --party-b "客户公司名称" \
-  --amount 90000 \
-  --effective-date "2026-09-07" \
-  --expiry-date "2027-09-06"
-```
-
-### 2. 提交审批
-
-```bash
-python3 scripts/approval_engine.py submit --contract-id 1
-```
-
-### 3. 审批操作
-
-```bash
-# 通过
-python3 scripts/approval_engine.py approve \
-  --contract-id 1 --approver-name "Rex" --approver-role "销售经理" --comment "同意"
-
-# 驳回
-python3 scripts/approval_engine.py reject \
-  --contract-id 1 --approver-name "Rex" --approver-role "法务审查员" --comment "违约责任不对等，需修改"
-```
-
-### 4. 风险扫描
-
-```bash
-python3 scripts/risk_scanner.py scan --contract-id 1
-```
-
-### 5. 生成合同文档
-
-```bash
-python3 scripts/contract_gen.py generate --contract-id 1
-```
-
-### 6. 签署 & 归档
-
-```bash
-python3 scripts/approval_engine.py sign --contract-id 1
-python3 scripts/approval_engine.py archive --contract-id 1
-```
 
 ## 审批阈值
 
@@ -122,6 +232,8 @@ python3 scripts/approval_engine.py archive --contract-id 1
 
 - Python 3.10+ 标准库
 - python-docx（合同生成，可选）
+- openpyxl（Excel 报告生成）
+- ocr-digitalization skill（扫描件数字化）
 
 ## 与其他维度的关系
 
@@ -130,73 +242,8 @@ python3 scripts/approval_engine.py archive --contract-id 1
 | L3 合同管理 | 继承 CLM 7 阶段 + 民法典 + 角色定义 |
 | L2 持久化 | 复用 SQLite + Repository 模式 |
 | L2 Office 文档 | 复用 python-docx |
-| L2 OCR 数字化 | 复用 contract_ocr.py（扫描件→文本，ADR-023） |
+| L2 OCR 数字化 | 复用 contract_ocr_v5.py（扫描件→文本，ADR-023） |
 | L2 知识库 | 复用合同模板索引 |
-
-### 7. 扫描件合同数字化（复用 L2 OCR-001）
-
-支持直接处理扫描件合同（PDF/图片），先数字化再审核：
-
-```bash
-# 扫描件 PDF → 高精度文本（自动纠错）
-python3 scripts/contract_ocr.py <扫描件.pdf> <输出.md> --engine auto
-
-# 生成的文本可直接进入审核流水线
-python3 scripts/contract_auditor.py audit-file --file <输出.txt>
-```
-
-**OCR 能力来自 L2 文档数字化组件（OCR-001，ADR-023）**：
-- 600 DPI 高分辨率渲染
-- 8 版本图像预处理自动选最优
-- RapidOCR 主引擎 + PaddleOCR 可选（自动回退）
-- 合同场景 40+ 规则自动纠错
-- 版面分析还原阅读顺序
-
-```bash
-# Python API（供 L3/L4 复用）
-python3 -c "
-from contract_ocr import digitalize_document
-res = digitalize_document('合同扫描件.pdf', engine='auto')
-print(res.text)      # 纯文本全文
-print(res.meta)      # 页数/行数/引擎/置信度
-"
-```
-
-#### 签名/印章自动检测提取（v5 增强）
-
-自动检测合同中的手写签名和红色公章位置，截图保存：
-
-```bash
-# 扫描件 PDF → 文本 + 签名/印章截图
-python3 scripts/contract_ocr_v5.py <扫描件.pdf> <输出.md>
-
-# 只提取文本，不检测签名
-python3 scripts/contract_ocr_v5.py <扫描件.pdf> <输出.md> --no-signatures
-
-# 指定签名截图保存目录
-python3 scripts/contract_ocr_v5.py <扫描件.pdf> <输出.md> --signature-dir ./signatures
-```
-
-**v5 新增能力**：
-- 🔴 **红色印章检测**：基于红色像素+形态学分析，自动定位公章/合同章
-- ✍️ **手写签名检测**：基于关键词附近墨色密度，定位签名区域
-- 📸 **自动截图保存**：每个签名/印章单独保存为 PNG
-- 🏷️ **智能标注**：关联"甲方/乙方 + 签字/盖章"等上下文标签
-- 📝 **位置标注**：在输出 Markdown 中标注签名/印章位置和置信度
-
-```bash
-# Python API
-python3 -c "
-from contract_ocr_v5 import digitalize_document_v5
-res = digitalize_document_v5('合同.pdf', extract_signatures=True)
-print(res.text)           # 纯文本
-print(res.markdown)       # Markdown（含签名标注）
-print(f'印章 {len(res.seals)} 处')
-print(f'签名 {len(res.signatures)} 处')
-for s in res.seals:
-    print(f'  第{s.page}页: {s.image_path}')
-"
-```
 
 ---
 

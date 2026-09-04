@@ -776,7 +776,7 @@ def pdf_to_images(pdf_path: str, dpi: int = 300) -> List[Image.Image]:
     
     # 优先用 PyMuPDF（更快）
     try:
-        import fitz
+        import pymupdf
         doc = pymupdf.open(pdf_path)
         images = []
         zoom = dpi / 72
