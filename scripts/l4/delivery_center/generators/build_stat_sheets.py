@@ -3,10 +3,12 @@
 从 ONES CSV 原始数据直接计算并生成透视表格式的 Excel Sheet
 """
 import sqlite3
+import json
 import pandas as pd
 import numpy as np
 from pathlib import Path
 from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 
 # === 配置 ===
 ONES_DIR = Path.home() / ".openclaw" / "data" / "ones_exports"
@@ -14,12 +16,23 @@ BDMS_DB = Path.home() / ".openclaw" / "data" / "bdms.db"
 REF_DIR = Path.home() / "Bangcle Workspace" / "01. Management" / "2026" / "2026团队报告" / "202606"
 REPORT_MONTH = "202606"
 REPORT_DATE = "2026-07-08"  # 参考报表导出日期
+CONFIG_DIR = Path(__file__).parent.parent / "config"
+
+# 统一样式常量
+HEADER_FONT_WHITE = Font(bold=True, size=10, color="FFFFFF")
+HEADER_FILL = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+THIN_BORDER = Border(
+    left=Side(style='thin'), right=Side(style='thin'),
+    top=Side(style='thin'), bottom=Side(style='thin')
+)
 
 # 全局数据缓存
 _sign_df = None
 _sign_df_full = None  # 全量签约数据（不过滤立项日期）
 _poc_df = None
+_poc_df_full = None  # 全量 POC 数据（不过滤立项日期）
 _abnormal_df = None
+_abnormal_detail_df = None  # ONES 原始异常数据（40列）
 _rev_df = None
 _acc_df = None
 _sign_formula_df = None  # 签约公式列落盘数据
@@ -38,13 +51,15 @@ def _try_read_csv(path, **kwargs):
 
 def _load_data(force=False):
     """延迟加载源数据"""
-    global _sign_df, _sign_df_full, _poc_df, _abnormal_df, _rev_df, _acc_df
-    if not force and _sign_df is not None and _sign_df_full is not None and _abnormal_df is not None:
+    global _sign_df, _sign_df_full, _poc_df, _poc_df_full, _abnormal_df, _abnormal_detail_df, _rev_df, _acc_df
+    if not force and _sign_df is not None and _sign_df_full is not None and _abnormal_df is not None and _poc_df_full is not None and _abnormal_detail_df is not None:
         return
     
     # 主数据源：ones_exports 目录
     _sign_df = _try_read_csv(ONES_DIR / "签约项目统计.csv")
     _poc_df = _try_read_csv(ONES_DIR / "poc_提前实施.csv")
+    _poc_df_full = _poc_df.copy() if _poc_df is not None else None
+    _abnormal_detail_df = _try_read_csv(ONES_DIR / "异常处置.csv")
     
     # 异常数据：优先使用完整版（55列），回退到标准版（40列）
     _abnormal_df = _try_read_csv(ONES_DIR / "202606-签约项目异常处置.csv")
@@ -1453,6 +1468,137 @@ def build_product_stats(ws):
 
 
 # ============================================================
+# 数据明细 Sheet
+# ============================================================
+
+def _write_detail_sheet(ws, df, report_date=None):
+    """通用数据明细写入：第1行=日期，第2行=列名，第3行+=数据"""
+    if report_date is None:
+        report_date = REPORT_DATE
+    ws.cell(row=1, column=1, value=report_date)
+    headers = list(df.columns)
+    for ci, h in enumerate(headers, 1):
+        ws.cell(row=2, column=ci, value=h)
+    for ci in range(1, len(headers) + 1):
+        cell = ws.cell(row=2, column=ci)
+        cell.font = HEADER_FONT_WHITE
+        cell.fill = HEADER_FILL
+        cell.border = THIN_BORDER
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+    for ri, (_, row) in enumerate(df.iterrows(), 3):
+        for ci, val in enumerate(row, 1):
+            v = "" if pd.isna(val) else val
+            cell = ws.cell(row=ri, column=ci, value=v)
+            cell.border = THIN_BORDER
+
+
+def fill_sign_detail_sheet(ws, df):
+    """签约明细：全量签约数据"""
+    _load_data()
+    _write_detail_sheet(ws, _sign_df_full)
+
+
+def fill_poc_detail_sheet(ws, df):
+    """POC&提前实施明细"""
+    _load_data()
+    _write_detail_sheet(ws, _poc_df_full)
+
+
+def fill_abnormal_detail_sheet(ws, df):
+    """异常项目明细"""
+    _load_data()
+    _write_detail_sheet(ws, _abnormal_detail_df)
+
+
+def fill_revenue_detail_sheet(ws, conn):
+    """确收交接明细：从 BDMS revenue_vouchers 加载"""
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM revenue_vouchers")
+    cols = [d[0] for d in cursor.description]
+    rows = cursor.fetchall()
+    col_map = {
+        "月份": None, "标题": None, "ID": "voucher_id", "BI履约ID": "bi_id",
+        "合同编号1": "合同编号", "邮件编号": None, "合同编号": "合同编号",
+        "客户名称": "客户名称", "销售部门": "销售部门", "项目经理": "项目经理",
+        "备注": None, "交接日期": "交接日期", "财务接收人": "财务",
+        "财务是否接收": "是否接收", "财务反馈": None, "交付邮件是否跨月": None,
+        "PMO提交人": None, "PMO反馈": None, "是否修改ONES状态": None,
+        "项目经理所属区域": None, "跨月交接": None, "跨月交接原因": None, "是否合格": None,
+    }
+    headers = list(col_map.keys())
+    ws.cell(row=1, column=1, value=REPORT_DATE)
+    for ci, h in enumerate(headers, 1):
+        ws.cell(row=2, column=ci, value=h)
+    for ci in range(1, len(headers) + 1):
+        cell = ws.cell(row=2, column=ci)
+        cell.font = HEADER_FONT_WHITE
+        cell.fill = HEADER_FILL
+        cell.border = THIN_BORDER
+    for ri, row in enumerate(rows, 3):
+        row_dict = dict(zip(cols, row))
+        for ci, h in enumerate(headers, 1):
+            db_col = col_map.get(h)
+            val = row_dict.get(db_col, "") if db_col else ""
+            cell = ws.cell(row=ri, column=ci, value=str(val) if val else "")
+            cell.border = THIN_BORDER
+
+
+def fill_acceptance_detail_sheet(ws, conn):
+    """验收交接明细：从 BDMS acceptance_vouchers 加载"""
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM acceptance_vouchers")
+    cols = [d[0] for d in cursor.description]
+    rows = cursor.fetchall()
+    col_map = {
+        "月份": None, "合同名称": "合同名称", "标题": None, "ID": "voucher_id",
+        "BI履约ID": "bi_id", "验收单编号-财务端": None, "合同编号1": "合同编号",
+        "验收单编号": "验收单编号", "合同编号": "合同编号", "客户名称": "客户名称",
+        "销售部门": None, "项目经理": "项目经理", "备注": None, "交接日期": "交接日期",
+        "验收方式": "验收方式", "截至目前全部/部分验收": "全部或部分",
+        "是否为渠道": None, "财务接收人": "财务", "是否接收": "财务是否接收",
+        "实际验收方式": None, "财务反馈": None, "PMO提交人": None, "PMO反馈": None,
+        "是否修改ones及OA状态": None, "项目经理所属区域": None, "是否合格": None,
+    }
+    headers = list(col_map.keys())
+    ws.cell(row=1, column=1, value=REPORT_DATE)
+    for ci, h in enumerate(headers, 1):
+        ws.cell(row=2, column=ci, value=h)
+    for ci in range(1, len(headers) + 1):
+        cell = ws.cell(row=2, column=ci)
+        cell.font = HEADER_FONT_WHITE
+        cell.fill = HEADER_FILL
+        cell.border = THIN_BORDER
+    for ri, row in enumerate(rows, 3):
+        row_dict = dict(zip(cols, row))
+        for ci, h in enumerate(headers, 1):
+            db_col = col_map.get(h)
+            val = row_dict.get(db_col, "") if db_col else ""
+            cell = ws.cell(row=ri, column=ci, value=str(val) if val else "")
+            cell.border = THIN_BORDER
+
+
+def fill_legend_detail_sheet(ws, conn):
+    """图例：项目经理-部门映射"""
+    legend_path = CONFIG_DIR / "legend_pm_dept.json"
+    if not legend_path.exists():
+        ws.cell(row=1, column=1, value="图例配置文件不存在")
+        return
+    legend = json.loads(legend_path.read_text(encoding="utf-8"))
+    headers = ["项目经理", "部门"]
+    ws.cell(row=1, column=1, value=REPORT_DATE)
+    for ci, h in enumerate(headers, 1):
+        ws.cell(row=2, column=ci, value=h)
+    for ci in range(1, len(headers) + 1):
+        cell = ws.cell(row=2, column=ci)
+        cell.font = HEADER_FONT_WHITE
+        cell.fill = HEADER_FILL
+        cell.border = THIN_BORDER
+    for ri, (pm, dept) in enumerate(legend.items(), 3):
+        ws.cell(row=ri, column=1, value=pm)
+        ws.cell(row=ri, column=2, value=dept)
+
+
+# ============================================================
 # 6. 提前实施分事业部统计
 # ============================================================
 def build_early_dept_stats(ws):
@@ -2151,16 +2297,48 @@ def build_all_stat_sheets(wb, conn):
     _cleanup_zeros(wb)
 
 
+def build_all_sheets(wb, conn):
+    """构建完整月报：6 个数据明细 + 9 个统计 = 15 Sheet"""
+    _load_data()
+    
+    # 数据明细 Sheet
+    detail_builders = [
+        ('签约', lambda ws: fill_sign_detail_sheet(ws, None)),
+        ('POC&提前实施', lambda ws: fill_poc_detail_sheet(ws, None)),
+        ('异常项目', lambda ws: fill_abnormal_detail_sheet(ws, None)),
+        ('确收交接', lambda ws: fill_revenue_detail_sheet(ws, conn)),
+        ('验收交接', lambda ws: fill_acceptance_detail_sheet(ws, conn)),
+        ('图例', lambda ws: fill_legend_detail_sheet(ws, conn)),
+    ]
+    
+    for name, builder in detail_builders:
+        if name in wb.sheetnames:
+            del wb[name]
+        ws = wb.create_sheet(name)
+        builder(ws)
+        print(f"  ✅ {name}")
+    
+    # 统计 Sheet
+    for name, builder in BUILDERS.items():
+        if name in wb.sheetnames:
+            del wb[name]
+        ws = wb.create_sheet(name)
+        builder(ws)
+        print(f"  ✅ {name}")
+    
+    _cleanup_zeros(wb)
+
+
 if __name__ == "__main__":
     from openpyxl import Workbook
     conn = sqlite3.connect(BDMS_DB)
     wb = Workbook()
     wb.remove(wb.active)
-    build_all_stat_sheets(wb, conn)
+    build_all_sheets(wb, conn)
     
     output_dir = Path.home() / ".openclaw" / "data" / "reports"
     output_dir.mkdir(parents=True, exist_ok=True)
-    output = output_dir / "统计Sheet测试.xlsx"
+    output = output_dir / "统计Sheet_v13.xlsx"
     wb.save(output)
     print(f"\n✅ 已保存: {output}")
     conn.close()
