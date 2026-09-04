@@ -1,7 +1,13 @@
 {% extends "base.html" %}
 {% block title %}仪表盘 - FIN-L4{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
 {% block content %}
-<h1 style="margin-bottom: 1.5rem;">仪表盘</h1>
+<div class="page-header">
+    <h1>仪表盘</h1>
+    <p>家庭财务全景概览</p>
+</div>
 
 <div class="dashboard-grid">
     <div class="stat-card">
@@ -27,38 +33,213 @@
         <div class="card-title">账户概览</div>
         {% if accounts %}
         <table class="table">
-            <thead><tr><th>账户</th><th>余额</th></tr></thead>
+            <thead><tr><th>账户</th><th class="num">余额</th></tr></thead>
             <tbody>
             {% for acc in accounts %}
             <tr>
                 <td>{{ acc.name }}</td>
-                <td>¥{{ acc.balance }}</td>
+                <td class="num">¥{{ acc.balance }}</td>
             </tr>
             {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p style="color: var(--text-muted);">暂无账户数据，请先 <a href="/accounts">创建账户</a></p>
+        <p class="text-muted">暂无账户数据，请先 <a href="/accounts">创建账户</a></p>
         {% endif %}
     </div>
     <div class="card">
         <div class="card-title">最近交易</div>
         {% if transactions %}
         <table class="table">
-            <thead><tr><th>日期</th><th>摘要</th><th>金额</th></tr></thead>
+            <thead><tr><th>日期</th><th>摘要</th><th class="num">金额</th></tr></thead>
             <tbody>
             {% for txn in transactions %}
             <tr>
                 <td>{{ txn.date }}</td>
                 <td>{{ txn.note | default("") }}</td>
-                <td>¥{{ txn.amount }}</td>
+                <td class="num">¥{{ txn.amount }}</td>
             </tr>
             {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p style="color: var(--text-muted);">暂无交易记录</p>
+        <p class="text-muted">暂无交易记录</p>
         {% endif %}
     </div>
 </div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title">资产分布</div>
+        <div class="chart-container">
+            <canvas id="assetPie"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-title">月度收支趋势</div>
+        <div class="chart-container">
+            <canvas id="cashflowChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    // Get current theme
+    function getThemeColors() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return {
+            text: isDark ? '#c9cdd6' : '#3d4250',
+            muted: isDark ? '#8b92a5' : '#6b7280',
+            border: isDark ? '#2a2e3d' : '#e4e6eb',
+            grid: isDark ? '#2a2e3d' : '#f0f1f4',
+            surface: isDark ? '#1a1d26' : '#ffffff',
+        };
+    }
+    
+    let assetChart, cashflowChart;
+    
+    function initCharts() {
+        const colors = getThemeColors();
+        
+        // Asset Distribution (mock data for demo)
+        const assetData = {
+            labels: ['现金/活期', '定期存款', '投资资产', '其他资产'],
+            values: [80000, 500000, 300000, 139150],
+            bgColors: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
+        };
+        
+        const ctx1 = document.getElementById('assetPie');
+        if (ctx1) {
+            assetChart = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: assetData.labels,
+                    datasets: [{
+                        data: assetData.values,
+                        backgroundColor: assetData.bgColors,
+                        borderColor: colors.surface,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: colors.text,
+                                font: { size: 12, family: "'Inter', sans-serif" },
+                                padding: 16,
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const total = ctx.dataset.data.reduce((a,b) => a+b, 0);
+                                    const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                    return `${ctx.label}: ¥${ctx.parsed.toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%',
+                }
+            });
+        }
+        
+        // Monthly Cashflow (mock data)
+        const months = ['1月', '2月', '3月', '4月', '5月', '6月'];
+        const income = [35000, 35000, 36000, 35000, 35500, 35000];
+        const expense = [28000, 26500, 29000, 27500, 28200, 27800];
+        
+        const ctx2 = document.getElementById('cashflowChart');
+        if (ctx2) {
+            cashflowChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: '收入',
+                            data: income,
+                            backgroundColor: '#10b981',
+                            borderRadius: 4,
+                        },
+                        {
+                            label: '支出',
+                            data: expense,
+                            backgroundColor: '#ef4444',
+                            borderRadius: 4,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: colors.muted, font: { size: 11 } }
+                        },
+                        y: {
+                            grid: { color: colors.grid },
+                            ticks: { 
+                                color: colors.muted, 
+                                font: { size: 11 },
+                                callback: function(v) { return '¥' + (v / 1000) + 'k'; }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: colors.text,
+                                font: { size: 12, family: "'Inter', sans-serif" },
+                                boxWidth: 12,
+                                padding: 16,
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return `${ctx.dataset.label}: ¥${ctx.parsed.y.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    // Update charts on theme change
+    window.updateChartsTheme = function(theme) {
+        if (!assetChart && !cashflowChart) return;
+        const colors = getThemeColors();
+        
+        if (assetChart) {
+            assetChart.options.plugins.legend.labels.color = colors.text;
+            assetChart.data.datasets[0].borderColor = colors.surface;
+            assetChart.update('none');
+        }
+        if (cashflowChart) {
+            cashflowChart.options.scales.x.ticks.color = colors.muted;
+            cashflowChart.options.scales.y.ticks.color = colors.muted;
+            cashflowChart.options.scales.y.grid.color = colors.grid;
+            cashflowChart.options.plugins.legend.labels.color = colors.text;
+            cashflowChart.update('none');
+        }
+    };
+    
+    // Init on load
+    if (typeof Chart !== 'undefined') {
+        initCharts();
+    } else {
+        window.addEventListener('load', initCharts);
+    }
+})();
+</script>
 {% endblock %}
