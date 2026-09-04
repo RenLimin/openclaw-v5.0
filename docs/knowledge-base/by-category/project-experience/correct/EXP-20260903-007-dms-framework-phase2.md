@@ -1,6 +1,6 @@
 ---
 title: "DMS 框架 Phase 2 通用模块建设经验"
-id: EXP-20260903-002
+id: EXP-20260903-007
 date: 2026-09-03
 type: correct
 project: delivery-management-framework

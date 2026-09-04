@@ -1,6 +1,6 @@
 ---
 title: "DMS 框架 Phase 1 核心引擎建设经验"
-id: EXP-20260903-001
+id: EXP-20260903-006
 date: 2026-09-03
 type: correct
 project: delivery-management-framework

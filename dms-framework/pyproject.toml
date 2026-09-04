@@ -1,0 +1,8 @@
+[project]
+name = "dms-framework"
+version = "1.2.0"
+description = "L3 通用交付管理框架"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

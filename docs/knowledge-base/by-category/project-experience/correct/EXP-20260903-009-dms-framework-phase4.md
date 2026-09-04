@@ -1,5 +1,5 @@
 ---
-id: EXP-20260903-004
+id: EXP-20260903-009
 title: DMS 框架 Phase 4 端到端验证经验
 date: 2026-09-03
 type: correct
