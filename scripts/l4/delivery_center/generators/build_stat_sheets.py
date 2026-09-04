@@ -2249,13 +2249,12 @@ def build_handover_stats(ws):
         label = REPORT_MONTH if r == 5 else "总计"
         ws.cell(row=r, column=9, value=label)
         if rev_csv is not None and '交付邮件是否跨月' in rev_csv.columns:
-            cross_valid = rev_csv[rev_csv['交付邮件是否跨月'].isin(['是', '否'])]
-            cross_no = int((cross_valid['交付邮件是否跨月'] == '是').sum())  # 是=跨月 → "否"列计数
-            cross_yes = int((cross_valid['交付邮件是否跨月'] == '否').sum())   # 否=不跨月 → "是"列计数
-            cross_total = len(cross_valid)
-            # 计算比率：总有效数据行作为分母
-            cross_rate_no = cross_no / cross_total if cross_total > 0 else 0  # 否列值 = 跨月比率
-            cross_rate_yes = cross_yes / cross_total if cross_total > 0 else 0  # 是列值 = 不跨月比率
+            # 正确统计：明确回答"是"的算跨月，其他所有（明确回答否/空值）都算不跨月
+            # 分母：总确收凭证数（DB 数据，和参考一致）
+            cross_yes = int((rev_csv['交付邮件是否跨月'] == '是').sum())  # 明确回答"是" → 跨月
+            # 不跨月：总凭证数 - 跨月数
+            cross_rate_yes = cross_yes / rev_total if rev_total > 0 else 0  # 是列 → 跨月比率
+            cross_rate_no = 1 - cross_rate_yes  # 否列 → 不跨月比率
         else:
             # 回退：从 DB 日期计算
             cross_rate_yes = 0
@@ -2270,8 +2269,8 @@ def build_handover_stats(ws):
                 else:
                     cross_rate_yes = 1
                     cross_rate_no = 0
-        ws.cell(row=r, column=10, value=round(cross_rate_yes, 14))   # 表头 "否" → 实际是不跨月，赋值不跨月比率
-        ws.cell(row=r, column=11, value=round(cross_rate_no, 14))  # 表头 "是" → 实际是跨月，赋值跨月比率
+        ws.cell(row=r, column=10, value=round(cross_rate_no, 14))   # 表头 "否" → 不跨月，赋值不跨月比率
+        ws.cell(row=r, column=11, value=round(cross_rate_yes, 14))  # 表头 "是" → 跨月，赋值跨月比率
         ws.cell(row=r, column=12, value=1)  # 总计
     
     # === 表3：验收合格率（列17-20）===
