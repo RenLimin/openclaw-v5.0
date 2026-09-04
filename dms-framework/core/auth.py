@@ -59,6 +59,136 @@ class TokenData(BaseModel):
     exp: Optional[int] = None
 
 
+# ---------------------------------------------------------------------------
+# RBAC — 角色权限层级
+# ---------------------------------------------------------------------------
+
+# 角色层级（高 → 低）
+ROLE_HIERARCHY: dict[str, int] = {
+    "admin": 4,
+    "manager": 3,
+    "user": 2,
+    "viewer": 1,
+}
+
+# 每个角色对应的权限集合
+# 格式: {resource: {actions}}
+# "*" 通配符表示所有资源/动作
+ROLE_PERMISSIONS: dict[str, dict[str, set[str]]] = {
+    "admin": {
+        "*": {"*"},
+    },
+    "manager": {
+        "*": {"read", "write", "create", "delete", "transition"},
+        "tenant_management": set(),  # 明确排除
+    },
+    "user": {
+        "*": {"read", "write", "create", "transition"},
+    },
+    "viewer": {
+        "*": {"read"},
+    },
+}
+
+
+def _expand_role(role: str) -> set[str]:
+    """返回角色继承链（含自身）。"""
+    level = ROLE_HIERARCHY.get(role, 0)
+    return {r for r, l in ROLE_HIERARCHY.items() if l <= level}
+
+
+def get_role_permissions(role: str) -> set[str]:
+    """获取角色的有效权限列表（格式: 'resource:action'）。"""
+    permissions: set[str] = set()
+    inherited = _expand_role(role)
+    for r in inherited:
+        res_perms = ROLE_PERMISSIONS.get(r, {})
+        for resource, actions in res_perms.items():
+            if resource == "*":
+                if "*" in actions:
+                    # admin: 拥有全部权限
+                    permissions.add("*:*")
+                    return permissions
+                # 通配资源的所有动作（如 manager: *: {read, write, ...}）
+                for action in actions:
+                    permissions.add(f"*:{action}")
+            else:
+                for action in actions:
+                    permissions.add(f"{resource}:{action}")
+    return permissions
+
+
+def has_permission(user_roles: list[str], resource: str, action: str) -> bool:
+    """检查用户角色是否拥有指定权限。"""
+    all_permissions: set[str] = set()
+    for role in user_roles:
+        all_permissions |= get_role_permissions(role)
+
+    # 超级权限
+    if "*:*" in all_permissions:
+        return True
+
+    # 检查具体权限
+    if f"{resource}:{action}" in all_permissions:
+        return True
+
+    # 检查通配资源权限
+    if f"*:{action}" in all_permissions:
+        return True
+
+    return False
+
+
+def has_role(user_roles: list[str], required_role: str) -> bool:
+    """检查用户是否拥有指定角色或更高层级角色。"""
+    required_level = ROLE_HIERARCHY.get(required_role, 0)
+    for role in user_roles:
+        if ROLE_HIERARCHY.get(role, 0) >= required_level:
+            return True
+    return False
+
+
+def require_role(*roles: str):
+    """FastAPI dependency 工厂：要求指定角色或更高。
+
+    Args:
+        *roles: 允许的角色名，满足其一即可。
+
+    Returns:
+        FastAPI dependency callable
+    """
+    def dependency(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+        # 检查是否满足任一角色要求
+        for role in roles:
+            if has_role(current_user.roles, role):
+                return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"需要角色: {', '.join(roles)}",
+        )
+    return dependency
+
+
+def require_permission(resource: str, action: str):
+    """FastAPI dependency 工厂：要求指定权限。
+
+    Args:
+        resource: 资源名（如 "project"）
+        action: 动作（如 "read", "write"）
+
+    Returns:
+        FastAPI dependency callable
+    """
+    def dependency(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+        if has_permission(current_user.roles, resource, action):
+            return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"缺少权限: {resource}:{action}",
+        )
+    return dependency
+
+
 class UserCredentials(BaseModel):
     username: str
     password: str
@@ -265,16 +395,19 @@ def get_current_user(
     """FastAPI 依赖：从 Bearer Token 或 API Key 提取当前用户。
 
     优先 Bearer Token，其次 X-API-Key。
+    自动根据角色计算权限注入 TokenData.permissions。
     """
     # 1. 尝试 Bearer Token
     if credentials and credentials.credentials:
         payload = _jwt_decode(credentials.credentials, get_jwt_secret())
         if payload:
+            roles = payload.get("roles", [])
+            perms = list(set().union(*(get_role_permissions(r) for r in roles))) if roles else []
             return TokenData(
                 sub=payload["sub"],
                 tenant_id=payload.get("tenant_id", "system"),
-                roles=payload.get("roles", []),
-                permissions=payload.get("permissions", []),
+                roles=roles,
+                permissions=perms,
             )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -285,10 +418,13 @@ def get_current_user(
     if api_key:
         key_info = _user_store.verify_api_key(api_key)
         if key_info:
+            roles = key_info["roles"]
+            perms = list(set().union(*(get_role_permissions(r) for r in roles))) if roles else []
             return TokenData(
                 sub=key_info["user_id"],
                 tenant_id=key_info["tenant_id"],
-                roles=key_info["roles"],
+                roles=roles,
+                permissions=perms,
             )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

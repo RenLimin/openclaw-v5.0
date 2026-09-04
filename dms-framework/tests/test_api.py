@@ -177,7 +177,7 @@ class TestAPI(unittest.TestCase):
         self.project_id = data["id"]
 
     def test_list_projects(self):
-        """GET /api/v1/project 列出项目。"""
+        """GET /api/v1/project 列出项目（分页）。"""
         # 先创建一个
         resp = self.client.post(
             "/api/v1/project",
@@ -189,8 +189,14 @@ class TestAPI(unittest.TestCase):
         resp = self.client.get("/api/v1/project", headers=self.headers)
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertIsInstance(data, list)
-        self.assertGreaterEqual(len(data), 1)
+        self.assertIsInstance(data, dict)
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertIn("page", data)
+        self.assertIn("page_size", data)
+        self.assertIn("pages", data)
+        self.assertIsInstance(data["items"], list)
+        self.assertGreaterEqual(data["total"], 1)
 
     def test_get_project(self):
         """GET /api/v1/project/{id} 获取详情。"""
@@ -309,6 +315,243 @@ class TestAPI(unittest.TestCase):
         data = resp.json()
         self.assertEqual(data["title"], "Test Task")
         self.assertEqual(data["project_id"], project_id)
+
+    # ── 搜索测试 ──────────────────────────────────────────────────────
+
+    def test_search_projects(self):
+        """GET /api/v1/project?search= 关键词搜索。"""
+        # 创建两个项目
+        self.client.post(
+            "/api/v1/project",
+            json={"name": "Alpha Search Test", "description": "first"},
+            headers=self.headers,
+        )
+        self.client.post(
+            "/api/v1/project",
+            json={"name": "Beta Other", "description": "second"},
+            headers=self.headers,
+        )
+
+        # 搜索 "Alpha"
+        resp = self.client.get("/api/v1/project?search=Alpha", headers=self.headers)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertGreaterEqual(len(data["items"]), 1)
+        names = [item["name"] for item in data["items"]]
+        self.assertIn("Alpha Search Test", names)
+
+    # ── 分页测试 ──────────────────────────────────────────────────────
+
+    def test_pagination(self):
+        """GET /api/v1/project?page=2&page_size=1 分页正确。"""
+        # 创建 3 个项目（用 page_size 前缀避免和其他测试冲突）
+        created_ids = []
+        for i in range(3):
+            resp = self.client.post(
+                "/api/v1/project",
+                json={"name": f"PageTest-{i}"},
+                headers=self.headers,
+            )
+            created_ids.append(resp.json()["id"])
+
+        # 搜索 page_size 前缀的项目
+        resp = self.client.get("/api/v1/project?search=PageTest&page=1&page_size=1", headers=self.headers)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["page"], 1)
+        self.assertEqual(data["page_size"], 1)
+        self.assertEqual(data["total"], 3)
+        self.assertEqual(data["pages"], 3)
+
+        # 第2页
+        resp2 = self.client.get("/api/v1/project?search=PageTest&page=2&page_size=1", headers=self.headers)
+        self.assertEqual(resp2.status_code, 200)
+        data2 = resp2.json()
+        self.assertEqual(data2["page"], 2)
+        self.assertEqual(len(data2["items"]), 1)
+        # 第1页和第2页的项目不同
+        self.assertNotEqual(data["items"][0]["id"], data2["items"][0]["id"])
+
+        # 第3页
+        resp3 = self.client.get("/api/v1/project?search=PageTest&page=3&page_size=1", headers=self.headers)
+        self.assertEqual(resp3.status_code, 200)
+        data3 = resp3.json()
+        self.assertEqual(len(data3["items"]), 1)
+        self.assertNotEqual(data2["items"][0]["id"], data3["items"][0]["id"])
+
+    # ── 排序测试 ──────────────────────────────────────────────────────
+
+    def test_sort_by_created_at(self):
+        """GET /api/v1/project?sort_by=created_at&sort_order=asc 排序。"""
+        # 创建两个项目（用 SortPrefix 搜索隔离）
+        self.client.post(
+            "/api/v1/project",
+            json={"name": "SortPrefix Old"},
+            headers=self.headers,
+        )
+        self.client.post(
+            "/api/v1/project",
+            json={"name": "SortPrefix New"},
+            headers=self.headers,
+        )
+
+        # 升序
+        resp = self.client.get(
+            "/api/v1/project?search=SortPrefix&sort_by=created_at&sort_order=asc&page_size=10",
+            headers=self.headers,
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(data["total"], 2)
+        self.assertEqual(len(data["items"]), 2)
+        self.assertLessEqual(
+            data["items"][0]["created_at"],
+            data["items"][1]["created_at"],
+        )
+
+        # 降序
+        resp = self.client.get(
+            "/api/v1/project?search=SortPrefix&sort_by=created_at&sort_order=desc&page_size=10",
+            headers=self.headers,
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data["items"]), 2)
+        self.assertGreaterEqual(
+            data["items"][0]["created_at"],
+            data["items"][1]["created_at"],
+        )
+
+    # ── 批量操作测试 ──────────────────────────────────────────────────
+
+    def test_batch_create(self):
+        """POST /api/v1/project/batch 批量创建。"""
+        resp = self.client.post(
+            "/api/v1/project/batch",
+            json={"items": [
+                {"name": "Batch 1"},
+                {"name": "Batch 2"},
+                {"name": "Batch 3"},
+            ]},
+            headers=self.headers,
+        )
+        self.assertEqual(resp.status_code, 201)
+        data = resp.json()
+        self.assertIn("succeeded", data)
+        self.assertIn("failed", data)
+        self.assertEqual(len(data["succeeded"]), 3)
+        self.assertEqual(len(data["failed"]), 0)
+
+    def test_batch_delete(self):
+        """DELETE /api/v1/project/batch 批量删除。"""
+        # 先创建
+        ids = []
+        for i in range(2):
+            resp = self.client.post(
+                "/api/v1/project",
+                json={"name": f"Batch Del {i}"},
+                headers=self.headers,
+            )
+            ids.append(resp.json()["id"])
+
+        # 批量删除（httpx delete 不支持 json=，用 request 方法）
+        resp = self.client.request(
+            "DELETE",
+            "/api/v1/project/batch",
+            json={"ids": ids},
+            headers=self.headers,
+        )
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertEqual(len(data["succeeded"]), 2)
+        self.assertEqual(len(data["failed"]), 0)
+
+        # 确认已删除
+        for pid in ids:
+            resp = self.client.get(f"/api/v1/project/{pid}", headers=self.headers)
+            self.assertEqual(resp.status_code, 404)
+
+    # ── RBAC 权限测试 ─────────────────────────────────────────────────
+
+    def test_rbac_viewer_cannot_create(self):
+        """viewer 角色不能创建项目 → 403。"""
+        # 创建 viewer 用户
+        viewer_id = _user_store.create_user(
+            "viewer_user", "pass", tenant_id="test-tenant", roles=["viewer"]
+        )
+        viewer_token = create_access_token(viewer_id, "test-tenant", roles=["viewer"])
+        viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
+
+        resp = self.client.post(
+            "/api/v1/project",
+            json={"name": "Viewer Project"},
+            headers=viewer_headers,
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_rbac_admin_can_delete_tenant(self):
+        """admin 可以删除租户。"""
+        # 创建租户
+        resp = self.client.post(
+            "/api/v1/tenants",
+            json={"name": "RBAC Test Tenant", "slug": "rbac-test"},
+            headers=self.headers,
+        )
+        self.assertEqual(resp.status_code, 201)
+        tid = resp.json()["id"]
+
+        # admin 删除
+        resp = self.client.delete(f"/api/v1/tenants/{tid}", headers=self.headers)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_rbac_viewer_cannot_access_tenants(self):
+        """viewer 不能访问租户端点 → 403。"""
+        viewer_id = _user_store.create_user(
+            "viewer_tenant", "pass", tenant_id="test-tenant", roles=["viewer"]
+        )
+        viewer_token = create_access_token(viewer_id, "test-tenant", roles=["viewer"])
+        viewer_headers = {"Authorization": f"Bearer {viewer_token}"}
+
+        resp = self.client.get("/api/v1/tenants", headers=viewer_headers)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_rbac_manager_can_create_project(self):
+        """manager 可以创建项目。"""
+        manager_id = _user_store.create_user(
+            "manager_user", "pass", tenant_id="test-tenant", roles=["manager"]
+        )
+        manager_token = create_access_token(manager_id, "test-tenant", roles=["manager"])
+        manager_headers = {"Authorization": f"Bearer {manager_token}"}
+
+        resp = self.client.post(
+            "/api/v1/project",
+            json={"name": "Manager Project"},
+            headers=manager_headers,
+        )
+        self.assertEqual(resp.status_code, 201)
+
+    def test_rbac_user_cannot_delete_tenant(self):
+        """普通 user 不能删除租户 → 403。"""
+        user_id = _user_store.create_user(
+            "normal_user", "pass", tenant_id="test-tenant", roles=["user"]
+        )
+        user_token = create_access_token(user_id, "test-tenant", roles=["user"])
+        user_headers = {"Authorization": f"Bearer {user_token}"}
+
+        # 先创建一个租户（用 admin）
+        resp = self.client.post(
+            "/api/v1/tenants",
+            json={"name": "User Test Tenant", "slug": "user-test"},
+            headers=self.headers,
+        )
+        tid = resp.json()["id"]
+
+        # user 尝试删除
+        resp = self.client.delete(f"/api/v1/tenants/{tid}", headers=user_headers)
+        self.assertEqual(resp.status_code, 403)
+
+
 
 
 class TestAuthModule(unittest.TestCase):

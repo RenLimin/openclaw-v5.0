@@ -95,11 +95,26 @@ class ProjectModule(BaseModule):
     def get_project(self, project_id: str) -> Optional[Project]:
         return self._repo.get(project_id)
 
-    def list_projects(self, status: str | None = None) -> list[Project]:
+    def list_projects(
+        self,
+        status: str | None = None,
+        search: str | None = None,
+        sort_by: str | None = None,
+        sort_order: str = "desc",
+        offset: int = 0,
+        limit: int | None = None,
+    ) -> list[Project]:
         filters: dict[str, Any] = {}
         if status:
             filters["status"] = status
-        return self._repo.list(**filters)
+        return self._repo.list(
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            offset=offset,
+            limit=limit,
+            **filters,
+        )
 
     def transition_project(self, project_id: str, transition_name: str,
                            context: dict[str, Any] | None = None) -> Project:
