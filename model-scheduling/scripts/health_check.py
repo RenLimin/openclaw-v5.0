@@ -192,6 +192,13 @@ def main():
     providers = providers_config.get("providers", {})
     print(f"  发现 {len(providers)} 个 provider")
 
+    # 跳过显式禁用的 provider（enabled: false）
+    disabled_providers = [pid for pid, pconf in providers.items() if pconf.get("enabled") is False]
+    if disabled_providers:
+        for pid in disabled_providers:
+            print(f"  ⏭️  跳过已禁用 provider: {pid}")
+        providers = {pid: pconf for pid, pconf in providers.items() if pconf.get("enabled") is not False}
+
     # 2. 逐个探测（含 model ID 验证）
     print("[2/3] 探测 provider 健康状态（含 model ID 验证）...")
     health = {}
@@ -239,12 +246,22 @@ def main():
     print()
     print("=== 健康探测完成 ===")
 
-    # 检查是否有 model ID 不可用,有则非零退出触发 cron failure alert
+    # 检查是否有 model ID 不可用。区分两类情况：
+    # - 402/配额类错误（quota）: 预期内状态（provider 到期/欠费），警告但不触发失败
+    # - 其他不可用: 真实异常，非零退出触发 cron failure alert
     unavailable_models = []
+    quota_models = []
     for pid, h in health.items():
         for mid, mst in h.get("models", {}).items():
             if mst["status"] == "unavailable":
-                unavailable_models.append(f"{pid}/{mid}")
+                if mst.get("http_code") == 402:
+                    quota_models.append(f"{pid}/{mid}")
+                else:
+                    unavailable_models.append(f"{pid}/{mid}")
+    if quota_models:
+        print(f"\n⚠️  {len(quota_models)} 个 model ID 配额耗尽（预期内，不告警）:")
+        for m in quota_models:
+            print(f"  - {m}")
     if unavailable_models:
         print(f"\n⚠️  {len(unavailable_models)} 个 model ID 不可用:")
         for m in unavailable_models:
