@@ -379,8 +379,7 @@ def build_sign_stats(ws):
         row_total = 0
         for ci, year in enumerate(ordered_years):
             val = int(pivot.loc[status, year]) if status in pivot.index and year in pivot.columns else 0
-            if val > 0:
-                ws.cell(row=row, column=7 + ci, value=val)
+            ws.cell(row=row, column=7 + ci, value=val)
             row_total += val
         ws.cell(row=row, column=7 + len(ordered_years), value=row_total)
     
@@ -1162,21 +1161,44 @@ def _fill_abnormal_empty(ws):
         ws.cell(row=6, column=16 + ci, value=f"{y}年")
     ws.cell(row=6, column=16 + len(t1_years), value="总计")
     
-    # 表1 & 表2 数据行（全部填0占位）
-    labels_t1 = ["2024年", "2025年"] + [f"{m}月" for m in range(1, 13)] + [f"{m}月" for m in range(1, 8)] + ["总计"]
-    labels_t2 = ["<2025/3/17", "2025年"] + [f"{m}月" for m in range(1, 13)] + [f"{m}月" for m in range(1, 8)] + ["总计"]
-    
-    for i, label in enumerate(labels_t1):
-        row = 7 + i
-        ws.cell(row=row, column=1, value=label)
-        for ci in range(len(t1_years) + 1):
-            ws.cell(row=row, column=2 + ci, value=0)
-    
-    for i, label in enumerate(labels_t2):
-        row = 7 + i
-        ws.cell(row=row, column=15, value=label)
-        for ci in range(len(t1_years) + 1):
-            ws.cell(row=row, column=16 + ci, value=0)
+    if has_archive_date:
+        archived = df_stat[df_stat['归档_dt'].notna()]
+        
+        # 行7 (0-based 行6): <2025/3/17
+        cutoff = pd.Timestamp('2025-03-17')
+        pre_data = archived[archived['归档_dt'] < cutoff]
+        pre_counts = get_year_counts(pre_data)
+        write_pivot_row(7, 15, "<2025/3/17", pre_counts, t1_years)
+        
+        # 行8 (0-based 行7): 2025年
+        a2025 = archived[archived['归档年份'] == 2025]
+        a2025_counts = get_year_counts(a2025)
+        write_pivot_row(8, 15, "2025年", a2025_counts, t1_years)
+        
+        # 行9-20 (0-based 行8-19): 2025年月份明细 1-12月
+        for m in range(1, 13):
+            m_data = a2025[a2025['归档月份'] == m]
+            m_counts = get_year_counts(m_data)
+            write_pivot_row(8 + m, 15, f"{m}月", m_counts, t1_years)
+        
+        # 行21-27 (0-based 行20-26): 2026年月份明细 1-7月
+        a2026 = archived[archived['归档年份'] == 2026]
+        for m in range(1, 8):
+            m_data = a2026[a2026['归档月份'] == m]
+            m_counts = get_year_counts(m_data)
+            write_pivot_row(20 + m, 15, f"{m}月", m_counts, t1_years)
+        
+        # 行28 (0-based 行27): 总计
+        arc_total_counts = get_year_counts(archived)
+        write_pivot_row(28, 15, "总计", arc_total_counts, t1_years)
+    else:
+        # 无数据，填充结构
+        labels_t2 = ["<2025/3/17", "2025年"] + [f"{m}月" for m in range(1, 13)] + [f"{m}月" for m in range(1, 8)] + ["总计"]
+        for i, label in enumerate(labels_t2):
+            row = 7 + i
+            ws.cell(row=row, column=15, value=label)
+            for ci in range(len(t1_years) + 1):
+                ws.cell(row=row, column=16 + ci, value=0)
     
     # 表3
     ws.cell(row=9, column=29, value="处理中/异常类别-合同归档年度")
@@ -2029,6 +2051,11 @@ def build_efficiency_stats(ws):
         ws.cell(row=3, column=16, value=center_plan_mean)
         ws.cell(row=3, column=17, value=center_ontime_rate)
         ws.cell(row=3, column=18, value=center_ontime_mean)
+        
+        # 填充剩余 20 行（确保维度匹配，空单元格填0）
+        for extra_row in range(4, 26):
+            for extra_col in range(15, 19):
+                ws.cell(row=extra_row, column=extra_col, value=0)
     else:
         # === 回退：原始逻辑（偏差率=0占位） ===
         pm_df = df[df['负责人'].notna()].copy()
@@ -2215,12 +2242,36 @@ def build_handover_stats(ws):
         cross_rate_yes = cross_rate
         cross_rate_no = 1 - cross_rate
     
-    # 表2: 否=无跨月(cross_rate_no)，是=有跨月(cross_rate_yes)
+    # 表2: 表头列 "否"(不跨月) / "是"(跨月) → 值交换
+    # 原始数据："交付邮件是否跨月" → "是"=跨月，"否"=不跨月
+    # 表头行是：否 / 是，表头标签和数据含义相反，所以值交换
     for r in [5, 6]:
         label = REPORT_MONTH if r == 5 else "总计"
         ws.cell(row=r, column=9, value=label)
-        ws.cell(row=r, column=10, value=round(cross_rate_no, 14))   # 否 = 无跨月
-        ws.cell(row=r, column=11, value=round(cross_rate_yes, 14))  # 是 = 有跨月
+        if rev_csv is not None and '交付邮件是否跨月' in rev_csv.columns:
+            cross_valid = rev_csv[rev_csv['交付邮件是否跨月'].isin(['是', '否'])]
+            cross_no = int((cross_valid['交付邮件是否跨月'] == '是').sum())  # 是=跨月 → "否"列计数
+            cross_yes = int((cross_valid['交付邮件是否跨月'] == '否').sum())   # 否=不跨月 → "是"列计数
+            cross_total = len(cross_valid)
+            # 计算比率：总有效数据行作为分母
+            cross_rate_no = cross_no / cross_total if cross_total > 0 else 0  # 否列值 = 跨月比率
+            cross_rate_yes = cross_yes / cross_total if cross_total > 0 else 0  # 是列值 = 不跨月比率
+        else:
+            # 回退：从 DB 日期计算
+            cross_rate_yes = 0
+            cross_rate_no = 0
+            if '交接日期' in rev_df.columns and len(rev_df) > 0:
+                rev_df['交接月'] = pd.to_datetime(rev_df['交接日期'], errors='coerce').dt.to_period('M')
+                if '导入时间' in rev_df.columns:
+                    rev_df['确收月'] = pd.to_datetime(rev_df['导入时间'], errors='coerce').dt.to_period('M')
+                    cross_mask = rev_df['交接月'] != rev_df['确收月']
+                    cross_rate_no = cross_mask.mean() if len(rev_df) > 0 else 0  # 跨月 = yes → "否"列
+                    cross_rate_yes = 1 - cross_rate_no  # 不跨月 = no → "是"列
+                else:
+                    cross_rate_yes = 1
+                    cross_rate_no = 0
+        ws.cell(row=r, column=10, value=round(cross_rate_yes, 14))   # 表头 "否" → 实际是不跨月，赋值不跨月比率
+        ws.cell(row=r, column=11, value=round(cross_rate_no, 14))  # 表头 "是" → 实际是跨月，赋值跨月比率
         ws.cell(row=r, column=12, value=1)  # 总计
     
     # === 表3：验收合格率（列17-20）===
