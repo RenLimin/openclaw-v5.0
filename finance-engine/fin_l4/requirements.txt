@@ -1,0 +1,17 @@
+# FIN-L4 依赖
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+jinja2>=3.1.0
+click>=8.1.0
+pydantic>=2.0.0
+python-multipart>=0.0.6
+
+# 安全
+cryptography>=41.0.0
+
+# 报表
+openpyxl>=3.1.0
+python-docx>=1.0.0
+
+# 定时任务
+apscheduler>=3.10.0

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FIN-L4 家庭理财{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-brand">💰 FIN-L4</div>
+        <ul class="nav-links">
+            <li><a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">仪表盘</a></li>
+            <li><a href="/accounts" class="{% if active_page == 'accounts' %}active{% endif %}">账户</a></li>
+            <li><a href="/transactions" class="{% if active_page == 'transactions' %}active{% endif %}">记账</a></li>
+            <li><a href="/loans" class="{% if active_page == 'loans' %}active{% endif %}">贷款</a></li>
+            <li><a href="/insurance" class="{% if active_page == 'insurance' %}active{% endif %}">保险</a></li>
+            <li><a href="/portfolio" class="{% if active_page == 'portfolio' %}active{% endif %}">投资</a></li>
+            <li><a href="/reports" class="{% if active_page == 'reports' %}active{% endif %}">报表</a></li>
+            <li><a href="/advise" class="{% if active_page == 'advise' %}active{% endif %}">建议</a></li>
+            <li><a href="/rates" class="{% if active_page == 'rates' %}active{% endif %}">利率</a></li>
+            <li><a href="/settings" class="{% if active_page == 'settings' %}active{% endif %}">设置</a></li>
+        </ul>
+    </nav>
+    <main class="main">
+        {% block content %}{% endblock %}
+    </main>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

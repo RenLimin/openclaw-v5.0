@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 - FIN-L4{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">仪表盘</h1>
+
+<div class="dashboard-grid">
+    <div class="stat-card">
+        <div class="stat-label">家庭净值</div>
+        <div class="stat-value positive">¥{{ net_worth | default("--") }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">总资产</div>
+        <div class="stat-value">¥{{ total_assets | default("--") }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">总负债</div>
+        <div class="stat-value negative">¥{{ total_liabilities | default("--") }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">资产负债率</div>
+        <div class="stat-value">{{ debt_ratio | default("--") }}</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title">账户概览</div>
+        {% if accounts %}
+        <table class="table">
+            <thead><tr><th>账户</th><th>余额</th></tr></thead>
+            <tbody>
+            {% for acc in accounts %}
+            <tr>
+                <td>{{ acc.name }}</td>
+                <td>¥{{ acc.balance }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-muted);">暂无账户数据，请先 <a href="/accounts">创建账户</a></p>
+        {% endif %}
+    </div>
+    <div class="card">
+        <div class="card-title">最近交易</div>
+        {% if transactions %}
+        <table class="table">
+            <thead><tr><th>日期</th><th>摘要</th><th>金额</th></tr></thead>
+            <tbody>
+            {% for txn in transactions %}
+            <tr>
+                <td>{{ txn.date }}</td>
+                <td>{{ txn.note | default("") }}</td>
+                <td>¥{{ txn.amount }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-muted);">暂无交易记录</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
