@@ -18,8 +18,8 @@ from core.saas import TenantContext
 from core.migrations import migration
 
 
-@migration("1.2.0")
-def upgrade_1_2_0(conn: Any) -> None:
+@migration("1.2.1")
+def upgrade_1_2_1(conn: Any) -> None:
     """v1.2.0：为 contract 类型 work_items 加部分索引。"""
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_work_items_type_contract "

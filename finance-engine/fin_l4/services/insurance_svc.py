@@ -91,7 +91,17 @@ class InsuranceService:
 
     def list_policies(self, family_id: str) -> List[Dict]:
         """列出家庭所有保单"""
-        return self.repo.list_by_family(family_id)
+        rows = self.repo.list_by_family(family_id)
+        return [{
+            "id": r["id"],
+            "policy_number": r.get("policy_number") or (r.get("extra_terms") and __import__("json").loads(r["extra_terms"]).get("policy_number", "")) or r["id"][:8],
+            "name": r.get("product_name", ""),
+            "type": r.get("policy_type", ""),
+            "sum_assured": r.get("sum_assured", "0"),
+            "premium": r.get("annual_premium", "0"),
+            "status": r.get("status", "active"),
+            "term_years": r.get("term_years", 0),
+        } for r in rows]
 
     def get_policy_detail(self, policy_id: str) -> Dict:
         """保单详情（含现金价值表）"""

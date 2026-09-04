@@ -21,8 +21,8 @@ from core.saas import TenantContext
 from core.migrations import migration
 
 
-@migration("1.2.0")
-def upgrade_1_2_0(conn):
+@migration("1.2.3")
+def upgrade_1_2_3(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_work_items_type_sla ON work_items(type) WHERE type='sla'")
 
 

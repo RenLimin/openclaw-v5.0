@@ -298,6 +298,38 @@ async def portfolio_detail_page(request: Request, portfolio_id: str):
     })
 
 
+@app.get("/accounts", response_class=HTMLResponse)
+async def accounts_page(request: Request):
+    """账户管理页"""
+    return templates.TemplateResponse(request, "accounts.html", {
+        "request": request, "active_page": "accounts",
+    })
+
+
+@app.get("/transactions", response_class=HTMLResponse)
+async def transactions_page(request: Request):
+    """记账页"""
+    return templates.TemplateResponse(request, "transactions.html", {
+        "request": request, "active_page": "transactions",
+    })
+
+
+@app.get("/rates", response_class=HTMLResponse)
+async def rates_page(request: Request):
+    """利率管理页"""
+    return templates.TemplateResponse(request, "rates.html", {
+        "request": request, "active_page": "rates",
+    })
+
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    """设置页"""
+    return templates.TemplateResponse(request, "settings.html", {
+        "request": request, "active_page": "settings",
+    }})
+
+
 @app.get("/health")
 async def health():
     """健康检查"""
@@ -315,7 +347,7 @@ async def report_page(request: Request):
 
     bs = report_svc.balance_sheet("default")
     income = report_svc.income_summary("default")
-    cashflow = report_svc.monthly_cashflow("default")
+    cashflow = report_svc.cashflow_monthly("default")
 
     return templates.TemplateResponse(request, "reports.html", {
         "request": request, "active_page": "report",

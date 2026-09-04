@@ -1,12 +1,44 @@
-% extends "base.html" %
-% block title %}报表中心 - FIN-L4% endblock %
-% block content %
+{% extends "base.html" %}
+{% block title %}报表中心 - FIN-L4{% endblock %}
+{% block content %}
 <h1 style="margin-bottom: 1.5rem;">报表中心</h1>
-<div class="card">
-    <div class="card-title">功能开发中</div>
-    <p style="color: var(--text-muted);">报表中心 模块正在建设中，敬请期待。</p>
-    <p style="margin-top: 1rem;">
-        <a href="/" class="btn btn-primary">返回仪表盘</a>
-    </p>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">资产负债表</div>
+    {% if balance_sheet.assets or balance_sheet.liabilities %}
+    <table class="table">
+        <thead><tr><th>科目</th><th>金额</th></tr></thead>
+        <tbody>
+            <tr><td><strong>资产</strong></td><td></td></tr>
+            {% for item in balance_sheet.assets %}
+            <tr><td style="padding-left: 2rem;">{{ item.code }} {{ item.name }}</td><td>¥{{ item.balance }}</td></tr>
+            {% endfor %}
+            <tr><td><strong>总资产</strong></td><td><strong>¥{{ balance_sheet.total_assets }}</strong></td></tr>
+            <tr><td><strong>负债</strong></td><td></td></tr>
+            {% for item in balance_sheet.liabilities %}
+            <tr><td style="padding-left: 2rem;">{{ item.code }} {{ item.name }}</td><td>¥{{ item.balance }}</td></tr>
+            {% endfor %}
+            <tr><td><strong>总负债</strong></td><td><strong>¥{{ balance_sheet.total_liabilities }}</strong></td></tr>
+            <tr><td><strong>净资产</strong></td><td><strong>¥{{ balance_sheet.net_worth }}</strong></td></tr>
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted);">暂无数据</p>
+    {% endif %}
 </div>
-% endblock %
+
+<div class="card">
+    <div class="card-title">收支汇总</div>
+    {% if income_summary.income or income_summary.expenses %}
+    <table class="table">
+        <tbody>
+            <tr><td><strong>总收入</strong></td><td><strong>¥{{ income_summary.total_income }}</strong></td></tr>
+            <tr><td><strong>总支出</strong></td><td><strong>¥{{ income_summary.total_expenses }}</strong></td></tr>
+            <tr><td><strong>净结余</strong></td><td><strong>¥{{ income_summary.net }}</strong></td></tr>
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted);">暂无数据</p>
+    {% endif %}
+</div>
+{% endblock %}

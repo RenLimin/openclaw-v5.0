@@ -235,7 +235,14 @@ class Repository(Generic[T]):
         return True
 
     def list(self, **filters: Any) -> list[T]:
-        return self._model.list(self._db, **filters)  # type: ignore[return-value]
+        return self._model.list(self._db, **filters)
+
+    def get_by_id_ignore_tenant(self, id: str) -> Optional[T]:
+        """按 ID 查询，忽略 tenant 隔离（用于管理视图）。"""
+        table = self._model.__tablename__
+        cursor = self._db.execute(f"SELECT * FROM {table} WHERE id = ?", (id,))
+        row = cursor.fetchone()
+        return self._model._row_to_instance(row) if row else None  # type: ignore[return-value]
 
     def count(self, **filters: Any) -> int:
         where = ["tenant_id = ?"]

@@ -51,7 +51,7 @@ def register_webui_routes(app, registry, db) -> None:
             ]
         except Exception:
             pass
-        return templates.TemplateResponse("dashboard.html", {
+        return templates.TemplateResponse(request=request, name="dashboard.html", context={
             "request": request,
             "modules": modules,
             "module_count": len(modules),
@@ -67,38 +67,44 @@ def register_webui_routes(app, registry, db) -> None:
                 projects = mod.list_projects()
         except Exception:
             pass
-        return templates.TemplateResponse("projects.html", {
+        return templates.TemplateResponse(request=request, name="projects.html", context={
             "request": request,
             "projects": projects,
         })
 
     @app.get("/projects/{project_id}", response_class=HTMLResponse, include_in_schema=False)
     async def page_project_detail(request: Request, project_id: str):
-        """项目详情页。"""
+        """项目详情页（管理视图：跨 tenant 查询）。"""
         project = None
         tasks = []
         milestones = []
         deliverables = []
         risks = []
         try:
-            p_mod = registry.get("project")
-            if p_mod:
-                project = p_mod.get_project(project_id)
-            t_mod = registry.get("task")
-            if t_mod:
-                tasks = [t for t in t_mod.list_tasks() if getattr(t, "project_id", "") == project_id]
-            m_mod = registry.get("milestone")
-            if m_mod:
-                milestones = [m for m in m_mod.list_milestones() if getattr(m, "project_id", "") == project_id]
-            d_mod = registry.get("deliverable")
-            if d_mod:
-                deliverables = [d for d in d_mod.list_deliverables() if getattr(d, "project_id", "") == project_id]
-            r_mod = registry.get("risk")
-            if r_mod:
-                risks = [r for r in r_mod.list_risks() if getattr(r, "project_id", "") == project_id]
+            from core.saas import TenantContext as _tc
+            _old = _tc.current()
+            _tc.set("system")
+            try:
+                p_mod = registry.get("project")
+                if p_mod and hasattr(p_mod, '_repo'):
+                    project = p_mod._repo.get_by_id_ignore_tenant(project_id)
+                t_mod = registry.get("task")
+                if t_mod:
+                    tasks = [t for t in t_mod.list_tasks() if getattr(t, "project_id", "") == project_id]
+                m_mod = registry.get("milestone")
+                if m_mod:
+                    milestones = [m for m in m_mod.list_milestones() if getattr(m, "project_id", "") == project_id]
+                d_mod = registry.get("deliverable")
+                if d_mod:
+                    deliverables = [d for d in d_mod.list_deliverables() if getattr(d, "project_id", "") == project_id]
+                r_mod = registry.get("risk")
+                if r_mod:
+                    risks = [r for r in r_mod.list_risks() if getattr(r, "project_id", "") == project_id]
+            finally:
+                _tc.set(_old)
         except Exception:
             pass
-        return templates.TemplateResponse("project_detail.html", {
+        return templates.TemplateResponse(request=request, name="project_detail.html", context={
             "request": request,
             "project": project,
             "tasks": tasks,
@@ -119,7 +125,7 @@ def register_webui_routes(app, registry, db) -> None:
             ]
         except Exception:
             pass
-        return templates.TemplateResponse("modules.html", {
+        return templates.TemplateResponse(request=request, name="modules.html", context={
             "request": request,
             "modules": modules,
         })

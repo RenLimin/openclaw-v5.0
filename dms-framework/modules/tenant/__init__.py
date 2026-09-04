@@ -102,7 +102,7 @@ class TenantModule(BaseModule):
         t = self._repo.get(tenant_id)
         if not t:
             return False
-        self._repo.delete(t)
+        self._repo.delete(tenant_id)
         return True
 
     # -- 配额检查 --

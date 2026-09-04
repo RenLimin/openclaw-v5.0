@@ -1,12 +1,26 @@
-% extends "base.html" %
-% block title %}投资持仓 - FIN-L4% endblock %
-% block content %
+{% extends "base.html" %}
+{% block title %}投资持仓 - FIN-L4{% endblock %}
+{% block content %}
 <h1 style="margin-bottom: 1.5rem;">投资持仓</h1>
+{% if portfolios %}
+<table class="table">
+    <thead><tr><th>名称</th><th>类型</th><th>总成本</th><th>总市值</th><th>盈亏</th></tr></thead>
+    <tbody>
+    {% for p in portfolios %}
+    <tr>
+        <td><a href="/portfolio/{{ p.id }}">{{ p.name }}</a></td>
+        <td>{{ p.type }}</td>
+        <td>¥{{ p.total_cost }}</td>
+        <td>¥{{ p.total_value }}</td>
+        <td style="color: {% if p.total_gain_loss and p.total_gain_loss.startswith('-') %}red{% else %}green{% endif %};">¥{{ p.total_gain_loss }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
 <div class="card">
-    <div class="card-title">功能开发中</div>
-    <p style="color: var(--text-muted);">投资持仓 模块正在建设中，敬请期待。</p>
-    <p style="margin-top: 1rem;">
-        <a href="/" class="btn btn-primary">返回仪表盘</a>
-    </p>
+    <div class="card-title">暂无投资组合</div>
+    <p style="color: var(--text-muted);">还没有创建投资组合。</p>
 </div>
-% endblock %
+{% endif %}
+{% endblock %}
