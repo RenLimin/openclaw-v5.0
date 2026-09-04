@@ -12,7 +12,7 @@
 | 组件 ID | OCR-001 |
 | 组件名称 | 文档数字化（OCR） |
 | 状态 | ✅ 已上线 (2026-09-02) — 双引擎 + 优化管线实测通过 |
-| 实现 | `skills/contract-approval/scripts/contract_ocr.py`（核心引擎） |
+| 实现 | `skills/ocr-digitalization/scripts/ocr_backends.py`（核心引擎） |
 | ADR | ADR-202609-023 |
 | 引擎 | RapidOCR（主）+ PaddleOCR（高精度补充）+ 多版本预处理 |
 

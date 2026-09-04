@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-04 10:27 UTC+08:00
+最后生成：2026-09-04 10:31 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -147,8 +147,8 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 27 |
-| EXP（经验卡片） | 19 |
+| ADR（架构决策记录） | 28 |
+| EXP（经验卡片） | 21 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -178,6 +178,7 @@
 | [`ADR-202608-021-system-backup`](../knowledge-base/by-category/project-experience/adr/ADR-202608-021-system-backup.md) | accepted |
 | [`ADR-202608-022-bdms-delivery-center`](../knowledge-base/by-category/project-experience/adr/ADR-202608-022-bdms-delivery-center.md) | accepted |
 | [`ADR-202609-018-sales-contract-approval`](../knowledge-base/by-category/project-experience/adr/ADR-202609-018-sales-contract-approval.md) | accepted |
+| [`ADR-202609-023-ocr-digitalization`](../knowledge-base/by-category/project-experience/adr/ADR-202609-023-ocr-digitalization.md) | accepted |
 | [`ADR-202609-024-session-isolation-sharing`](../knowledge-base/by-category/project-experience/adr/ADR-202609-024-session-isolation-sharing.md) | proposed |
 | [`ADR-202609-025-delivery-management-framework`](../knowledge-base/by-category/project-experience/adr/ADR-202609-025-delivery-management-framework.md) | proposed |
 | [`ADR-202609-026-personal-finance-framework-L3`](../knowledge-base/by-category/project-experience/adr/ADR-202609-026-personal-finance-framework-L3.md) | accepted |
@@ -202,6 +203,8 @@
 | [`EXP-20260901-018-ppt-capability-deep-research`](../knowledge-base/by-category/project-experience/correct/EXP-20260901-018-ppt-capability-deep-research.md) | active |
 | [`EXP-20260902-001-contract-approval-skill`](../knowledge-base/by-category/project-experience/correct/EXP-20260902-001-contract-approval-skill.md) | — |
 | [`EXP-20260903-001-dms-framework-phase1`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-001-dms-framework-phase1.md) | — |
+| [`EXP-20260903-001-ocr-coordinate-system`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-001-ocr-coordinate-system.md) | active |
+| [`EXP-20260903-002-audit-scope-filter`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-002-audit-scope-filter.md) | active |
 | [`EXP-20260903-002-dms-framework-phase2`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-002-dms-framework-phase2.md) | — |
 | [`EXP-20260903-003-dms-framework-phase3`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-003-dms-framework-phase3.md) | — |
 | [`EXP-20260903-004-dms-framework-phase4`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-004-dms-framework-phase4.md) | — |
@@ -212,8 +215,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `11e2d14` |
-| Commit 数 | 187 |
+| HEAD | `91d2da1` |
+| Commit 数 | 188 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
