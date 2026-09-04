@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-03 23:17 UTC+08:00
+最后生成：2026-09-04 10:27 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -38,7 +38,7 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 125 个（可用 113）
+**总计** 126 个（可用 114）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
@@ -46,7 +46,7 @@
 | `openclaw-custodian` | 4 | — |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 29 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 30 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -65,6 +65,7 @@
 | `macos-orphan-launchagent-cleanup` | 卸载并彻底清除指向已删除代码的 macOS LaunchAgent 孤儿服务与幽灵进程，含 lsof 误判规避 |
 | `markdown-frontmatter-schema-audit-gate` | Validate and gate Markdown doc frontmatter (layers/stage/tags/IDs, cross-refs, relative... |
 | `node-plugin-capability-check-from-dist-source` | Verify an installed npm/OpenClaw plugin's real capability (e.g. proactive send, require... |
+| `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 |
 | `openclaw-add-tool-via-also-allow` | Add a blocked tool in OpenClaw without changing global profile: patch tools.alsoAllow, ... |
 | `openclaw-channel-proactive-delivery-triage` | Diagnose OpenClaw channel proactive/cron delivery failures (e.g. WeCom bot summary not ... |
 | `openclaw-channel-regression-log-audit` | Regression-test an OpenClaw chat channel after gateway restart using gateway.log layer ... |
@@ -135,19 +136,19 @@
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
-| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
+| openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
-| openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 
 ## 文档资产
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 26 |
-| EXP（经验卡片） | 18 |
+| ADR（架构决策记录） | 27 |
+| EXP（经验卡片） | 19 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -180,6 +181,7 @@
 | [`ADR-202609-024-session-isolation-sharing`](../knowledge-base/by-category/project-experience/adr/ADR-202609-024-session-isolation-sharing.md) | proposed |
 | [`ADR-202609-025-delivery-management-framework`](../knowledge-base/by-category/project-experience/adr/ADR-202609-025-delivery-management-framework.md) | proposed |
 | [`ADR-202609-026-personal-finance-framework-L3`](../knowledge-base/by-category/project-experience/adr/ADR-202609-026-personal-finance-framework-L3.md) | accepted |
+| [`ADR-202609-027-fin-l4-system-design`](../knowledge-base/by-category/project-experience/adr/ADR-202609-027-fin-l4-system-design.md) | proposed |
 
 ### 经验卡片清单
 
@@ -203,14 +205,15 @@
 | [`EXP-20260903-002-dms-framework-phase2`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-002-dms-framework-phase2.md) | — |
 | [`EXP-20260903-003-dms-framework-phase3`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-003-dms-framework-phase3.md) | — |
 | [`EXP-20260903-004-dms-framework-phase4`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-004-dms-framework-phase4.md) | — |
+| [`EXP-20260903-005-dms-framework-l3-complete`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-005-dms-framework-l3-complete.md) | — |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `571ad5f` |
-| Commit 数 | 186 |
+| HEAD | `11e2d14` |
+| Commit 数 | 187 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
