@@ -1,0 +1,27 @@
+# FIN-L4 systemd 单元文件（Linux 裸机部署）
+# 安装: 复制到 /etc/systemd/system/fin-l4.service 后
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now fin-l4
+# 说明: 路径占位 {{PROJECT_DIR}} {{VENV_PYTHON}} {{PORT}} {{DATA_DIR}} {{FAMILY_ID}}
+# 由 deploy.sh --bare 自动生成实际文件;此处为参考模板
+
+[Unit]
+Description=FIN-L4 家庭理财管理系统
+After=network.target
+
+[Service]
+Type=simple
+User=fin4
+Group=fin4
+WorkingDirectory={{PROJECT_DIR}}
+Environment=FIN4_HOST=127.0.0.1
+Environment=FIN4_PORT={{PORT}}
+Environment=FIN4_DB_DIR={{DATA_DIR}}
+Environment=FIN4_FAMILY_ID={{FAMILY_ID}}
+Environment=PYTHONUNBUFFERED=1
+ExecStart={{VENV_PYTHON}} -m fin_l4.run_web
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

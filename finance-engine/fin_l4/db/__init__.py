@@ -4,9 +4,12 @@ import sqlite3
 import os
 from pathlib import Path
 
+from fin_l4.config import get_settings
+
 _global_conn = None
 
-DB_DIR = Path(os.path.expanduser("~/.fin-l4"))
+# DB 目录来自配置（FIN4_DB_DIR 可覆盖）
+DB_DIR = get_settings().db_dir
 DB_DIR.mkdir(parents=True, exist_ok=True)
 
 # 迁移脚本（按顺序执行）
