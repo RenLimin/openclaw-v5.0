@@ -257,10 +257,13 @@ def _col_55_project_stat_status(df: pd.DataFrame, status_counts: dict[str, pd.Se
             return np.nan
         
         proj_str = str(proj_code).strip()
-        ba_val = total_items.iloc[i]
-        az_val = az.iloc[i]
-        ax_val = ax.iloc[i]
-        ay_val = ay.iloc[i]
+        if proj_str not in total_items.index:
+            return np.nan
+            
+        ba_val = total_items.loc[proj_str]
+        az_val = az.loc[proj_str] if proj_str in az.index else 0
+        ax_val = ax.loc[proj_str] if proj_str in ax.index else 0
+        ay_val = ay.loc[proj_str] if proj_str in ay.index else 0
         
         if proj_str in archived_projects:
             return "已结项"
@@ -470,16 +473,20 @@ def _col_67_project_acceptance_status(df: pd.DataFrame, delivery_counts: dict[st
         if proj_code is None or (isinstance(proj_code, float) and np.isnan(proj_code)) or str(proj_code).strip() == "":
             return np.nan
         
-        ba_val = total_items.iloc[i]
-        bm_val = bm.iloc[i]
-        bj_val = bj.iloc[i]
-        bk_val = bk.iloc[i]
-        bl_val = bl.iloc[i]
-        bi_val = bi.iloc[i]
-        be_val = be.iloc[i]
-        bf_val = bf.iloc[i]
-        bg_val = bg.iloc[i]
-        bh_val = bh.iloc[i]
+        proj_str = str(proj_code).strip()
+        if proj_str not in total_items.index:
+            return np.nan
+            
+        ba_val = total_items.loc[proj_str]
+        bm_val = bm.loc[proj_str] if proj_str in bm.index else 0
+        bj_val = bj.loc[proj_str] if proj_str in bj.index else 0
+        bk_val = bk.loc[proj_str] if proj_str in bk.index else 0
+        bl_val = bl.loc[proj_str] if proj_str in bl.index else 0
+        bi_val = bi.loc[proj_str] if proj_str in bi.index else 0
+        be_val = be.loc[proj_str] if proj_str in be.index else 0
+        bf_val = bf.loc[proj_str] if proj_str in bf.index else 0
+        bg_val = bg.loc[proj_str] if proj_str in bg.index else 0
+        bh_val = bh.loc[proj_str] if proj_str in bh.index else 0
         
         sum_bk_bm = bk_val + bl_val + bm_val
         sum_be_bh = be_val + bf_val + bg_val + bh_val
@@ -530,7 +537,7 @@ def _col_68_baseline_end_date(df: pd.DataFrame, acceptance_status: pd.Series) ->
     max_end_dates = temp.dropna(subset=["end_date"]).groupby("project")["end_date"].max()
     
     def get_date(i, row):
-        acc_status = acceptance_status.iloc[i]
+        acc_status = acceptance_status.loc[row.name]
         if acc_status != "全部验收":
             return None
         
@@ -601,7 +608,7 @@ def _col_71_delivery_plan_cross_month(df: pd.DataFrame, diff: pd.Series) -> pd.S
     - AF = 预算-预估交付完成日期
     """
     def compute(i, row):
-        bq = diff.iloc[i]
+        bq = diff.loc[row.name]
         ac_val = row.get("履约项异常/变更备注", "")
         if ac_val is None or (isinstance(ac_val, float) and np.isnan(ac_val)):
             ac_val = ""
@@ -712,7 +719,7 @@ def _col_75_ontime_delivery_cross_month(df: pd.DataFrame, diff: pd.Series) -> pd
     - AG = 交付邮件发送日期
     """
     def compute(i, row):
-        bu = diff.iloc[i]
+        bu = diff.loc[row.name]
         ac_val = row.get("履约项异常/变更备注", "")
         if ac_val is None or (isinstance(ac_val, float) and np.isnan(ac_val)):
             ac_val = ""
@@ -1330,7 +1337,7 @@ def save_abnormal_formula_columns(df, report_date, conn=None):
         ))
 
     cursor.executemany(
-        "INSERT INTO abnormal_formula_columns (销售合同编号, 报告日期, 项目经理团队, 项目验收状态_异常) VALUES (?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO abnormal_formula_columns (销售合同编号, 报告日期, 项目经理团队, 项目验收状态_异常) VALUES (?, ?, ?, ?)",
         records,
     )
     conn.commit()

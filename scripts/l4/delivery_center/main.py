@@ -13,6 +13,7 @@ Bangcle 交付管理系统 - 主调度入口。
 
 import argparse
 import sys
+import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
