@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}模块 — DMS Framework{% endblock %}
+{% block content %}
+<h1>🧩 模块管理</h1>
+<table class="data-table">
+    <thead>
+        <tr><th>模块</th><th>版本</th><th>描述</th><th>表</th><th>依赖</th></tr>
+    </thead>
+    <tbody>
+        {% for m in modules %}
+        <tr>
+            <td><strong>{{ m.name }}</strong></td>
+            <td>{{ m.version }}</td>
+            <td>{{ m.description }}</td>
+            <td><code>{{ m.tables|join(', ') }}</code></td>
+            <td>{{ m.dependencies|join(', ') or '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

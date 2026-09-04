@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}项目 — DMS Framework{% endblock %}
+{% block content %}
+<h1>📁 项目列表</h1>
+{% if projects %}
+<table class="data-table">
+    <thead>
+        <tr><th>名称</th><th>状态</th><th>优先级</th><th>创建时间</th></tr>
+    </thead>
+    <tbody>
+        {% for p in projects %}
+        <tr>
+            <td><a href="/projects/{{ p.id }}">{{ p.name }}</a></td>
+            <td><span class="badge badge-{{ p.status }}">{{ p.status }}</span></td>
+            <td>{{ p.priority }}</td>
+            <td>{{ p.created_at[:10] if p.created_at else '-' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty">暂无项目。使用 <code>dms project create &lt;name&gt;</code> 创建。</p>
+{% endif %}
+{% endblock %}

@@ -94,7 +94,8 @@ def build_registry() -> FrameworkRegistry:
     from core.state_machine import StateMachineEngine
     from core.event_bus import EventBus
 
-    from modules.project import manifest as project_manifest, _factory as project_factory
+    from modules.tenant import manifest as tenant_manifest, _factory as tenant_factory
+from modules.project import manifest as project_manifest, _factory as project_factory
     from modules.milestone import manifest as milestone_manifest, _factory as milestone_factory
     from modules.deliverable import manifest as deliverable_manifest, _factory as deliverable_factory
     from modules.risk import manifest as risk_manifest, _factory as risk_factory
@@ -116,6 +117,7 @@ def build_registry() -> FrameworkRegistry:
     registry._event_bus = EventBus()
     registry._workflow_engine = WorkflowSchemeEngine()
 
+    registry.register(tenant_manifest, tenant_factory)
     registry.register(project_manifest, project_factory)
     registry.register(milestone_manifest, milestone_factory)
     registry.register(deliverable_manifest, deliverable_factory)

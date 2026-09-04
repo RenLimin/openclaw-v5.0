@@ -213,3 +213,39 @@ def upgrade_1_1_0(conn: "sqlite3.Connection") -> None:
     except Exception:
         pass
     conn.commit()
+
+
+@migration("1.2.0")
+def upgrade_1_2_0(conn: "sqlite3.Connection") -> None:
+    """v1.2.0：租户管理表（tenants + tenant_config）。"""
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS tenants (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL DEFAULT 'system',
+            name TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            tier TEXT DEFAULT 'free',
+            status TEXT DEFAULT 'active',
+            contact_email TEXT,
+            max_projects INTEGER DEFAULT 10,
+            max_users INTEGER DEFAULT 5,
+            metadata TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS tenant_config (
+            id TEXT PRIMARY KEY,
+            tenant_id TEXT NOT NULL DEFAULT 'system',
+            module_name TEXT NOT NULL,
+            enabled BOOLEAN DEFAULT 1,
+            config_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(tenant_id, module_name)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug);
+        CREATE INDEX IF NOT EXISTS idx_tenant_config_tenant ON tenant_config(tenant_id);
+    """)
+    conn.commit()

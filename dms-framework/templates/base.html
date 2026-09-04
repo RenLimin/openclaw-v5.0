@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DMS Framework{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">🦞 DMS</div>
+        <ul>
+            <li><a href="/" class="{% if request.url.path == '/' %}active{% endif %}">📊 看板</a></li>
+            <li><a href="/projects" class="{% if '/projects' in request.url.path %}active{% endif %}">📁 项目</a></li>
+            <li><a href="/modules" class="{% if '/modules' in request.url.path %}active{% endif %}">🧩 模块</a></li>
+            <li><a href="/docs" target="_blank">📄 API 文档</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

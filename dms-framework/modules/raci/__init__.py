@@ -80,8 +80,12 @@ class RACIModule(BaseModule):
 
     def _load_from_db(self) -> None:
         assert self._repo and self._engine
-        for entity in self._repo.list():
-            self._engine.assign(entity.to_assignment())
+        try:
+            for entity in self._repo.list():
+                self._engine.assign(entity.to_assignment())
+        except Exception:
+            # 表不存在时静默跳过（首次初始化，migration 尚未执行）
+            pass
 
     def _publish(self, name: str, payload: dict[str, Any], entity_id: str = "") -> None:
         bus = self._get_event_bus()

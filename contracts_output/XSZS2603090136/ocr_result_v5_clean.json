@@ -1,0 +1,67 @@
+{
+  "seals": [
+    {
+      "type": "seal",
+      "page": 7,
+      "label": "甲方公章",
+      "side": "甲方",
+      "bbox": [
+        624,
+        918,
+        1129,
+        1413
+      ],
+      "confidence": 0.85,
+      "image_path": "contracts_output/XSZS2603090136/signatures_v5/page_7_seal_甲方.png"
+    },
+    {
+      "type": "seal",
+      "page": 7,
+      "label": "乙方公章",
+      "side": "乙方",
+      "bbox": [
+        1486,
+        1040,
+        1958,
+        1440
+      ],
+      "confidence": 0.85,
+      "image_path": "contracts_output/XSZS2603090136/signatures_v5/page_7_seal_乙方.png"
+    }
+  ],
+  "signatures": [
+    {
+      "type": "signature",
+      "page": 7,
+      "label": "甲方签字",
+      "side": "甲方",
+      "bbox": [
+        62,
+        1622,
+        1179,
+        1988
+      ],
+      "confidence": 0.8,
+      "image_path": "contracts_output/XSZS2603090136/signatures_v5/page_7_signature_甲方.png"
+    },
+    {
+      "type": "signature",
+      "page": 7,
+      "label": "乙方签字",
+      "side": "乙方",
+      "bbox": [
+        1303,
+        1622,
+        2420,
+        1988
+      ],
+      "confidence": 0.8,
+      "image_path": "contracts_output/XSZS2603090136/signatures_v5/page_7_signature_乙方.png"
+    }
+  ],
+  "total_pages": 8,
+  "meta": {
+    "dpi": 300,
+    "engine": "rapidocr"
+  }
+}

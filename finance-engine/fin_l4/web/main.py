@@ -76,7 +76,7 @@ async def dashboard(request: Request):
     except Exception:
         transactions = []
     
-    return templates.TemplateResponse("dashboard.html", {
+    return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "active_page": "dashboard",
         "net_worth": net_worth,
@@ -103,7 +103,7 @@ async def budget_page(request: Request, month: str = None):
     svc = BudgetService(conn)
     overview = svc.get_overview("default", month)
 
-    return templates.TemplateResponse("budget.html", {
+    return templates.TemplateResponse(request, "budget.html", {
         "request": request,
         "active_page": "budget",
         "month": month,
@@ -114,7 +114,7 @@ async def budget_page(request: Request, month: str = None):
 @app.get("/import", response_class=HTMLResponse)
 async def import_page(request: Request):
     """CSV 导入页"""
-    return templates.TemplateResponse("import.html", {
+    return templates.TemplateResponse(request, "import.html", {
         "request": request,
         "active_page": "import",
     })
@@ -133,7 +133,7 @@ async def loans_page(request: Request):
     conn = get_db()
     svc = LoanService(conn)
     loans = svc.list_loans("default")
-    return templates.TemplateResponse("loans.html", {
+    return templates.TemplateResponse(request, "loans.html", {
         "request": request, "active_page": "loans", "loans": loans,
     })
 
@@ -149,7 +149,7 @@ async def loan_detail_page(request: Request, loan_id: str):
     loan = svc.repo.get(loan_id)
     schedule = svc.get_schedule(loan_id)
     summary = svc.get_summary(loan_id)
-    return templates.TemplateResponse("loan_detail.html", {
+    return templates.TemplateResponse(request, "loan_detail.html", {
         "request": request, "active_page": "loans",
         "loan": loan, "schedule": schedule, "summary": summary,
         "today": str(date.today()), "prepay_result": None,
@@ -170,7 +170,7 @@ async def loan_prepay(request: Request, loan_id: str):
     loan = svc.repo.get(loan_id)
     schedule = svc.get_schedule(loan_id)
     summary = svc.get_summary(loan_id)
-    return templates.TemplateResponse("loan_detail.html", {
+    return templates.TemplateResponse(request, "loan_detail.html", {
         "request": request, "active_page": "loans",
         "loan": loan, "schedule": schedule, "summary": summary,
         "today": str(date.today()), "prepay_result": result,
@@ -199,7 +199,7 @@ async def insurance_page(request: Request):
     conn = get_db()
     svc = InsuranceService(conn)
     policies = svc.list_policies("default")
-    return templates.TemplateResponse("insurance.html", {
+    return templates.TemplateResponse(request, "insurance.html", {
         "request": request, "active_page": "insurance", "policies": policies,
     })
 
@@ -213,7 +213,7 @@ async def insurance_detail_page(request: Request, policy_id: str):
     svc = InsuranceService(conn)
     policy = svc.get_policy_detail(policy_id)
     gaps = svc.get_coverage_gap("default")
-    return templates.TemplateResponse("insurance_detail.html", {
+    return templates.TemplateResponse(request, "insurance_detail.html", {
         "request": request, "active_page": "insurance",
         "policy": policy, "cash_value_table": policy.get("cash_value_table", []),
         "coverage_gap": None, "surrender_value": None,
@@ -229,7 +229,7 @@ async def insurance_surrender(request: Request, policy_id: str):
     svc = InsuranceService(conn)
     result = svc.surrender_policy(policy_id)
     policy = svc.get_policy_detail(policy_id)
-    return templates.TemplateResponse("insurance_detail.html", {
+    return templates.TemplateResponse(request, "insurance_detail.html", {
         "request": request, "active_page": "insurance",
         "policy": policy, "cash_value_table": policy.get("cash_value_table", []),
         "coverage_gap": None, "surrender_value": result["cash_value"],
@@ -247,7 +247,7 @@ async def coverage_gap_page(request: Request):
     total_current = sum(float(g["current"]) for g in gaps)
     total_recommended = sum(float(g["recommended"]) for g in gaps)
     total_gap = sum(float(g["gap"]) for g in gaps)
-    return templates.TemplateResponse("coverage_gap.html", {
+    return templates.TemplateResponse(request, "coverage_gap.html", {
         "request": request, "active_page": "insurance",
         "gaps": gaps,
         "total_current": f"{total_current:,.2f}",
@@ -266,7 +266,7 @@ async def portfolio_page(request: Request):
     conn = get_db()
     svc = PortfolioService(conn)
     portfolios = svc.list_portfolios("default")
-    return templates.TemplateResponse("portfolio.html", {
+    return templates.TemplateResponse(request, "portfolio.html", {
         "request": request, "active_page": "portfolio", "portfolios": portfolios,
     })
 
@@ -288,7 +288,7 @@ async def portfolio_detail_page(request: Request, portfolio_id: str):
         gain = (float(h.get("current_price", 0) or 0) - float(h.get("cost_basis_price", 0) or 0)) * float(h.get("shares", 0) or 0)
         h["gain"] = f"{gain:,.2f}"
 
-    return templates.TemplateResponse("portfolio_detail.html", {
+    return templates.TemplateResponse(request, "portfolio_detail.html", {
         "request": request, "active_page": "portfolio",
         "portfolio": {"id": portfolio_id, "name": ""},
         "performance": performance,

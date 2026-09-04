@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name if project else '项目详情' }} — DMS Framework{% endblock %}
+{% block content %}
+{% if project %}
+<h1>📁 {{ project.name }}</h1>
+<div class="meta">
+    <span class="badge badge-{{ project.status }}">{{ project.status }}</span>
+    <span>优先级: {{ project.priority }}</span>
+    <span>创建: {{ project.created_at[:10] if project.created_at else '-' }}</span>
+</div>
+
+{% if project.description %}<p>{{ project.description }}</p>{% endif %}
+
+<h2>📋 任务 ({{ tasks|length }})</h2>
+{% if tasks %}
+<table class="data-table">
+    <thead><tr><th>标题</th><th>状态</th><th>优先级</th><th>负责人</th></tr></thead>
+    <tbody>{% for t in tasks %}
+    <tr>
+        <td>{{ t.title }}</td>
+        <td><span class="badge badge-{{ t.status }}">{{ t.status }}</span></td>
+        <td>{{ t.priority }}</td>
+        <td>{{ t.assignee_id or '-' }}</td>
+    </tr>
+    {% endfor %}</tbody>
+</table>
+{% else %}<p class="empty">暂无任务</p>{% endif %}
+
+<h2>🏁 里程碑 ({{ milestones|length }})</h2>
+{% if milestones %}
+<table class="data-table">
+    <thead><tr><th>名称</th><th>状态</th><th>截止日期</th></tr></thead>
+    <tbody>{% for m in milestones %}
+    <tr>
+        <td>{{ m.title }}</td>
+        <td><span class="badge badge-{{ m.status }}">{{ m.status }}</span></td>
+        <td>{{ m.due_date or '-' }}</td>
+    </tr>
+    {% endfor %}</tbody>
+</table>
+{% else %}<p class="empty">暂无里程碑</p>{% endif %}
+
+<h2>📦 交付物 ({{ deliverables|length }})</h2>
+{% if deliverables %}
+<table class="data-table">
+    <thead><tr><th>名称</th><th>状态</th></tr></thead>
+    <tbody>{% for d in deliverables %}
+    <tr>
+        <td>{{ d.title }}</td>
+        <td><span class="badge badge-{{ d.status }}">{{ d.status }}</span></td>
+    </tr>
+    {% endfor %}</tbody>
+</table>
+{% else %}<p class="empty">暂无交付物</p>{% endif %}
+
+<h2>⚠️ 风险 ({{ risks|length }})</h2>
+{% if risks %}
+<table class="data-table">
+    <thead><tr><th>名称</th><th>状态</th><th>优先级</th></tr></thead>
+    <tbody>{% for r in risks %}
+    <tr>
+        <td>{{ r.title }}</td>
+        <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+        <td>{{ r.priority }}</td>
+    </tr>
+    {% endfor %}</tbody>
+</table>
+{% else %}<p class="empty">暂无风险</p>{% endif %}
+
+{% else %}
+<p class="empty">项目不存在</p>
+{% endif %}
+{% endblock %}
