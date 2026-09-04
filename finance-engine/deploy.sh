@@ -66,7 +66,9 @@ cmd_status() {
             state=$(docker inspect -f '{{.State.Status}}' "${SERVICE_NAME}" 2>/dev/null || echo "unknown")
             info "Docker 部署: 容器 ${SERVICE_NAME} 状态 = ${state}"
             if [ "$state" = "running" ]; then
-                info "访问: http://localhost:${PORT}"
+                local mapped_port
+                mapped_port=$(docker port "${SERVICE_NAME}" 8500/tcp 2>/dev/null | grep -oE "[0-9]+$" | head -1 || echo "${PORT}")
+                info "访问: http://localhost:${mapped_port}"
             fi
             exit 0
         fi
