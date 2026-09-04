@@ -4,6 +4,8 @@ import sqlite3
 import os
 from pathlib import Path
 
+_global_conn = None
+
 DB_DIR = Path(os.path.expanduser("~/.fin-l4"))
 DB_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -219,9 +221,14 @@ def get_db(db_path: str = None) -> sqlite3.Connection:
 
 def init_db(db_path: str = None):
     """初始化数据库（执行所有迁移）"""
+    global _global_conn
     conn = get_db(db_path)
+    _global_conn = conn
     for migration in MIGRATIONS:
-        conn.executescript(migration)
+        if callable(migration):
+            migration()
+        else:
+            conn.executescript(migration)
     conn.commit()
     return conn
 
@@ -231,3 +238,17 @@ def get_db_path(family_id: str = None) -> str:
     if family_id:
         return str(DB_DIR / f"fin_l4_{family_id}.db")
     return str(DB_DIR / "fin_l4.db")
+
+# 迁移: insurance 表加 start_date（忽略已存在错误）
+MIGRATIONS.append("""
+    SELECT 1;
+""")
+# 用 try/except 方式加列
+def _add_insurance_start_date():
+    try:
+        _global_conn.execute("ALTER TABLE fin4_insurance_policies ADD COLUMN start_date TEXT")
+        _global_conn.commit()
+    except Exception:
+        pass
+
+MIGRATIONS.append(_add_insurance_start_date)

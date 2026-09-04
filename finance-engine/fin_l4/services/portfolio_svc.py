@@ -148,6 +148,10 @@ class PortfolioService:
                 for k, v in target_alloc.items()
             }
 
+        # 默认目标配置: 均衡分配
+        if not target:
+            target = {AssetType.STOCK: Decimal("40"), AssetType.BOND: Decimal("30"),
+                     AssetType.FUND: Decimal("20"), AssetType.CASH: Decimal("10")}
         suggestions = self.engine.suggest_rebalancing(portfolio.id, target)
         return {
             "portfolio_id": portfolio_id,

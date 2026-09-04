@@ -121,7 +121,7 @@ class LoanService:
             start_date=date.fromisoformat(loan_data["start_date"]),
         )
 
-        result = self.engine.calculate_early_payoff(loan, Decimal(amount))
+        result = self.engine.calculate_early_payoff(loan, Decimal(amount), date.today())
         return {
             "interest_saved": str(result.interest_saved),
             "break_even_months": result.break_even_months,
@@ -130,3 +130,52 @@ class LoanService:
     def list_loans(self, family_id: str) -> List[Dict]:
         """列出家庭所有贷款"""
         return self.repo.list_by_family(family_id)
+
+    def execute_prepay(self, loan_id: str, amount: str, date_str: str = None) -> Dict:
+        """执行提前还款（实际扣款）"""
+        from datetime import date
+        loan_data = self.repo.get(loan_id)
+        if not loan_data:
+            raise ValueError(f"贷款不存在: {loan_id}")
+
+        # 计算节省利息
+        prepay_result = self.prepay(loan_id, amount)
+
+        # 更新贷款状态（减少本金）
+        new_principal = Decimal(loan_data["principal"]) - Decimal(amount)
+        self.repo.update_principal(loan_id, str(new_principal))
+
+        self.audit.log(
+            family_id=loan_data["family_id"],
+            user="system",
+            action="prepay",
+            entity_type="loan",
+            entity_id=loan_id,
+            details={"amount": amount, "interest_saved": prepay_result["interest_saved"]},
+        )
+
+        return {
+            "loan_id": loan_id,
+            "prepay_amount": amount,
+            "new_principal": str(new_principal),
+            "interest_saved": prepay_result["interest_saved"],
+        }
+
+    def close_loan(self, loan_id: str) -> Dict:
+        """结清贷款"""
+        loan_data = self.repo.get(loan_id)
+        if not loan_data:
+            raise ValueError(f"贷款不存在: {loan_id}")
+
+        self.repo.update_status(loan_id, "closed")
+
+        self.audit.log(
+            family_id=loan_data["family_id"],
+            user="system",
+            action="close",
+            entity_type="loan",
+            entity_id=loan_id,
+            details={},
+        )
+
+        return {"loan_id": loan_id, "status": "closed"}

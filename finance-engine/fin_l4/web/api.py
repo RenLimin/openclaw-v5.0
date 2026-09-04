@@ -420,3 +420,128 @@ def list_import_rules():
     conn = get_db()
     svc = ImportService(conn)
     return svc.list_rules("default")
+
+
+# ========== M3 贷款详情 API ==========
+
+@router.get("/loans/{loan_id}")
+def api_loan_detail(loan_id: str):
+    from fin_l4.db import get_db
+    from fin_l4.services.loan_svc import LoanService
+    conn = get_db()
+    svc = LoanService(conn)
+    loan = svc.repo.get(loan_id)
+    schedule = svc.get_schedule(loan_id)
+    summary = svc.get_summary(loan_id)
+    return {"loan": loan, "schedule": schedule, "summary": summary}
+
+
+@router.post("/loans/{loan_id}/prepay")
+def api_loan_prepay(loan_id: str, body: dict = None):
+    from fin_l4.db import get_db
+    from fin_l4.services.loan_svc import LoanService
+    amount = (body or {}).get("amount", "0")
+    conn = get_db()
+    svc = LoanService(conn)
+    return svc.execute_prepay(loan_id, amount)
+
+
+@router.post("/loans/{loan_id}/close")
+def api_loan_close(loan_id: str):
+    from fin_l4.db import get_db
+    from fin_l4.services.loan_svc import LoanService
+    conn = get_db()
+    svc = LoanService(conn)
+    return svc.close_loan(loan_id)
+
+
+# ========== M3 保险详情 API ==========
+
+@router.get("/insurance/{policy_id}")
+def api_insurance_detail(policy_id: str):
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    return svc.get_policy_detail(policy_id)
+
+
+@router.post("/insurance/{policy_id}/surrender")
+def api_insurance_surrender(policy_id: str):
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    return svc.surrender_policy(policy_id)
+
+
+@router.get("/insurance/coverage-gap")
+def api_coverage_gap(family_id: str = "default", monthly_income: str = "35000"):
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    return svc.get_coverage_gap(family_id, monthly_income)
+
+
+# ========== M3 投资详情 API ==========
+
+@router.get("/portfolios/{portfolio_id}")
+def api_portfolio_detail(portfolio_id: str):
+    from fin_l4.db import get_db
+    from fin_l4.services.portfolio_svc import PortfolioService
+    conn = get_db()
+    svc = PortfolioService(conn)
+    return {
+        "performance": svc.get_performance(portfolio_id),
+        "allocation": svc.get_allocation(portfolio_id),
+        "rebalance": svc.get_rebalance(portfolio_id),
+        "holdings": svc.get_holdings(portfolio_id),
+    }
+
+
+# ========== M4 导出 API ==========
+
+@router.get("/export/balance-sheet")
+def export_balance_sheet():
+    from fin_l4.db import get_db
+    from fin_l4.services.export_svc import ExportService
+    conn = get_db()
+    svc = ExportService(conn)
+    data = svc.export_balance_sheet_excel("default")
+    from fastapi.responses import Response
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=balance_sheet.xlsx"},
+    )
+
+
+@router.get("/export/transactions")
+def export_transactions():
+    from fin_l4.db import get_db
+    from fin_l4.services.export_svc import ExportService
+    conn = get_db()
+    svc = ExportService(conn)
+    data = svc.export_transactions_excel("default")
+    from fastapi.responses import Response
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=transactions.xlsx"},
+    )
+
+
+@router.get("/export/report")
+def export_report():
+    from fin_l4.db import get_db
+    from fin_l4.services.export_svc import ExportService
+    conn = get_db()
+    svc = ExportService(conn)
+    data = svc.export_financial_report_word("default")
+    from fastapi.responses import Response
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": "attachment; filename=financial_report.docx"},
+    )
