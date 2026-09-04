@@ -1,6 +1,6 @@
 ---
 title: "DMS 框架 Phase 3 知识库建设经验"
-id: EXP-20260903-003
+id: EXP-20260903-008
 date: 2026-09-03
 type: correct
 project: delivery-management-framework

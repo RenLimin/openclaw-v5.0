@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-04 10:47 UTC+08:00
+最后生成：2026-09-04 12:11 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -38,7 +38,7 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 126 个（可用 114）
+**总计** 127 个（可用 115）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
@@ -46,7 +46,7 @@
 | `openclaw-custodian` | 4 | — |
 | `openclaw-extra` | 16 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
-| `openclaw-workspace` | 30 | **本 workspace 自建**（受版本控制） |
+| `openclaw-workspace` | 31 | **本 workspace 自建**（受版本控制） |
 
 ### 自建技能（workspace）
 
@@ -60,6 +60,7 @@
 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 |
 | `edit-stale-state-break-loop` | Breaking edit-tool retry loops when prior mutations already changed the target text |
 | `edit-tool-exact-whitespace-recovery` | Edit-tool "oldText not found" usually means a whitespace mismatch. On macOS, use `od -c... |
+| `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI + OpenClaw 三通道。 |
 | `git-https-token-file-credential-helper` | Push to GitHub over HTTPS with a token file, no plaintext token in git config, plus fir... |
 | `git-nothing-to-commit-untracked-file-triage` | Diagnose "nothing to commit" or a missing file from a commit: check ignore/tracking sta... |
 | `macos-orphan-launchagent-cleanup` | 卸载并彻底清除指向已删除代码的 macOS LaunchAgent 孤儿服务与幽灵进程，含 lsof 误判规避 |
@@ -200,21 +201,21 @@
 | [`EXP-20260824-012-kb-phase3-readiness`](../knowledge-base/by-category/project-experience/correct/EXP-20260824-012-kb-phase3-readiness.md) | active |
 | [`EXP-20260901-018-ppt-capability-deep-research`](../knowledge-base/by-category/project-experience/correct/EXP-20260901-018-ppt-capability-deep-research.md) | active |
 | [`EXP-20260902-001-contract-approval-skill`](../knowledge-base/by-category/project-experience/correct/EXP-20260902-001-contract-approval-skill.md) | — |
-| [`EXP-20260903-001-dms-framework-phase1`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-001-dms-framework-phase1.md) | — |
 | [`EXP-20260903-001-ocr-coordinate-system`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-001-ocr-coordinate-system.md) | active |
 | [`EXP-20260903-002-audit-scope-filter`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-002-audit-scope-filter.md) | active |
-| [`EXP-20260903-002-dms-framework-phase2`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-002-dms-framework-phase2.md) | — |
-| [`EXP-20260903-003-dms-framework-phase3`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-003-dms-framework-phase3.md) | — |
-| [`EXP-20260903-004-dms-framework-phase4`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-004-dms-framework-phase4.md) | — |
-| [`EXP-20260903-005-dms-framework-l3-complete`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-005-dms-framework-l3-complete.md) | — |
+| [`EXP-20260903-006-dms-framework-phase1`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-006-dms-framework-phase1.md) | — |
+| [`EXP-20260903-007-dms-framework-phase2`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-007-dms-framework-phase2.md) | — |
+| [`EXP-20260903-008-dms-framework-phase3`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-008-dms-framework-phase3.md) | — |
+| [`EXP-20260903-009-dms-framework-phase4`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-009-dms-framework-phase4.md) | — |
+| [`EXP-20260903-010-dms-framework-l3-complete`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-010-dms-framework-l3-complete.md) | — |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `4efd986` |
-| Commit 数 | 194 |
+| HEAD | `3345b46` |
+| Commit 数 | 201 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
