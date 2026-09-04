@@ -179,6 +179,109 @@ class CategoryRepository(BaseRepository):
             (family_id,)
         ).fetchall()
         return self._rows_to_list(rows)
+    def get(self, category_id: str) -> Optional[Dict]:
+        """按 ID 获取分类"""
+        row = self.conn.execute(
+            f"SELECT * FROM {self.table} WHERE id = ?",
+            (category_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+
+
+class BudgetRepository(BaseRepository):
+    def __init__(self, conn):
+        super().__init__(conn, "fin4_budgets")
+
+    def upsert(self, family_id: str, category_id: str,
+               month: str, amount: str) -> str:
+        """创建或更新预算（按月+分类唯一）"""
+        existing = self.conn.execute(
+            f"SELECT id FROM {self.table} "
+            f"WHERE family_id = ? AND category_id = ? AND start_date = ?",
+            (family_id, category_id, month)
+        ).fetchone()
+
+        uid = _uid()
+        if existing:
+            self.conn.execute(
+                f"UPDATE {self.table} SET amount = ? WHERE id = ?",
+                (amount, existing["id"])
+            )
+            uid = existing["id"]
+        else:
+            self.conn.execute(
+                f"INSERT INTO {self.table} (id, family_id, category_id, amount, period, start_date) "
+                f"VALUES (?, ?, ?, ?, 'month', ?)",
+                (uid, family_id, category_id, amount, month)
+            )
+        self.conn.commit()
+        return uid
+
+    def get(self, family_id: str, category_id: str, month: str) -> Optional[Dict]:
+        row = self.conn.execute(
+            f"SELECT * FROM {self.table} "
+            f"WHERE family_id = ? AND category_id = ? AND start_date = ?",
+            (family_id, category_id, month)
+        ).fetchone()
+        return dict(row) if row else None
+
+    def list_by_family(self, family_id: str, month: str = None) -> List[Dict]:
+        if month:
+            rows = self.conn.execute(
+                f"SELECT * FROM {self.table} WHERE family_id = ? AND start_date = ?",
+                (family_id, month)
+            ).fetchall()
+        else:
+            rows = self.conn.execute(
+                f"SELECT * FROM {self.table} WHERE family_id = ?",
+                (family_id,)
+            ).fetchall()
+        return self._rows_to_list(rows)
+
+
+class ImportRuleRepository(BaseRepository):
+    def __init__(self, conn):
+        super().__init__(conn, "fin4_import_rules")
+
+    def create(self, family_id: str, pattern: str,
+               category_id: str = None, priority: int = 0) -> str:
+        uid = _uid()
+        self.conn.execute(
+            f"INSERT INTO {self.table} (id, family_id, pattern, category_id, priority) "
+            f"VALUES (?, ?, ?, ?, ?)",
+            (uid, family_id, pattern, category_id, priority)
+        )
+        self.conn.commit()
+        return uid
+
+    def list_active(self, family_id: str) -> List[Dict]:
+        rows = self.conn.execute(
+            f"SELECT * FROM {self.table} "
+            f"WHERE family_id = ? AND is_active = 1 "
+            f"ORDER BY priority DESC",
+            (family_id,)
+        ).fetchall()
+        return self._rows_to_list(rows)
+
+    def list_by_family(self, family_id: str) -> List[Dict]:
+        rows = self.conn.execute(
+            f"SELECT * FROM {self.table} WHERE family_id = ? ORDER BY priority DESC",
+            (family_id,)
+        ).fetchall()
+        return self._rows_to_list(rows)
+
+    def set_active(self, rule_id: str, active: bool):
+        self.conn.execute(
+            f"UPDATE {self.table} SET is_active = ? WHERE id = ?",
+            (1 if active else 0, rule_id)
+        )
+        self.conn.commit()
+
+    def delete(self, rule_id: str):
+        self.conn.execute(f"DELETE FROM {self.table} WHERE id = ?", (rule_id,))
+        self.conn.commit()
 
 
 class LoanRepository(BaseRepository):

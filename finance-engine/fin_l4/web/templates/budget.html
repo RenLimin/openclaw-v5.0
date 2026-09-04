@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}预算管理 — FIN-L4{% endblock %}
+{% block content %}
+<h1>📊 预算管理 — {{ month }}</h1>
+
+{% if overview.statuses %}
+<div class="card">
+    <h2>预算总览</h2>
+    <div class="summary-row">
+        <div class="summary-item">
+            <span class="label">总预算</span>
+            <span class="value">¥{{ overview.total_budget }}</span>
+        </div>
+        <div class="summary-item">
+            <span class="label">已支出</span>
+            <span class="value">¥{{ overview.total_spent }}</span>
+        </div>
+        <div class="summary-item">
+            <span class="label">剩余</span>
+            <span class="value">¥{{ overview.total_remaining }}</span>
+        </div>
+        <div class="summary-item">
+            <span class="label">超支</span>
+            <span class="value {% if overview.exceeded > 0 %}danger{% endif %}">{{ overview.exceeded }} 项</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h2>分类预算</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>分类</th>
+                <th>预算</th>
+                <th>已支出</th>
+                <th>剩余</th>
+                <th>进度</th>
+                <th>状态</th>
+                <th>日均可用</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in overview.statuses %}
+            <tr>
+                <td>{{ s.category }}</td>
+                <td>¥{{ s.budget }}</td>
+                <td>¥{{ s.spent }}</td>
+                <td>¥{{ s.remaining }}</td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill status-{{ s.status }}" style="width: {{ s.usage_pct }}%"></div>
+                    </div>
+                    <span class="progress-text">{{ s.usage_pct }}%</span>
+                </td>
+                <td>
+                    {% if s.status == 'exceeded' %}
+                    <span class="badge danger">超支</span>
+                    {% elif s.status == 'warning' %}
+                    <span class="badge warning">预警</span>
+                    {% else %}
+                    <span class="badge ok">正常</span>
+                    {% endif %}
+                </td>
+                <td>¥{{ s.daily_budget }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card">
+    <p>本月尚未设置预算。<a href="/settings">前往设置</a></p>
+</div>
+{% endif %}
+{% endblock %}

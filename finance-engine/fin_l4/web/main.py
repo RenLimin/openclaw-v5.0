@@ -88,6 +88,38 @@ async def dashboard(request: Request):
     })
 
 
+
+@app.get("/budget", response_class=HTMLResponse)
+async def budget_page(request: Request, month: str = None):
+    """预算管理页"""
+    from datetime import date
+    from fin_l4.db import get_db
+    from fin_l4.services.budget_svc import BudgetService
+
+    if month is None:
+        month = date.today().strftime("%Y-%m")
+
+    conn = get_db()
+    svc = BudgetService(conn)
+    overview = svc.get_overview("default", month)
+
+    return templates.TemplateResponse("budget.html", {
+        "request": request,
+        "active_page": "budget",
+        "month": month,
+        "overview": overview,
+    })
+
+
+@app.get("/import", response_class=HTMLResponse)
+async def import_page(request: Request):
+    """CSV 导入页"""
+    return templates.TemplateResponse("import.html", {
+        "request": request,
+        "active_page": "import",
+    })
+
+
 app.include_router(router)
 
 @app.get("/health")
