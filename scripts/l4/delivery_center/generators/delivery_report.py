@@ -1,6 +1,6 @@
 """交付月报生成器
 
-生成 12 Sheet 的交付月报 Excel 文件。
+生成 15 Sheet 的交付月报 Excel 文件。
 基于 openpyxl 库，支持公式、样式、多 Sheet。
 
 Sheet 列表（基于 2026 交付中心报告模版 v1.0）：
@@ -9,15 +9,19 @@ Sheet 列表（基于 2026 交付中心报告模版 v1.0）：
   3. 异常项目 (37列)
   4. 确收交接 (17列)
   5. 验收交接 (14列)
-  6. 交付效率统计 (18列)
-  7. 签约统计 (15列)
-  8. POC&提前实施统计 (28列)
-  9. 异常统计 (30列)
-  10. 异常台账 (17列)
-  11. 交接统计 (21列)
-  12. 图例 (29列)
+  6. 签约统计
+  7. POC&提前实施统计
+  8. 异常统计
+  9. 异常台账
+  10. 产品-授权&维保统计
+  11. 提前实施分事业部统计
+  12. 交付异常分事业部统计
+  13. 交付效率统计
+  14. 交接统计
+  15. 图例
 
-已验证 2026-09-01。
+统计 Sheet 由 build_stat_sheets.py 精确生成，完全匹配手工报表格式。
+已验证 2026-09-04。
 """
 
 import pandas as pd
@@ -257,33 +261,51 @@ def generate_delivery_report(
     ws5 = wb.create_sheet("验收交接")
     _fill_acceptance_sheet(ws5, acceptance_df if acceptance_df is not None else pd.DataFrame())
 
-    # Sheet 6: 交付效率统计
-    ws6 = wb.create_sheet("交付效率统计")
-    _fill_efficiency_sheet(ws6, efficiency_df if efficiency_df is not None else pd.DataFrame())
+    # Sheet 6-14: 统计 Sheet（精确匹配手工报表格式，由 build_stat_sheets 生成）
+    # 包括：签约统计、POC&提前实施统计、异常统计、异常台账、产品-授权&维保统计、
+    #       提前实施分事业部统计、交付异常分事业部统计、交付效率统计、交接统计
+    try:
+        from scripts.l4.delivery_center.generators.build_stat_sheets import BUILDERS, _cleanup_zeros
+        
+        # 按手工报表顺序生成统计 Sheet
+        stat_sheet_order = [
+            "签约统计",
+            "POC&提前实施统计",
+            "异常统计",
+            "异常台账",
+            "产品-授权&维保统计",
+            "提前实施分事业部统计",
+            "交付异常分事业部统计",
+            "交付效率统计",
+            "交接统计",
+        ]
+        
+        for name in stat_sheet_order:
+            if name in BUILDERS:
+                ws = wb.create_sheet(name)
+                BUILDERS[name](ws)
+                print(f"  ✅ {name}")
+            else:
+                print(f"  ⚠️  {name}: 生成器未找到")
+    except Exception as e:
+        print(f"  ⚠️ 统计 Sheet 生成异常: {e}")
+        # 回退到简化版
+        ws6 = wb.create_sheet("交付效率统计")
+        _fill_efficiency_sheet(ws6, efficiency_df if efficiency_df is not None else pd.DataFrame())
+        ws7 = wb.create_sheet("签约统计")
+        _fill_contract_stats_sheet(ws7, contract_df if contract_df is not None else pd.DataFrame())
+        ws8 = wb.create_sheet("POC&提前实施统计")
+        _fill_poc_stats_sheet(ws8, poc_df if poc_df is not None else pd.DataFrame())
+        ws9 = wb.create_sheet("异常统计")
+        _fill_exception_stats_sheet(ws9, exception_df if exception_df is not None else pd.DataFrame())
+        ws10 = wb.create_sheet("异常台账")
+        _fill_exception_ledger_sheet(ws10, exception_df if exception_df is not None else pd.DataFrame())
+        ws11 = wb.create_sheet("交接统计")
+        _fill_handover_stats_sheet(ws11, revenue_df if revenue_df is not None else pd.DataFrame())
 
-    # Sheet 7: 签约统计
-    ws7 = wb.create_sheet("签约统计")
-    _fill_contract_stats_sheet(ws7, contract_df if contract_df is not None else pd.DataFrame())
-
-    # Sheet 8: POC&提前实施统计
-    ws8 = wb.create_sheet("POC&提前实施统计")
-    _fill_poc_stats_sheet(ws8, poc_df if poc_df is not None else pd.DataFrame())
-
-    # Sheet 9: 异常统计
-    ws9 = wb.create_sheet("异常统计")
-    _fill_exception_stats_sheet(ws9, exception_df if exception_df is not None else pd.DataFrame())
-
-    # Sheet 10: 异常台账
-    ws10 = wb.create_sheet("异常台账")
-    _fill_exception_ledger_sheet(ws10, exception_df if exception_df is not None else pd.DataFrame())
-
-    # Sheet 11: 交接统计
-    ws11 = wb.create_sheet("交接统计")
-    _fill_handover_stats_sheet(ws11, revenue_df if revenue_df is not None else pd.DataFrame())
-
-    # Sheet 12: 图例
-    ws12 = wb.create_sheet("图例")
-    _fill_legend_sheet(ws12)
+    # Sheet 15: 图例
+    ws_legend = wb.create_sheet("图例")
+    _fill_legend_sheet(ws_legend)
 
     # 保存
     output_path = out_dir / f"交付月报-{month}.xlsx"

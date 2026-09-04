@@ -31,7 +31,7 @@ class InsuranceService:
                    sum_assured: str, annual_premium: str, term_years: int,
                    payment_years: int, insured_name: str = None,
                    insured_age: int = None, insured_gender: str = None,
-                   start_date: str = None) -> Dict:
+                   start_date: str = None, extra_terms: str = None) -> Dict:
         """添加保单"""
         if policy_type not in TYPE_MAP:
             raise ValueError(f"无效险种: {policy_type}")
@@ -49,6 +49,7 @@ class InsuranceService:
             insured_age=insured_age,
             insured_gender=insured_gender,
             start_date=start_date or str(date_mod.today()),
+            extra_terms=extra_terms,
         )
 
         self.audit.log(
