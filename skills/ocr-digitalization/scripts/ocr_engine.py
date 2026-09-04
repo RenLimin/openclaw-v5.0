@@ -833,10 +833,15 @@ def pdf_to_images(pdf_path: str, dpi: int = 300) -> List[Image.Image]:
 # OCR 识别（调用 v4 的引擎）
 # ============================================================
 
-def ocr_image(image: Image.Image, engine: str = "rapidocr") -> List[OCRLine]:
+def ocr_image(image: Image.Image, engine: str = "rapidocr", backends: dict = None) -> List[OCRLine]:
     """OCR 识别单页图片，返回按阅读顺序排列的行
     
     复用 v4 的多版本预处理 + 最优结果选择逻辑
+    
+    Args:
+        image: PIL Image
+        engine: OCR 引擎 (rapidocr/paddle/auto)
+        backends: 预加载的后端字典（可选），避免每页重复加载模型
     """
     import sys
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -847,17 +852,18 @@ def ocr_image(image: Image.Image, engine: str = "rapidocr") -> List[OCRLine]:
         preprocess_image, sort_text_lines
     )
     
-    # 初始化后端
-    backends = {}
-    rb = RapidOCRBackend()
-    rb.load()
-    backends['rapidocr'] = rb
-    
-    if engine in ('paddle', 'auto'):
-        pb = PaddleOCRBackend()
-        pb.load()
-        if pb.available():
-            backends['paddle'] = pb
+    # 初始化后端（如果调用方没传预加载的）
+    if backends is None:
+        backends = {}
+        rb = RapidOCRBackend()
+        rb.load()
+        backends['rapidocr'] = rb
+        
+        if engine in ('paddle', 'auto'):
+            pb = PaddleOCRBackend()
+            pb.load()
+            if pb.available():
+                backends['paddle'] = pb
     
     # 多版本预处理 + 多引擎，取最优
     versions = preprocess_image(image)
@@ -1083,12 +1089,26 @@ def digitalize_document_v5(
             print(f"警告: v4 图片转换失败，尝试 PyMuPDF: {e}")
             image_list = pdf_to_images(pdf_path, dpi=dpi)
         
+        # 预加载 OCR 后端（只加载一次，避免每页重复初始化）
+        import sys as _sys
+        _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from ocr_backends import RapidOCRBackend, PaddleOCRBackend
+        _backends = {}
+        _rb = RapidOCRBackend()
+        _rb.load()
+        _backends['rapidocr'] = _rb
+        if engine in ('paddle', 'auto'):
+            _pb = PaddleOCRBackend()
+            _pb.load()
+            if _pb.available():
+                _backends['paddle'] = _pb
+        
         for i, img in enumerate(image_list):
             page_num = i + 1
             pass  # 静默处理
             
-            # OCR
-            lines = ocr_image(img, engine=engine)
+            # OCR（复用预加载的后端）
+            lines = ocr_image(img, engine=engine, backends=_backends)
             lines = correct_contract_text(lines)
             
             page_result = PageResult(
