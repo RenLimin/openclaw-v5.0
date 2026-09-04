@@ -154,6 +154,15 @@ def get_api_key(provider_id: str) -> str:
     return ""
 
 # ─── HTTP 服务 ───
+
+# ─── Embedding 速率限制（模块级全局）───
+_EMBEDDING_PROVIDER = "coding-plan"
+_EMBEDDING_BASE_URL = "https://ark.cn-beijing.volces.com/api/coding/v3"
+_EMBEDDING_MAX_BATCH = 10  # 火山 API 单批上限
+_EMBEDDING_MIN_INTERVAL = 2.0  # 全局最小请求间隔(秒)
+_embedding_last_request_time = [0.0]
+_embedding_lock = asyncio.Lock()
+
 class ProxyHandler:
     def __init__(self):
         self.request_count = 0
@@ -193,6 +202,8 @@ class ProxyHandler:
 
             if path in ("/v1/chat/completions", "/chat/completions") and method == "POST":
                 await self._handle_chat(body, writer)
+            elif path in ("/v1/embeddings", "/embeddings") and method == "POST":
+                await self._handle_embeddings(body, writer)
             elif path in ("/v1/models", "/models") and method == "GET":
                 await self._handle_models(writer)
             elif path == "/health" and method == "GET":
@@ -209,6 +220,104 @@ class ProxyHandler:
                 pass
         finally:
             writer.close()
+
+    async def _handle_embeddings(self, body: bytes, writer):
+        """处理 embedding 请求 — 分片转发到火山 coding-plan。"""
+        global _embedding_last_request_time
+        self.request_count += 1
+        try:
+            request = json.loads(body)
+        except json.JSONDecodeError as e:
+            logger.error(f"Embedding JSON decode failed: {e}")
+            await self._send_error(400, "Invalid JSON", writer)
+            return
+
+        inputs = request.get("input", [])
+        if not inputs:
+            await self._send_error(400, "Empty input", writer)
+            return
+
+        model = request.get("model", "doubao-embedding-vision-251215")
+        logger.info(f"Embedding request: {len(inputs)} inputs, model={model}")
+
+        # 获取 API key
+        api_key = get_api_key(_EMBEDDING_PROVIDER)
+        if not api_key:
+            await self._send_error(500, "Cannot get coding-plan API key", writer)
+            return
+
+        # 分片处理（火山限 10 条/批）
+        all_embeddings = []
+        total_usage = {"prompt_tokens": 0, "total_tokens": 0}
+        try:
+            for batch_start in range(0, len(inputs), _EMBEDDING_MAX_BATCH):
+                batch = inputs[batch_start:batch_start + _EMBEDDING_MAX_BATCH]
+                payload = json.dumps({"model": model, "input": batch})
+
+                # 全局速率限制：确保请求间隔 >= EMBEDDING_MIN_INTERVAL
+                async with _embedding_lock:
+                    import time as _time
+                    now = _time.monotonic()
+                    elapsed = now - _embedding_last_request_time[0]
+                    wait = _EMBEDDING_MIN_INTERVAL - elapsed
+                    if wait > 0:
+                        await asyncio.sleep(wait)
+                    _embedding_last_request_time[0] = _time.monotonic()
+
+                req = urllib.request.Request(
+                    f"{_EMBEDDING_BASE_URL}/embeddings",
+                    data=payload.encode(),
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    method="POST",
+                )
+                response = urllib.request.urlopen(req, timeout=60)
+                result = json.loads(response.read())
+
+                if "data" in result:
+                    for item in result["data"]:
+                        all_embeddings.append(item)
+                    usage = result.get("usage", {})
+                    total_usage["prompt_tokens"] += usage.get("prompt_tokens", 0)
+                    total_usage["total_tokens"] += usage.get("total_tokens", 0)
+                else:
+                    logger.error(f"Embedding batch {batch_start} error: {result}")
+                    await self._send_error(502, f"Provider error: {result.get('error', {}).get('message', 'unknown')}", writer)
+                    return
+
+                logger.debug(f"Batch {batch_start}-{batch_start + len(batch) - 1} OK")
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8", errors="replace")
+            logger.error(f"Embedding provider error: {e.code} {error_body[:200]}")
+            await self._send_error(e.code, error_body[:500], writer)
+            return
+        except Exception as e:
+            logger.error(f"Embedding forwarding failed: {e}")
+            await self._send_error(500, str(e)[:200], writer)
+            return
+
+        # 构造 OpenAI-compatible 响应
+        response_data = {
+            "object": "list",
+            "data": [
+                {"object": "embedding", "embedding": item["embedding"], "index": idx}
+                for idx, item in enumerate(all_embeddings)
+            ],
+            "model": model,
+            "usage": total_usage,
+        }
+        resp_body = json.dumps(response_data).encode()
+        header = (
+            f"HTTP/1.1 200 OK\r\n"
+            f"Content-Type: application/json\r\n"
+            f"Content-Length: {len(resp_body)}\r\n"
+            f"Connection: close\r\n\r\n"
+        )
+        writer.write(header.encode() + resp_body)
+        await writer.drain()
+        logger.info(f"Embedding response: {len(all_embeddings)} vectors, {total_usage['total_tokens']} tokens")
 
     async def _handle_chat(self, body: bytes, writer):
         self.request_count += 1

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}看板 — DMS Framework{% endblock %}
+{% block content %}
+<h1>📊 看板</h1>
+<div class="cards">
+    <div class="card">
+        <div class="card-number">{{ module_count }}</div>
+        <div class="card-label">已注册模块</div>
+    </div>
+    <div class="card">
+        <div class="card-number">14</div>
+        <div class="card-label">业务模块</div>
+    </div>
+    <div class="card">
+        <div class="card-number">9</div>
+        <div class="card-label">核心引擎</div>
+    </div>
+</div>
+
+<h2>模块列表</h2>
+<table class="data-table">
+    <thead>
+        <tr><th>模块</th><th>版本</th><th>描述</th></tr>
+    </thead>
+    <tbody>
+        {% for m in modules %}
+        <tr>
+            <td><strong>{{ m.name }}</strong></td>
+            <td>{{ m.version }}</td>
+            <td>{{ m.description }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -228,3 +228,10 @@ _(将由 `docs/knowledge-base/by-category/project-experience/` 自动汇聚)_
 - **端口冲突事件**：OpenMAIC 原定 3000 与 model-scheduling 冲突，改为 3002。已建立端口分配表和校验规则（AGENTS.md）
 <!-- openclaw-memory-promotion:memory:memory/2026-08-25.md:14:32 -->
 - ## model-scheduling 切换成功 + 三处 bug 修复 [score=0.789 signals=5 recalls=5 avg=0.779 source=memory/2026-08-25.md:14-15] <!-- trigger: model-scheduling, 15-10, 127.0.0.1 --> <!-- importance: 8 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+
+### 2026-09-04: 禁止功能共存，坚持迭代建设 ★★
+- **问题**：BDMS 月报存在两个生成路径——`generate_report_202606.py`（旧版）和 `build_stat_sheets.py`（新版），功能重叠、数据不一致
+- **根因**：每次修复时新建脚本而非迭代原有脚本，导致多版本共存
+- **原则**：同一功能只允许一个实现路径；修复/增强必须迭代原有代码；废弃脚本必须删除（备份后可回滚）
+- **行动**：合并为单一 `build_stat_sheets.py`（15 Sheet），废弃 `generate_report_202606.py`
+- **教训**：迭代建设 > 平行重建；发现共存立即合并
