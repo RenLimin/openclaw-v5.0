@@ -11,6 +11,7 @@ memory/
 .env
 .env.local
 .env.*
+!.env.example
 *.env
 secrets/
 .venv/

@@ -1,0 +1,29 @@
+# FIN-L4 容器编排 — docker compose 一键部署
+# 用法: docker compose up -d
+services:
+  fin4:
+    build: .
+    image: fin-l4:latest
+    container_name: fin-l4
+    restart: unless-stopped
+    ports:
+      - "${FIN4_PORT:-8500}:8500"
+    environment:
+      - FIN4_HOST=0.0.0.0
+      - FIN4_PORT=8500
+      - FIN4_DB_DIR=/data
+      - FIN4_FAMILY_ID=${FIN4_FAMILY_ID:-default}
+      - FIN4_DEBUG=${FIN4_DEBUG:-0}
+      - FIN4_EXTERNAL_READONLY=${FIN4_EXTERNAL_READONLY:-1}
+    volumes:
+      - fin4_data:/data
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8500/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  fin4_data:
+    name: fin4_data
