@@ -302,3 +302,40 @@ async def portfolio_detail_page(request: Request, portfolio_id: str):
 async def health():
     """健康检查"""
     return {"status": "ok", "version": "0.1.0", "layer": "L4"}
+
+
+@app.get("/report", response_class=HTMLResponse)
+async def report_page(request: Request):
+    """报表页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.report_svc import ReportService
+
+    conn = get_db()
+    report_svc = ReportService(conn)
+
+    bs = report_svc.balance_sheet("default")
+    income = report_svc.income_summary("default")
+    cashflow = report_svc.monthly_cashflow("default")
+
+    return templates.TemplateResponse(request, "reports.html", {
+        "request": request, "active_page": "report",
+        "balance_sheet": bs,
+        "income_summary": income,
+        "cashflow": cashflow,
+    })
+
+
+@app.get("/advise", response_class=HTMLResponse)
+async def advise_page(request: Request):
+    """理财建议页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.advise_svc import AdviseService
+
+    conn = get_db()
+    advise_svc = AdviseService(conn)
+    health = advise_svc.health_check("default", "35000", "20000")
+
+    return templates.TemplateResponse(request, "advise.html", {
+        "request": request, "active_page": "advise",
+        "health": health,
+    })
