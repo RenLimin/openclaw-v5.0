@@ -108,12 +108,6 @@ def _load_data(force=False):
     acc_cols = [d[0] for d in c.description]
     _acc_df = pd.DataFrame([dict(r) for r in c.fetchall()], columns=acc_cols)
     
-    conn.close()
-    
-    # 从 REF 目录加载确收凭证交接 CSV（含跨月/验收字段）
-    _handover_rev_df = _try_read_csv(REF_DIR / "202606确收凭证交接-确收.csv")
-    _handover_acc_df = _try_read_csv(REF_DIR / "202606确收凭证交接-验收.csv")
-    
     # === 读取公式列落盘数据（从 BDMS）===
     global _sign_formula_df, _poc_formula_df, _abnormal_formula_df
     
@@ -154,6 +148,10 @@ def _load_data(force=False):
         _abnormal_formula_df = None
     
     conn.close()
+    
+    # 从 REF 目录加载确收凭证交接 CSV（含跨月/验收字段）
+    _handover_rev_df = _try_read_csv(REF_DIR / "202606确收凭证交接-确收.csv")
+    _handover_acc_df = _try_read_csv(REF_DIR / "202606确收凭证交接-验收.csv")
 
 
 def _compute_status_category(df):
