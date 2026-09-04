@@ -10,8 +10,8 @@ OCR 文档数字化组件 (OCR-001) v5 - 签名增强版
   5. 双引擎融合（RapidOCR + PaddleOCR）— 只对扫描件生效
 
 用法：
-  CLI: python3 contract_ocr_v5.py <input.pdf> <output.md> [--extract-signatures]
-  API: from contract_ocr_v5 import digitalize_document_v5
+  CLI: python3 ocr_engine.py <input.pdf> <output.md> [--extract-signatures]
+  API: from ocr_engine import digitalize_document_v5
 """
 import os
 import re
@@ -842,7 +842,7 @@ def ocr_image(image: Image.Image, engine: str = "rapidocr") -> List[OCRLine]:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     
     # 动态导入 v4 组件
-    from contract_ocr import (
+    from ocr_backends import (
         RapidOCRBackend, PaddleOCRBackend,
         preprocess_image, sort_text_lines
     )
@@ -1076,7 +1076,7 @@ def digitalize_document_v5(
         try:
             import sys
             sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-            from contract_ocr import pdf_to_images as v4_pdf_to_images
+            from ocr_backends import pdf_to_images as v4_pdf_to_images
             images = v4_pdf_to_images(pdf_path, dpi)
             image_list = [img for _, img in images]
         except Exception as e:
