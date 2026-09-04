@@ -26,6 +26,7 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
+
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """仪表盘首页"""
@@ -55,6 +56,18 @@ async def dashboard(request: Request):
         total_liabilities = "--"
         debt_ratio = "--"
     
+    # 获取资产分布
+    try:
+        asset_distribution = report_svc.asset_distribution("default")
+    except Exception:
+        asset_distribution = []
+    
+    # 获取月度现金流
+    try:
+        monthly_cashflow = report_svc.cashflow_monthly("default", 6)
+    except Exception:
+        monthly_cashflow = []
+    
     # 获取账户列表
     try:
         accounts_raw = account_svc.list_accounts("default")
@@ -72,7 +85,7 @@ async def dashboard(request: Request):
             "SELECT * FROM fin4_transactions WHERE family_id = ? ORDER BY date DESC LIMIT 10",
             ("default",)
         ).fetchall()
-        transactions = [{"date": t["date"], "note": t.get("note", ""), "amount": t["amount"]} for t in txns]
+        transactions = [{"date": t["date"], "note": t["note"] or "", "amount": t["amount"]} for t in txns]
     except Exception:
         transactions = []
     
@@ -83,11 +96,11 @@ async def dashboard(request: Request):
         "total_assets": total_assets,
         "total_liabilities": total_liabilities,
         "debt_ratio": debt_ratio,
+        "asset_distribution": asset_distribution,
+        "monthly_cashflow": monthly_cashflow,
         "accounts": accounts,
         "transactions": transactions,
     })
-
-
 
 @app.get("/budget", response_class=HTMLResponse)
 async def budget_page(request: Request, month: str = None):
@@ -327,7 +340,7 @@ async def settings_page(request: Request):
     """设置页"""
     return templates.TemplateResponse(request, "settings.html", {
         "request": request, "active_page": "settings",
-    }})
+    })
 
 
 @app.get("/health")
@@ -370,4 +383,49 @@ async def advise_page(request: Request):
     return templates.TemplateResponse(request, "advise.html", {
         "request": request, "active_page": "advise",
         "health": health,
+    })
+    # 获取资产分布
+    try:
+        asset_distribution = report_svc.asset_distribution("default")
+    except Exception:
+        asset_distribution = []
+    
+    # 获取月度现金流
+    try:
+        monthly_cashflow = report_svc.cashflow_monthly("default", 6)
+    except Exception:
+        monthly_cashflow = []
+    
+    # 获取账户列表
+    try:
+        accounts_raw = account_svc.list_accounts("default")
+        accounts = []
+        for acc in accounts_raw:
+            balance = account_svc.get_balance(acc["id"])
+            if balance != 0:
+                accounts.append({"name": acc["name"], "balance": str(balance)})
+    except Exception:
+        accounts = []
+    
+    # 获取最近交易
+    try:
+        txns = report_svc.conn.execute(
+            "SELECT * FROM fin4_transactions WHERE family_id = ? ORDER BY date DESC LIMIT 10",
+            ("default",)
+        ).fetchall()
+        transactions = [{"date": t["date"], "note": t["note"] or "", "amount": t["amount"]} for t in txns]
+    except Exception:
+        transactions = []
+    
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "request": request,
+        "active_page": "dashboard",
+        "net_worth": net_worth,
+        "total_assets": total_assets,
+        "total_liabilities": total_liabilities,
+        "debt_ratio": debt_ratio,
+        "asset_distribution": asset_distribution,
+        "monthly_cashflow": monthly_cashflow,
+        "accounts": accounts,
+        "transactions": transactions,
     })

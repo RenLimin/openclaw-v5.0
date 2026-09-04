@@ -169,3 +169,35 @@ class ReportService:
                 "total_liabilities": bs["total_liabilities"],
             }
         ]
+
+    def asset_distribution(self, family_id: str) -> List[Dict]:
+        """资产分布按大分类汇总"""
+        accounts = self.account_repo.list_by_family(family_id)
+        categories = {
+            "liquid": {"name": "现金/活期", "total": Decimal("0")},
+            "fixed": {"name": "定期存款", "total": Decimal("0")},
+            "investment": {"name": "投资资产", "total": Decimal("0")},
+            "other": {"name": "其他资产", "total": Decimal("0")},
+        }
+
+        for acc in accounts:
+            balance = self.account_repo.get_balance(acc["id"])
+            if balance <= 0:
+                continue
+            # 这里简单分类：根据账户代码前缀或者类型
+            # 对于演示数据，我们按以下方式分类
+            if acc["code"].startswith("LIQ_"):
+                categories["liquid"]["total"] += balance
+            elif acc["code"].startswith("FIX_"):
+                categories["fixed"]["total"] += balance
+            elif acc["code"].startswith("INV_"):
+                categories["investment"]["total"] += balance
+            else:
+                categories["other"]["total"] += balance
+
+        result = []
+        for cat in categories.values():
+            if cat["total"] > 0:
+                result.append({"label": cat["name"], "value": str(cat["total"])})
+
+        return result

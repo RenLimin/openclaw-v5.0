@@ -102,10 +102,10 @@
     function initCharts() {
         const colors = getThemeColors();
         
-        // Asset Distribution (mock data for demo)
+        // Asset Distribution (real data from backend)
         const assetData = {
-            labels: ['现金/活期', '定期存款', '投资资产', '其他资产'],
-            values: [80000, 500000, 300000, 139150],
+            labels: [{% for item in asset_distribution %} "{{ item.label }}", {% endfor %}],
+            values: [{% for item in asset_distribution %} {{ item.value }}, {% endfor %}],
             bgColors: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'],
         };
         
@@ -149,10 +149,10 @@
             });
         }
         
-        // Monthly Cashflow (mock data)
-        const months = ['1月', '2月', '3月', '4月', '5月', '6月'];
-        const income = [35000, 35000, 36000, 35000, 35500, 35000];
-        const expense = [28000, 26500, 29000, 27500, 28200, 27800];
+        // Monthly Cashflow (real data from backend)
+        const months = [{% for item in monthly_cashflow %} "{{ item.month }}", {% endfor %}];
+        const income = [{% for item in monthly_cashflow %} {{ item.income }}, {% endfor %}];
+        const expense = [{% for item in monthly_cashflow %} {{ item.expense }}, {% endfor %}];
         
         const ctx2 = document.getElementById('cashflowChart');
         if (ctx2) {
