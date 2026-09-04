@@ -8,6 +8,12 @@ user-invocable: true
 
 > L4 专有业务层组件，基于《民法典》合同编 + CLM 7 阶段方法论。
 
+## 依赖组件
+
+- **OCR-001（L2 文档数字化）**：`skills/ocr-digitalization/`
+  - 通过兼容层（`scripts/contract_ocr_v5.py` / `contract_ocr.py`）透明调用
+  - 实际实现位于 `ocr-digitalization/scripts/ocr_engine.py`
+
 ## When to Use
 
 - 用户需要创建、审批、签署、归档销售合同
