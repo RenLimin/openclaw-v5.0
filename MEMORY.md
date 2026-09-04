@@ -68,6 +68,7 @@
   - **已完成**: **FIN-L4 M1-M4 全部里程碑** — M1 骨架+数据层+8服务+Web UI+CLI ✅ / M2 智能分类+预算+CSV导入 ✅ / M3 贷款/保险/投资深度 ✅ / M4 导出+CLI+Skill ✅
   - **当前**: M5 打磨中（全量测试 77/77 通过，待 UI 优化 + 知识库配套文档）
   - **已完成**: **PPT 能力深度调研** — 三项核心能力(表格/流程图/图标)验证通过 + 高级能力(126形状/阴影/透明度)验证 + 业界8方案对比 + EXP-018 commit `9ce3163`
+  - **已完成**: **DMS L3 通用交付管理框架** — 14 业务模块 + 9 核心引擎 + 228 测试全过 + 15 篇 capabilities 知识库。统一 CLI (`dms <module> <command>`) / 统一 DB (delivery.db) / 事件驱动 (12 订阅者) / 多租户 / 热插拔。ADR-025 v1.2 + DESIGN.md v1.3 + EXP-006~010。commit `b39c074` 已 push
   - **阻塞中**: WeCom 每日观测摘要投递（缺 Agent mode 凭据 corpId/corpSecret/agentId）
 
 ## 经验沉淀
