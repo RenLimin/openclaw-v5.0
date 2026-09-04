@@ -1,33 +1,120 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}FIN-L4 家庭理财{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=2.0">
     {% block extra_head %}{% endblock %}
 </head>
 <body>
-    <nav class="nav">
-        <div class="nav-brand">💰 FIN-L4</div>
-        <ul class="nav-links">
-            <li><a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">仪表盘</a></li>
-            <li><a href="/accounts" class="{% if active_page == 'accounts' %}active{% endif %}">账户</a></li>
-            <li><a href="/budget" class="{% if active_page == 'budget' %}active{% endif %}">预算</a></li>
-            <li><a href="/import" class="{% if active_page == 'import' %}active{% endif %}">导入</a></li>
-            <li><a href="/transactions" class="{% if active_page == 'transactions' %}active{% endif %}">记账</a></li>
-            <li><a href="/loans" class="{% if active_page == 'loans' %}active{% endif %}">贷款</a></li>
-            <li><a href="/insurance" class="{% if active_page == 'insurance' %}active{% endif %}">保险</a></li>
-            <li><a href="/portfolio" class="{% if active_page == 'portfolio' %}active{% endif %}">投资</a></li>
-            <li><a href="/reports" class="{% if active_page == 'reports' %}active{% endif %}">报表</a></li>
-            <li><a href="/advise" class="{% if active_page == 'advise' %}active{% endif %}">建议</a></li>
-            <li><a href="/rates" class="{% if active_page == 'rates' %}active{% endif %}">利率</a></li>
-            <li><a href="/settings" class="{% if active_page == 'settings' %}active{% endif %}">设置</a></li>
-        </ul>
-    </nav>
-    <main class="main">
-        {% block content %}{% endblock %}
-    </main>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                💰 <span>FIN-L4</span>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">概览</div>
+                    <ul class="sidebar-links">
+                        <li><a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">
+                            <span class="nav-icon">📊</span>仪表盘
+                        </a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">资产管理</div>
+                    <ul class="sidebar-links">
+                        <li><a href="/accounts" class="{% if active_page == 'accounts' %}active{% endif %}">
+                            <span class="nav-icon">🏦</span>账户
+                        </a></li>
+                        <li><a href="/transactions" class="{% if active_page == 'transactions' %}active{% endif %}">
+                            <span class="nav-icon">📝</span>记账
+                        </a></li>
+                        <li><a href="/budget" class="{% if active_page == 'budget' %}active{% endif %}">
+                            <span class="nav-icon">📋</span>预算
+                        </a></li>
+                        <li><a href="/import" class="{% if active_page == 'import' %}active{% endif %}">
+                            <span class="nav-icon">📤</span>导入
+                        </a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">财务规划</div>
+                    <ul class="sidebar-links">
+                        <li><a href="/loans" class="{% if active_page == 'loans' %}active{% endif %}">
+                            <span class="nav-icon">🏠</span>贷款
+                        </a></li>
+                        <li><a href="/insurance" class="{% if active_page == 'insurance' %}active{% endif %}">
+                            <span class="nav-icon">🛡️</span>保险
+                        </a></li>
+                        <li><a href="/portfolio" class="{% if active_page == 'portfolio' %}active{% endif %}">
+                            <span class="nav-icon">📈</span>投资
+                        </a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">分析工具</div>
+                    <ul class="sidebar-links">
+                        <li><a href="/reports" class="{% if active_page == 'reports' %}active{% endif %}">
+                            <span class="nav-icon">📑</span>报表
+                        </a></li>
+                        <li><a href="/advise" class="{% if active_page == 'advise' %}active{% endif %}">
+                            <span class="nav-icon">💡</span>建议
+                        </a></li>
+                        <li><a href="/rates" class="{% if active_page == 'rates' %}active{% endif %}">
+                            <span class="nav-icon">📉</span>利率
+                        </a></li>
+                    </ul>
+                </div>
+                <div class="sidebar-section">
+                    <div class="sidebar-section-title">系统</div>
+                    <ul class="sidebar-links">
+                        <li><a href="/settings" class="{% if active_page == 'settings' %}active{% endif %}">
+                            <span class="nav-icon">⚙️</span>设置
+                        </a></li>
+                    </ul>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                    🌙 深色
+                </button>
+            </div>
+        </aside>
+        <main class="main">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script>
+        // Theme toggle
+        (function() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeToggle');
+            
+            // Check saved preference or system default
+            const saved = localStorage.getItem('fin-l4-theme');
+            if (saved) {
+                html.setAttribute('data-theme', saved);
+                btn.textContent = saved === 'dark' ? '☀️ 浅色' : '🌙 深色';
+            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                html.setAttribute('data-theme', 'dark');
+                btn.textContent = '☀️ 浅色';
+            }
+            
+            btn.addEventListener('click', function() {
+                const current = html.getAttribute('data-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('fin-l4-theme', next);
+                btn.textContent = next === 'dark' ? '☀️ 浅色' : '🌙 深色';
+                
+                if (window.updateChartsTheme) {
+                    window.updateChartsTheme(next);
+                }
+            });
+        })();
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
