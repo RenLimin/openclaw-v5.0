@@ -19,8 +19,8 @@ from core.saas import TenantContext
 from core.migrations import migration
 
 
-@migration("1.2.0")
-def upgrade_1_2_0(conn):
+@migration("1.2.4")
+def upgrade_1_2_4(conn):
     """为 communication 类型的 work_items 建索引。"""
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_work_items_type_communication "

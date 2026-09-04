@@ -1,12 +1,32 @@
-% extends "base.html" %
-% block title %}理财建议 - FIN-L4% endblock %
-% block content %
+{% extends "base.html" %}
+{% block title %}理财建议 - FIN-L4{% endblock %}
+{% block content %}
 <h1 style="margin-bottom: 1.5rem;">理财建议</h1>
-<div class="card">
-    <div class="card-title">功能开发中</div>
-    <p style="color: var(--text-muted);">理财建议 模块正在建设中，敬请期待。</p>
-    <p style="margin-top: 1rem;">
-        <a href="/" class="btn btn-primary">返回仪表盘</a>
-    </p>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">财务健康评分</div>
+    <div style="font-size: 3rem; font-weight: bold; color: var(--primary);">{{ health.health_score }}</div>
+    <p style="color: var(--text-muted); margin-top: 0.5rem;">{{ health.summary }}</p>
 </div>
-% endblock %
+
+{% if health.allocation %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">资产配置建议</div>
+    <p>{{ health.allocation }}</p>
+</div>
+{% endif %}
+
+{% if health.debt_plan %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">债务优化</div>
+    <p>{{ health.debt_plan }}</p>
+</div>
+{% endif %}
+
+{% if health.insurance_gap %}
+<div class="card">
+    <div class="card-title">保障缺口</div>
+    <p>{{ health.insurance_gap }}</p>
+</div>
+{% endif %}
+{% endblock %}

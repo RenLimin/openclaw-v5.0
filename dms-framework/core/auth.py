@@ -317,4 +317,4 @@ def create_access_token(
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(hours=get_jwt_expire_hours())).timestamp()),
     }
-    return _jwt_encode(payload, JWT_SECRET)
+    return _jwt_encode(payload, get_jwt_secret())

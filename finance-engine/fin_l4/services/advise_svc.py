@@ -50,11 +50,32 @@ class AdviseService:
             "summary": report.summary,
         }
         if report.allocation_advice:
-            result["allocation"] = report.allocation_advice
+            aa = report.allocation_advice
+            parts = [f"风险等级: {aa.risk_level.value if hasattr(aa.risk_level, 'value') else aa.risk_level}"]
+            if hasattr(aa, 'target_allocation'):
+                alloc = ", ".join(f"{k}: {v}" for k, v in aa.target_allocation.items())
+                parts.append(f"目标配置: {alloc}")
+            if hasattr(aa, 'rationale') and aa.rationale:
+                parts.append(aa.rationale)
+            result["allocation"] = "; ".join(parts)
         if report.debt_plan:
-            result["debt_plan"] = report.debt_plan
+            dp = report.debt_plan
+            if isinstance(dp, list):
+                result["debt_plan"] = " → ".join(str(item) for item in dp)
+            elif isinstance(dp, dict):
+                result["debt_plan"] = "; ".join(f"{k}: {v}" for k, v in dp.items())
+            else:
+                result["debt_plan"] = str(dp)
         if report.insurance_gap:
-            result["insurance_gap"] = report.insurance_gap
+            ig = report.insurance_gap
+            if hasattr(ig, 'life_gap'):
+                gaps = []
+                if hasattr(ig, 'life_gap'): gaps.append(f"寿险缺口: ¥{ig.life_gap}")
+                if hasattr(ig, 'ci_gap'): gaps.append(f"重疾缺口: ¥{ig.ci_gap}")
+                if hasattr(ig, 'medical_gap'): gaps.append(f"医疗缺口: ¥{ig.medical_gap}")
+                result["insurance_gap"] = "、".join(gaps)
+            else:
+                result["insurance_gap"] = str(ig)
         return result
 
     def debt_optimization(self, family_id: str,

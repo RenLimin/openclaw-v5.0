@@ -19,8 +19,8 @@ from core.saas import TenantContext
 from core.migrations import migration
 
 
-@migration("1.3.0")
-def upgrade_1_3_0(conn):
+@migration("1.3.3")
+def upgrade_1_3_3(conn):
     """decision 模块迁移：添加 type='decision' 部分索引。"""
     conn.execute("CREATE INDEX IF NOT EXISTS idx_work_items_type_decision ON work_items(type) WHERE type='decision'")
 

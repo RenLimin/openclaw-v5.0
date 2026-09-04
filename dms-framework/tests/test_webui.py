@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
 @unittest.skipUnless(
-    __import__("importlib.util").find_spec("jinja2") is not None,
+    __import__("importlib.util", fromlist=["find_spec"]).find_spec("jinja2") is not None,
     "jinja2 not installed",
 )
 class TestWebUI(unittest.TestCase):
@@ -78,6 +78,7 @@ class TestWebUI(unittest.TestCase):
             headers=self.headers,
         )
         pid = resp.json()["id"]
+        # Web UI 管理视图跨 tenant 查询
         resp = self.client.get(f"/projects/{pid}")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("UI Test Project", resp.text)

@@ -4,6 +4,7 @@ core/saas.py — SaaS 基础设施
 """
 from __future__ import annotations
 
+import contextvars
 import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -15,9 +16,10 @@ from typing import Any, Optional
 # ---------------------------------------------------------------------------
 
 class TenantContext:
-    """线程本地租户上下文。
+    """租户上下文（线程 + 协程安全）。
 
-    用 threading.local 保证每个线程有独立的 tenant_id。
+    用 contextvars.ContextVar 保证每个执行上下文有独立的 tenant_id，
+    兼容 threading.local（同步）和 asyncio（异步）两种场景。
     默认值 "system" 用于系统级操作（如迁移、初始化）。
 
     典型用法:
@@ -26,21 +28,23 @@ class TenantContext:
             repo.list()
     """
 
-    _local = threading.local()
+    _var: contextvars.ContextVar[str] = contextvars.ContextVar(
+        "tenant_id", default="system"
+    )
 
     @classmethod
     def set(cls, tenant_id: str) -> None:
         if not tenant_id or not isinstance(tenant_id, str):
             raise ValueError("tenant_id must be a non-empty string")
-        cls._local.tenant_id = tenant_id
+        cls._var.set(tenant_id)
 
     @classmethod
     def current(cls) -> str:
-        return getattr(cls._local, "tenant_id", "system")
+        return cls._var.get()
 
     @classmethod
     def reset(cls) -> None:
-        cls._local.tenant_id = "system"
+        cls._var.set("system")
 
     @classmethod
     def scope(cls, tenant_id: str) -> "_TenantScope":
@@ -51,14 +55,14 @@ class TenantContext:
 class _TenantScope:
     def __init__(self, tenant_id: str) -> None:
         self._new = tenant_id
-        self._old: str = "system"
+        self._token: contextvars.Token[str] | None = None
 
     def __enter__(self) -> None:
-        self._old = TenantContext.current()
-        TenantContext.set(self._new)
+        self._token = TenantContext._var.set(self._new)
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        TenantContext.set(self._old)
+        if self._token is not None:
+            TenantContext._var.reset(self._token)
 
 
 # ---------------------------------------------------------------------------

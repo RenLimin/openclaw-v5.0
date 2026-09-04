@@ -20,8 +20,8 @@ from core.saas import TenantContext
 from core.migrations import migration
 
 
-@migration("1.2.0")
-def upgrade_1_2_0(conn):
+@migration("1.2.5")
+def upgrade_1_2_5(conn):
     """为 resource 类型 work_items 添加部分索引。"""
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_work_items_type_resource "
