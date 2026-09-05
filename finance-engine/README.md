@@ -34,6 +34,19 @@
 
 ---
 
+
+## 🖼️ 产品截图
+
+<p align="center">
+  <img src="demo/dashboard.png" alt="仪表盘首页" width="90%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+</p>
+
+<p align="center">
+  <em>仪表盘 — 资产概览、收支趋势、预算执行一屏掌握</em>
+</p>
+
+<br>
+
 ## 🏗️ 架构概览
 
 FIN-L4 基于 OpenClaw 5 层架构中的 L4 专有业务层应用，继承 L3 六大通用财务引擎。
