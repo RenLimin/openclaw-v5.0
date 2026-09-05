@@ -1,0 +1,36 @@
+site_name: FIN-L4 家庭理财管理系统
+site_description: 全本地 · 零外部依赖 · 私有化部署的家庭理财管家
+site_author: RenLimin
+site_url: ''
+repo_url: https://github.com/RenLimin/openclaw-v5.0
+repo_name: openclaw-v5.0
+edit_uri: blob/main/finance-engine/
+theme:
+  name: material
+  language: zh
+  features:
+  - navigation.tabs
+  - navigation.top
+  - search.highlight
+  - content.code.copy
+  palette:
+    primary: indigo
+    accent: indigo
+plugins:
+- search
+markdown_extensions:
+- 'toc: { permalink: true }'
+- admonition
+- pymdownx.details
+- pymdownx.superfences
+- pymdownx.mermaid
+nav:
+- 首页: README.md
+- 快速开始:
+  - 安装部署: DEPLOYMENT.md
+  - 操作手册: docs/OPERATIONS.md
+- 架构设计: docs/ARCHITECTURE.md
+- 测试报告: docs/TEST_REPORT.md
+- 交付清单: docs/DELIVERY.md
+- 贡献指南: CONTRIBUTING.md
+- 行为准则: CODE_OF_CONDUCT.md
