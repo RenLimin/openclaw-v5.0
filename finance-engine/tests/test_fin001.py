@@ -60,10 +60,16 @@ def test_trial_balance_after_transactions():
     """测试交易后试算平衡"""
     engine = AccountingEngine()
 
+    # 期初设置：资产(10000+50000) = 权益(60000)，满足会计恒等式
     cash = engine.create_account("现金", AccountType.ASSET, initial_balance=10000)
     bank = engine.create_account("银行存款", AccountType.ASSET, initial_balance=50000)
+    capital = engine.create_account("实收资本", AccountType.EQUITY, initial_balance=60000)
     income = engine.create_account("收入", AccountType.INCOME)
     expense = engine.create_account("费用", AccountType.EXPENSE)
+
+    # 期初试算平衡（确保基线正确）
+    tb_init = engine.get_trial_balance()
+    assert tb_init.is_balanced, f"期初试算不平衡: 借方 {tb_init.debit_total} ≠ 贷方 {tb_init.credit_total}"
 
     # 一系列交易
     engine.record_transaction(cash.id, income.id, 8000, note="工资")
