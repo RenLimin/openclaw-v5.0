@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # git pre-commit hook: 自动重生成系统资产清单 + 提醒配置快照
-# 安装: .git/hooks/pre-commit (本文件由 workspace 管理, 见 scripts/install-hooks.sh)
+# 安装: .git/hooks/pre-commit (本文件由 workspace 管理, 见 L2-infra/components/config-management/install-hooks.sh)
 #
 # 行为:
 #   1. 重生成资产清单, 有变化则自动加入本次提交
@@ -15,20 +15,20 @@ cd "$(git rev-parse --show-toplevel)"
 # --- 1. 资产清单 ---
 echo "🔄 正在重生成系统资产清单..."
 
-if python3 scripts/gen_asset_inventory.py --check >/dev/null 2>&1; then
+if python3 L2-infra/components/config-management/gen_asset_inventory.py --check >/dev/null 2>&1; then
     echo "✅ 资产清单是最新的"
 else
-    python3 scripts/gen_asset_inventory.py
+    python3 L2-infra/components/config-management/gen_asset_inventory.py
     git add docs/architecture/01-asset-inventory.md
     echo "✅ 资产清单已更新并加入本次提交"
 fi
 
 # --- 2. 配置快照 (见 docs/conventions/commit-and-config.md) ---
-if [ -f scripts/snapshot_config.py ]; then
-    if ! python3 scripts/snapshot_config.py --check >/dev/null 2>&1; then
+if [ -f L2-infra/components/config-management/snapshot_config.py ]; then
+    if ! python3 L2-infra/components/config-management/snapshot_config.py --check >/dev/null 2>&1; then
         echo "⚠️  ~/.openclaw/openclaw.json 有未快照的变更"
         echo "    如本次提交涉及配置改动, 请运行:"
-        echo "      python3 scripts/snapshot_config.py && git add config-snapshots/"
+        echo "      python3 L2-infra/components/config-management/snapshot_config.py && git add config-snapshots/"
     else
         echo "✅ 配置快照是最新的"
     fi
@@ -37,17 +37,17 @@ fi
 # --- 3. 知识库 schema 校验 + INDEX 派生同步 (ADR-003 阶段 2) ---
 # 存在阻塞性错误时阻塞提交: 非法 layer/stage/category、重复 ID、缺 title。
 # 这些会让三维查询静默漏数据 — 与 ADR-008 「静默失败比明确失败更危险」同理。
-if [ -f scripts/kb_index.py ] && [ -d docs/knowledge-base ]; then
+if [ -f L2-infra/components/memory-embedding/kb_index.py ] && [ -d docs/knowledge-base ]; then
     KB_OUT="$(mktemp -t kb_validate)"
     trap 'rm -f "$KB_OUT"' EXIT
-    if python3 scripts/kb_index.py --validate >"$KB_OUT" 2>&1; then
+    if python3 L2-infra/components/memory-embedding/kb_index.py --validate >"$KB_OUT" 2>&1; then
         echo "✅ 知识库 schema 校验通过"
         # INDEX.md 派生小节跟随内容变化, 自动重生并加入提交。
         # 不用 `|| true` 吐错: 它失败时 INDEX.md 会静默陈旧而 hook 报成功
         # (2026-08-23 第三轮 review 发现)。
         EMIT_OUT="$(mktemp -t kb_emit)"
         trap 'rm -f "$KB_OUT" "$EMIT_OUT"' EXIT
-        if ! python3 scripts/kb_index.py --emit-index >"$EMIT_OUT" 2>&1; then
+        if ! python3 L2-infra/components/memory-embedding/kb_index.py --emit-index >"$EMIT_OUT" 2>&1; then
             cat "$EMIT_OUT"
             echo ""
             echo "❌ INDEX.md 派生生成失败 — 不能静默放过"

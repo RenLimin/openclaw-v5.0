@@ -145,16 +145,16 @@
 
 ```bash
 # 获取推荐模型
-python3 model-scheduling/scripts/router.py "任务描述"
+python3 L2-infra/components/model-scheduling/scripts/router.py "任务描述"
 
 # 模型同步
-python3 model-scheduling/scripts/sync_models.py
+python3 L2-infra/components/model-scheduling/scripts/sync_models.py
 
 # 健康探测
-python3 model-scheduling/scripts/health_check.py
+python3 L2-infra/components/model-scheduling/scripts/health_check.py
 
 # 用量获取
-python3 model-scheduling/scripts/fetch_usage.py
+python3 L2-infra/components/model-scheduling/scripts/fetch_usage.py
 ```
 
 ---
