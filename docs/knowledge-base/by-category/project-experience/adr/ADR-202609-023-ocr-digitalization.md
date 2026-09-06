@@ -30,7 +30,7 @@ tags: [adr, ocr, document-digitalization, L2, infrastructure, rapidocr, paddleoc
 **组件标识**：
 - 组件 ID：OCR-001
 - 组件名称：文档数字化（OCR）
-- 目录：`docs/architecture/components/ocr-digitalization/`（设计）+ `skills/contract-approval/scripts/contract_ocr.py`（实现，供 L4 复用）
+- 目录：`docs/architecture/components/ocr-digitalization/`（设计）+ `L3-business/skills/contract-approval/scripts/contract_ocr.py`（实现，供 L4 复用）
 - ADR：ADR-202609-023
 
 **核心能力**：

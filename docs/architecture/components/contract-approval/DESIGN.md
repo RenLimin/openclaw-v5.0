@@ -32,7 +32,7 @@ adr: ADR-202609-018
 
 | 原则 | 说明 |
 |------|------|
-| **独立可运行** | `skills/contract-approval/` 自包含，零外部依赖 |
+| **独立可运行** | `L3-business/skills/contract-approval/` 自包含，零外部依赖 |
 | **可扩展** | 预留 REST API 契约，未来整合时只需加 API 层 |
 | **知识驱动** | 基于 CLM 7 阶段方法论 + 民法典，不凭经验 |
 | **辅助定位** | 风险扫描器是"辅助提醒"而非法务判断替代 |
@@ -41,7 +41,7 @@ adr: ADR-202609-018
 ## 3. 模块架构
 
 ```
-skills/contract-approval/
+L3-business/skills/contract-approval/
 ├── SKILL.md              # 技能入口（frontmatter + 使用说明）
 ├── README.md             # 详细文档
 ├── templates/            # 合同模板
