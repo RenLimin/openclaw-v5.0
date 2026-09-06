@@ -48,6 +48,7 @@ VALID_DIMENSIONS = {
     "frontend-dev", "backend-dev", "testing", "devops-sre", "data-engineering",
     "security-engineering", "software-development", "methodology",
     "cross-border-ecommerce",
+    "saas-development",
 }
 VALID_BUSINESS_CATEGORIES = {"industry-practice", "theoretical-knowledge", "project-experience"}
 VALID_XREF_RELATIONS = {"implements", "extends", "referenced_by", "related", "depends_on"}
