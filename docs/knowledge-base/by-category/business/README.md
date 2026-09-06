@@ -1,9 +1,9 @@
 ---
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 title: "L3 通用业务层 — 业务知识库总索引"
 description: "L3 业务知识库的总索引，按业务维度组织"
-source: "L3 架构设计 v1.3"
-version: "1.3"
+source: "L3 架构设计 v1.5"
+version: "1.5"
 category: "business"
 dimension: "methodology"
 type: "index"
@@ -51,12 +51,12 @@ tags: ["l3", "index", "business-knowledge"]
 
 | 维度 | 说明 | 状态 |
 |------|------|------|
-| L3 建设方法论 | 维度设计 / 角色定义 / 知识编写 / 质量验证 | ✅ 2 篇已就绪 |
+| L3 建设方法论 | 维度设计 / 角色定义 / 知识编写 / 质量验证 / 经验沉淀 | ✅ 6 篇已就绪 |
 
 ## 建设顺序
 
 ```
-阶段 0: 方法论知识库     ✅ 已完成
+阶段 0: 方法论知识库     ✅ 已完成（6 篇）
 阶段 1: 项目管理 (P0)    📋 下一阶段
 阶段 2: 合同管理 (P0)    📐 设计中
 阶段 3: 产品设计 (P0)    📋 待启动
@@ -80,3 +80,4 @@ tags: ["l3", "index", "business-knowledge"]
 - 2026-08-25: 初始化
 - 2026-08-25: 新增合同管理维度
 - 2026-08-25: SaaS 系统开发重构为"软件开发"全生命周期业务操作系统（8 阶段端到端）
+- 2026-09-06: 方法论知识库补齐 6 篇（dimension-design/quality-standard/lessons-learned），对齐 L3 架构 v1.5
