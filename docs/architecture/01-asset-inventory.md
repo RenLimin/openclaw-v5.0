@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-06 19:37 UTC+08:00
+最后生成：2026-09-06 19:42 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -100,10 +100,10 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
+| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
@@ -145,9 +145,9 @@
 | [`ADR-202609-018-sales-contract-approval`](../knowledge-base/by-category/project-experience/adr/ADR-202609-018-sales-contract-approval.md) | accepted |
 | [`ADR-202609-023-ocr-digitalization`](../knowledge-base/by-category/project-experience/adr/ADR-202609-023-ocr-digitalization.md) | accepted |
 | [`ADR-202609-024-session-isolation-sharing`](../knowledge-base/by-category/project-experience/adr/ADR-202609-024-session-isolation-sharing.md) | proposed |
-| [`ADR-202609-025-delivery-management-framework`](../knowledge-base/by-category/project-experience/adr/ADR-202609-025-delivery-management-framework.md) | proposed |
+| [`ADR-202609-025-delivery-management-framework`](../knowledge-base/by-category/project-experience/adr/ADR-202609-025-delivery-management-framework.md) | accepted |
 | [`ADR-202609-026-personal-finance-framework-L3`](../knowledge-base/by-category/project-experience/adr/ADR-202609-026-personal-finance-framework-L3.md) | accepted |
-| [`ADR-202609-027-fin-l4-system-design`](../knowledge-base/by-category/project-experience/adr/ADR-202609-027-fin-l4-system-design.md) | proposed |
+| [`ADR-202609-027-fin-l4-system-design`](../knowledge-base/by-category/project-experience/adr/ADR-202609-027-fin-l4-system-design.md) | accepted |
 
 ### 经验卡片清单
 
@@ -180,8 +180,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `43b12f23` |
-| Commit 数 | 236 |
+| HEAD | `891e426b` |
+| Commit 数 | 237 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

@@ -12,9 +12,9 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 3.2 (2026-09-04 — L4 设计 v2.1: +外部数据/系统链接/数据安全) |
+| 文档版本 | 3.3 (2026-09-06 — ADR转正 + L4组件清单更新 + 状态对齐实现) |
 | 文档状态 | active |
-| 运行时 cron | 仅 heartbeat:main(30m),所有业务 cron 已清除(2026-08-26) |
+| 运行时 cron | 6 个活跃业务 cron（错误扫描/provider健康探测/错误处理/备份/会话清理/记忆健康）；仅 4 个任务 disabled |
 | 决策状态 | 5 层架构已锁定(ADR-012 accepted,替代 ADR-001); SCA-001 已上线(ADR-018 accepted) |
 | 配套文档 | `../knowledge-base/README.md` |
 | 待办 | 无(L3 启动待 Rex 拍板,见 §6.2) |
@@ -545,15 +545,16 @@ L4 专有业务
 | **流程扩展** | 继承 L3 流程,插入专有步骤 | `checkout` L3 + `risk_assessment` L4 |
 | **接口扩展** | L4 暴露专有 API,不影响 L3 | `/api/proprietary/*` |
 
-**当前**: ✅ 已上线 — 3 个 L4 组件全部完成
+**当前**: ✅ 已上线 — 3 个 L4 实例全部完成
 
-**已建设组件**:
+**已建设组件** (通用框架 → 专有实例):
 
-| 组件 ID | 名称 | 职责 | ADR | DESIGN.md | 状态 |
+| 通用框架 | 专有实例 | 职责 | ADR | DESIGN.md | 状态 |
 |---|---|---|---|---|---|
-| CPT-012 | Bangcle PPT 模板系统 | Bangcle 官方 VI 设计规范 + 页面类型模板 + pptxgenjs 代码模板 | ADR-017 | `components/bangcle-ppt-template/` | ✅ 已上线 |
-| BDMS-001 | 交付中心运营引擎 (BDMS) | 数据采集 + 业务引擎 + 报告生成 + 审批流程 + 调度监控 | — | `components/l4-delivery-center/` | ✅ 已上线 |
-| SCA-001 | 销售合同审批模块 (SCA) | 分级审批流程 + 风险扫描 + 合同生成 + 审计追踪 | ADR-018 | `L3-business/skills/contract-approval/` | ✅ 已上线 |
+| — | CPT-012 (Bangcle PPT) | Bangcle 官方 VI 设计规范 + 页面类型模板 + pptxgenjs 代码模板 | ADR-017 | `L4-proprietary/components/bangcle-ppt/` | ✅ 已上线 |
+| DMS-001 (DMS 框架) | BDMS-L4 (交付中心) | DMS 框架: 交付管理通用引擎 + 项目/合同核心模块; 交付中心: 基于 DMS 框架的 Bangcle 交付中心实例（数据采集 + 业务引擎 + 报告生成 + 调度监控） | ADR-025 (框架) / ADR-022 (实例) | `docs/architecture/components/delivery-management-framework/` (框架) | ✅ 已上线 |
+| SCA-001 (合同审批框架) | SCA-L4 (销售合同审批) | 通用框架: 分级审批流程 + 风险扫描 + 合同生成; 实例: 对应销售合同审批规则 | ADR-018 (框架) | `L3-business/skills/contract-approval/` (框架) | ✅ 已上线 |
+| FIN-L3 (家庭理财框架) | FIN-L4 (Rex 家庭理财) | 通用框架: 账户/贷款/保险/投资/利率/建议; 实例: Rex 家庭理财系统 (CLI + Web UI + 测试数据) | ADR-026 (框架) / ADR-027 (实例) | `docs/architecture/components/family-finance/` (框架) | ✅ 已上线 |
 
 > **BDMS 详情**: 24 个 Python 文件，3157 行代码。5 个采集器 + 4 个业务引擎 + 2 个报告生成器 + 审批流程 + 调度监控。数据库 514+531 行。
 
