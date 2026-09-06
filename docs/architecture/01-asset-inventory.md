@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-06 16:07 UTC+08:00
+最后生成：2026-09-06 17:22 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -41,13 +41,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 100 个（可用 89）
+**总计** 101 个（可用 90）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 50 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 21 | 插件附带技能 |
+| `openclaw-extra` | 22 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
 
 ## L2 — Agent 资产
@@ -101,8 +101,8 @@
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
-| provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
+| provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
@@ -180,8 +180,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `280d3c35` |
-| Commit 数 | 233 |
+| HEAD | `5c19ec35` |
+| Commit 数 | 234 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

@@ -81,5 +81,5 @@ task: "读取文档并将结果写入 /workspace/tmp/xxx.md"
 ## 相关
 
 - OpenClaw 官方文档：`/opt/homebrew/lib/node_modules/openclaw/docs/`
-- 合同审批模块：`skills/contract-approval/`
+- 合同审批模块：`L3-business/skills/contract-approval/`
 - ADR-018：`docs/knowledge-base/by-category/project-experience/adr/ADR-202609-018-sales-contract-approval.md`

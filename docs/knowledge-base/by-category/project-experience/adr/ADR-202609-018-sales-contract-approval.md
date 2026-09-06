@@ -35,7 +35,7 @@ Rex 提供了实际销售合同（信创-技术服务合同，梆梆安全移动
 **模块标识**：
 - 组件 ID：SCA-001
 - 模块名称：销售合同审批模块（Sales Contract Approval）
-- 目录：`skills/contract-approval/`
+- 目录：`L3-business/skills/contract-approval/`
 
 ## 理由（Rationale）
 
@@ -66,7 +66,7 @@ Rex 提供了实际销售合同（信创-技术服务合同，梆梆安全移动
 | 知识库工具链 | 合同模板索引 |
 
 ### 5. 独立性与可扩展性
-- 独立目录 `skills/contract-approval/`，自包含
+- 独立目录 `L3-business/skills/contract-approval/`，自包含
 - 零外部依赖（Python 标准库 + python-docx）
 - 预留 REST API 接口契约，未来整合时只需加 API 层
 - 核心业务逻辑（审批引擎、风险扫描器）与 IO 解耦

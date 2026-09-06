@@ -1,3 +1,7 @@
+---
+name: ones-browser-export
+description: "ONES 浏览器自动化数据导出：通过 osascript 控制 Chrome 从 ONES 筛选器导出 CSV 数据，用于月报/签约统计/POC 统计等场景。"
+---
 # ONES 浏览器自动化数据导出
 
 ## 触发条件
@@ -16,7 +20,7 @@
 ```python
 import subprocess
 def run_js(js):
-    cmd = ['osascript', '-e', 
+    cmd = ['osascript', '-e',
         'tell application "Google Chrome" to execute (first tab of first window whose URL contains "ones.bangcle.com") javascript "' + js + '"']
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     return r.stdout.strip()

@@ -553,7 +553,7 @@ L4 专有业务
 |---|---|---|---|---|---|
 | CPT-012 | Bangcle PPT 模板系统 | Bangcle 官方 VI 设计规范 + 页面类型模板 + pptxgenjs 代码模板 | ADR-017 | `components/bangcle-ppt-template/` | ✅ 已上线 |
 | BDMS-001 | 交付中心运营引擎 (BDMS) | 数据采集 + 业务引擎 + 报告生成 + 审批流程 + 调度监控 | — | `components/l4-delivery-center/` | ✅ 已上线 |
-| SCA-001 | 销售合同审批模块 (SCA) | 分级审批流程 + 风险扫描 + 合同生成 + 审计追踪 | ADR-018 | `skills/contract-approval/` | ✅ 已上线 |
+| SCA-001 | 销售合同审批模块 (SCA) | 分级审批流程 + 风险扫描 + 合同生成 + 审计追踪 | ADR-018 | `L3-business/skills/contract-approval/` | ✅ 已上线 |
 
 > **BDMS 详情**: 24 个 Python 文件，3157 行代码。5 个采集器 + 4 个业务引擎 + 2 个报告生成器 + 审批流程 + 调度监控。数据库 514+531 行。
 
