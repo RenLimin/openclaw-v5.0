@@ -3,7 +3,7 @@ type: adr
 id: ADR-202609-025
 date: 2026-09-03
 title: L3 通用交付管理框架设计（DMS-Framework）
-status: proposed
+status: accepted
 deciders: [Rex]
 layers: [L3, L4]
 tags: [delivery-management, framework, module-registry, raci, state-machine, saas, multi-tenant, metadata-driven]
@@ -14,7 +14,7 @@ superseded_by: null
 # [ADR-202609-025] L3 通用交付管理框架设计（DMS-Framework）
 
 ## 1. 状态
-**proposed**
+**accepted**
 
 ## 2. 背景
 

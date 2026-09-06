@@ -10,7 +10,7 @@ tags:
   - L4
   - personal-finance
 stage: design
-status: proposed
+status: accepted
 date: 2026-09-04
 ---
 
@@ -18,7 +18,7 @@ date: 2026-09-04
 
 | 字段 | 值 |
 |---|---|
-| 状态 | proposed |
+| 状态 | accepted |
 | 决策日期 | 2026-09-04 |
 | 决策者 | Rex |
 | 层级 | L4 专有业务层 |
