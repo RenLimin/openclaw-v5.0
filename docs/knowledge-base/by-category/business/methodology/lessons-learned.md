@@ -29,7 +29,7 @@ last_reviewed: "2026-09-06"
 **问题**：methodologies subagent 报告"13 篇完成"，但实际文件目录全空。
 **根因**：subagent 把"写好了"当成"完成了"，实际没写文件。
 **修复**：主 agent 逐条验证文件存在性，直接补写；不轻信 subagent 汇报。
-**预防**：批量 subagent 任务必须含**明确验证命令**（如 `ls` + `wc -l`），主 agent 逐文件核对。详见 [EXP-20260903-003-dms-framework-phase3](../../project-experience/correct/EXP-20260903-003-dms-framework-phase3.md)。
+**预防**：批量 subagent 任务必须含**明确验证命令**（如 `ls` + `wc -l`），主 agent 逐文件核对。详见 [EXP-20260903-008-dms-framework-phase3](../../project-experience/correct/EXP-20260903-008-dms-framework-phase3.md)。
 
 ## 2026-09-03: 对比验证必须到单元格级
 
