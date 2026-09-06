@@ -26,7 +26,7 @@
           "enabled": true
         },
         "mode": "safeguard",
-        "model": "longcat/LongCat-2.0"
+        "model": "coding-plan/deepseek-v4-flash"
       },
       "contextPruning": {
         "mode": "cache-ttl",
@@ -57,7 +57,7 @@
       "systemAgent": {
         "agentId": "<REDACTED>"
       },
-      "bootstrapMaxChars": 8000
+      "bootstrapMaxChars": 15000
     },
     "ownership": "explicit",
     "entries": {
@@ -141,7 +141,7 @@
     }
   },
   "meta": {
-    "lastTouchedVersion": "2026.8.1",
+    "lastTouchedVersion": "2026.9.1",
     "migrations": {
       "modelPolicyAllowlist": true
     }
@@ -150,7 +150,11 @@
     "providers": {
       "coding-plan": {
         "api": "openai-completions",
-        "apiKey": "<REDACTED>",
+        "apiKey": {
+          "source": "file",
+          "provider": "codingplan",
+          "id": "value"
+        },
         "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
         "models": [
           {
@@ -314,6 +318,13 @@
         "mode": "propose"
       },
       "approvalPolicy": "pending"
+    },
+    "load": {
+      "extraDirs": [
+        "/Users/bangcle/.openclaw/workspace/L2-infra/skills",
+        "/Users/bangcle/.openclaw/workspace/L3-business/skills",
+        "/Users/bangcle/.openclaw/workspace/L4-proprietary/skills"
+      ]
     }
   },
   "tools": {
@@ -321,7 +332,9 @@
     "alsoAllow": [
       "tavily_search",
       "tavily_extract",
-      "wecom_mcp"
+      "wecom_mcp",
+      "message",
+      "group:messaging"
     ],
     "sandbox": {
       "tools": {
@@ -347,7 +360,7 @@
   "plugins": {
     "entries": {
       "longcat": {
-        "enabled": true
+        "enabled": false
       },
       "tavily": {
         "enabled": true,
@@ -391,9 +404,9 @@
         "path": "/Users/bangcle/.openclaw/secrets/tavily.apiKey",
         "mode": "singleValue"
       },
-      "codingplankey": {
+      "codingplan": {
         "source": "file",
-        "path": "/Users/bangcle/.openclaw/secrets/coding-plan.apiKey",
+        "path": "/Users/bangcle/.openclaw/secrets/codingplan.apiKey",
         "mode": "singleValue"
       },
       "longcatkey": {
@@ -404,6 +417,11 @@
       "gatewayauthtoken": {
         "source": "file",
         "path": "/Users/bangcle/.openclaw/secrets/gateway.auth.token",
+        "mode": "singleValue"
+      },
+      "memorysearchkey": {
+        "source": "file",
+        "path": "/Users/bangcle/.openclaw/secrets/memory.search.remote.apiKey",
         "mode": "singleValue"
       }
     }
@@ -423,7 +441,11 @@
       "fallback": "none",
       "remote": {
         "baseUrl": "http://127.0.0.1:3000/v1",
-        "apiKey": "<REDACTED>"
+        "apiKey": {
+          "source": "file",
+          "provider": "memorysearchkey",
+          "id": "value"
+        }
       },
       "rememberAcrossConversations": false
     }
