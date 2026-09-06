@@ -1,0 +1,4 @@
+# 局部豁免：fin_l4_pf01/data/ 是代码模块（模拟数据源），非业务本地数据
+# 全局 .gitignore 的 data/ 规则仅针对业务持久化数据
+!fin_l4_pf01/data/
+!fin_l4_pf01/data/rex_family_data.py
