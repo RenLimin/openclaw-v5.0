@@ -5,5 +5,5 @@ set -uo pipefail
 WORKSPACE="/Users/bangcle/.openclaw/workspace"
 cd "$WORKSPACE" || { echo "ERROR: cannot cd to workspace"; exit 1; }
 
-# 调用 Python 扫描脚本
-.venv-bdms/bin/python3 scripts/l2/error_handler/scan_errors.py
+# 调用 Python 扫描脚本（重构后新路径；用系统 python3，venv 已随计划移除）
+python3 "$WORKSPACE/L2-infra/scripts/error_handler/scan_errors.py"
