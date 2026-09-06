@@ -9,8 +9,9 @@ sub_area: role-definition
 type: role
 tags: [financial-advisor, CFP, family-finance]
 last_reviewed: 2026-08-26
+id: FIN-R01-SOUL
+stage: manage
 ---
-
 # 理财顾问 SOUL.md
 
 ## 角色定位

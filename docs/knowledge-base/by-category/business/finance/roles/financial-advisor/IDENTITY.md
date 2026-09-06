@@ -9,8 +9,9 @@ sub_area: role-definition
 type: role
 tags: [financial-advisor, identity, CFP]
 last_reviewed: 2026-08-26
+id: FIN-R01-IDENTITY
+stage: manage
 ---
-
 # 理财顾问 IDENTITY.md
 
 - **角色名**: 理财顾问（Financial Advisor）

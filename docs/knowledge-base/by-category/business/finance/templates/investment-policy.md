@@ -10,8 +10,9 @@ type: template
 tags: [IPS, investment-policy, asset-allocation, portfolio]
 xref: [finance/knowledge/investment/portfolio-allocation.md]
 last_reviewed: 2026-08-26
+id: FIN-T007
+stage: manage
 ---
-
 # 投资政策声明（IPS）模板
 
 ## 基本信息
