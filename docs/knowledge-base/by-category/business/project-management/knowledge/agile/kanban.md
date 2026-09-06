@@ -1,14 +1,16 @@
 ---
 title: "看板方法（Kanban）"
+id: PM-011
 description: "看板方法的核心原则、实践和适用场景"
 source: "Kanban Method (David J. Anderson)"
 version: "Kanban 2024"
 category: "industry-practice"
 dimension: "project-management"
+stage: "manage"
 sub_area: "agile"
 type: "industry-practice"
 tags: ["project-management", "agile", "kanban", "flow"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # 看板方法（Kanban）
@@ -78,6 +80,13 @@ last_reviewed: "2026-08-25"
 - 保留 Scrum 的 Sprint 和角色
 - 引入看板的 WIP 限制和流动管理
 - 适合从 Scrum 向看板过渡的团队
+
+## 注意事项
+
+- 看板是流程改进方法，不是完整的项目管理框架
+- WIP 限制是核心，不设限的看板只是看板墙
+- 变更随时发生，需要明确的流程规则支撑
+- 与 [scrum-guide.md](./scrum-guide.md) 组合为 Scrumban 时需明确各自生效范围
 
 ## 参考资料
 

@@ -1,14 +1,16 @@
 ---
 title: "混合项目管理方法"
+id: PM-012
 description: "预测型与敏捷方法的混合策略，根据项目特征选择最佳组合"
 source: "PMBOK 8th / Gartner Hybrid PM 2026"
 version: "2026"
 category: "industry-practice"
 dimension: "project-management"
+stage: "manage"
 sub_area: "agile"
 type: "industry-practice"
 tags: ["project-management", "agile", "hybrid", "tailoring"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # 混合项目管理方法
@@ -93,6 +95,14 @@ last_reviewed: "2026-08-25"
 - 团队需要理解两种方法的思维差异
 - 避免"假敏捷"（形式上是 Scrum，实质上是小瀑布）
 - 定期评估混合策略的有效性
+
+## 适用场景
+
+- ✅ 需求部分明确、部分模糊的大型项目
+- ✅ 企业 IT 项目（瀑布需求 + 敏捷开发 + 瀑布部署）
+- ✅ 合规要求高的行业（敏捷开发 + 瀑布验收）
+- ❌ 需求完全明确且变化极少
+- ❌ 小型纯敏捷团队（直接 Scrum/Kanban 更简单）
 
 ## 参考资料
 

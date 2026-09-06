@@ -1,14 +1,16 @@
 ---
 title: "风险管理：风险登记册"
+id: PM-013
 description: "项目风险识别、评估、应对和监控的完整方法"
 source: "PMBOK 8th / ISO 31000"
 version: "PMBOK 8th (2026)"
 category: "industry-practice"
 dimension: "project-management"
+stage: "manage"
 sub_area: "risk-management"
 type: "industry-practice"
 tags: ["project-management", "risk", "assessment", "mitigation"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # 风险管理：风险登记册

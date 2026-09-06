@@ -1,14 +1,16 @@
 ---
 title: "Scrum Master — 简介"
+id: PM-R02-IDENTITY
 description: "Scrum Master 的角色简介和适用场景"
 source: "Scrum Guide 2020"
 version: "Scrum Guide 2020"
 category: "business"
 dimension: "project-management"
+stage: "manage"
 sub_area: "roles"
 type: "role-definition"
 tags: ["project-management", "role", "identity", "scrum-master"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # Scrum Master — 简介

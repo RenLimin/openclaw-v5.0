@@ -1,14 +1,16 @@
 ---
 title: "Scrum 指南要点"
+id: PM-010
 description: "Scrum 框架的核心概念、角色、事件和工件"
 source: "Scrum Guide 2020 (Schwaber & Sutherland)"
 version: "Scrum Guide 2020"
 category: "industry-practice"
 dimension: "project-management"
+stage: "manage"
 sub_area: "agile"
 type: "industry-practice"
 tags: ["project-management", "agile", "scrum", "framework"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # Scrum 指南要点
@@ -80,6 +82,13 @@ Scrum 基于经验主义——知识来自经验，决策基于所见。
 - ✅ 跨职能自组织团队
 - ❌ 需求极其稳定且可预测
 - ❌ 团队无法频繁交付
+
+## 注意事项
+
+- Scrum 是框架而非银弹，需要结合 [tailoring.md](../pmbok-8th/tailoring.md) 裁剪
+- 避免"伪 Scrum"：仪式齐全但无自组织和经验主义
+- 产品负责人和 Scrum Master 角色不可兼任（责任冲突）
+- Sprint 目标一旦确定应保持稳定，变更走 [change-request.md](../../templates/change-request.md)
 
 ## 参考资料
 

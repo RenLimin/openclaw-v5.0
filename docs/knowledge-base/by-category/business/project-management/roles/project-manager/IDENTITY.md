@@ -1,14 +1,16 @@
 ---
 title: "项目经理 — 简介"
+id: PM-R01-IDENTITY
 description: "项目管理者的角色简介和适用场景"
 source: "PMBOK 8th / PMI"
 version: "PMBOK 8th (2026)"
 category: "business"
 dimension: "project-management"
+stage: "manage"
 sub_area: "roles"
 type: "role-definition"
 tags: ["project-management", "role", "identity", "pm"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # 项目经理 — 简介

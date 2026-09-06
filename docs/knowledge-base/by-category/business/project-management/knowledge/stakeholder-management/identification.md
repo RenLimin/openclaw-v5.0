@@ -1,14 +1,16 @@
 ---
 title: "干系人识别与参与"
+id: PM-014
 description: "项目干系人识别、分析和参与管理的系统方法"
 source: "PMBOK 8th / Stakeholder Circle"
 version: "PMBOK 8th (2026)"
 category: "industry-practice"
 dimension: "project-management"
+stage: "manage"
 sub_area: "stakeholder-management"
 type: "industry-practice"
 tags: ["project-management", "stakeholder", "engagement", "communication"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # 干系人识别与参与
@@ -107,6 +109,13 @@ last_reviewed: "2026-08-25"
 - 关键干系人的态度可能随时间变化
 - 不要忽视"沉默的干系人"——他们可能在关键时刻反对
 - 干系人管理与沟通管理紧密关联但不同
+
+## 适用场景
+
+- ✅ 项目启动时干系人全面识别
+- ✅ 项目阶段变化后的干系人复核
+- ✅ 新干系人出现时的登记册更新
+- ❌ 干系人极少且明确时（可直接登记无需复杂分析）
 
 ## 参考资料
 

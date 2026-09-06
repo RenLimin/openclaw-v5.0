@@ -74,3 +74,19 @@ last_reviewed: "2026-09-06"
 ## 变更历史
 
 - 2026-09-06: 初始版本（收录 2026-08-25 ~ 2026-09-06 L3 建设实证经验）
+
+## 2026-09-06: 项目管理维度 P0 建设完成
+
+**背景**：按 L3 架构阶段 1 建设项目管理维度（P0）——PMBOK 8th 核心知识 + 敏捷 + 风险管理 + 干系人管理 + 4 角色 + 5 模板。
+**问题**：初期已有 8 篇知识文档（2026-08-25）缺 `id`/`stage`，且部分缺"适用场景/注意事项"结构章节；scrum-master 缺 AGENTS.md；wbs 模板缺 id。首批 `kb_index.py --validate` 报 30+ 条 PM 维度警告。
+**根因**：早期建设未对照 `kb_index.py` schema 与 [knowledge-authoring.md](./knowledge-authoring.md) 标准结构；角色文件未一次补齐 4 文件标准。
+**修复**：批量补齐 id/stage；新增 6 篇知识（tailoring/user-stories/qualitative-analysis/response-strategies/engagement-plan/communication-plan）；补齐 scrum-master AGENTS.md 与 4 角色 references/；补齐 4 模板；为存量知识补"适用场景/注意事项"章节；最终 PM 维度 31 文件零警告。
+**预防**：① 批量知识库建设后立即跑 `kb_index.py --validate` 并**按维度过滤**逐条清零；② 角色建设用 4 文件标准清单核对（SOUL+AGENTS+IDENTITY+references）；③ 存量文档合标时按 [knowledge-authoring.md](./knowledge-authoring.md) §2 标准结构逐项补齐（适用场景+注意事项必含）。
+
+## 2026-09-06: 复用既有维度骨架而非重建
+
+**背景**：项目管理维度已存在 2026-08-25 的早期骨架（8 知识 + 2 角色 + 1 模板）。
+**问题**：若从零重建会丢失既有成果，且造成重复 ID。
+**根因**：未先盘点既有资产。
+**修复**：先 `find` + `wc -l` 盘点既有文件，区分"补全/升级/新增"三类：存量文档补 id/stage/结构，角色补缺失文件，知识新增 6 篇补齐 4 大知识域，模板新增 4 个补齐 5 模板。
+**预防**：建设前先盘点维度目录现状，优先复用骨架、增量补齐，避免重复建设。

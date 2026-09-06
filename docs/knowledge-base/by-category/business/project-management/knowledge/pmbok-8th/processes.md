@@ -1,14 +1,16 @@
 ---
 title: "PMBOK 8th：40 个过程概览"
+id: PM-002
 description: "PMBOK 第 8 版恢复的 40 个项目管理过程，按绩效域分组"
 source: "PMBOK Guide 8th Edition, Project Management Institute (2026)"
 version: "PMBOK 8th (2026)"
 category: "theoretical-knowledge"
 dimension: "project-management"
+stage: "manage"
 sub_area: "pmbok-8th"
 type: "theoretical-knowledge"
 tags: ["project-management", "pmbok", "processes", "practices"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # PMBOK 8th：40 个过程概览
@@ -105,6 +107,20 @@ last_reviewed: "2026-08-25"
 | 规定性 | 较强 | 非规定性 |
 | 原则 | 无 | 6 条原则 |
 | 适用方法 | 偏预测型 | 预测/适应/混合 |
+
+## 适用场景
+
+- ✅ 了解 PMBOK 8th 过程全景
+- ✅ 裁剪过程选择参考
+- ✅ 过程与绩效域的对应关系查询
+- ❌ 需要某个过程的详细步骤时（参考 PMI Standards+）
+
+## 注意事项
+
+- 40 个过程是非规定性的，必须裁剪使用
+- 过程分组与第 6 版的知识领域分组不同（按绩效域）
+- 相同名称的过程出现在多个绩效域（如"定义范围"在规划和交付）注意上下文
+- 裁剪决策参考 [tailoring.md](./tailoring.md)
 
 ## 参考资料
 

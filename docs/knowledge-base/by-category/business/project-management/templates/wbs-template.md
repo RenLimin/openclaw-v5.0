@@ -1,14 +1,16 @@
 ---
+id: PM-T001
 title: "WBS 模板（工作分解结构）"
 description: "项目工作分解结构模板，将项目范围分解为可管理的工作包"
 source: "PMBOK 8th / PMI"
 version: "PMBOK 8th (2026)"
 category: "business"
 dimension: "project-management"
+stage: "manage"
 sub_area: "templates"
 type: "template"
 tags: ["project-management", "wbs", "scope", "planning"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # WBS 模板（工作分解结构）
