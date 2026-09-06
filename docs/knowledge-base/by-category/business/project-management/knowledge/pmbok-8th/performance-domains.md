@@ -1,14 +1,16 @@
 ---
 title: "PMBOK 8th：7 个绩效域"
+id: PM-003
 description: "PMBOK 第 8 版的 7 个绩效域，项目管理的核心关注领域"
 source: "PMBOK Guide 8th Edition, Project Management Institute (2026)"
 version: "PMBOK 8th (2026)"
 category: "theoretical-knowledge"
 dimension: "project-management"
+stage: "manage"
 sub_area: "pmbok-8th"
 type: "theoretical-knowledge"
 tags: ["project-management", "pmbok", "performance-domains"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # PMBOK 8th：7 个绩效域
@@ -86,6 +88,20 @@ last_reviewed: "2026-08-25"
 | 交付 | 交付（保留） |
 | 度量 | 合并入其他绩效域 |
 | 不确定性 | 不确定性（保留） |
+
+## 适用场景
+
+- ✅ 需要整体理解项目管理关注领域的项目经理
+- ✅ 评估项目健康度的绩效域对标
+- ✅ 混合/预测型项目的绩效管理
+- ❌ 需要过程级操作指导时（改用 [processes.md](./processes.md)）
+
+## 注意事项
+
+- 7 个绩效域相互关联，不可孤立管理
+- 绩效域是持续关注领域，不是阶段
+- 度量合并入各绩效域，不再单列
+- 与 6 条原则（[principles.md](./principles.md)）配套使用
 
 ## 参考资料
 

@@ -1,14 +1,16 @@
 ---
 title: "Scrum Master — 身份人设"
+id: PM-R02-SOUL
 description: "Scrum Master 的角色定义，敏捷团队的教练和促进者"
 source: "Scrum Guide 2020 / Scrum Alliance"
 version: "Scrum Guide 2020"
 category: "business"
 dimension: "project-management"
+stage: "manage"
 sub_area: "roles"
 type: "role-definition"
 tags: ["project-management", "role", "soul", "scrum-master"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # Scrum Master — 身份人设

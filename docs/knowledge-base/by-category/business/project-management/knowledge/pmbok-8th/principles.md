@@ -1,14 +1,16 @@
 ---
 title: "PMBOK 8th：6 条项目管理原则"
+id: PM-001
 description: "PMBOK 第 8 版的 6 条核心原则，项目管理的价值观基础"
 source: "PMBOK Guide 8th Edition, Project Management Institute (2026)"
 version: "PMBOK 8th (2026)"
 category: "theoretical-knowledge"
 dimension: "project-management"
+stage: "manage"
 sub_area: "pmbok-8th"
 type: "theoretical-knowledge"
 tags: ["project-management", "pmbok", "principles", "values"]
-last_reviewed: "2026-08-25"
+last_reviewed: "2026-09-06"
 ---
 
 # PMBOK 8th：6 条项目管理原则
@@ -91,6 +93,13 @@ PMBOK 第 8 版从第 7 版的 12 条原则精简为 6 条核心原则，
 - 原则是价值观，不是规则——需要根据情境判断如何应用
 - 原则之间可能冲突（如适应性与质量），需要平衡
 - 原则适用于所有项目管理方法（预测型/适应型/混合型）
+
+## 适用场景
+
+- ✅ 项目价值观与决策原则的建立
+- ✅ 团队文化塑造与冲突解决
+- ✅ 方法裁剪时的价值判断依据
+- ❌ 需要具体操作步骤时（改用过程文档）
 
 ## 参考资料
 
