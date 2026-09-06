@@ -25,7 +25,7 @@ from pathlib import Path
 from typing import Any
 
 CONFIG = Path.home() / ".openclaw" / "openclaw.json"
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parent.parent.parent.parent
 SNAPSHOT = REPO / "config-snapshots" / "openclaw.json"
 
 # 精确字段名匹配（小写、去下划线/连字符后）→ 值脱敏。

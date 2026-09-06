@@ -37,7 +37,7 @@ try:
 except ImportError:
     sys.exit("需要 PyYAML: pip3 install pyyaml")
 
-REPO = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parent.parent.parent.parent
 KB_ROOT = REPO / "docs" / "knowledge-base"
 BUSINESS_KB_ROOT = KB_ROOT / "by-category" / "business"
 

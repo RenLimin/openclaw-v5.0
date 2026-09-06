@@ -99,7 +99,7 @@ Example placeholders (replace or remove them):
 
 **Voice storytelling:** `sag` (ElevenLabs TTS) is **currently unavailable** — missing `ELEVENLABS_API_KEY` (verified 2026-08-22 via `openclaw skills check`). Don't attempt voice output until it's configured; use text. See ADR-008 §6.
 
-**Local environment reality check** (verified 2026-08-22, re-verify with `bash scripts/tool_policy_audit.sh`):
+**Local environment reality check** (verified 2026-08-22, re-verify with `bash L2-infra/components/tool-policy/tool_policy_audit.sh`):
 
 - **WeCom (企业微信) is configured and enabled** as of 2026-08-22 12:03 (installed by Rex, `dmPolicy: pairing`, `allowFrom: []`). Other channels (Feishu/Telegram/Slack/etc) remain `not configured`. Re-check with `openclaw channels list --all` — this changed mid-session once already.
   - Existing cron jobs still use `delivery.mode=none` (set when no channel existed, EXP-20260822-005). Revisit only if Rex wants cron output delivered to WeCom.
@@ -179,7 +179,7 @@ Example placeholders (replace or remove them):
 ```
 
 ### 统一扫描入口
-- 脚本：`scripts/l2/error_handler/scan_errors.sh`（调用 scan_errors.py）
+- 脚本：`L2-infra/scripts/error_handler/scan_errors.sh`（调用 scan_errors.py）
 - 覆盖：cron 错误 + LLM 超时 + Provider 健康
 - 输出：`memory/error-scan-latest.json`（结构化结果）
 - 自动处置：`handle_timeout.sh`（Gateway 重启 + 模型切换建议）

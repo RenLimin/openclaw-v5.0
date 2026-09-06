@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CONFIG_FILE="${HOME}/.openclaw/openclaw.json"
 SNAPSHOT="${REPO_ROOT}/config-snapshots/openclaw.json"
 

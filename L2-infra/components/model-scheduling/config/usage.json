@@ -1,0 +1,47 @@
+{
+  "providers": {
+    "coding-plan": {
+      "health": {
+        "status": "healthy",
+        "latency_ms": 390,
+        "last_checked": "2026-09-06T06:32:43.920138+00:00",
+        "models": {
+          "doubao-seed-2-1-turbo": {
+            "status": "available",
+            "http_code": 200
+          },
+          "doubao-seed-2-0-lite-260215": {
+            "status": "available",
+            "http_code": 200
+          },
+          "doubao-seed-code-preview-251028": {
+            "status": "available",
+            "http_code": 200
+          }
+        }
+      }
+    },
+    "longCat": {
+      "health": {
+        "status": "healthy",
+        "latency_ms": 125,
+        "last_checked": "2026-09-06T06:33:04.354861+00:00",
+        "models": {
+          "LongCat-2.0": {
+            "status": "unavailable",
+            "http_code": 402,
+            "error": "{\"error\":{\"code\":\"too_many_requests\",\"message\":\"Call failed: Insufficient token quota.\",\"type\":\"rate_limit_error\"}}"
+          }
+        }
+      }
+    },
+    "model-scheduling": {
+      "health": {
+        "status": "healthy",
+        "latency_ms": 2,
+        "last_checked": "2026-09-06T06:33:04.493359+00:00"
+      }
+    }
+  },
+  "last_health_check": "2026-09-06T06:33:04.493464+00:00"
+}
