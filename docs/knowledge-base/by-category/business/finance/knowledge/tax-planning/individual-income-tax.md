@@ -10,8 +10,9 @@ type: knowledge
 tags: [tax, individual-income-tax, special-deduction, annual-bonus]
 xref: [finance/knowledge/tax-planning/enterprise-tax.md]
 last_reviewed: 2026-08-26
+id: FIN-KB-005
+stage: manage
 ---
-
 # 个人所得税筹划
 
 ## 税法框架
@@ -114,6 +115,18 @@ last_reviewed: 2026-08-26
 3. **年终奖随意选择**：未比较两种方式
 4. **虚假填报**：税务稽查风险极高
 5. **忽略经营所得核定征收**：个体户可选查账/核定
+
+## 适用场景
+
+- 个人所得税优化：专项附加扣除、年终奖计税方式选择
+- 需要结合家庭资产负债表、收支表进行量化分析的场景
+- 与财务规划师、保险顾问协作时引用该知识
+
+## 注意事项
+
+- 政策/市场数据有时效性（如税率、LPR），使用时以最新官方发布为准
+- 本知识为通用方法论，不构成针对具体家庭的投资/税务/保险建议
+- 复杂个案（高净值、跨境、企业主）应升级给持牌专业人士
 
 ## 参考框架
 

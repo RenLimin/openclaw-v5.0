@@ -10,8 +10,9 @@ type: knowledge
 tags: [life-insurance, term-life, whole-life, increasing-life, protection]
 xref: [finance/knowledge/insurance/health-insurance.md]
 last_reviewed: 2026-08-26
+id: FIN-KB-007
+stage: manage
 ---
-
 # 人寿保险配置
 
 ## 产品类型
@@ -125,6 +126,18 @@ last_reviewed: 2026-08-26
 3. **保额太低**：50 万以下的定寿在通胀后杯水车薪
 4. **忽视健康告知**：隐瞒病史可能导致拒赔
 5. **保单不检视**：家庭结构变化时需调整
+
+## 适用场景
+
+- 家庭寿险规划：保额测算、产品选型、受益人安排
+- 需要结合家庭资产负债表、收支表进行量化分析的场景
+- 与财务规划师、保险顾问协作时引用该知识
+
+## 注意事项
+
+- 政策/市场数据有时效性（如税率、LPR），使用时以最新官方发布为准
+- 本知识为通用方法论，不构成针对具体家庭的投资/税务/保险建议
+- 复杂个案（高净值、跨境、企业主）应升级给持牌专业人士
 
 ## 参考框架
 

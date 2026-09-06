@@ -9,8 +9,9 @@ sub_area: template
 type: template
 tags: [financial-checkup, family-finance, assessment]
 last_reviewed: 2026-08-26
+id: FIN-T006
+stage: manage
 ---
-
 # 家庭财务体检模板
 
 ## 基本信息

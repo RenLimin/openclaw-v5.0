@@ -10,8 +10,9 @@ type: knowledge
 tags: [enterprise-tax, corporate-income-tax, VAT, SME-preferences]
 xref: [finance/knowledge/tax-planning/individual-income-tax.md]
 last_reviewed: 2026-08-26
+id: FIN-KB-006
+stage: manage
 ---
-
 # 企业税务筹划
 
 ## 企业主要税种
@@ -127,6 +128,18 @@ last_reviewed: 2026-08-26
 3. **整体性**：综合考量所有税种和期间
 4. **风险可控**：激进筹划方案需评估稽查风险
 5. **文档完备**：留存合同、发票、决策记录
+
+## 适用场景
+
+- 企业主税务筹划：企业所得税、增值税、小微企业优惠
+- 需要结合家庭资产负债表、收支表进行量化分析的场景
+- 与财务规划师、保险顾问协作时引用该知识
+
+## 注意事项
+
+- 政策/市场数据有时效性（如税率、LPR），使用时以最新官方发布为准
+- 本知识为通用方法论，不构成针对具体家庭的投资/税务/保险建议
+- 复杂个案（高净值、跨境、企业主）应升级给持牌专业人士
 
 ## 参考框架
 

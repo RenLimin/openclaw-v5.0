@@ -10,8 +10,9 @@ type: knowledge
 tags: [risk-management, VaR, drawdown, sharpe-ratio, hedging]
 xref: [project-management/knowledge/risk-management/risk-register.md]
 last_reviewed: 2026-08-26
+id: FIN-KB-004
+stage: manage
 ---
-
 # 投资风险管理
 
 ## 风险类型
@@ -126,6 +127,18 @@ Sortino = (Rp - Rf) / σ_downside
 | 锚定效应 | 参考买入价做决策 | 基于当前价值重新评估 |
 | 羊群效应 | 追热点、跟风操作 | 独立分析、逆向思考 |
 | 近因偏差 | 过度重视近期表现 | 拉长评估周期 |
+
+## 适用场景
+
+- 投资风险管理：组合风险评估、止损与压力测试
+- 需要结合家庭资产负债表、收支表进行量化分析的场景
+- 与财务规划师、保险顾问协作时引用该知识
+
+## 注意事项
+
+- 政策/市场数据有时效性（如税率、LPR），使用时以最新官方发布为准
+- 本知识为通用方法论，不构成针对具体家庭的投资/税务/保险建议
+- 复杂个案（高净值、跨境、企业主）应升级给持牌专业人士
 
 ## 参考框架
 

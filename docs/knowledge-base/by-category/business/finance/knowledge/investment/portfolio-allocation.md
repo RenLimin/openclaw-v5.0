@@ -10,8 +10,9 @@ type: knowledge
 tags: [portfolio, asset-allocation, MPT, strategic-allocation, tactical-allocation]
 xref: [project-management/knowledge/pmbok-8th/principles.md]
 last_reviewed: 2026-08-26
+id: FIN-KB-002
+stage: manage
 ---
-
 # 资产配置策略
 
 ## 核心概念
@@ -82,6 +83,18 @@ last_reviewed: 2026-08-26
 3. **忽视相关性**：持有多个高度相关的"分散"资产（如多只沪深 300 基金）
 4. **忽略成本**：频繁调整导致交易费用和税负侵蚀收益
 5. **一成不变**：未随生命周期调整风险敞口（如退休后仍保持高股票仓位）
+
+## 适用场景
+
+- 家庭资产配置：根据风险偏好确定大类资产比例与再平衡节奏
+- 需要结合家庭资产负债表、收支表进行量化分析的场景
+- 与财务规划师、保险顾问协作时引用该知识
+
+## 注意事项
+
+- 政策/市场数据有时效性（如税率、LPR），使用时以最新官方发布为准
+- 本知识为通用方法论，不构成针对具体家庭的投资/税务/保险建议
+- 复杂个案（高净值、跨境、企业主）应升级给持牌专业人士
 
 ## 参考框架
 

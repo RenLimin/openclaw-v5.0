@@ -10,8 +10,9 @@ type: knowledge
 tags: [health-insurance, medical-insurance, critical-illness, long-term-care]
 xref: [finance/knowledge/insurance/life-insurance.md]
 last_reviewed: 2026-08-26
+id: FIN-KB-008
+stage: manage
 ---
-
 # 健康保险配置
 
 ## 中国医疗保障体系
@@ -129,6 +130,18 @@ last_reviewed: 2026-08-26
 3. **给老人买重疾险**：保费倒挂（保费≈保额），不划算
 4. **忽视续保条件**：非保证续保产品可能停售/拒续
 5. **保额不足**：重疾保额低于 30 万难以覆盖康复期
+
+## 适用场景
+
+- 家庭健康保障：医疗/重疾/长护险的配置与检视
+- 需要结合家庭资产负债表、收支表进行量化分析的场景
+- 与财务规划师、保险顾问协作时引用该知识
+
+## 注意事项
+
+- 政策/市场数据有时效性（如税率、LPR），使用时以最新官方发布为准
+- 本知识为通用方法论，不构成针对具体家庭的投资/税务/保险建议
+- 复杂个案（高净值、跨境、企业主）应升级给持牌专业人士
 
 ## 参考框架
 
