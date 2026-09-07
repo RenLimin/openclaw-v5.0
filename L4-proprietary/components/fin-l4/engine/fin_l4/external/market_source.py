@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
+
 """行情数据源（预留，返回占位数据）
 
 TODO: 接入真实行情数据源（新浪财经 / 东方财富 / Wind / Tushare 等）

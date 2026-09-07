@@ -124,12 +124,28 @@ Example placeholders (replace or remove them):
 - ✅ 主会话直接做：查询、单步操作、简短回复、配置读取
 - ✅ subagent 隔离：多步骤构建、批量文件写入、KB 文档生成、代码重构、跨文件编辑
 
-**三层防护**：
+**主会话三层防护**：
 | 层级 | 机制 | 作用 |
 |---|---|---|
 | L1 预防 | 长任务 subagent 隔离 | 主会话不累积 token |
 | L2 降级 | compaction 模型同 provider | 共享网络/鉴权命运 |
 | L3 兜底 | keepRecentTokens=30k | 压缩不丢关键上下文 |
+
+### Subagent 上下文保护规范
+
+subagent 是临时隔离会话，**没有 compaction 保护**（运行时不支持），长任务可能直接溢出。必须遵守以下规范：
+
+1. **长任务必须分段**：每段子任务预估 token 用量 < 50% ctx window（当前 doubao-seed 256k → 每段 < 128k tokens）
+   - 预估方法：每步 exec 输出按 2k tokens 估算，文件读取按文件大小/4 估算（中文 UTF-8 约 4 字节/token）
+   - 超过 50 步的任务必须拆成多个 subagent 串行执行
+2. **`sessions_spawn` 必须加 `runTimeoutSeconds`**：
+   - 短任务（<10 步）：600s
+   - 中任务（10-30 步）：1800s
+   - 长任务（>30 步）：3600s，且必须分段
+3. **子任务输出必须精简**：结果回传主会话不超过 2000 token（约 8000 字符）
+   - 详细结果写入文件，主会话只读取摘要
+   - 禁止在 subagent 回复中粘贴完整文件内容
+4. **辅助工具**：`L2-infra/components/context-management/subagent_ctx_guard.py` — 输入任务描述和预估步数，输出建议的分段策略和 token 预算
 
 ## 异常自动处置（L1 防压缩冲突之上）
 

@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
+
 """外部数据接入模块"""
 
 from fin_l4.external.base import DataSource, DataSnapshot, DataSourceRegistry

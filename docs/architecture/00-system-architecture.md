@@ -310,10 +310,12 @@ adapters/
 
 1. **上下文管理** (2026-08-21, 08-24 升级)
    - 组件 ID: 上下文管理配置 + 溢出防护状态机
-   - 功能: 两层防线自动管理上下文溢出
+   - 功能: 两层压缩防线 + 生命周期治理，全覆盖
      - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复;摘要委托给**同 provider 的大 ctx 模型**
      - 第 2 层: Mid-turn precheck — 中途检查,中止并交给 recovery
-     - ~~Session pruning~~ → ❌ 不生效(运行时 provider 白名单限制)
+     - 生命周期治理: 会话生命周期管理 cron(每日 02:00)替代原 session pruning，分级清理过期会话 + deleteAfterRun
+     - Subagent 保护: 分段执行 + runTimeoutSeconds + 输出精简(见 AGENTS.md 规范)
+     - Compaction fallback: 同 provider 模型复用 + memoryFlush 独立模型兜底
    - 溢出防护状态机: NORMAL → WARN → DIVERT → HARD_LIMIT → RECOVERED
      - 各模型水位阈值(基于实测 contextWindow):
        - ark-code-latest(224k): WARN 134k / DIVERT 179k / HARD_LIMIT 201k
@@ -668,7 +670,7 @@ L4 专有业务
 - ✅ 工作区配置(USER/IDENTITY/SOUL)
 - ✅ 第一个 L2 组件(Tavily)
 - ✅ ADR-001/002/003(4 层架构 + 三维模型 + 演进路径)
-- 🚧 上下文管理(自动压缩 + 溢出防护状态机;session pruning 层不生效 — 2/3 层实际生效)
+- ✅ 上下文管理(两层压缩防线 + 生命周期治理 + subagent 保护 + compaction fallback — 全覆盖)
 - ✅ 配置管理(快照 + 四步流程 + 漂移检测)
 - ✅ 工具策略治理(三态模型 + 六项审计)
 - ✅ 记忆语义检索(本地 embedding + 健康监控)
