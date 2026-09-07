@@ -142,7 +142,16 @@ class BudgetService:
         """预算总览"""
         statuses = self.get_status(family_id, month)
         if not statuses:
-            return {"month": month, "total_budget": "0", "total_spent": "0"}
+            return {
+                "month": month,
+                "total_budget": "0",
+                "total_spent": "0",
+                "total_remaining": "0",
+                "categories": 0,
+                "exceeded": 0,
+                "warning": 0,
+                "statuses": [],
+            }
 
         total_budget = sum(s.budget_amount for s in statuses)
         total_spent = sum(s.spent_amount for s in statuses)

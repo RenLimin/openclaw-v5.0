@@ -26,6 +26,36 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    """ValueError -> 400 + 错误提示页或 JSON"""
+    from fastapi.responses import JSONResponse
+    path = request.url.path
+    if path.startswith("/api/"):
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    # 页面请求：返回错误页
+    return templates.TemplateResponse(
+        request, "error.html",
+        {"error": str(exc), "active_page": ""},
+        status_code=400,
+    )
+
+
+@app.exception_handler(Exception)
+async def generic_error_handler(request: Request, exc: Exception):
+    """通用异常 -> 500（但不裸抛堆栈）"""
+    from fastapi.responses import JSONResponse
+    path = request.url.path
+    msg = str(exc) if __debug__ else "Internal Server Error"
+    if path.startswith("/api/"):
+        return JSONResponse(status_code=500, content={"error": msg})
+    return templates.TemplateResponse(
+        request, "error.html",
+        {"error": msg, "active_page": ""},
+        status_code=500,
+    )
+
+
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):

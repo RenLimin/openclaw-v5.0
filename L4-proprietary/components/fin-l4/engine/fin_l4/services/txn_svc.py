@@ -43,6 +43,8 @@ class TransactionService:
             raise ValueError(f"借方账户不存在: {debit_account_id}")
         if not credit_acc:
             raise ValueError(f"贷方账户不存在: {credit_account_id}")
+        if debit_account_id == credit_account_id:
+            raise ValueError("借贷不能为同一账户")
 
         txn_id = self.repo.create(
             family_id=family_id,

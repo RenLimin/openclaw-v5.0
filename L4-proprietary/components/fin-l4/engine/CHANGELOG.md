@@ -7,6 +7,41 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [v1.1.0] — 2026-09-07
+
+### Fixed
+
+- **CLI 硬编码 family_id="default"** → 新增全局 `--family` 选项 + `_fid(ctx)` 自动取首个家庭
+- **`txn add` 不支持 account code** → 新增 code→id 解析，CLI 层接受 code 或 id
+- **AccountService.record_transaction 参数名错误** → `date=` → `txn_date=`，补 `from datetime import date`
+- **L3 引擎 `get_trial_balance` 期初失衡** → `SYS-OPENING-BALANCE` 账户余额计入试算汇总（此前被跳过导致资产=权益时才碰巧平衡）
+- **预算服务空状态字段缺失** → `get_overview()` 无预算时返回完整字段（含 `total_remaining/statuses`），修复 CLI `budget status` KeyError
+- **保险 CLI 签名与服务不匹配** → `insurance create` 参数对齐 `add_policy()` 真实签名（`term-years/payment-years/insured-name`）
+- **保险列表字段名不匹配** → CLI 读 `name/type/premium` 对齐 `list_policies()` 重映射字段
+- **Web 500 裸抛异常** → 新增 `ValueError`/`Exception` 全局处理器，API 返回 400/500 JSON，页面返回 `error.html`
+- **服务层缺借贷同账户校验** → `txn_svc.record()` 写入前拦截（与引擎校验一致，避免脏数据入库）
+
+### Added
+
+- **CLI `category` 命令组** → `category create/list`，预算可按分类名称设置（`--category`）
+- **Web `error.html` 模板** → 异常时友好错误页
+- **测试** → 新增 `test_trial_balance_balanced_with_opening`（期初配平验证）
+
+### Architecture
+
+- L3 六引擎物理迁移至 `L3-business/components/finance-engine/`，L4 仅做服务编排（符合 4 层架构契约）
+
+### Verified
+
+- L3 六引擎设计测试：6/6 通过
+- L4 服务测试：79/79 通过
+- CLI 全链路冒烟：账户/交易/试算平衡/分类/预算/贷款/保险/理财建议 全部通过
+- Web 12 页面 + API：全部 200 / 400 友好响应
+- 导出：Excel 资产负债表、Excel 交易流水、Word 报告 全部可用
+- 安全：AES-256-GCM 加密、审计日志 验证通过
+
+---
+
 ## [v1.0.0] — 2026-09-04
 
 ### Added

@@ -11,12 +11,26 @@ def _get_conn():
 
 @click.group()
 @click.option('--db', default=None, help='数据库路径')
+@click.option('--family', 'family_id', default=None, help='家庭 ID（默认取第一个家庭）')
 @click.pass_context
-def cli(ctx, db):
+def cli(ctx, db, family_id):
     """FIN-L4 家庭理财管理 CLI"""
     ctx.ensure_object(dict)
     init_db(db)
     ctx.obj['conn'] = get_db(db)
+    if family_id is None:
+        from fin_l4.db.repositories import FamilyRepository
+        fams = FamilyRepository(ctx.obj['conn']).list_all()
+        family_id = fams[0]['id'] if fams else None
+    ctx.obj['family_id'] = family_id
+
+
+def _fid(ctx) -> str:
+    """解析当前家庭 ID；无家庭时给出明确报错。"""
+    fid = ctx.obj.get('family_id')
+    if not fid:
+        raise click.ClickException('尚未创建家庭，请先执行: finctl family create --name <名称>')
+    return fid
 
 
 # ========== 家庭 ==========
@@ -65,7 +79,7 @@ def account():
 def account_create(ctx, code, name, acc_type, balance):
     from fin_l4.services.account_svc import AccountService
     svc = AccountService(ctx.obj['conn'])
-    result = svc.create_account(family_id="default", code=code, name=name, type=acc_type, opening_balance=balance)
+    result = svc.create_account(family_id=_fid(ctx), code=code, name=name, type=acc_type, opening_balance=balance)
     click.echo(f"已创建账户: {result['id']}")
 
 
@@ -74,7 +88,7 @@ def account_create(ctx, code, name, acc_type, balance):
 def account_list(ctx):
     from fin_l4.services.account_svc import AccountService
     svc = AccountService(ctx.obj['conn'])
-    accounts = svc.list_accounts("default")
+    accounts = svc.list_accounts(_fid(ctx))
     for acc in accounts:
         balance = svc.get_balance(acc['id'])
         click.echo(f"{acc['code']}  {acc['name']:20s}  {acc['type']:10s}  ¥{balance}")
@@ -85,7 +99,7 @@ def account_list(ctx):
 def trial_balance(ctx):
     from fin_l4.services.account_svc import AccountService
     svc = AccountService(ctx.obj['conn'])
-    result = svc.get_trial_balance("default")
+    result = svc.get_trial_balance(_fid(ctx))
     click.echo(f"借方合计: ¥{result['debit_total']}")
     click.echo(f"贷方合计: ¥{result['credit_total']}")
     click.echo(f"平衡: {'✅' if result['is_balanced'] else '❌'}")
@@ -100,8 +114,8 @@ def txn():
 
 
 @txn.command('add')
-@click.option('--debit', required=True, help='借方账户ID')
-@click.option('--credit', required=True, help='贷方账户ID')
+@click.option('--debit', required=True, help='借方账户ID或科目代码')
+@click.option('--credit', required=True, help='贷方账户ID或科目代码')
 @click.option('--amount', required=True, help='金额')
 @click.option('--date', 'txn_date', default=None, help='日期 (YYYY-MM-DD)')
 @click.option('--note', default=None, help='摘要')
@@ -109,9 +123,24 @@ def txn():
 def txn_add(ctx, debit, credit, amount, txn_date, note):
     from datetime import date as date_mod
     from fin_l4.services.txn_svc import TransactionService
+    from fin_l4.db.repositories import AccountRepository
     svc = TransactionService(ctx.obj['conn'])
-    result = svc.record(family_id="default", date_str=txn_date or str(date_mod.today()),
-                        amount=amount, debit_account_id=debit, credit_account_id=credit, note=note)
+    acc_repo = AccountRepository(ctx.obj['conn'])
+    fid = _fid(ctx)
+
+    def _resolve(ref: str) -> str:
+        # 优先按 id；否则按 code 在家庭内解析
+        acc = acc_repo.get(ref)
+        if acc:
+            return ref
+        by_code = acc_repo.get_by_code(fid, ref)
+        if by_code:
+            return by_code['id']
+        raise click.ClickException(f'账户不存在: {ref}（支持 id 或科目代码）')
+
+    result = svc.record(family_id=fid, date_str=txn_date or str(date_mod.today()),
+                        amount=amount, debit_account_id=_resolve(debit),
+                        credit_account_id=_resolve(credit), note=note)
     click.echo(f"已记录: {result['id']}")
 
 
@@ -121,9 +150,42 @@ def txn_add(ctx, debit, credit, amount, txn_date, note):
 def txn_list(ctx, limit):
     from fin_l4.services.txn_svc import TransactionService
     svc = TransactionService(ctx.obj['conn'])
-    txns = svc.list_transactions("default", limit=limit)
+    txns = svc.list_transactions(_fid(ctx), limit=limit)
     for t in txns:
         click.echo(f"{t['date']}  ¥{t['amount']:>12s}  {t.get('note', '')}")
+
+
+# ========== 分类 ==========
+
+@cli.group()
+def category():
+    """分类管理"""
+    pass
+
+
+@category.command('create')
+@click.option('--name', required=True, help='分类名称')
+@click.option('--type', 'cat_type', required=True, type=click.Choice(['income', 'expense']), help='分类类型')
+@click.pass_context
+def category_create(ctx, name, cat_type):
+    from fin_l4.db.repositories import CategoryRepository
+    from fin_l4.services.category_engine import CategoryEngine
+    fid = _fid(ctx)
+    repo = CategoryRepository(ctx.obj['conn'])
+    cid = repo.create(family_id=fid, name=name, type=cat_type)
+    click.echo(f"已创建分类: {name} ({cid})")
+
+
+@category.command('list')
+@click.pass_context
+def category_list(ctx):
+    from fin_l4.db.repositories import CategoryRepository
+    fid = _fid(ctx)
+    rows = CategoryRepository(ctx.obj['conn']).list_by_family(fid)
+    for r in rows:
+        click.echo(f"{r['id']}  {r['name']:20s}  {r['type']}")
+    if not rows:
+        click.echo("（暂无分类，用 category create 创建）")
 
 
 # ========== 预算 ==========
@@ -135,14 +197,25 @@ def budget():
 
 
 @budget.command('set')
-@click.option('--category-id', required=True, help='分类ID')
+@click.option('--category-id', default=None, help='分类ID')
+@click.option('--category', default=None, help='分类名称（按名称解析，与 --category-id 二选一）')
 @click.option('--month', required=True, help='月份 (YYYY-MM)')
 @click.option('--amount', required=True, help='预算金额')
 @click.pass_context
-def budget_set(ctx, category_id, month, amount):
+def budget_set(ctx, category_id, category, month, amount):
     from fin_l4.services.budget_svc import BudgetService
+    from fin_l4.db.repositories import CategoryRepository
     svc = BudgetService(ctx.obj['conn'])
-    result = svc.set_budget("default", category_id, month, amount)
+    fid = _fid(ctx)
+    if not category_id and not category:
+        raise click.ClickException('请提供 --category-id 或 --category 分类名称')
+    if not category_id:
+        rows = CategoryRepository(ctx.obj['conn']).list_by_family(fid)
+        matched = [r for r in rows if r['name'] == category]
+        if not matched:
+            raise click.ClickException(f'分类不存在: {category}（可用: {", ".join(r["name"] for r in rows[:10])}）')
+        category_id = matched[0]['id']
+    result = svc.set_budget(fid, category_id, month, amount)
     click.echo(f"预算已设置: {result['status']}")
 
 
@@ -152,7 +225,7 @@ def budget_set(ctx, category_id, month, amount):
 def budget_status(ctx, month):
     from fin_l4.services.budget_svc import BudgetService
     svc = BudgetService(ctx.obj['conn'])
-    overview = svc.get_overview("default", month or "")
+    overview = svc.get_overview(_fid(ctx), month or "")
     click.echo(f"预算总览 ({overview['month']}):")
     click.echo(f"  总预算: ¥{overview['total_budget']}")
     click.echo(f"  已支出: ¥{overview['total_spent']}")
@@ -177,7 +250,7 @@ def loan():
 def loan_create(ctx, name, principal, rate, term, method):
     from fin_l4.services.loan_svc import LoanService
     svc = LoanService(ctx.obj['conn'])
-    result = svc.create_loan(family_id="default", name=name, principal=principal,
+    result = svc.create_loan(family_id=_fid(ctx), name=name, principal=principal,
                              annual_rate=rate, term_months=term, method=method)
     click.echo(f"已创建贷款: {result['id']}")
 
@@ -187,7 +260,7 @@ def loan_create(ctx, name, principal, rate, term, method):
 def loan_list(ctx):
     from fin_l4.services.loan_svc import LoanService
     svc = LoanService(ctx.obj['conn'])
-    loans = svc.list_loans("default")
+    loans = svc.list_loans(_fid(ctx))
     for loan in loans:
         click.echo(f"{loan['id'][:8]}  {loan['name']:20s}  ¥{loan['principal']}  {loan['annual_rate']}  {loan['term_months']}月")
 
@@ -231,19 +304,22 @@ def insurance():
 
 
 @insurance.command('create')
-@click.option('--number', required=True, help='保单号')
 @click.option('--name', required=True, help='产品名称')
-@click.option('--type', 'ins_type', required=True, help='险种类型')
+@click.option('--type', 'ins_type', required=True, help='险种类型 (term_life/whole_life/endowment/critical_illness/medical/annuity/universal_life/tax_deferred)')
 @click.option('--premium', required=True, help='年缴保费')
 @click.option('--sum-assured', required=True, help='保额')
-@click.option('--start-date', required=True, help='生效日期')
+@click.option('--term-years', required=True, type=int, help='保障期限(年)')
+@click.option('--payment-years', required=True, type=int, help='缴费年限')
+@click.option('--insured-name', default=None, help='被保人姓名')
+@click.option('--start-date', default=None, help='生效日期 (YYYY-MM-DD)')
 @click.pass_context
-def insurance_create(ctx, number, name, ins_type, premium, sum_assured, start_date):
+def insurance_create(ctx, name, ins_type, premium, sum_assured, term_years, payment_years, insured_name, start_date):
     from fin_l4.services.insurance_svc import InsuranceService
     svc = InsuranceService(ctx.obj['conn'])
-    result = svc.create_policy(family_id="default", policy_number=number, product_name=name,
-                               policy_type=ins_type, annual_premium=premium, sum_assured=sum_assured,
-                               start_date=start_date)
+    result = svc.add_policy(family_id=_fid(ctx), product_name=name, policy_type=ins_type,
+                            sum_assured=sum_assured, annual_premium=premium,
+                            term_years=term_years, payment_years=payment_years,
+                            insured_name=insured_name, start_date=start_date)
     click.echo(f"已创建保单: {result['id']}")
 
 
@@ -252,9 +328,9 @@ def insurance_create(ctx, number, name, ins_type, premium, sum_assured, start_da
 def insurance_list(ctx):
     from fin_l4.services.insurance_svc import InsuranceService
     svc = InsuranceService(ctx.obj['conn'])
-    policies = svc.list_policies("default")
+    policies = svc.list_policies(_fid(ctx))
     for p in policies:
-        click.echo(f"{p['id'][:8]}  {p['product_name']:20s}  {p['policy_type']:15s}  ¥{p['annual_premium']:>8}  ¥{p['sum_assured']:>10}  {p['status']}")
+        click.echo(f"{p['id'][:8]}  {p['name']:20s}  {p['type']:15s}  ¥{p['premium']:>8}  ¥{p['sum_assured']:>10}  {p['status']}")
 
 
 # ========== 投资 ==========
@@ -271,7 +347,7 @@ def portfolio():
 def portfolio_create(ctx, name):
     from fin_l4.services.portfolio_svc import PortfolioService
     svc = PortfolioService(ctx.obj['conn'])
-    result = svc.create_portfolio(family_id="default", name=name)
+    result = svc.create_portfolio(family_id=_fid(ctx), name=name)
     click.echo(f"已创建组合: {result['id']}")
 
 
@@ -280,7 +356,7 @@ def portfolio_create(ctx, name):
 def portfolio_list(ctx):
     from fin_l4.services.portfolio_svc import PortfolioService
     svc = PortfolioService(ctx.obj['conn'])
-    portfolios = svc.list_portfolios("default")
+    portfolios = svc.list_portfolios(_fid(ctx))
     for p in portfolios:
         click.echo(f"{p['id'][:8]}  {p['name']:20s}  {p.get('base_currency', 'CNY')}")
 
@@ -328,7 +404,7 @@ def report():
 def report_balance_sheet(ctx):
     from fin_l4.services.report_svc import ReportService
     svc = ReportService(ctx.obj['conn'])
-    result = svc.balance_sheet("default")
+    result = svc.balance_sheet(_fid(ctx))
     click.echo("=" * 50)
     click.echo("资产负债表")
     click.echo(f"日期: {result['date']}")
@@ -350,7 +426,7 @@ def report_balance_sheet(ctx):
 def report_income(ctx):
     from fin_l4.services.report_svc import ReportService
     svc = ReportService(ctx.obj['conn'])
-    result = svc.income_summary("default")
+    result = svc.income_summary(_fid(ctx))
     click.echo("=" * 50)
     click.echo("收支汇总")
     click.echo("=" * 50)
@@ -370,7 +446,7 @@ def report_income(ctx):
 def report_cashflow(ctx):
     from fin_l4.services.report_svc import ReportService
     svc = ReportService(ctx.obj['conn'])
-    result = svc.cashflow_monthly("default")
+    result = svc.cashflow_monthly(_fid(ctx))
     click.echo("=" * 40)
     click.echo("月度现金流")
     click.echo("=" * 40)
@@ -429,7 +505,7 @@ def export():
 def export_balance_sheet(ctx, output):
     from fin_l4.services.export_svc import ExportService
     svc = ExportService(ctx.obj['conn'])
-    data = svc.export_balance_sheet_excel("default")
+    data = svc.export_balance_sheet_excel(_fid(ctx))
     with open(output, 'wb') as f:
         f.write(data)
     click.echo(f"已导出: {output} ({len(data)} bytes)")
@@ -441,7 +517,7 @@ def export_balance_sheet(ctx, output):
 def export_transactions(ctx, output):
     from fin_l4.services.export_svc import ExportService
     svc = ExportService(ctx.obj['conn'])
-    data = svc.export_transactions_excel("default")
+    data = svc.export_transactions_excel(_fid(ctx))
     with open(output, 'wb') as f:
         f.write(data)
     click.echo(f"已导出: {output} ({len(data)} bytes)")
@@ -453,7 +529,7 @@ def export_transactions(ctx, output):
 def export_report(ctx, output):
     from fin_l4.services.export_svc import ExportService
     svc = ExportService(ctx.obj['conn'])
-    data = svc.export_financial_report_word("default")
+    data = svc.export_financial_report_word(_fid(ctx))
     with open(output, 'wb') as f:
         f.write(data)
     click.echo(f"已导出: {output} ({len(data)} bytes)")
@@ -475,7 +551,7 @@ def advise():
 def advise_health(ctx, income, expenses, age):
     from fin_l4.services.advise_svc import AdviseService
     svc = AdviseService(ctx.obj['conn'])
-    result = svc.health_check("default", income, expenses, age=age)
+    result = svc.health_check(_fid(ctx), income, expenses, age=age)
     click.echo(f"财务健康评分: {result['health_score']}")
     click.echo(f"总结: {result['summary']}")
     if 'allocation' in result:
