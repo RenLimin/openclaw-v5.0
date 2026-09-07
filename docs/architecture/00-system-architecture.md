@@ -456,7 +456,7 @@ adapters/
       - 会话生命周期(ADR-013): 管清理,本组件管共享 → 不冲突
       - 上下文管理(ADR-018): 管溢出,本组件管共享 → 不冲突
       - 错误自动处理(ADR-014): 管故障,supervisor 归其管 → 范围不膨胀
-    - 当前状态: 📐 设计态(DESIGN.md + ADR + P0 手动版任务卡已建)
+    - 当前状态: ✅ 已落地(CLI 可用: task-init/state-write/event-log; 协议层 + 任务卡模板已验证)
     - ADR: ADR-202609-024
     - 设计: `components/session-isolation-sharing/DESIGN.md`
 
@@ -488,7 +488,7 @@ adapters/
 | BDMS 交付中心 | ADR-022 | `components/l4-delivery-center/` (+v2) | 交付中心运营引擎 | ✅ 已上线 |
 
 
-**L2 组件建设状态**: **17 个 L2 基础设施组件设计齐备**,其中 16 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测),1 个设计态(会话隔离与共享,ADR-202609-024)。
+**L2 组件建设状态**: **17 个 L2 基础设施组件设计齐备**,其中 17 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测 + 会话隔离与共享),0 个设计态。
 总计 `docs/architecture/components/` 目录下有 **23 个 DESIGN.md**（含 L3/L4 组件设计）。
 
 **配置安全保护** (横切关注点,2026-08-26):
