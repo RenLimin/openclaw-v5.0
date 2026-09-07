@@ -84,11 +84,17 @@ def scan_cron_errors():
     known_resolved_ids = {
         "63927a5a-721d-45a5-aa5d-9b95357d9453",  # provider 健康探测(agent turn, 已删除)
     }
+    # heartbeat 任务：no-route skipped / 瞬态 timeout 属预期行为，不作为异常源
+    heartbeat_ids = {
+        "5d833bb5-6dde-4eb7-ac77-0777546db953",  # heartbeat:main
+        "1c133572-3b50-4e14-96c4-ef2f7054fe5a",  # heartbeat:ms-research
+        "9fe434a8-9edf-49c0-8ab6-03525b1b4184",  # heartbeat:ms-coding
+    }
 
     rows = _parse_cron_list_table(output)
     for row in rows:
         job_id = row.get("ID", "")
-        if not job_id or job_id == self_job_id or job_id in known_resolved_ids:
+        if not job_id or job_id == self_job_id or job_id in known_resolved_ids or job_id in heartbeat_ids:
             continue
 
         name = row.get("Name", job_id)
