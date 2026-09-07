@@ -55,7 +55,7 @@
         "every": "30m"
       },
       "systemAgent": {
-        "agentId": "<REDACTED>"
+        "agentId": "main"
       },
       "bootstrapMaxChars": 15000
     },
@@ -261,6 +261,84 @@
             "maxTokens": 131072
           }
         ]
+      },
+      "llama-cpp": {
+        "baseUrl": "http://127.0.0.1:19433/v1",
+        "apiKey": "llama-cpp-local",
+        "api": "openai-completions",
+        "timeoutSeconds": 600,
+        "localService": {
+          "command": "/Users/bangcle/.openclaw/llama-cpp/b10534/darwin-arm64/llama-server",
+          "healthUrl": "http://127.0.0.1:19433/health",
+          "readyTimeoutMs": 30000,
+          "idleStopMs": 600000,
+          "args": [
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "19433",
+            "--models-preset",
+            "/Users/bangcle/.openclaw/tools/llama.cpp/models.ini",
+            "--models-max",
+            "2",
+            "--metrics",
+            "--no-ui"
+          ]
+        },
+        "models": [
+          {
+            "id": "gemma-4-e4b-it-q4_k_m",
+            "name": "Gemma 4 E4B (Q4_K_M)",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 512,
+            "contextTokens": 512,
+            "maxTokens": 1,
+            "params": {
+              "modelPath": "/Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf",
+              "contextSize": 512
+            },
+            "compat": {
+              "supportsTools": false,
+              "supportsUsageInStreaming": false
+            }
+          },
+          {
+            "id": "embeddinggemma-300m-qat-q8_0",
+            "name": "Gemma Embedding 300M (Q8_0)",
+            "api": "openai-completions",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 512,
+            "contextTokens": 512,
+            "maxTokens": 1,
+            "params": {
+              "modelPath": "/Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf",
+              "contextSize": 512
+            },
+            "compat": {
+              "supportsTools": false,
+              "supportsUsageInStreaming": false
+            }
+          }
+        ]
       }
     }
   },
@@ -428,7 +506,7 @@
   },
   "channels": {
     "wecom": {
-      "botId": "<REDACTED>",
+      "botId": "aibz6IDSF5ilGqo60JgFTG3FWqTYl5HosLw",
       "secret": "<REDACTED>",
       "dmPolicy": "pairing",
       "allowFrom": []
@@ -436,8 +514,7 @@
   },
   "memory": {
     "search": {
-      "provider": "openai-compatible",
-      "model": "doubao-embedding-vision-251215",
+      "provider": "local",
       "fallback": "none",
       "remote": {
         "baseUrl": "http://127.0.0.1:3000/v1",
@@ -447,12 +524,15 @@
           "id": "value"
         }
       },
-      "rememberAcrossConversations": false
+      "rememberAcrossConversations": false,
+      "local": {
+        "modelPath": "/Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf"
+      }
     }
   },
   "commands": {
     "ownerAllowFrom": [
-      "<REDACTED>"
+      "wecom:1313"
     ]
   },
   "session": {
@@ -462,7 +542,7 @@
   },
   "bindings": [
     {
-      "agentId": "<REDACTED>",
+      "agentId": "main",
       "match": {
         "channel": "wecom",
         "accountId": "*"
@@ -470,6 +550,6 @@
     }
   ],
   "talk": {
-    "agentId": "<REDACTED>"
+    "agentId": "main"
   }
 }
