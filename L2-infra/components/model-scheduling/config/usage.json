@@ -3,8 +3,8 @@
     "coding-plan": {
       "health": {
         "status": "healthy",
-        "latency_ms": 1019,
-        "last_checked": "2026-09-07T02:02:13.141996+00:00",
+        "latency_ms": 424,
+        "last_checked": "2026-09-07T03:02:12.574381+00:00",
         "models": {
           "doubao-seed-2-1-turbo": {
             "status": "available",
@@ -24,8 +24,8 @@
     "longCat": {
       "health": {
         "status": "healthy",
-        "latency_ms": 147,
-        "last_checked": "2026-09-07T02:02:22.755131+00:00",
+        "latency_ms": 150,
+        "last_checked": "2026-09-07T03:02:17.938329+00:00",
         "models": {
           "LongCat-2.0": {
             "status": "unavailable",
@@ -37,12 +37,11 @@
     },
     "model-scheduling": {
       "health": {
-        "status": "unreachable",
-        "latency_ms": 10002,
-        "error": "timed out",
-        "last_checked": "2026-09-07T02:02:32.952818+00:00"
+        "status": "healthy",
+        "latency_ms": 2,
+        "last_checked": "2026-09-07T03:02:18.115507+00:00"
       }
     }
   },
-  "last_health_check": "2026-09-07T02:02:32.956063+00:00"
+  "last_health_check": "2026-09-07T03:02:18.118902+00:00"
 }
