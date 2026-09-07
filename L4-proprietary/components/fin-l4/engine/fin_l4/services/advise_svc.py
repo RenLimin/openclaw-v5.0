@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
+
 """理财建议服务 — 调用 FIN-006 引擎"""
 
 from decimal import Decimal

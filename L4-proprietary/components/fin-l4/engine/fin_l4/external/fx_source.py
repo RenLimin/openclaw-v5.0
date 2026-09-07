@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
+
 """汇率数据源（预留，返回占位数据）
 
 TODO: 接入真实汇率数据源（央行中间价 / 汇率 API / 银行牌价等）

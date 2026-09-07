@@ -1,3 +1,6 @@
+import sys, os
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
+
 """报表服务 — 调用 L3 引擎生成各类报表"""
 
 from datetime import date
