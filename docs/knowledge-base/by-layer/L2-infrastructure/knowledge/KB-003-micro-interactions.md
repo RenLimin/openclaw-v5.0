@@ -1,6 +1,6 @@
 ---
 title: 微交互设计模式
-layer: [L2]
+layers: [L2]
 stage: design
 category: industry-practice
 tags: [micro-interactions, animation, transition, ux, feedback]

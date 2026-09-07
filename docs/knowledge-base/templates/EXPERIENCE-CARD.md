@@ -3,7 +3,7 @@ type: experience-card
 id: EXP-YYYYMMDD-xxx
 date: YYYY-MM-DD
 title: 经验标题（一句话概括问题/方案）
-layer: [L2, L3]                # 涉及层级
+layers: [L2, L3]                # 涉及层级
 stage: develop                 # design | develop | manage
 severity: medium               # low | medium | high | critical
 kind: incorrect                # correct | incorrect

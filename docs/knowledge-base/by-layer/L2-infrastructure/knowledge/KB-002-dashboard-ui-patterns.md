@@ -1,6 +1,6 @@
 ---
 title: 仪表盘数据可视化 UI 模式
-layer: [L2]
+layers: [L2]
 stage: design
 category: industry-practice
 tags: [dashboard, ui, pattern, data-viz, cards, tables, grid]

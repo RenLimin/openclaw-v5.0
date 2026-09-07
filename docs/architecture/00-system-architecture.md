@@ -460,7 +460,36 @@ adapters/
     - ADR: ADR-202609-024
     - 设计: `components/session-isolation-sharing/DESIGN.md`
 
-**L2 组件建设状态**: **13 个组件设计齐备**,其中 12 个已上线(7 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型),1 个设计态(会话隔离与共享,ADR-202609-024)。
+
+### 新增 L2 基础设施组件（2026-09-07 补全）
+
+| 组件 | ADR | DESIGN.md | 实现 | 当前状态 |
+|---|---|---|---|---|
+| 系统备份 | ADR-021 | `components/backup/` | `config_snapshot.py` | ✅ 已上线 |
+| MCP Server 适配 | 无 | `components/mcp-server/` | 适配层契约 | ✅ 已上线（但无 ADR） |
+| 可观测性适配 | ADR-004 | `components/observability/` | `agent_observer.py` | ✅ 已上线 |
+| OCR 文档数字化 | ADR-023 | `components/ocr-digitalization/` | 文档 OCR + 规则纠错工具链 | ✅ 已上线 |
+
+
+### L3 通用业务组件
+
+| 组件 | ADR | DESIGN.md | 说明 | 状态 |
+|---|---|---|---|---|
+| 交付管理框架(DMS) | ADR-025 | `components/delivery-management-framework/` | 通用交付运营框架 | ✅ 已上线 |
+| 个人理财通用框架 | ADR-026/027 | `components/personal-finance/` | 个人理财引擎基类/规范 | ✅ 已上线 |
+
+
+### L4 专有业务组件
+
+| 组件 | ADR | DESIGN.md | 说明 | 状态 |
+|---|---|---|---|---|
+| Bangcle PPT 模板系统 | ADR-017 | `components/bangcle-ppt-template/` | Bangcle 官方 VI 规范 + PPT 生成模板 | ✅ 已上线 |
+| 销售合同审批模块 | ADR-018 | `components/contract-approval/` | 销售合同审批工作流 + OCR 识别 | ✅ 已上线 |
+| BDMS 交付中心 | ADR-022 | `components/l4-delivery-center/` (+v2) | 交付中心运营引擎 | ✅ 已上线 |
+
+
+**L2 组件建设状态**: **17 个 L2 基础设施组件设计齐备**,其中 16 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测),1 个设计态(会话隔离与共享,ADR-202609-024)。
+总计 `docs/architecture/components/` 目录下有 **23 个 DESIGN.md**（含 L3/L4 组件设计）。
 
 **配置安全保护** (横切关注点,2026-08-26):
 - **问题**：自定义资产直接写入 openclaw.json 无任何保护,可能导致系统 crash(参考 08-26 SQLite 损坏事故)

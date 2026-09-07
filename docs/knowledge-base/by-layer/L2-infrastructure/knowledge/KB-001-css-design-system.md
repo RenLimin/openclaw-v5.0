@@ -1,6 +1,6 @@
 ---
 title: CSS 设计系统
-layer: [L2]
+layers: [L2]
 stage: design
 category: industry-practice
 tags: [css, design-system, design-token, spacing, color, typography]

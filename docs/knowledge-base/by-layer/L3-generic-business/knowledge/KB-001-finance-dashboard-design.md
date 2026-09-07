@@ -1,6 +1,6 @@
 ---
 title: 个人/家庭财务仪表盘设计
-layer: [L3]
+layers: [L3]
 stage: design
 category: industry-practice
 tags: [finance, dashboard, personal-finance, ui, data-viz]
