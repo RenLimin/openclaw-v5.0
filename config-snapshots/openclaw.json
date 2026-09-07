@@ -55,7 +55,7 @@
         "every": "30m"
       },
       "systemAgent": {
-        "agentId": "main"
+        "agentId": "<REDACTED>"
       },
       "bootstrapMaxChars": 15000
     },
@@ -264,7 +264,7 @@
       },
       "llama-cpp": {
         "baseUrl": "http://127.0.0.1:19433/v1",
-        "apiKey": "llama-cpp-local",
+        "apiKey": "<REDACTED>",
         "api": "openai-completions",
         "timeoutSeconds": 600,
         "localService": {
@@ -301,7 +301,7 @@
               "cacheWrite": 0
             },
             "contextWindow": 512,
-            "contextTokens": 512,
+            "contextTokens": "<REDACTED>",
             "maxTokens": 1,
             "params": {
               "modelPath": "/Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf",
@@ -327,7 +327,7 @@
               "cacheWrite": 0
             },
             "contextWindow": 512,
-            "contextTokens": 512,
+            "contextTokens": "<REDACTED>",
             "maxTokens": 1,
             "params": {
               "modelPath": "/Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf",
@@ -506,7 +506,7 @@
   },
   "channels": {
     "wecom": {
-      "botId": "aibz6IDSF5ilGqo60JgFTG3FWqTYl5HosLw",
+      "botId": "<REDACTED>",
       "secret": "<REDACTED>",
       "dmPolicy": "pairing",
       "allowFrom": []
@@ -532,7 +532,7 @@
   },
   "commands": {
     "ownerAllowFrom": [
-      "wecom:1313"
+      "<REDACTED>"
     ]
   },
   "session": {
@@ -542,7 +542,7 @@
   },
   "bindings": [
     {
-      "agentId": "main",
+      "agentId": "<REDACTED>",
       "match": {
         "channel": "wecom",
         "accountId": "*"
@@ -550,6 +550,6 @@
     }
   ],
   "talk": {
-    "agentId": "main"
+    "agentId": "<REDACTED>"
   }
 }
