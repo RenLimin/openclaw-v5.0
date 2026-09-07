@@ -180,8 +180,15 @@ def ping_provider(provider_id: str, provider_conf: dict) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="网络健康探测")
     parser.add_argument("--dry-run", action="store_true", help="预览但不写入")
-    parser.add_argument("--force", action="store_true", help="跳过确认")
+    parser.add_argument("--force", action="store_true", help="跳过确认(非交互,用于 cron)")
+    parser.add_argument("--no-interactive", action="store_true", help="等价于 --force,非交互写入")
     args = parser.parse_args()
+    # --no-interactive 是 --force 的语义别名;均未指定时,若 stdin 非 TTY(如 cron/管道)则自动跳过交互
+    if args.no_interactive:
+        args.force = True
+    elif not args.force and not sys.stdin.isatty():
+        print("[3/3] 检测到非交互环境(stdin 非 TTY),自动跳过确认并写入")
+        args.force = True
 
     print("=== 网络健康探测 ===")
     print()
@@ -225,9 +232,13 @@ def main():
 
     if not args.force:
         print("[3/3] 确认写入? (y/N): ", end="")
-        if input().strip().lower() != "y":
-            print("  已取消")
-            return
+        try:
+            if input().strip().lower() != "y":
+                print("  已取消")
+                return
+        except EOFError:
+            print("\n  检测到 EOF(无交互输入),自动写入")
+            args.force = True
 
     # 更新 usage.json 中的健康状态
     usage = {}
