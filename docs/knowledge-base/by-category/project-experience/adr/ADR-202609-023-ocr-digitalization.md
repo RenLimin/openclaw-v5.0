@@ -4,7 +4,7 @@ title: L2 OCR 文档数字化组件（OCR-001）建设
 status: accepted
 date: 2026-09-02
 deciders: Rex
-layer: L2
+layers: L2
 component_id: OCR-001
 component_name: 文档数字化（OCR）组件
 tags: [adr, ocr, document-digitalization, L2, infrastructure, rapidocr, paddleocr]

@@ -1,6 +1,6 @@
 ---
 title: 知识标题
-layer: [L1, L2]                # 适用层级
+layers: [L1, L2]                # 适用层级
 stage: design                  # design | develop | manage
 category: industry-practice    # industry-practice | theoretical-knowledge | project-experience
 tags: [tag1, tag2]

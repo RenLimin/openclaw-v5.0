@@ -2,7 +2,7 @@
 type: library-item
 id: LIB-xxx
 title: 库/组件/工具名称
-layer: [L2]                     # 通常在 L2
+layers: [L2]                     # 通常在 L2
 stage: develop
 category: industry-practice
 tags: [tag1, tag2]

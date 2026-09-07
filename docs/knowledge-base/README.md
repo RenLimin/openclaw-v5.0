@@ -94,7 +94,7 @@ knowledge-base/
 ```yaml
 ---
 title: 知识标题
-layer: [L1, L2]                # 适用层级
+layers: [L1, L2]                # 适用层级
 stage: design                  # 主要阶段
 category: industry-practice    # 类别
 tags: [tag1, tag2]

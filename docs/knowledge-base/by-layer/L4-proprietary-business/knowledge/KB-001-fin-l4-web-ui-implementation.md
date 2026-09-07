@@ -1,6 +1,6 @@
 ---
 title: FIN-L4 Web UI 美化实现记录
-layer: [L4]
+layers: [L4]
 stage: develop
 category: project-experience
 tags: [fin-l4, personal-finance, ui, implementation, css]
