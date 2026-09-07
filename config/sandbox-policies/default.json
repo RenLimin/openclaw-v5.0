@@ -1,0 +1,35 @@
+{
+  "allowed_commands": [
+    "echo",
+    "ls",
+    "pwd",
+    "cat",
+    "head",
+    "tail",
+    "grep",
+    "python",
+    "python3",
+    "pip",
+    "node",
+    "npm",
+    "git",
+    "find",
+    "wc",
+    "sort",
+    "uniq"
+  ],
+  "allowed_paths": [
+    "workspace/*",
+    "sandboxes/*",
+    "tmp/*",
+    "/private/tmp/*"
+  ],
+  "blocked_paths": [
+    "/etc/*",
+    "/root/*",
+    "/Users/*/.ssh",
+    "*/.git/*",
+    "*.pem",
+    "*.key"
+  ]
+}

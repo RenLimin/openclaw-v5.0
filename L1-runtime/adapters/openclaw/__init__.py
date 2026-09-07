@@ -1,1 +1,1 @@
-<longcat_arg_value>
+# OpenClaw adapter package
