@@ -7,7 +7,7 @@ from pathlib import Path
 
 def test_delivery_report_generation():
     """测试交付月报生成"""
-    from v1.generators.delivery_report import generate_delivery_report
+    from scripts.l4.delivery_center.generators.delivery_report import generate_delivery_report
 
     # 创建测试数据
     contract_df = pd.DataFrame({
@@ -39,15 +39,15 @@ def test_delivery_report_generation():
 
 def test_revenue_report_generation():
     """测试确收月报生成"""
-    from v1.generators.revenue_report import generate_revenue_report
+    from scripts.l4.delivery_center.generators.revenue_report import generate_revenue_report
 
-    revenue_df = pd.DataFrame({
+    budget_df = pd.DataFrame({
+        "合同编号": ["C001"],
+        "预算金额": [100000],
+    })
+    actual_df = pd.DataFrame({
         "合同编号": ["C001"],
         "实际金额": [90000],
-    })
-    acceptance_df = pd.DataFrame({
-        "合同编号": ["C001"],
-        "验收日期": ["2026-06-30"],
     })
     contract_df = pd.DataFrame({
         "合同编号": ["C001"],
@@ -59,8 +59,8 @@ def test_revenue_report_generation():
 
     result = generate_revenue_report(
         month="202606",
-        revenue_df=revenue_df,
-        acceptance_df=acceptance_df,
+        budget_df=budget_df,
+        actual_df=actual_df,
         contract_df=contract_df,
         output_dir=output_dir,
     )

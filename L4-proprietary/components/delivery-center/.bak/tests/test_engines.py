@@ -7,17 +7,25 @@ from datetime import datetime
 
 def test_join_contract_oa():
     """测试 ONES-OA 关联"""
-    from v1.engines.join_engine import load_oa_contracts, map_pm_to_dept
+    from scripts.l4.delivery_center.engines.join_engine import join_contract_oa
 
-    # 原测试关联的 API 已重构为 join_all_sources，这里单独验证结构完整性
-    # 直接调用核心小函数保证结构对即可
-    assert callable(load_oa_contracts)
-    assert callable(map_pm_to_dept)
+    ones_df = pd.DataFrame({
+        "销售合同编号": ["C001", "C002", "C003"],
+        "项目名称": ["项目A", "项目B", "项目C"],
+    })
+    oa_df = pd.DataFrame({
+        "合同编号": ["C001", "C002"],
+        "客户名称": ["客户A", "客户B"],
+    })
+
+    result = join_contract_oa(ones_df, oa_df)
+    assert len(result) == 3
+    assert "客户名称" in result.columns
 
 
 def test_status_determination():
     """测试状态判定"""
-    from v1.engines.status_engine import determine_delivery_status
+    from scripts.l4.delivery_center.engines.status_engine import determine_delivery_status
 
     row = pd.Series({
         "状态": "实施进行中",
@@ -30,7 +38,7 @@ def test_status_determination():
 
 def test_scoring():
     """测试考核扣分"""
-    from v1.engines.scoring_engine import calculate_accuracy_score
+    from scripts.l4.delivery_center.engines.scoring_engine import calculate_accuracy_score
 
     df = pd.DataFrame({
         "交付计划方向": ["一致", "延后", "提前"],
@@ -46,7 +54,7 @@ def test_scoring():
 
 def test_variance():
     """测试差异计算"""
-    from v1.engines.variance_engine import calculate_variance
+    from scripts.l4.delivery_center.engines.variance_engine import calculate_variance
 
     df = pd.DataFrame({
         "预算金额": [100, 200, 300],

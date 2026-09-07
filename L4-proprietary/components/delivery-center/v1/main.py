@@ -20,12 +20,12 @@ from datetime import datetime
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.l4.delivery_center.pipeline import run_pipeline
-from scripts.l4.delivery_center.generators.delivery_report import generate_delivery_report
-from scripts.l4.delivery_center.generators.revenue_report import generate_revenue_report
-from scripts.l4.delivery_center.generators.approval_engine import generate_revenue_acceptance_summary
-from scripts.l4.delivery_center.engines.join_engine import load_oa_contracts
-from scripts.l4.delivery_center.engines.join_engine import (
+from v1.pipeline import run_pipeline
+from v1.generators.delivery_report import generate_delivery_report
+from v1.generators.revenue_report import generate_revenue_report
+from v1.generators.approval_engine import generate_revenue_acceptance_summary
+from v1.engines.join_engine import load_oa_contracts
+from v1.engines.join_engine import (
     load_revenue_vouchers,
     load_acceptance_vouchers,
 )
@@ -74,7 +74,7 @@ def run_full_pipeline(month: str, report_only: bool = False, dry_run: bool = Fal
     # ONES API 数据采集（异常项目）
     ones_abnormal_df = pd.DataFrame()
     try:
-        from scripts.l4.delivery_center.collectors.ones_collector import load_ones_abnormal_projects
+        from v1.collectors.ones_collector import load_ones_abnormal_projects
         ones_abnormal_df = load_ones_abnormal_projects()
         print(f"  ✅ ONES 异常项目: {len(ones_abnormal_df)} 个")
     except Exception as e:

@@ -69,8 +69,8 @@ def generate_revenue_report(
     # Sheet 1: 确收凭证汇总（按部门）
     ws1 = wb.create_sheet("确收凭证汇总")
     if revenue_df is not None and not revenue_df.empty:
-        from scripts.l4.delivery_center.engines.join_engine import map_pm_to_dept
-        from scripts.l4.delivery_center.engines.summary_engine import pivot_revenue_by_dept
+        from v1.engines.join_engine import map_pm_to_dept
+        from v1.engines.summary_engine import pivot_revenue_by_dept
         rev_with_dept = map_pm_to_dept(revenue_df, "项目经理")
         dept_summary = pivot_revenue_by_dept(rev_with_dept)
         _write_df_to_sheet(ws1, dept_summary)
@@ -140,7 +140,7 @@ def _fill_legend_sheet(ws):
 if __name__ == "__main__":
     print("=== 确收月报生成器测试 ===\n")
 
-    from scripts.l4.delivery_center.engines.join_engine import (
+    from v1.engines.join_engine import (
         load_revenue_vouchers,
         load_acceptance_vouchers,
     )
