@@ -5,7 +5,7 @@ Copyright (c) 2026 Bangcle, Inc. All rights reserved.
 import os
 import json
 from typing import Dict, Any, Optional, Tuple, Callable, List
-from .utils import ensure_directory
+from utils import ensure_directory
 
 # 内置 reducers
 REDUCERS = {

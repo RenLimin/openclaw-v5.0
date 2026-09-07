@@ -5,8 +5,12 @@ Copyright (c) 2026 Bangcle, Inc. All rights reserved.
 """
 import argparse
 import sys
-sys.path.insert(0, '.')
-from scripts.session_isolation import TaskInitializer, EventLogger, StateReducer
+from pathlib import Path
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+from task_init import TaskInitializer
+from event_logger import EventLogger
+from state_reducer import StateReducer
 
 def main():
     parser = argparse.ArgumentParser(description="Session Isolation Sharing CLI")

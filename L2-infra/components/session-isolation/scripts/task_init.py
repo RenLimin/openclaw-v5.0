@@ -5,7 +5,7 @@ Copyright (c) 2026 Bangcle, Inc. All rights reserved.
 import os
 from typing import Optional, Tuple, Dict, Any, List
 import shutil
-from .utils import (
+from utils import (
     TEMPLATES_ROOT,
     IN_PROGRESS,
     validate_task_id,
@@ -108,7 +108,7 @@ class TaskInitializer:
 
         # 如果有上下文路径，添加到TASK.yml
         if context_paths:
-            from .utils import load_task_yaml
+            from utils import load_task_yaml
             data, err = load_task_yaml(task_id)
             if err:
                 shutil.rmtree(task_path)
