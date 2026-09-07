@@ -145,6 +145,16 @@ subagent 是临时隔离会话，**没有 compaction 保护**（运行时不支�
 3. **子任务输出必须精简**：结果回传主会话不超过 2000 token（约 8000 字符）
    - 详细结果写入文件，主会话只读取摘要
    - 禁止在 subagent 回复中粘贴完整文件内容
+
+### 多会话并行建设规范（必遵守）
+
+当新建子会话做并行建设时，**自动前置要求**：
+> 「请先阅读 `docs/conventions/multi-session-build.md` 规范，按 `L2-infra/components/session-isolation/scripts/cli.py` 创建任务卡后，再开始建设」
+
+每个子会话：
+1. 必须先按规范创建任务卡，更新状态为 `in-progress`
+2. 必须先读取架构文档和现有设计，对齐分层契约后才开工
+3. 建设完成后必须更新任务卡状态为 `done` 并列出产出物
 4. **辅助工具**：`L2-infra/components/context-management/subagent_ctx_guard.py` — 输入任务描述和预估步数，输出建议的分段策略和 token 预算
 
 ## 异常自动处置（L1 防压缩冲突之上）
