@@ -21,7 +21,7 @@
 - 列80-83(CB-CE): 异常项目相关
 
 用法:
-    from scripts.l4.delivery_center.formula_columns import compute_formula_columns
+    from v1.formula_columns import compute_formula_columns
     result_df = compute_formula_columns(df, report_date, legend_df, abnormal_df)
 """
 

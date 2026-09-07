@@ -166,7 +166,7 @@ def generate_revenue_acceptance_summary(
 if __name__ == "__main__":
     print("=== 审批流程引擎测试 ===\n")
 
-    from scripts.l4.delivery_center.engines.join_engine import (
+    from v1.engines.join_engine import (
         load_revenue_vouchers,
         load_acceptance_vouchers,
     )

@@ -17,8 +17,8 @@ from datetime import datetime
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.l4.delivery_center.db import init_db, executemany, query
-from scripts.l4.delivery_center.collectors.data_cleaner import (
+from v1.db import init_db, executemany, query
+from v1.collectors.data_cleaner import (
     calibrate_contract_no,
     clean_oa_contract,
     clean_wecom_revenue,
@@ -273,7 +273,7 @@ def run_pipeline(month: str, collect_only: bool = False, clean_only: bool = Fals
             print("  请先运行: python3 -m scripts.l4.delivery_center.collectors.oa_collector {month}")
 
         # WeCom
-        from scripts.l4.delivery_center.collectors.wecom_collector import collect_from_local
+        from v1.collectors.wecom_collector import collect_from_local
         collect_from_local(month)
 
         # 工时

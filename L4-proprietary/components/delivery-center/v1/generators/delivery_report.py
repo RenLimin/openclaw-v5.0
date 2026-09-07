@@ -265,7 +265,7 @@ def generate_delivery_report(
     # 包括：签约统计、POC&提前实施统计、异常统计、异常台账、产品-授权&维保统计、
     #       提前实施分事业部统计、交付异常分事业部统计、交付效率统计、交接统计
     try:
-        from scripts.l4.delivery_center.generators.build_stat_sheets import BUILDERS, _cleanup_zeros
+        from v1.generators.build_stat_sheets import BUILDERS, _cleanup_zeros
         
         # 按手工报表顺序生成统计 Sheet
         stat_sheet_order = [
