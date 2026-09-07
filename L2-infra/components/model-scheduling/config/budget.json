@@ -1,0 +1,23 @@
+
+{
+  "budget": {
+    "coding-plan": {
+      "enabled": true,
+      "monthly_threshold": 10,
+      "currency": "USD",
+      "alert_email": "",
+      "alert_wecom": true
+    },
+    "longCat": {
+      "enabled": true,
+      "monthly_threshold": 5,
+      "currency": "USD",
+      "alert_wecom": true
+    }
+  },
+  "alert": {
+    "enabled": true,
+    "channel": "wecom",
+    "wecom_target": "user:1313"
+  }
+}

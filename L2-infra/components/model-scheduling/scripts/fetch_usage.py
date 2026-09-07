@@ -141,6 +141,15 @@ def main():
     USAGE_FILE.write_text(json.dumps(usage, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"[3/3] ✅ 已写入 {USAGE_FILE}")
     print()
+
+    # 自动检查预算告警
+    print("[4/4] 检查预算告警...")
+    from subprocess import run, PIPE
+    result = run([sys.executable, "budget_alert.py", "--force"], cwd=Path(__file__).parent, capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        print(result.stderr)
+    print()
     print("=== 用量获取完成 ===")
 
 
