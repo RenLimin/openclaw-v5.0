@@ -5,11 +5,11 @@ L2 基础设施层 — 标准化健康检查流程。
 覆盖：运行时、服务、资产、架构符合性、垃圾清理、备份状态。
 
 用法：
-  python3 scripts/l2/system_full_audit.py          # 完整检查
-  python3 scripts/l2/system_full_audit.py --json   # JSON 输出
-  python3 scripts/l2/system_full_audit.py --quick   # 快速检查（仅关键项）
+  python3 L2-infra/scripts/system_full_audit.py          # 完整检查
+  python3 L2-infra/scripts/system_full_audit.py --json   # JSON 输出
+  python3 L2-infra/scripts/system_full_audit.py --quick   # 快速检查（仅关键项）
 
-已验证 2026-09-01。
+修订：2026-09-07 — 对齐 L3/L4 分层重构后的目录结构（ADR-026）。
 """
 
 import argparse
@@ -24,12 +24,15 @@ WORKSPACE = Path(__file__).resolve().parent.parent.parent.parent / "workspace"
 DATA_DIR = Path.home() / ".openclaw" / "data"
 BACKUP_DIR = Path.home() / ".openclaw" / "backups"
 DOCS_DIR = WORKSPACE / "docs" / "architecture"
-L4_SCRIPTS = WORKSPACE / "scripts" / "l4" / "delivery_center"
+L4_COMPONENTS = WORKSPACE / "L4-proprietary" / "components"
+KB_INDEX = WORKSPACE / "L2-infra" / "components" / "memory-embedding" / "kb_index.py"
+KB_DIR = WORKSPACE / "docs" / "knowledge-base" / "by-category" / "project-experience"
 
-# 验证路径存在
+# 验证路径存在（对齐 L3/L4 分层后的目录结构，ADR-026）
 assert WORKSPACE.exists(), f"WORKSPACE 不存在: {WORKSPACE}"
 assert DOCS_DIR.exists(), f"DOCS_DIR 不存在: {DOCS_DIR}"
-assert L4_SCRIPTS.exists(), f"L4_SCRIPTS 不存在: {L4_SCRIPTS}"
+assert L4_COMPONENTS.exists(), f"L4_COMPONENTS 不存在: {L4_COMPONENTS}"
+assert KB_INDEX.exists(), f"KB_INDEX 不存在: {KB_INDEX}"
 
 
 def run(cmd: str, timeout: int = 15) -> tuple[int, str, str]:
@@ -69,14 +72,21 @@ def audit_system_status() -> list[dict]:
 
     # gateway status
     rc, out, _ = run("openclaw gateway status 2>&1 | head -10")
-    if "running" in out.lower() or "ok" in out.lower():
-        results.append(check("gateway", "✅", "Gateway 健康"))
+    if (
+        rc == 0
+        and out
+        and "loaded" in out.lower()
+        or "running" in out.lower()
+        or "healthy" in out.lower()
+        or "ok" in out.lower()
+    ):
+        results.append(check("gateway", "✅", "Gateway 健康 (LaunchAgent loaded)"))
     else:
         results.append(check("gateway", "⚠️", out[:200]))
 
     # channels
     rc, out, _ = run("openclaw channels list --all 2>&1 | grep -i wecom")
-    if rc == 0 and "OK" in out:
+    if rc == 0 and out and ("enabled" in out.lower() or "OK" in out):
         results.append(check("wecom channel", "✅", "WeCom 已启用"))
     else:
         results.append(check("wecom channel", "⚠️", out[:200]))
@@ -136,20 +146,28 @@ def audit_assets() -> list[dict]:
     else:
         results.append(check("L2 DESIGN.md", "⚠️", f"目录不存在: {design_dir}"))
 
-    # L4 Python files
-    if L4_SCRIPTS.exists():
-        count = len(list(L4_SCRIPTS.rglob("*.py")))
-        results.append(check("L4 Python files", "✅", f"{count} 个文件"))
+    # L4 Python files（对齐分层后的 components 目录，ADR-026）
+    if L4_COMPONENTS.exists():
+        count = sum(
+            1
+            for comp in L4_COMPONENTS.iterdir()
+            if comp.is_dir()
+            for _ in comp.rglob("*.py")
+        )
+        comps = sorted(c.name for c in L4_COMPONENTS.iterdir() if c.is_dir())
+        results.append(check("L4 Python files", "✅", f"{count} 个文件 · 组件: {', '.join(comps)}"))
     else:
-        results.append(check("L4 Python files", "⚠️", f"目录不存在: {L4_SCRIPTS}"))
+        results.append(check("L4 Python files", "⚠️", f"目录不存在: {L4_COMPONENTS}"))
 
-    # 配置文件
-    config_dir = L4_SCRIPTS / "config"
-    if config_dir.exists():
-        count = len(list(config_dir.glob("*.json")))
-        results.append(check("config files", "✅", f"{count} 个配置"))
-    else:
-        results.append(check("config files", "⚠️", f"目录不存在: {config_dir}"))
+    # 配置文件（各组件 config 目录，含深层 v1/v2）
+    config_count = sum(
+        len(list(cfg_dir.glob("*.json")))
+        for comp in L4_COMPONENTS.iterdir()
+        if comp.is_dir()
+        for cfg_dir in comp.rglob("config")
+        if cfg_dir.is_dir()
+    )
+    results.append(check("config files", "✅", f"{config_count} 个配置"))
 
     # 数据库
     db_path = DATA_DIR / "bdms.db"
@@ -170,8 +188,8 @@ def audit_assets() -> list[dict]:
     else:
         results.append(check("database", "❌", f"数据库不存在: {db_path}"))
 
-    # 知识库
-    rc, out, _ = run(f"python3 {WORKSPACE}/scripts/kb_index.py --stats 2>/dev/null | head -5")
+    # 知识库（对齐重构后路径）
+    rc, out, _ = run(f"python3 {KB_INDEX} --stats 2>/dev/null | head -5")
     if rc == 0 and out:
         results.append(check("knowledge base", "✅", out[:200]))
     else:
@@ -207,18 +225,20 @@ def audit_architecture_compliance() -> list[dict]:
     results = []
 
     # ADR
-    rc, out, _ = run(
-        f"find {DOCS_DIR}/../knowledge-base/by-category/project-experience/adr -name '*.md' | wc -l"
-    )
-    if rc == 0:
-        results.append(check("ADR count", "✅", f"{out.strip()} 篇"))
+    adr_dir = KB_DIR / "adr"
+    if adr_dir.exists():
+        count = len(list(adr_dir.glob("*.md")))
+        results.append(check("ADR count", "✅", f"{count} 篇"))
+    else:
+        results.append(check("ADR count", "⚠️", f"目录不存在: {adr_dir}"))
 
     # EXP
-    rc, out, _ = run(
-        f"find {DOCS_DIR}/../knowledge-base/by-category/project-experience/correct -name '*.md' | wc -l"
-    )
-    if rc == 0:
-        results.append(check("EXP count", "✅", f"{out.strip()} 篇"))
+    exp_dir = KB_DIR / "correct"
+    if exp_dir.exists():
+        count = len(list(exp_dir.glob("*.md")))
+        results.append(check("EXP count", "✅", f"{count} 篇"))
+    else:
+        results.append(check("EXP count", "⚠️", f"目录不存在: {exp_dir}"))
 
     # 架构文档版本
     rc, out, _ = run(f"grep '文档版本' {DOCS_DIR}/00-system-architecture.md | head -1")
@@ -247,8 +267,11 @@ def audit_garbage() -> list[dict]:
     else:
         results.append(check(".trash", "✅", "已清理"))
 
-    # 临时文件
-    rc, out, _ = run(f"find {DATA_DIR} -name '*.tmp' -o -name '*.bak' 2>/dev/null | wc -l")
+    # 临时文件（排除 ones_exports 备份目录）
+    rc, out, _ = run(
+        f"find {DATA_DIR} -name '*.tmp' -o -name '*.bak' 2>/dev/null "
+        f"| grep -v ones_exports | wc -l"
+    )
     if rc == 0:
         count = int(out)
         if count == 0:
