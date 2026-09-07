@@ -79,6 +79,14 @@ class AccountRepository(BaseRepository):
         ).fetchall()
         return self._rows_to_list(rows)
 
+    def get_by_code(self, family_id: str, code: str) -> Optional[Dict]:
+        """按科目代码查找账户（家庭内唯一）。"""
+        row = self.conn.execute(
+            f"SELECT * FROM {self.table} WHERE family_id = ? AND code = ?",
+            (family_id, code)
+        ).fetchone()
+        return self._row_to_dict(row)
+
     def get_balance(self, account_id: str) -> Decimal:
         """计算账户当前余额（期初 + 借贷差额）"""
         account = self.get(account_id)

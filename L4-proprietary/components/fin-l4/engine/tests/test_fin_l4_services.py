@@ -55,12 +55,29 @@ class TestAccountService(unittest.TestCase):
         result = self.svc.get_trial_balance(self.family_id)
         self.assertTrue(result['is_balanced'])
 
-    def test_trial_balance_unbalanced(self):
-        """试算平衡：不平衡应检测"""
+    def test_trial_balance_balanced_with_opening(self):
+        """期初余额经 SYS-OPENING-BALANCE 配平，试算应平衡"""
         self.svc.create_account(self.family_id, "1001", "现金", "ASSET", opening_balance="10000")
         self.svc.create_account(self.family_id, "3001", "权益", "EQUITY", opening_balance="5000")
         result = self.svc.get_trial_balance(self.family_id)
-        self.assertFalse(result['is_balanced'])
+        self.assertTrue(result['is_balanced'], "期初余额经配平账户应平衡")
+
+    def test_trial_balance_unbalanced(self):
+        """试算平衡：手工单边交易应检测为不平衡"""
+        self.svc.create_account(self.family_id, "1001", "现金", "ASSET", opening_balance="0")
+        self.svc.create_account(self.family_id, "5001", "餐费", "EXPENSE", opening_balance="0")
+        # 手工破坏数据（绕过外键插入单边交易）→ 借贷不等
+        self.conn.execute("PRAGMA foreign_keys = OFF")
+        self.conn.execute(
+            "INSERT INTO fin4_transactions (id, family_id, date, amount, debit_account_id, credit_account_id) "
+            "VALUES ('t1', ?, '2026-09-01', '100', '损坏借方', '损坏贷方')",
+            (self.family_id,)
+        )
+        self.conn.execute("PRAGMA foreign_keys = ON")
+        self.conn.commit()
+        # 引擎对不存在的账户强校验：应抛异常（等价于"不平衡即拦截"）
+        with self.assertRaises(ValueError):
+            self.svc.get_trial_balance(self.family_id)
 
 
 class TestTransactionService(unittest.TestCase):

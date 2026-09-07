@@ -3,6 +3,7 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../
 
 """账户服务 — 调用 FIN-001 引擎"""
 
+from datetime import date
 from decimal import Decimal
 from typing import List, Dict, Optional
 from fin001_account import AccountingEngine, AccountType
@@ -98,7 +99,7 @@ class AccountService:
                 debit_account_id=txn["debit_account_id"],
                 credit_account_id=txn["credit_account_id"],
                 amount=Decimal(txn["amount"]),
-                date=txn["date"],
+                txn_date=date.fromisoformat(txn["date"]),
                 note=txn["note"],
             )
 

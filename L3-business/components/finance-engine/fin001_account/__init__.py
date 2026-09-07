@@ -361,6 +361,13 @@ class AccountingEngine:
         total_debit = Decimal("0")
         total_credit = Decimal("0")
 
+        # SYS-OPENING-BALANCE 是系统配平账户（初始余额的权益方），
+        # 不计入账户明细，但其余额必须参与试算平衡，否则期初借贷不配平。
+        opening_bal = self.get_account_balance("SYS-OPENING-BALANCE", as_of_date)
+        if opening_bal:
+            total_debit += opening_bal if opening_bal < 0 else Decimal("0")
+            total_credit += opening_bal if opening_bal > 0 else Decimal("0")
+
         for acc in self._accounts.values():
             if acc.id == "SYS-OPENING-BALANCE":
                 continue
