@@ -12,10 +12,10 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 3.4 (2026-09-07 — 文档对齐实际状态：cron 重建完成 + L4 PPT 上线 + L3 FIN 启动 + 上下文全覆盖) |
+| 文档版本 | 3.5 (2026-09-08 — L2 011 Office Engine v2 升级完成,文档对齐实际状态：cron 重建完成 + L4 PPT 上线 + L3 FIN 启动 + 上下文全覆盖) |
 | 文档状态 | active |
 | 运行时 cron | 7 个活跃业务 cron（错误扫描/provider健康探测/会话错误处理/备份/会话生命周期/记忆健康/每日观测投递）；3 个任务 disabled（2 个 ms 心跳 + 1 个技能审阅） |
-| 决策状态 | 5 层架构已锁定(ADR-012); 28 份 ADR accepted; L3 FIN 引擎已迁 L3; L4 四个组件已上线 |
+| 决策状态 | 5 层架构已锁定(ADR-012); 28 份 ADR accepted; L3 FIN 引擎已迁 L3; L4 五个组件已上线(新增 CISSP 学习系统) |
 | 配套文档 | `../knowledge-base/README.md` |
 | 待办 | 详见演进路线各阶段（L3 已启动，知识库自建系统 0/7 触发条件暂缓） |
 
@@ -156,7 +156,17 @@ L1 → 任何上层              (禁止 — 反向依赖)
        └→ 不满足 → 提示缺失能力,要求补充适配层或选择其他运行时
 ```
 
-**当前状态**: 📋 架构预留(当前直接安装 OpenClaw,选型流程待实现)
+**当前状态**: 🚧 部分就绪（OpenClaw 全流程可跑通，其他运行时 registry 预留）
+
+**设计文档**: `L0-install/DESIGN.md`
+
+**运行时注册表**: `L0-install/registry/`（每个运行时一个 YAML 文件）
+
+**安装引擎**: `L0-install/installer/`（六步流水线 + 主入口）
+
+**契约测试**: `L0-install/contract/test_contract.py`（L1 十项能力验证）
+
+**部署清单**: `L0-install/manifest/`（系统资产 + 运行时部署映射）
 
 **演进方式**:
 - 新增运行时 = 新增适配层 + 选型选项
@@ -303,7 +313,7 @@ adapters/
 | 工具策略 | 008 | `components/tool-policy/` | `scripts/tool_policy_audit.sh` | 六项审计 |
 | 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态 + `scripts/observability/memory_search_monitor.py` | 行为探针三态判据 |
 | 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py`(六项子能力全备) | pre-commit 阻塞实测 |
-| Office 文档生成 | 011 | `components/office-generation/` | 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
+| Office 文档生成 | 011 | `components/office-generation/` | unified SDK: create/read/update/parse/convert (v2.0.0) + 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
 | 文档数字化(OCR) | 023 | `components/ocr-digitalization/` | `contract_ocr.py`(RapidOCR主+Paddle可选+8版本预处理+40+规则纠错) | 10页扫描件合同实测通过 |
 
 **已建设组件清单**(详细):
@@ -503,6 +513,16 @@ adapters/
   - 启动条件见 ADR-003 §4.2 七触发条件(2026-08-24 复测仍 **0/7**,暂缓)
   - 就绪度: 能力已备 6/6,需求未达 0/7
 
+**设计文档**: `L0-install/DESIGN.md`
+
+**运行时注册表**: `L0-install/registry/`（每个运行时一个 YAML 文件）
+
+**安装引擎**: `L0-install/installer/`（六步流水线 + 主入口）
+
+**契约测试**: `L0-install/contract/test_contract.py`（L1 十项能力验证）
+
+**部署清单**: `L0-install/manifest/`（系统资产 + 运行时部署映射）
+
 **演进方式**:
 - 优先复用 L1 能力
 - 必要时自建 wrapper,但不得绕过 L1 抽象层
@@ -677,7 +697,7 @@ L4 专有业务
 | 项 | 状态 | 标记 |
 |---|---|---|
 | L0 + L1 + L2 最小可用 | 已上线 | ✅ |
-| L3 已启动，L4 四组件已上线 | 已落地 | ✅ |
+| L3 已启动，L4 五组件已上线 | 已落地 | ✅ |
 | 知识库轻量方案(Markdown + 元数据) | 已上线 | ✅ |
 | 工作区基础文件(AGENTS / IDENTITY / SOUL / USER / MEMORY) | 已上线 | ✅ |
 | 13 个 L2 组件设计齐备（12 个已上线） | 已上线 | ✅ |
@@ -770,6 +790,7 @@ L4 专有业务
 | ADR-017 | L4 Bangcle PPT 模板系统(VI规范+页面类型模板) | 中 | ✅ accepted (2026-09-01) |
 | ADR-018 | L4 销售合同审批模块(SCA-001) | 高 | ✅ accepted (2026-09-02) |
 | ADR-026 | L3 家庭及个人理财通用框架(FIN) | 高 | ✅ accepted (2026-09-03) |
+| ADR-028 | L0 系统安装层（注册表+流水线+契约验证） | 高 | 📋 proposed (2026-09-07) |
 
 ---
 
@@ -831,6 +852,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-09-07 | **3.4** | **L0 系统安装层 P0 建设完成**：六步流水线 + registry + 契约测试 + 部署清单。OpenClaw 全流程就绪，Claude Code / CrewAI 预留。ADR-028 proposed。 |
 | 2026-08-21 | 0.1 | 初版骨架(4 层架构 + 契约 + 演进路线) |
 | 2026-08-21 | 0.3 | 新增 L2 上下文管理组件 |
 | 2026-08-22 | 0.4 | 新增 L2 配置管理组件 |

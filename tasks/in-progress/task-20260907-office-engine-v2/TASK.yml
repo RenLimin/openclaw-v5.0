@@ -1,0 +1,57 @@
+id: task-20260907-office-engine-v2
+name: Office 文档引擎 v2（M1：L2 011 演进）
+status: done
+priority: high
+created_at: 2026-09-07T22:50:00+08:00
+updated_at: 2026-09-08T10:55:00+08:00
+owner: main-agent
+
+scope:
+  project: 综合开放平台
+  component: L2 office-generation (011) v2
+  version: 2.0.0
+
+goals:
+  - id: g1
+    description: 统一 SDK：OfficeDocument 工厂类 + Word/Excel/PPT 三套 SDK 统一接口
+    status: done
+  - id: g2
+    description: 文档解析（parse）：Word/Excel/PPT → JSON/Markdown
+    status: done
+  - id: g3
+    description: 格式转换（convert）：docx↔pdf、xlsx→pdf、格式兼容
+    status: done
+  - id: g4
+    description: ADR-016 修订 + DESIGN.md v2 重写
+    status: done
+  - id: g5
+    description: 单元测试 + 集成测试（每套 SDK 至少 5 个用例）
+    status: done
+  - id: g6
+    description: 架构文档 00-system-architecture.md 更新至 v3.4
+    status: done
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/architecture/components/office-generation/DESIGN.md
+  - path: docs/conventions/commit-and-config.md
+  - path: L2-infra/components/office-generation/
+
+artifacts:
+  - name: L2 Office Engine SDK 代码
+    path: L2-infra/components/office-generation/src/office_engine/
+    status: done  # Word/Excel 完成；PPT 进行中
+  - name: 修订后的 ADR-016
+    path: docs/knowledge-base/by-category/project-experience/adr/ADR-016-office-generation.md
+    status: done
+  - name: DESIGN.md v2
+    path: docs/architecture/components/office-generation/DESIGN.md
+    status: done
+  - name: 测试用例 + 测试报告
+    path: L2-infra/components/office-generation/tests/
+    status: done  # Word 17 + Excel 23 = 40 用例全部通过
+  - name: 架构文档更新
+    path: docs/architecture/00-system-architecture.md (v3.4)
+    status: done

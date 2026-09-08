@@ -1,0 +1,50 @@
+# TASK.yml — CISSP 学习系统建设
+id: task-20260908-cissp-learning
+name: "CISSP 学习系统建设（L3 维度 + L4 组件）"
+status: in-progress
+priority: high
+created_at: 2026-09-08T22:00:00+08:00
+updated_at: 2026-09-08T23:45:00+08:00
+owner: main-agent
+
+scope:
+  project: openclaw-v5.0
+  component: cissp-learning
+  version: 0.1.0
+
+goals:
+  - id: g1
+    description: "L3 security-engineering 维度：CISSP CBK 知识库（8 域）+ 3 角色 + 模板"
+    status: pending
+  - id: g2
+    description: "L4 cissp-learning 组件：规划引擎 + 每日内容 + 题库 + 速记卡 + CLI"
+    status: done
+  - id: g3
+    description: "ADR + DESIGN.md + 操作指南 + 端到端验证"
+    status: done
+  - id: g4
+    description: "知识库索引校验 + commit + push"
+    status: in-progress
+
+blockers: []
+
+context:
+  - path: tasks/task-20260908-cissp-learning/CONTEXT.md
+  - path: docs/knowledge-base/by-category/business/methodology/dimension-design.md
+
+artifacts:
+  - name: L4 cissp-learning 组件
+    path: L4-proprietary/components/cissp-learning/
+    status: done
+  - name: 题库 554 题（覆盖 8 域）
+    path: L4-proprietary/components/cissp-learning/data/questions.json
+    status: done
+  - name: DESIGN.md 设计文档
+    path: L4-proprietary/components/cissp-learning/DESIGN.md
+    status: done
+  - name: CLI 工具（7 个子命令）
+    path: L4-proprietary/components/cissp-learning/src/cissp/cli.py
+    status: done
+  - name: 用户文档 × 3
+    path: L4-proprietary/components/cissp-learning/docs/
+    status: done

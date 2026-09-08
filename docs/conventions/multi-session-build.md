@@ -120,6 +120,7 @@ cp tasks/_templates/TASK.yml tasks/in-progress/task-YYYYMMDD-NNN/TASK.yml
 | **先读后写** | 写共享位置前先确认当前内容，避免覆盖他人成果 |
 | **冲突上报** | 发现覆盖风险 → 立即上报主会话，不擅自处理 |
 | **命名空间隔离** | `state/` 按 scope 隔离：session/task/project/user/global |
+| **禁止嵌套子会话** | 所有开发任务基于一级子会话进行，不再从子会话发起二级/孙会话；主会话拆分所有一级子任务，一级子会话直接干活，不拆分二级任务（避免 provider tool schema 不兼容导致失败） |
 
 ## 七、验收标准（子会话完成条件）
 

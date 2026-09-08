@@ -1,0 +1,69 @@
+# TASK.yml — 任务协议模板
+# 用法: 复制到 tasks/in-progress/<task_id>/TASK.yml 并填写
+# 字段规范:
+#   status: pending | in-progress | blocked | done | cancelled
+#   scope: 项目/组件/版本三级定位
+#   goals: 结构化目标清单(status: pending | in-progress | done)
+#   blockers: 当前阻塞点,空数组表示无阻塞
+#   context: 任务启动时 AI 应读取的上下文文件(相对 workspace 根)
+#   artifacts: 产出物清单(status: pending | in-progress | done)
+
+id: task-20260908-001
+name: Office Generation M2: L3新增Office业务维度
+status: done
+priority: high
+created_at: 2026-09-08T14:20:00+08:00
+updated_at: 2026-09-08T14:49:00+08:00
+owner: subagent-m2-l3-office
+
+scope:
+  project: office-generation
+  component: office-business
+  version: v2.0
+
+goals:
+  - id: g1
+    description: 创建L3业务目录结构，新增ADR记录设计决策
+    status: done
+  - id: g2
+    description: 新增文档业务知识（规范/结构/变量体系）
+    status: done
+  - id: g3
+    description: 创建通用模板资产（合同/报告/方案/汇报 + index.json索引）
+    status: done
+  - id: g4
+    description: 定义角色（文档工程师/分析师）
+    status: done
+  - id: g5
+    description: 新增DESIGN.md设计文档
+    status: done
+
+blockers: []
+
+context:
+  - path: docs/conventions/multi-session-build.md
+  - path: docs/architecture/components/office-generation/DESIGN.md
+  - path: docs/knowledge-base/by-category/project-experience/adr/ADR-202608-016-office-document-generation.md
+
+artifacts:
+  - name: 任务卡
+    path: tasks/in-progress/task-20260908-office-m2-l3-dimension/TASK.yml
+    status: done
+  - name: ADR文档
+    path: docs/knowledge-base/by-category/project-experience/adr/ADR-202609-029-l3-office-business-dimension.md
+    status: done
+  - name: DESIGN.md设计文档
+    path: docs/architecture/components/office-business/DESIGN.md
+    status: done
+  - name: L3 Office业务目录骨架
+    path: L3-business/components/office-business/
+    status: done
+  - name: 业务知识文档
+    path: L3-business/components/office-business/knowledge/
+    status: done
+  - name: 通用模板资产
+    path: L3-business/components/office-business/templates/
+    status: done
+  - name: 角色定义
+    path: L3-business/components/office-business/roles/
+    status: done

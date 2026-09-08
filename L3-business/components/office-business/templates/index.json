@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-09-08",
+  "total_count": 11,
+  "templates": [
+    {
+      "id": "sales-contract-001",
+      "name": "销售合同通用框架",
+      "category": "contract",
+      "path": "contract/sales-contract.md",
+      "description": "通用销售合同模板，包含完整合同结构和标准条款框架",
+      "tags": ["合同", "销售", "框架"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "service-contract-001",
+      "name": "服务合同通用框架",
+      "category": "contract",
+      "path": "contract/service-contract.md",
+      "description": "通用服务合同模板，适合咨询服务、技术服务、运维服务等",
+      "tags": ["合同", "服务", "框架"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "weekly-report-001",
+      "name": "项目周报",
+      "category": "report",
+      "path": "report/weekly-report.md",
+      "description": "标准项目周报模板，包含进度、风险、计划",
+      "tags": ["报告", "周报", "项目"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "monthly-report-001",
+      "name": "月度工作报告",
+      "category": "report",
+      "path": "report/monthly-report.md",
+      "description": "标准月度工作汇报，含完成情况、指标、问题、计划",
+      "tags": ["报告", "月度", "工作"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "quarterly-report-001",
+      "name": "季度工作报告",
+      "category": "report",
+      "path": "report/quarterly-report.md",
+      "description": "季度总结报告，含目标回顾、成果分析、问题、下一步",
+      "tags": ["报告", "季度", "总结"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "annual-report-001",
+      "name": "年度工作报告",
+      "category": "report",
+      "path": "report/annual-report.md",
+      "description": "年度工作总结与计划，全年回顾 + 下年规划",
+      "tags": ["报告", "年度", "总结计划"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "project-proposal-001",
+      "name": "项目方案",
+      "category": "proposal",
+      "path": "proposal/project-proposal.md",
+      "description": "通用项目方案，含背景、需求、方案、计划、报价",
+      "tags": ["方案", "项目", "投标"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "technical-proposal-001",
+      "name": "技术方案",
+      "category": "proposal",
+      "path": "proposal/technical-proposal.md",
+      "description": "技术方案模板，含架构、设计、实现、部署",
+      "tags": ["方案", "技术", "设计"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "project-status-001",
+      "name": "项目状态汇报",
+      "category": "presentation",
+      "path": "presentation/project-status.md",
+      "description": "项目状态汇报，含进度、成本、质量、风险、下一步",
+      "tags": ["汇报", "项目", "状态"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    },
+    {
+      "id": "meeting-minutes-001",
+      "name": "会议纪要",
+      "category": "presentation",
+      "path": "presentation/meeting-minutes.md",
+      "description": "标准会议纪要，含参会人员、议程、决议、行动项",
+      "tags": ["会议", "纪要", "记录"],
+      "created_at": "2026-09-08",
+      "updated_at": "2026-09-08"
+    }
+  ]
+}

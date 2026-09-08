@@ -114,6 +114,25 @@ Example placeholders (replace or remove them):
 - On Discord, wrap multiple links in `<>` to suppress embeds (`<https://example.com>`).
 - On WhatsApp, use **bold** or CAPS instead of headers.
 
+### Image/Screenshot Recognition Priority Chain
+
+Always follow this order for image/screenshot/text extraction:
+
+1. **Local Tesseract OCR** (text-only content like console screenshots, tables, chats):
+   - Use `tesseract /path/to/image output -l chi_sim+eng` directly
+   - Fast (<10s), zero cost, good accuracy for text
+2. **Local llama-cpp-provider vision model** (needs layout/color/icon understanding, complex content):
+   - Use the `view_image` tool
+3. **Remote multi-modal API** (natural images, complex diagrams, photos):
+   - Only use when local options fail
+
+**判断规则**:
+- Console/chat/code screenshot → start with OCR
+- Flowchart/diagram → OCR first, if insufficient, then visual model
+- Natural photos → directly visual model
+
+This avoids repeated failed remote attempts and improves response speed.
+
 ## 长任务隔离（L1 防压缩冲突）
 
 长任务（>5 步 exec / 大量文件读写 / 批量操作 / KB 文档生成）必须用 `sessions_spawn(mode="run")` 隔离到 subagent，主会话只做调度和汇总。
