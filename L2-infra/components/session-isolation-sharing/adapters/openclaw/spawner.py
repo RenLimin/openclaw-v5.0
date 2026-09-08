@@ -7,8 +7,10 @@ Copyright (c) 2026 Bangcle, Inc. All rights reserved.
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-from scripts.orchestrator.scheduler import Task
+# Task is in scripts/orchestrator/scheduler.py
+component_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(component_root / "scripts"))
+from orchestrator.scheduler import Task
 
 import openclaw
 from openclaw.tools import sessions_spawn
