@@ -1,0 +1,100 @@
+# Claude Code 运行时注册表（预留）
+# 对应 L1 适配层: 📋 预留
+
+meta:
+  name: claude-code
+  display_name: Claude Code
+  official_docs_url: https://docs.anthropic.com/en/docs/claude-code
+  version_constraint: ">=1.0"
+  current_version: "TBD"
+  platform_support:
+    - macos
+    - linux
+    - windows
+  license: Anthropic Terms of Service
+  category: cli-first
+
+capability_assessment:
+  # 已知项填写，未知标 TBD
+  agent_loop:
+    status: native
+    mapping: "CLI agent loop，支持 MCP 工具调用"
+    notes: "TBD：是否支持 subagent / 多会话隔离"
+
+  tools:
+    status: native
+    mapping: "MCP (Model Context Protocol) 工具系统"
+    notes: "TBD：工具注册方式、权限控制机制"
+
+  memory:
+    status: TBD
+    mapping: "TBD"
+    notes: "Claude Code 原生记忆能力待调研"
+
+  schedule:
+    status: missing
+    mapping: "无原生定时调度能力"
+    notes: "需要适配层借助外部调度器（cron / LaunchAgent）"
+
+  channel:
+    status: partial
+    mapping: "CLI 交互为主，无多 channel 接入"
+    notes: "TBD：是否支持 MCP 的 channel 扩展"
+
+  config:
+    status: partial
+    mapping: "CLI 配置文件 + 环境变量"
+    notes: "TBD：配置文件格式、热更新支持"
+
+  credential:
+    status: TBD
+    mapping: "TBD"
+    notes: "API key 通过环境变量传入；其他凭据管理待调研"
+
+  sandbox:
+    status: partial
+    mapping: "本地执行，无原生沙箱隔离"
+    notes: "TBD：是否支持 Docker 沙箱模式"
+
+  context:
+    status: native
+    mapping: "自动上下文管理 + 压缩"
+    notes: "TBD：具体阈值、压缩策略"
+
+  health:
+    status: TBD
+    mapping: "TBD"
+    notes: "TBD：是否有自检/健康检查命令"
+
+installation:
+  install_command: "npm install -g @anthropic-ai/claude-code"
+  install_method: npm_global
+  alternative_install:
+    - "brew install anthropic-ai/tap/claude-code"
+  dependencies:
+    - name: node
+      version_constraint: ">=20"
+      check_command: "node --version"
+  post_install:
+    - "claude --version"
+
+ecosystem:
+  skills:
+    TBD
+    # notes: Claude Code 的 Commands / Skills 系统
+  mcp_servers:
+    - "TBD：MCP 服务器生态"
+  model_providers:
+    - anthropic    # Claude 系列模型
+
+adapter:
+  path: L1-runtime/adapters/claude-code/
+  status: reserved   # ready / reserved / in-progress
+  files: []
+  version: "0.0"
+
+known_limitations:
+  - "📋 预留状态，能力自评待实测验证"
+  - "CLI 为主，多 channel 接入需要额外适配"
+  - "定时调度能力缺失，需要适配层借助外部调度器"
+  - "沙箱隔离能力待确认"

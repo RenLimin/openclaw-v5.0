@@ -1,0 +1,99 @@
+# CrewAI 运行时注册表（预留）
+# 对应 L1 适配层: 📋 预留
+
+meta:
+  name: crewai
+  display_name: CrewAI
+  official_docs_url: https://docs.crewai.com/
+  version_constraint: ">=0.50"
+  current_version: "TBD"
+  platform_support:
+    - macos
+    - linux
+    - windows
+  license: MIT
+  category: framework
+
+capability_assessment:
+  agent_loop:
+    status: native
+    mapping: "多 Agent 协作框架，Crew + Task 模型"
+    notes: "TBD：单 agent 模式、会话管理"
+
+  tools:
+    status: native
+    mapping: "Tool 系统，支持自定义工具 + 内置工具集"
+    notes: "TBD：工具注册方式、权限控制"
+
+  memory:
+    status: partial
+    mapping: "Crew 级 memory + task 级 memory"
+    notes: "TBD：记忆持久化、语义检索能力"
+
+  schedule:
+    status: TBD
+    mapping: "TBD"
+    notes: "TBD：是否有原生定时调度能力"
+
+  channel:
+    status: missing
+    mapping: "无原生 channel 接入，纯框架"
+    notes: "需要适配层自行接入消息通道"
+
+  config:
+    status: partial
+    mapping: "YAML/JSON 配置 + 环境变量"
+    notes: "TBD：配置热更新、动态 reconfigure"
+
+  credential:
+    status: TBD
+    mapping: "TBD"
+    notes: "API key 通过环境变量传入；其他凭据管理待调研"
+
+  sandbox:
+    status: TBD
+    mapping: "TBD"
+    notes: "TBD：沙箱隔离能力"
+
+  context:
+    status: TBD
+    mapping: "TBD"
+    notes: "TBD：上下文管理策略、token 限制"
+
+  health:
+    status: TBD
+    mapping: "TBD"
+    notes: "TBD：健康检查能力"
+
+installation:
+  install_command: "pip install crewai"
+  install_method: pip
+  dependencies:
+    - name: python
+      version_constraint: ">=3.10"
+      check_command: "python3 --version"
+    - name: pip
+      version_constraint: ">=23"
+      check_command: "pip --version"
+  post_install:
+    - "crewai --version"
+
+ecosystem:
+  tools:
+    - "TBD：内置工具集列表"
+  integrations:
+    - "TBD：第三方集成列表"
+  model_providers:
+    - "TBD：支持的 LLM provider 列表"
+
+adapter:
+  path: L1-runtime/adapters/crewai/
+  status: reserved   # ready / reserved / in-progress
+  files: []
+  version: "0.0"
+
+known_limitations:
+  - "📋 预留状态，能力自评待实测验证"
+  - "纯框架，无原生 channel 接入能力"
+  - "需要 Python 环境，Node 环境下运行需要桥接"
+  - "多 Agent 协作是强项，但单 Agent 模式可能过重"

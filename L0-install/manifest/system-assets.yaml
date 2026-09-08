@@ -1,0 +1,234 @@
+# 系统资产清单（运行时无关）
+# L0 安装时根据 deployment-map.yaml 映射到目标运行时的原生路径
+# 最后生成: 2026-09-07
+
+version: "1.0"
+generated_at: "2026-09-07T00:00:00+08:00"
+
+# L1 运行时层资产
+l1:
+  adapters:
+    - id: openclaw-adapter
+      name: OpenClaw 适配层
+      path: L1-runtime/adapters/openclaw/
+      type: code
+      deploy_required: true
+      description: L1 抽象契约的 OpenClaw 实现
+    - id: claude-code-adapter
+      name: Claude Code 适配层
+      path: L1-runtime/adapters/claude-code/
+      type: code
+      deploy_required: false
+      description: 📋 预留
+    - id: crewai-adapter
+      name: CrewAI 适配层
+      path: L1-runtime/adapters/crewai/
+      type: code
+      deploy_required: false
+      description: 📋 预留
+
+# L2 基础设施层资产
+l2:
+  config_management:
+    - id: config-safe-write
+      name: 配置安全写入通道
+      path: L2-infra/components/config-management/config_safe_write.sh
+      type: script
+      deploy_required: true
+      description: dry-run → 写入 → validate → 读回 四步保护流程
+    - id: config-snapshots
+      name: 配置快照目录
+      path: config-snapshots/
+      type: directory
+      deploy_required: true
+      description: 配置变更快照存储
+
+  credentials:
+    - id: credentials-script
+      name: 凭据管理脚本
+      path: L2-infra/components/credentials/credentials.sh
+      type: script
+      deploy_required: true
+      description: 凭据生命周期管理（add/rotate/revoke/audit）
+
+  observability:
+    - id: agent-observer
+      name: Agent 可观测性脚本
+      path: L2-infra/scripts/observability/agent_observer.py
+      type: script
+      deploy_required: false
+      description: 行为观测与日志收集
+
+  memory:
+    - id: memory-search-monitor
+      name: 记忆检索健康监控
+      path: L2-infra/scripts/observability/memory_search_monitor.py
+      type: script
+      deploy_required: true
+      description: 记忆检索三态健康监控（ok/degraded/down）
+
+  knowledge_base:
+    - id: kb-index
+      name: 知识库工具链
+      path: L2-infra/scripts/kb_index.py
+      type: script
+      deploy_required: true
+      description: Markdown 知识库索引/查询/验证/导出工具
+
+  tool_policy:
+    - id: tool-policy-audit
+      name: 工具策略审计脚本
+      path: L2-infra/components/tool-policy/tool_policy_audit.sh
+      type: script
+      deploy_required: true
+      description: 三态模型审计（denied / allowed-but-broken / allowed-and-working）
+
+  model_scheduling:
+    - id: model-scheduling
+      name: 模型调度系统
+      path: model-scheduling/
+      type: module
+      deploy_required: false
+      description: 智能模型路由 + 健康探测 + 用量追踪
+
+  session_lifecycle:
+    - id: session-lifecycle
+      name: 会话生命周期管理
+      path: L2-infra/components/session-lifecycle/
+      type: component
+      deploy_required: false
+      description: 自动清理过期会话（分级策略）
+
+  error_handling:
+    - id: error-handling
+      name: 错误自动处理
+      path: L2-infra/components/error-handling/
+      type: component
+      deploy_required: false
+      description: 检测→分级→自愈闭环
+
+  office_generation:
+    - id: office-generation
+      name: Office 文档生成组件
+      path: L2-infra/components/office-generation/
+      type: component
+      deploy_required: false
+      description: Word/Excel/PPT 文档生成工具链
+
+  ocr_digitalization:
+    - id: ocr-digitalization
+      name: OCR 文档数字化组件
+      path: L2-infra/components/ocr-digitalization/
+      type: component
+      deploy_required: false
+      description: 扫描件/图片 → 高精度文本
+
+# L3 通用业务层资产
+l3:
+  contract_approval:
+    - id: contract-approval-skill
+      name: 销售合同审批通用框架
+      path: L3-business/skills/contract-approval/
+      type: skill
+      deploy_required: false
+      description: SCA-001 通用框架（分级审批 + 风险扫描 + 合同生成）
+
+  family_finance:
+    - id: fin-framework
+      name: 家庭及个人理财通用框架
+      path: finance-engine/
+      type: module
+      deploy_required: false
+      description: FIN-L3 通用框架（账户/贷款/保险/投资/利率/建议）
+
+  dms_framework:
+    - id: dms-framework
+      name: 交付管理系统通用框架
+      path: dms-framework/
+      type: module
+      deploy_required: false
+      description: DMS-001 通用框架（数据采集 + 业务引擎 + 报告生成）
+
+# L4 专有业务层资产
+l4:
+  bangcle_ppt:
+    - id: bangcle-ppt
+      name: Bangcle PPT 模板系统
+      path: L4-proprietary/components/bangcle-ppt/
+      type: skill
+      deploy_required: false
+      description: CPT-012 官方 VI 设计规范 + 页面类型模板
+
+  sales_contract_approval:
+    - id: sca-l4
+      name: 销售合同审批模块
+      path: L3-business/skills/contract-approval/  # 继承 L3 + 专有规则
+      type: skill
+      deploy_required: false
+      description: SCA-L4 基于民法典的销售合同审批专有规则
+
+  bdms_l4:
+    - id: bdms-l4
+      name: 交付中心运营引擎
+      path: dms-framework/  # 基于 DMS 框架
+      type: module
+      deploy_required: false
+      description: BDMS-L4 Bangcle 交付中心实例
+
+  fin_l4:
+    - id: fin-l4
+      name: Rex 家庭理财系统
+      path: finance-engine/
+      type: module
+      deploy_required: false
+      description: FIN-L4 基于 FIN-L3 的 Rex 家庭理财实例
+
+# 文档资产
+docs:
+  architecture:
+    - id: system-architecture
+      name: 系统架构文档
+      path: docs/architecture/00-system-architecture.md
+      type: doc
+    - id: asset-inventory
+      name: 系统资产清单
+      path: docs/architecture/01-asset-inventory.md
+      type: doc
+
+  knowledge_base:
+    - id: adr-collection
+      name: ADR 架构决策记录
+      path: docs/knowledge-base/by-category/project-experience/adr/
+      type: docs
+    - id: exp-collection
+      name: 经验卡片
+      path: docs/knowledge-base/by-category/project-experience/correct/
+      type: docs
+
+# 工作区基础文件
+workspace:
+  - id: agents-md
+    name: AGENTS.md
+    path: AGENTS.md
+    type: config
+    deploy_required: true
+  - id: soul-md
+    name: SOUL.md
+    path: SOUL.md
+    type: config
+    deploy_required: true
+  - id: identity-md
+    name: IDENTITY.md
+    path: IDENTITY.md
+    type: config
+    deploy_required: true
+  - id: user-md
+    name: USER.md
+    path: USER.md
+    type: config
+    deploy_required: true
+  - id: memory-md
+    name: MEMORY.md
+    path: MEMORY.md
+    type: data
+    deploy_required: false
