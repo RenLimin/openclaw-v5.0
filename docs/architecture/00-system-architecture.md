@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 3.6 (2026-09-08 — 新增「原生优先」全局设计原则 + L2 会话任务编排组件,配套全局开发设计规范 docs/conventions/dev-standards.md,避免重复建设/系统冲突) |
+| 文档版本 | 3.7 (2026-09-08 — 会话任务编排并入 session-isolation-sharing 子模块,不新建独立组件;多子会话并行编排设计落库) |
 | 文档状态 | active |
 | 运行时 cron | 7 个活跃业务 cron（错误扫描/provider健康探测/会话错误处理/备份/会话生命周期/记忆健康/每日观测投递）；3 个任务 disabled（2 个 ms 心跳 + 1 个技能审阅） |
 | 决策状态 | 5 层架构已锁定(ADR-012); 28 份 ADR accepted; L3 FIN 引擎已迁 L3; L4 五个组件已上线(新增 CISSP 学习系统) |
@@ -497,6 +497,10 @@ adapters/
       - 会话生命周期(ADR-013): 管清理,本组件管共享 → 不冲突
       - 上下文管理(ADR-018): 管溢出,本组件管共享 → 不冲突
       - 错误自动处理(ADR-014): 管故障,supervisor 归其管 → 范围不膨胀
+    - **任务编排子模块(2026-09-08 并入)**: 多子会话并行编排 — 任务依赖排序 + 错峰发起 + 批量调度
+      - 业务场景: 多子会话并行建设(读 tasks/ 待办 → 排序 → 错峰发起原生 sessions_spawn)
+      - 并发控制/嵌套深度/限流 → 复用运行时原生,不在组件内实现
+      - 实现: P1 阶段扩展(scripts/ + 适配层),见 DESIGN.md §6
     - 当前状态: ✅ 已落地(CLI 可用: task-init/state-write/event-log; 协议层 + 任务卡模板已验证)
     - ADR: ADR-202609-024
     - 设计: `components/session-isolation-sharing/DESIGN.md`
@@ -510,14 +514,14 @@ adapters/
 | MCP Server 适配 | 无 | `components/mcp-server/` | 适配层契约 | ✅ 已上线（但无 ADR） |
 | 可观测性适配 | ADR-004 | `components/observability/` | `agent_observer.py` | ✅ 已上线 |
 | OCR 文档数字化 | ADR-023 | `components/ocr-digitalization/` | 文档 OCR + 规则纠错工具链 | ✅ 已上线 |
-| 会话任务编排 | 待 ADR | `components/session-orchestrator/` | 任务卡读取 + 依赖排序 + 错峰发起 + 状态跟踪(并发/限流复用运行时原生能力) | 📐 设计态 |
+| ~~会话任务编排~~ | — | ~~`components/session-orchestrator/`~~ | ~~独立组件~~ → **并入 session-isolation-sharing 子模块** | ❌ 已废弃 |
 
 **L2 组件职责边界（避免重复建设，全组件适用）**：
 
 | 组件 | 管什么 | 不管什么 | 协同关系 |
 |---|---|---|---|
 | **model-scheduling** | 用哪个模型（路由/健康/用量/预算） | 什么时候发、发多少个 | 编排发起任务前调用它选模型 |
-| **session-orchestrator** | 任务顺序/依赖/错峰/状态跟踪 | 并发上限/限流/嵌套深度（复用原生） | 调用原生 `sessions_spawn` 发起，并发由运行时控制 |
+| **session-isolation-sharing** | 任务卡/状态/事件协议 + **任务编排子模块**(依赖排序/错峰发起/批量调度) | 并发上限/限流/嵌套深度（复用原生） | 调用原生 `sessions_spawn` 发起，并发由运行时控制 |
 | **context-management** | 上下文窗口估算/分段策略 | 任务编排/并发控制 | 编排参考它的预算决定是否错峰 |
 
 > 以上边界基于「原生优先」原则；任何新组件加入前先过 §1.3.2 Checklist + `docs/conventions/dev-standards.md`。
@@ -540,7 +544,7 @@ adapters/
 | BDMS 交付中心 | ADR-022 | `components/l4-delivery-center/` (+v2) | 交付中心运营引擎 | ✅ 已上线 |
 
 
-**L2 组件建设状态**: **18 个 L2 基础设施组件设计齐备**,其中 17 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测 + 会话隔离与共享),1 个设计态(会话任务编排)。
+**L2 组件建设状态**: **17 个 L2 基础设施组件设计齐备**,其中 17 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测 + 会话隔离与共享),0 个设计态(会话任务编排已并入会话隔离与共享组件,不再单独计数)。
 总计 `docs/architecture/components/` 目录下有 **23 个 DESIGN.md**（含 L3/L4 组件设计）。
 
 **配置安全保护** (横切关注点,2026-08-26):
