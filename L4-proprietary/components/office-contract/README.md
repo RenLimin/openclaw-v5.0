@@ -63,7 +63,7 @@ draft → review1 → review2 → review3 → approved → signed → archived
 ## Quick Start
 
 ```bash
-cd L4-proprietary-business/office-contract
+cd L4-proprietary/components/office-contract
 
 # 1. 初始化数据库
 python3 -m cli.contractctl init
@@ -120,7 +120,7 @@ office-contract/
 ## 测试
 
 ```bash
-cd L4-proprietary-business/office-contract
+cd L4-proprietary/components/office-contract
 python3 tests/test_e2e.py
 ```
 
@@ -146,6 +146,6 @@ python3 tests/test_e2e.py
 
 ## 相关文档
 
-- 风险扫描规则：`skills/contract-approval/checklists/risk-matrix.md`
-- 审核标准库：`skills/contract-approval/checklists/sales-contract.md`
+- 风险扫描规则：`L3-business/components/contract-approval/checklists/risk-matrix.md`
+- 审核标准库：`L3-business/components/contract-approval/checklists/sales-contract.md`
 - 架构文档：`docs/architecture/`

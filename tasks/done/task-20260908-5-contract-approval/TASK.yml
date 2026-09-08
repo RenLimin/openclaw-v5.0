@@ -1,0 +1,69 @@
+id: task-20260908-5-contract-approval
+name: Office 合同审批工作流收尾
+status: done
+priority: medium
+created_at: 2026-09-08T17:08:00+08:00
+updated_at: 2026-09-08T17:10:00+08:00
+owner: jerry
+
+scope:
+  project: openclaw-v5.0
+  component: L4-proprietary/components/office-contract (OFC-001)
+  version: v1.0.0
+
+goals:
+  - id: g1
+    description: 验证现有产出完整性
+    status: done
+  - id: g2
+    description: 补全缺失文档（README 路径修正、使用说明）
+    status: done
+  - id: g3
+    description: 更新任务卡 status 为 done
+    status: done
+  - id: g4
+    description: 提交成果到 git
+    status: done
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/architecture/components/contract-approval/DESIGN.md
+  - path: L4-proprietary/components/office-contract/README.md
+
+artifacts:
+  - name: L4 Office 合同审批组件
+    path: L4-proprietary/components/office-contract/
+    status: done
+  - name: CLI 入口 (contractctl, 11 子命令)
+    path: L4-proprietary/components/office-contract/cli/contractctl.py
+    status: done
+  - name: 业务服务层
+    path: L4-proprietary/components/office-contract/services/contract_service.py
+    status: done
+  - name: Office 场景配置
+    path: L4-proprietary/components/office-contract/config/settings.py
+    status: done
+  - name: 端到端集成测试 (25 用例全通过)
+    path: L4-proprietary/components/office-contract/tests/test_e2e.py
+    status: done
+  - name: README 使用文档
+    path: L4-proprietary/components/office-contract/README.md
+    status: done
+  - name: 设计文档
+    path: docs/architecture/components/contract-approval/DESIGN.md
+    status: done
+
+acceptance:
+  - description: 测试 25/25 全通过
+    result: pass
+  - description: CLI 11 个子命令可用
+    result: pass
+  - description: README 完整含 Quick Start
+    result: pass
+  - description: 任务卡归档到 tasks/done/
+    result: pass
+  - description: 代码已提交 git
+    result: pass

@@ -2,7 +2,7 @@
 component_id: SCA-001
 component_name: 销售合同审批模块
 layer: L4
-status: 🔨 开发中
+status: ✅ 已上线
 date: 2026-09-02
 adr: ADR-202609-018
 ---
