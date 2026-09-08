@@ -176,6 +176,53 @@ state/
 
 ---
 
+## 5.5 任务编排子模块（多子会话并行编排）
+
+> 2026-09-08 并入。业务场景：**多子会话并行建设** —— 从任务卡队列读取待办，按依赖排序，错峰发起原生子会话，跟踪状态回写任务卡。
+> 原则：**并发控制/嵌套深度/限流一律复用运行时原生能力，本模块只做原生之上的编排逻辑**（对齐 00-system-architecture.md §1.3 原生优先原则 + docs/conventions/dev-standards.md）。
+
+### 5.5.1 职责边界
+
+| 管什么 | 不管什么（原生/其他组件管） |
+|---|---|
+| 读取任务卡待办（pending 任务） | 并发上限（原生 `maxConcurrent`） |
+| 任务依赖排序（串行组 vs 可并行组） | 嵌套深度（原生 `maxSpawnDepth`） |
+| 错峰发起（间隔 5-10s，避免 burst 限流） | 每会话子代数（原生 `maxChildrenPerAgent`） |
+| 启动后状态跟踪（回写 TASK.yml） | 会话生命周期清理（session-lifecycle, ADR-013） |
+| 结果汇总（收集完成 → 更新任务卡 → 汇报） | 模型选择（model-scheduling） |
+
+### 5.5.2 工作流
+
+```
+tasks/in-progress/*/TASK.yml (pending) → 依赖排序 → 分批(可并行组) → 错峰发起原生 sessions_spawn → 完成事件 → 回写任务卡(done) → 汇总汇报
+```
+
+1. **读取**：扫描 `tasks/in-progress/` 下 `status: pending` 的任务卡
+2. **排序**：按 dependencies 字段分组（无依赖 = 可并行；有依赖 = 串行等前置 done）
+3. **错峰发起**：对可并行组，间隔 5-10s 逐个调用原生 `sessions_spawn`（并发由运行时 `maxConcurrent` 兜底）
+4. **跟踪**：子会话完成事件到达 → 更新任务卡 `status: done` + `artifacts`
+5. **汇总**：全部完成后向主会话汇报结果
+
+### 5.5.3 可移植性（跨 AI Agent）
+
+| 部分 | 是否绑定运行时 | 说明 |
+|---|---|---|
+| 任务读取/排序/回写/汇总 | ❌ 不绑定 | 纯文件 + YAML，任何 Agent 可用 |
+| 错峰调度器 | ❌ 不绑定 | 纯 Python 标准库（time/sleep） |
+| **会话发起** | ✅ 绑定 | L1 适配层实现（OpenClaw: `sessions_spawn`；其他 Agent: 对应 API） |
+
+核心逻辑与适配层分离：`scripts/orchestrator/` 提供纯逻辑（排序/错峰/状态机），L1 适配层只实现「发起会话」一个接口。
+
+### 5.5.4 依赖声明（升级前校验/升级后更新）
+
+| 依赖 | 校验点 | 更新点 |
+|---|---|---|
+| `sessions_spawn` 接口 | 升级前确认会话发起参数不变 | 升级后更新适配层实现 |
+| `maxConcurrent` 并发配置 | 升级前确认并发语义不变 | 升级后核对默认值/范围 |
+| 任务卡协议 | 无需（纯文件） | 无需 |
+
+---
+
 ## 6. 建设阶段
 
 ### P0: 手动版（当前阶段）
@@ -192,13 +239,17 @@ state/
   - [ ] `task_init.py` — 创建任务卡
   - [ ] `state_reducer.py` — 共享状态合并
   - [ ] `event_logger.py` — 事件追加
+- [ ] **`scripts/orchestrator/` 任务编排子模块（2026-09-08 并入）**
+  - [ ] `scheduler.py` — 依赖排序 + 错峰调度（纯逻辑，运行时无关）
+  - [ ] 适配层扩展 `adapters/openclaw/` — 实现「发起会话」接口（绑定运行时）
+  - [ ] 状态回写 — 完成后自动更新 TASK.yml
 - [ ] 适配层扩展 `adapters/openclaw/` (L1 接口)
 - [ ] 手动触发 hook 同步
 
 ### P2: 全自动（plugin 驱动）
 
 - [ ] OpenClaw plugin 化（适配层内）
-- [ ] 完整 reducer + 子代理 supervisor
+- [ ] 完整 reducer + 子代理 supervisor（supervisor 归 ADR-014 错误处理）
 - [ ] 跨框架可移植验证
 
 ---
@@ -230,4 +281,5 @@ state/
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-09-02 | v1.0 | 创建:会话隔离与共享组件设计 |
+| 2026-09-08 | v1.1 | 新增 §5.5 任务编排子模块（多子会话并行编排,复用原生并发控制）; P1 清单补充 orchestrator 脚本 + 适配层 |
 
