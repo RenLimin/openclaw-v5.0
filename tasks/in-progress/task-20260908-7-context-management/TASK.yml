@@ -1,0 +1,43 @@
+id: task-20260908-7-context-management
+name: 上下文管理缺口全覆盖
+status: done
+priority: high
+created_at: 2026-09-08T21:47:00+08:00
+updated_at: 2026-09-08T22:10:00+08:00
+owner: subagent
+
+scope:
+  project: openclaw-core
+  component: context-management
+  version: v1.0
+
+goals:
+  - id: g1
+    description: 补齐 compaction 配置
+    status: done
+  - id: g2
+    description: 补齐会话生命周期替代 session pruning
+    status: done
+  - id: g3
+    description: 固化 subagent 上下文保护规范到 AGENTS.md
+    status: done
+  - id: g4
+    description: 验证所有缺口已覆盖
+    status: done
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/knowledge-base/by-category/project-experience/adr/ADR-202608-018-context-management.md
+
+artifacts:
+  - name: 完整 compaction 配置
+    path: /Users/bangcle/.openclaw/openclaw.json
+    status: done
+  - name: 会话生命周期管理 cron
+    path: /Users/bangcle/.openclaw/workspace/L2-infra/components/context-management/subagent_ctx_guard.py
+    status: done
+  - name: AGENTS.md 规范固化
+    path: /Users/bangcle/.openclaw/workspace/AGENTS.md
+    status: done

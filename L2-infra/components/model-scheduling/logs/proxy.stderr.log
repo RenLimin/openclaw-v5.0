@@ -1,0 +1,997 @@
+2026-09-08 20:22:21,023 [INFO] model-scheduling.config: 热更新监听已启动
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 458, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 448, in main
+    server = await asyncio.start_server(handle_client, args.host, args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/streams.py", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 1638, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 48] error while attempting to bind on address ('127.0.0.1', 3000): [errno 48] address already in use
+2026-09-08 20:22:26,323 [INFO] model-scheduling.config: 热更新监听已启动
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 458, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 448, in main
+    server = await asyncio.start_server(handle_client, args.host, args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/streams.py", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 1638, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 48] error while attempting to bind on address ('127.0.0.1', 3000): [errno 48] address already in use
+2026-09-08 20:22:31,656 [INFO] model-scheduling.config: 热更新监听已启动
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 458, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 448, in main
+    server = await asyncio.start_server(handle_client, args.host, args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/streams.py", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 1638, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 48] error while attempting to bind on address ('127.0.0.1', 3000): [errno 48] address already in use
+2026-09-08 20:22:36,956 [INFO] model-scheduling.config: 热更新监听已启动
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 458, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 448, in main
+    server = await asyncio.start_server(handle_client, args.host, args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/streams.py", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 1638, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 48] error while attempting to bind on address ('127.0.0.1', 3000): [errno 48] address already in use
+2026-09-08 20:22:42,219 [INFO] model-scheduling.config: 热更新监听已启动
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 458, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 448, in main
+    server = await asyncio.start_server(handle_client, args.host, args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/streams.py", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 1638, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 48] error while attempting to bind on address ('127.0.0.1', 3000): [errno 48] address already in use
+2026-09-08 20:22:47,459 [INFO] model-scheduling.config: 热更新监听已启动
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 458, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 448, in main
+    server = await asyncio.start_server(handle_client, args.host, args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/streams.py", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 1638, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 48] error while attempting to bind on address ('127.0.0.1', 3000): [errno 48] address already in use
+2026-09-08 20:22:52,749 [INFO] model-scheduling.config: 热更新监听已启动
+Traceback (most recent call last):
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 458, in <module>
+    asyncio.run(main())
+    ~~~~~~~~~~~^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 205, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/runners.py", line 128, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 720, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py", line 448, in main
+    server = await asyncio.start_server(handle_client, args.host, args.port)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/streams.py", line 84, in start_server
+    return await loop.create_server(factory, host, port, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.14/3.14.7/Frameworks/Python.framework/Versions/3.14/lib/python3.14/asyncio/base_events.py", line 1638, in create_server
+    raise OSError(err.errno, msg) from None
+OSError: [Errno 48] error while attempting to bind on address ('127.0.0.1', 3000): [errno 48] address already in use
+2026-09-08 20:22:58,040 [INFO] model-scheduling.config: 热更新监听已启动
+2026-09-08 20:22:58,041 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-09-08 20:22:58,623 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:23:06,598 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 20:23:21,157 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:23:28,706 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 20:23:39,949 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:23:50,383 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 20:24:04,155 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:24:14,772 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 20:24:32,684 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:24:50,579 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:25:50,326 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:26:11,571 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:26:21,827 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:26:28,745 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:26:37,312 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:26:42,575 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:26:52,095 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:27:05,760 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:27:13,360 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:27:52,563 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:28:00,042 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:28:06,209 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:28:08,681 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:28:16,694 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:28:46,895 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 20:29:00,643 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:29:04,770 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:29:10,086 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:29:13,247 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:29:22,566 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:29:28,725 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:30:10,241 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:30:17,100 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:30:28,116 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:30:31,216 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:30:40,265 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:30:47,499 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:30:55,034 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:31:00,885 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:31:30,609 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:31:36,833 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:31:57,972 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:06,109 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:09,816 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:15,903 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:22,791 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:27,332 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:36,057 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:42,434 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:32:48,214 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:33:15,666 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:33:23,052 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:33:23,122 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:33:31,072 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:33:39,740 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:35:22,924 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:35:22,928 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:35:33,038 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:36:59,185 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:36:59,191 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:37:22,088 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:37:28,291 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:37:47,650 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:37:59,943 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:38:07,507 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:38:13,765 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:38:20,825 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:38:37,922 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:38:37,928 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:38:44,459 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:38:53,555 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:39:03,961 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:39:10,375 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:39:16,963 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:39:28,012 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:39:32,544 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:39:44,347 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:39:50,331 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:01,810 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:12,733 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:17,002 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:24,383 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:31,702 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:42,875 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:52,569 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:40:55,799 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:41:03,441 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:41:12,946 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:41:19,148 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:41:29,339 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:41:40,128 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:41:49,325 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:41:57,370 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:42:01,215 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:42:12,129 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:42:58,857 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 20:43:17,610 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:43:29,811 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:43:38,757 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:43:47,328 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:43:53,748 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:44:05,032 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:44:37,348 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:45:47,826 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:45:59,342 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:46:04,958 [ERROR] model-scheduling.proxy: 流式传输中断: Connection lost
+2026-09-08 20:46:44,776 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:47:10,377 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:47:21,069 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:47:25,761 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:47:30,652 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:47:41,328 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:47:48,929 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:48:03,462 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:52:08,729 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:52:38,119 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:52:44,812 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:53:20,490 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:54:49,359 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 20:55:44,541 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:56:00,332 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:56:12,251 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:56:12,255 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:56:19,026 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:56:27,646 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:56:47,977 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:56:55,429 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:57:05,610 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:57:23,930 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:57:35,134 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:57:35,138 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:57:35,141 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:57:47,130 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:57:54,535 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:57:54,541 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:58:04,301 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:58:15,080 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:58:15,080 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:58:15,084 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:58:22,193 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:58:35,855 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:58:35,858 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:58:47,365 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:58:50,420 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 20:58:50,426 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:59:00,841 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 20:59:14,493 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 20:59:22,105 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 21:00:16,433 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 21:00:28,891 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:00:36,538 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 21:00:36,541 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 21:01:00,693 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:01:40,207 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 21:01:40,214 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 21:02:09,521 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:02:17,464 [INFO] model-scheduling.config: 热更新监听已启动
+2026-09-08 21:02:17,465 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-09-08 21:02:18,353 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 21:02:51,160 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:03:24,899 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:03:52,241 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:04:15,391 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:06:03,435 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:06:17,588 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:06:33,203 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 21:06:33,271 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:06:56,105 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:08:03,344 [ERROR] model-scheduling.proxy: 流式传输中断: Connection lost
+2026-09-08 21:08:33,582 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:33:42,226 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:33:48,756 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:33:54,755 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:09,167 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:13,126 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:17,116 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:20,935 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:32,412 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:37,449 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:43,441 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:46,047 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:34:54,627 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:35:01,163 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:35:20,568 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:35:26,331 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:35:31,587 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:35:41,943 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:35:46,455 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:35:50,631 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:36:02,500 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:36:04,963 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:36:09,144 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:36:12,700 [INFO] model-scheduling.proxy: 任务: reasoning → 模型: coding-plan/deepseek-v4-flash
+2026-09-08 21:36:53,073 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:37:26,675 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:37:38,392 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:38:01,188 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:38:11,349 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:38:32,641 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:38:58,947 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:39:15,001 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:39:26,570 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:39:39,356 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:39:52,406 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:40:05,554 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:40:18,710 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:40:29,657 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:40:40,651 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:40:46,152 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:40:55,633 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:41:07,238 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:41:13,158 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:41:23,770 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:41:30,330 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:41:35,642 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:41:41,894 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:41:55,036 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:42:06,650 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:42:23,375 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:42:32,447 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:42:44,537 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:42:57,678 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:43:10,547 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:43:19,159 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:43:26,465 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:43:38,453 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:43:51,750 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:44:29,492 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:47:01,262 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:13,553 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:18,289 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:24,908 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:30,706 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:36,197 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:39,486 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:45,784 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:51,151 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:47:56,665 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:03,828 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:07,991 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:12,082 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:17,504 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:24,151 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:34,140 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:38,126 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:48:54,043 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:49:33,586 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:51:02,906 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:11,452 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:15,570 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:18,704 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:24,979 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:32,380 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:42,049 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:51,804 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:51:55,341 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:52:14,839 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:52:22,107 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:52:42,801 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:52:51,184 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:53:29,786 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:53:38,787 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:53:52,695 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:53:58,836 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:54:15,202 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:54:22,422 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:54:30,369 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:54:39,108 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:54:59,235 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:55:17,201 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:55:31,746 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:56:07,281 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 21:57:25,840 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:57:31,715 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:57:38,573 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:57:50,459 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:57:55,583 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:07,724 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:10,511 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:18,668 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:22,381 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:29,419 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:32,945 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:43,000 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:48,323 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:58:57,298 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:04,980 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:11,890 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:14,856 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:25,195 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:30,518 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:33,838 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:40,777 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:46,911 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 21:59:56,219 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:02,639 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:08,266 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:14,082 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:27,437 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:32,359 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:38,439 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:44,550 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:53,098 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:00:56,698 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:01:07,176 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:01:14,429 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:01:19,389 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:01:24,692 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:01:30,053 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:01:45,986 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:01:51,128 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:02:04,378 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:02:07,591 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:02:17,451 [INFO] model-scheduling.config: 热更新监听已启动
+2026-09-08 22:02:17,451 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-09-08 22:02:47,577 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:03:04,772 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:03:17,172 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:03:20,129 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:03:28,888 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:03:35,030 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:03:42,640 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:03:49,126 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:03:57,740 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:04:05,282 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:04:08,046 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:04:29,021 [ERROR] model-scheduling.proxy: 请求处理失败: Connection lost
+2026-09-08 22:04:29,021 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 22:04:29,068 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:04:39,070 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:04:54,949 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:04:58,379 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:02,585 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:10,055 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:14,690 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:26,979 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:36,627 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:48,696 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:53,373 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:05:59,970 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:06:08,954 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:06:18,795 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:06:36,405 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:06:50,507 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:07:33,085 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:08:00,218 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:08:18,748 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:08:30,397 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:08:43,071 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:08:59,082 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:09:10,439 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:09:21,305 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:09:33,016 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:09:43,949 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:09:53,436 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:10:04,362 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:10:14,179 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:10:23,730 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:10:33,081 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:10:44,606 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:10:51,975 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:11:00,609 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 22:15:09,867 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:15:23,282 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:15:30,234 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:15:36,837 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:15:43,710 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:15:53,326 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:15:56,232 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:10,866 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:16,353 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:23,169 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:26,435 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:34,949 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:40,278 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:48,136 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:16:55,057 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:02,233 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:05,426 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:10,322 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:17,416 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:23,222 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:26,297 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:37,585 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:45,360 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:17:58,570 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:18:37,273 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:18:56,624 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:04,495 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:08,165 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:14,265 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:21,911 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:25,638 [INFO] model-scheduling.config: 热更新监听已启动
+2026-09-08 22:19:25,639 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-09-08 22:19:30,459 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:36,671 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:40,222 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:44,052 [INFO] model-scheduling.config: 热更新监听已启动
+2026-09-08 22:19:44,052 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-09-08 22:19:48,922 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:51,971 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:19:58,158 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:20:05,813 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:20:09,630 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:20:13,169 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:20:16,660 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:20:58,322 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:21:26,243 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:21:36,117 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:21:45,301 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:21:51,961 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:21:58,657 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:22:05,583 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:22:14,711 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:22:20,441 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:22:27,014 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:23:27,040 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:23:40,633 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:23:47,846 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:23:56,167 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:02,724 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:10,170 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:16,546 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:22,060 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:28,634 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:35,396 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:41,770 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:48,376 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:24:56,280 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:03,377 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:13,378 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:17,174 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:22,829 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:29,219 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:39,321 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:44,574 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:25:51,247 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:26:02,498 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:26:13,838 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 22:26:44,245 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:37:00,310 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 22:59:20,347 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:59:31,154 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:59:37,989 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 22:59:48,853 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:00:07,714 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:00:16,409 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:00:29,392 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:00:36,694 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:00:50,184 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:01:00,603 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:01:05,894 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:01:15,099 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:01:55,879 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:07:00,333 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:07:15,610 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:07:22,702 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:07:33,826 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 23:19:18,883 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:19:26,746 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:19:42,044 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:19:49,911 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:19:58,189 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:20:04,328 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:20:10,624 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:20:18,827 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:25:04,636 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:25:23,135 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:25:35,018 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 23:25:35,019 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:25:59,166 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:26:08,583 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:26:17,065 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:26:26,084 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:26:32,133 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:26:50,064 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:27:02,392 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:27:13,139 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:27:27,227 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:27:51,479 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:28:14,108 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:28:46,055 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:28:50,056 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:29:04,145 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:29:27,182 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:29:56,072 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:30:44,907 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:32:49,352 [INFO] model-scheduling.proxy: 任务: multimodal → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-08 23:33:29,060 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 23:38:34,413 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 23:38:46,895 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 23:38:59,456 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 23:39:09,696 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:14,857 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:18,793 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 23:39:26,702 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:28,875 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:32,993 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:40,577 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:44,178 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-08 23:39:51,107 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:52,978 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:39:55,924 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:00,142 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:06,387 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:17,886 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:22,481 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:36,514 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:40,093 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:47,237 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:53,747 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:40:59,145 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:05,789 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:11,156 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:18,685 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:25,020 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:32,456 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:40,564 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:46,188 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:41:55,754 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:42:04,774 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:42:12,752 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:42:20,781 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:42:29,689 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:42:34,222 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:42:56,491 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:43:07,060 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:43:13,137 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:43:32,086 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:43:45,348 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:43:48,858 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:44:04,123 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:44:09,181 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:44:16,269 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:44:59,891 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:45:20,466 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:45:32,516 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:45:45,950 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:46:01,319 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:46:06,740 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:46:16,316 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:46:29,090 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:46:38,771 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:47:05,155 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:47:26,009 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:47:33,941 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:47:54,193 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:48:13,695 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:48:25,535 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:48:45,584 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:48:54,121 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:49:03,570 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:49:26,639 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:49:58,141 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:50:25,610 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:50:32,999 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:51:00,119 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:51:13,024 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:51:25,928 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:51:37,128 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:52:03,202 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:52:22,938 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:52:45,734 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:52:53,645 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:53:22,597 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:53:39,007 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:54:07,733 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:54:56,016 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:55:14,372 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:55:38,769 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:55:43,672 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:56:02,888 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:56:10,853 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:56:17,564 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:56:36,516 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:56:42,372 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:56:54,431 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:57:19,345 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:57:44,531 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:58:01,259 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:58:11,424 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:58:21,953 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:58:36,585 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:58:47,199 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-08 23:58:47,202 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:59:02,968 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:59:17,677 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:59:33,058 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:59:45,190 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-08 23:59:59,197 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:00:11,467 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:00:25,507 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:00:48,102 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:01:11,008 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:01:24,028 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:01:38,612 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:01:50,958 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:02:04,762 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:02:17,440 [INFO] model-scheduling.config: 热更新监听已启动
+2026-09-09 00:02:17,441 [INFO] model-scheduling.proxy: 代理服务已启动: 127.0.0.1:3000
+2026-09-09 00:02:17,498 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:02:49,425 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:03:12,414 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:03:32,942 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:03:49,245 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:04:41,348 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-09 00:04:41,348 [ERROR] model-scheduling.proxy: 请求处理失败: Connection lost
+2026-09-09 00:04:41,348 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-09 00:04:41,353 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:04:55,454 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:05:05,649 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:05:18,797 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:05:45,204 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:06:06,716 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:06:29,982 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:06:54,368 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:07:22,820 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:07:45,779 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:08:19,849 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:08:32,088 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:08:52,910 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:09:10,531 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:09:31,379 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:09:47,954 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:10:05,857 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:10:14,555 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:10:26,243 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:10:53,474 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:11:06,243 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:11:20,875 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:11:37,202 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:11:44,245 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:12:02,172 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:12:12,399 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:12:28,619 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:12:37,911 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:12:49,612 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:12:57,788 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:13:09,998 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:13:21,170 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:13:35,211 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:13:47,274 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:13:54,337 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:14:02,211 [ERROR] model-scheduling.proxy: 流式传输中断: Connection lost
+2026-09-09 00:14:32,302 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:00,391 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:05,805 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:09,893 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:13,409 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:17,825 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:21,608 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:29,857 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:36,556 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:44,129 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:50,631 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:54,164 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:15:59,464 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:07,596 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:15,075 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:25,600 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:29,866 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:36,361 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:47,263 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:54,786 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:16:59,920 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:17:09,073 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:17:26,548 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:17:40,388 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:17:57,462 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:18:17,737 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:18:26,651 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:18:34,997 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:18:50,353 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:19:17,178 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:19:26,752 [ERROR] model-scheduling.proxy: 流式传输中断: Connection lost
+2026-09-09 00:19:26,756 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:19:43,262 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-09 00:19:43,388 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:20:03,636 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:20:29,748 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:21:03,350 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:21:15,884 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:21:35,052 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:21:52,568 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:22:06,570 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:22:24,129 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:22:42,669 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:23:22,166 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:23:40,556 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:23:49,962 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:24:14,864 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:24:46,064 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:25:08,067 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:25:32,227 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:26:00,412 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:26:43,698 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:26:54,697 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:27:06,528 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:27:24,125 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:27:34,506 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:27:48,561 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:28:02,932 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:28:13,565 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:28:20,055 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:28:38,671 [ERROR] model-scheduling.proxy: 请求处理失败: [Errno 54] Connection reset by peer
+2026-09-09 00:28:38,819 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:28:56,631 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:29:06,965 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:29:15,244 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:29:21,813 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:29:36,823 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:29:48,756 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:29:59,469 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:30:11,256 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:30:23,850 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:39:34,645 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:49:44,261 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:49:54,328 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:50:03,169 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:50:11,360 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:50:18,867 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:50:26,173 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:50:31,999 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:50:40,833 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:50:54,985 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:51:05,774 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:51:14,298 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:51:31,253 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:51:36,822 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:51:43,913 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 00:51:47,263 [ERROR] model-scheduling.proxy: 流式传输中断: Connection lost
+2026-09-09 00:52:14,353 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 01:01:45,691 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:01:51,899 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:01:56,817 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:04,282 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:09,378 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:15,566 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:23,368 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:29,543 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:35,952 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:43,654 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 01:02:52,215 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 01:03:03,623 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 01:03:09,339 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 01:03:13,929 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 02:00:00,259 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:00:04,232 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:00:07,700 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:00:11,263 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:00:14,819 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:00:18,398 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:00:23,425 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:08,986 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:13,771 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:16,135 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:18,369 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:21,615 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:25,591 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:29,379 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:34,570 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:04:38,546 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 02:07:00,402 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 03:00:02,837 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 03:00:24,428 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 04:04:08,992 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:13,432 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:17,270 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:19,346 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:21,892 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:23,838 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:27,566 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:34,411 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:41,476 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:48,689 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:53,168 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:04:56,513 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:05:02,610 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 04:07:00,450 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:07:12,528 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:07:23,258 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:07:33,002 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:07:40,816 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:07:49,206 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:08:01,672 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:08:18,296 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:08:24,991 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:08:37,399 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:08:48,863 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:09:02,777 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:09:21,675 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:09:32,738 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:09:40,864 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:09:48,584 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:09:56,589 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:10:07,430 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:10:22,447 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:10:30,493 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:10:38,992 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:10:48,748 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:11:05,260 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 04:11:12,182 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 06:04:08,955 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:13,053 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:15,521 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:18,234 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:22,259 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:25,796 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:29,193 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:33,267 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:36,832 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:39,450 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:42,001 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:46,318 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:50,824 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:04:53,776 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 06:07:00,530 [INFO] model-scheduling.proxy: 任务: research → 模型: coding-plan/doubao-seed-2-1-turbo
+2026-09-09 07:10:59,185 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:13:22,517 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:13:33,673 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:13:40,495 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:13:48,742 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:00,325 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:05,924 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:10,147 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:18,425 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:29,642 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:34,698 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:39,688 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:44,357 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:48,469 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:14:56,253 [INFO] model-scheduling.proxy: 任务: chat → 模型: coding-plan/doubao-seed-2.0-lite
+2026-09-09 07:15:34,245 [INFO] model-scheduling.proxy: 任务: coding → 模型: coding-plan/ark-code-latest
+2026-09-09 07:56:53,824 [INFO] model-scheduling.config: 热更新: models.yaml

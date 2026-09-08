@@ -1,0 +1,33 @@
+id: task-20260908-l3-health
+name: L3健康管理通用维度建设
+status: pending
+dependencies: []
+priority: high
+created_at: 2026-09-08T15:55:00+08:00
+updated_at: 2026-09-08T15:55:00+08:00
+owner: main-agent
+
+scope:
+  project: generic-business
+  component: health-management
+  version: v1.0
+
+goals:
+  - id: g1
+    description: L3 维度设计 + ADR + DESIGN.md
+    status: pending
+  - id: g2
+    description: 知识领域/角色/模板创建
+    status: pending
+  - id: g3
+    description: 验证并提交
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/architecture/02-generic-business-layer.md
+
+artifacts: []

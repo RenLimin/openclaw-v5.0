@@ -96,6 +96,24 @@
   - 关键决策：4 层架构、Markdown+frontmatter 知识库、双轨制经验沉淀
 - _(预留位：后续补充其他项目)_
 
+## 7.5 网络与代理（重要）
+
+<!-- observed: 2026-09-08 | status: active -->
+- Always 访问外网资源（github.com / npm / pip / brew 等）时**默认使用代理**
+- Never 因为“网络不通”就断定资源不可用，先尝试走代理再下结论
+- 本机代理端口：**7897**（HTTP/HTTPS 代理）
+- 使用方式：环境变量 `http_proxy=http://127.0.0.1:7897` / `https_proxy=http://127.0.0.1:7897`
+- 或 curl 直接用：`curl -x http://127.0.0.1:7897 ...`
+
+## 7.6 本机操作权限与边界
+
+<!-- observed: 2026-09-08 | status: active -->
+- Always 将本机操作默认为安全环境，不受沙箱限制，可以直接执行 shell 操作
+- **不可**随意删除 workspace 之外的文件（系统文件、配置文件等）
+- **不可**进行网络交易、支付等敏感操作
+- 修改 model-scheduling 等自定义系统资产（文件、端口、配置）需谨慎，先确认影响
+- 修改 OpenClaw 核心文档、配置必须有回退方案（备份 + 可恢复路径）
+
 ## 8. 偏好 — 应当避免 (Don'ts)
 
 <!-- observed: 2026-08-21 | status: active -->

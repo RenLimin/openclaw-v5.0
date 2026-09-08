@@ -1,0 +1,33 @@
+id: task-20260908-office-contract-approval
+name: L4 Office 合同审批工作流落地
+status: pending
+dependencies: []
+priority: high
+created_at: 2026-09-08T15:57:00+08:00
+updated_at: 2026-09-08T15:57:00+08:00
+owner: main-agent
+
+scope:
+  project: office-business
+  component: contract-approval
+  version: m3
+
+goals:
+  - id: g1
+    description: 按设计落地完整工作流（起草→分级审批→风险扫描→归档合约）
+    status: pending
+  - id: g2
+    description: 端到端测试验证
+    status: pending
+  - id: g3
+    description: 更新文档 + 提交
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/architecture/components/contract-approval/DESIGN.md
+
+artifacts: []

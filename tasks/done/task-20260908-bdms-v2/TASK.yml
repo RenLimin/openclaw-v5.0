@@ -1,0 +1,37 @@
+id: task-20260908-bdms-v2
+name: BDMS交付月报v2补全与验证
+status: pending
+dependencies: []
+priority: high
+created_at: 2026-09-08T15:58:00+08:00
+updated_at: 2026-09-08T15:58:00+08:00
+owner: main-agent
+
+scope:
+  project: delivery-center
+  component: v2
+  version: v2.0
+
+goals:
+  - id: g1
+    description: 补全L3 delivery-management-framework维度文档
+    status: pending
+  - id: g2
+    description: 验证v2生成器，修复发现问题
+    status: pending
+  - id: g3
+    description: 验证202606月交付月报输出
+    status: pending
+  - id: g4
+    description: 提交验证结果
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/architecture/components/delivery-management-framework/DESIGN.md
+  - path: docs/knowledge-base/by-category/project-experience/adr/ADR-202608-022-bdms-delivery-center.md
+
+artifacts: []

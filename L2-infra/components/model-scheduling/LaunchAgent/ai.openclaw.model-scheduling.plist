@@ -11,7 +11,7 @@
     <key>ProgramArguments</key>
     <array>
       <string>/opt/homebrew/bin/python3</string>
-      <string>/Users/bangcle/.openclaw/workspace/model-scheduling/scripts/proxy.py</string>
+      <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py</string>
       <string>--host</string>
       <string>127.0.0.1</string>
       <string>--port</string>
@@ -19,7 +19,7 @@
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/bangcle/.openclaw/workspace/model-scheduling</string>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling</string>
 
     <key>RunAtLoad</key>
     <true/>
@@ -34,10 +34,10 @@
     <integer>5</integer>
 
     <key>StandardOutPath</key>
-    <string>/Users/bangcle/.openclaw/workspace/model-scheduling/logs/proxy.stdout.log</string>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/logs/proxy.stdout.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/bangcle/.openclaw/workspace/model-scheduling/logs/proxy.stderr.log</string>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/logs/proxy.stderr.log</string>
 
     <key>ProcessType</key>
     <string>Background</string>

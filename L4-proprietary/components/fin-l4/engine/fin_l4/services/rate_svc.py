@@ -1,5 +1,3 @@
-import sys, os
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
 
 """利率同步服务 — 调用 FIN-004 引擎"""
 

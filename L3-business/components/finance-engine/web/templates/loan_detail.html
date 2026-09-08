@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}贷款详情 - FIN-L4{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">📊 {{ loan.name }}</h1>
+
+<div class="grid grid-2" style="margin-bottom: 1.5rem;">
+    <div class="card">
+        <div class="card-title">贷款信息</div>
+        <table style="width:100%">
+            <tr><td>本金</td><td style="text-align:right;font-weight:bold">¥{{ loan.principal }}</td></tr>
+            <tr><td>年利率</td><td style="text-align:right">{{ "%.2f"|format(loan.annual_rate|float*100) }}%</td></tr>
+            <tr><td>期限</td><td style="text-align:right">{{ loan.term_months }} 个月</td></tr>
+            <tr><td>还款方式</td><td style="text-align:right">{{ loan.method }}</td></tr>
+            <tr><td>状态</td><td style="text-align:right">
+                {% if loan.status == 'active' %}<span class="badge badge-green">还款中</span>
+                {% else %}<span class="badge">{{ loan.status }}</span>{% endif %}
+            </td></tr>
+        </table>
+    </div>
+    <div class="card">
+        <div class="card-title">还款概览</div>
+        <table style="width:100%">
+            <tr><td>月供</td><td style="text-align:right;font-weight:bold">¥{{ summary.monthly_payment }}</td></tr>
+            <tr><td>总利息</td><td style="text-align:right">¥{{ summary.total_interest }}</td></tr>
+            <tr><td>剩余本金</td><td style="text-align:right">¥{{ summary.remaining_balance }}</td></tr>
+            <tr><td>已还期数</td><td style="text-align:right">{{ summary.paid_periods }}</td></tr>
+            <tr><td>剩余期数</td><td style="text-align:right">{{ summary.remaining_periods }}</td></tr>
+        </table>
+    </div>
+</div>
+
+{% if loan.status == 'active' %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">提前还款</div>
+    <form action="/loans/{{ loan.id }}/prepay" method="post" style="display:flex;gap:1rem;align-items:flex-end">
+        <div>
+            <label>还款金额</label>
+            <input type="number" name="amount" step="0.01" required placeholder="输入金额">
+        </div>
+        <div>
+            <label>还款日期</label>
+            <input type="date" name="date" value="{{ today }}">
+        </div>
+        <button type="submit" class="btn btn-primary">执行提前还款</button>
+    </form>
+    {% if prepay_result %}
+    <div style="margin-top:1rem;padding:1rem;background:#e8f5e9;border-radius:4px;">
+        💰 预计节省利息: <strong>¥{{ prepay_result.interest_saved }}</strong>
+        (回本周期: {{ prepay_result.break_even_months }} 个月)
+    </div>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <form action="/loans/{{ loan.id }}/close" method="post" style="display:inline">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('确定结清此贷款？')">结清贷款</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-title">还款计划表</div>
+    <div style="max-height:400px;overflow-y:auto">
+    <table style="width:100%;font-size:0.85rem">
+        <thead>
+            <tr style="position:sticky;top:0;background:var(--bg)">
+                <th>期数</th><th>月供</th><th>本金</th><th>利息</th><th>剩余本金</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for entry in schedule %}
+            <tr>
+                <td>{{ entry.period }}</td>
+                <td>¥{{ entry.payment }}</td>
+                <td>¥{{ entry.principal }}</td>
+                <td>¥{{ entry.interest }}</td>
+                <td>¥{{ entry.remaining_balance }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<a href="/loans" class="btn" style="margin-top:1rem">← 返回贷款列表</a>
+{% endblock %}

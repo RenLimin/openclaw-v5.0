@@ -1,0 +1,33 @@
+id: task-20260908-l4-personal-health
+name: L4个人健康管理系统建设
+status: pending
+dependencies: [task-20260908-l3-health]
+priority: high
+created_at: 2026-09-08T15:59:00+08:00
+updated_at: 2026-09-08T15:59:00+08:00
+owner: main-agent
+
+scope:
+  project: personal-health
+  component: system
+  version: v1.0
+
+goals:
+  - id: g1
+    description: L4 个人健康组件设计 + ADR/DESIGN
+    status: pending
+  - id: g2
+    description: 实现CLI工具 + 数据模型
+    status: pending
+  - id: g3
+    description: 验证 + 提交
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/architecture/components/health-management/DESIGN.md
+
+artifacts: []
