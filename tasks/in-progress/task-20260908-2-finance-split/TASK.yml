@@ -1,0 +1,49 @@
+id: task-20260908-2-finance-split
+name: L3/L4理财引擎分层收尾
+status: done
+priority: high
+created_at: 2026-09-08T17:06:00+08:00
+updated_at: 2026-09-08T17:08:00+08:00
+owner: subagent
+
+scope:
+  project: personal-finance
+  component: finance-engine
+  version: v1.0
+
+goals:
+  - id: g1
+    description: 修复L4测试文件sys.path指向L3
+    status: done
+  - id: g2
+    description: 验证L3/L4分层契约
+    status: done
+  - id: g3
+    description: 跑通全量测试
+    status: done
+  - id: g4
+    description: 提交修改
+    status: done
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/knowledge-base/by-category/project-experience/adr/ADR-202609-026-personal-finance-framework-L3.md
+
+artifacts:
+  - name: 修复后的测试文件
+    path: L4-proprietary/components/fin-l4/engine/tests/
+    status: done
+  - name: L3 README（已有，无需修改）
+    path: L3-business/components/finance-engine/README.md
+    status: done
+
+results:
+  test_count: 145
+  test_passed: 145
+  layer_check: "L3 零 L4 依赖，L4 → L3 单向依赖，符合分层契约"
+  changes:
+    - "清理 fin001~fin006 测试文件中冗余的 sys.path.insert(0, '..') 残留"
+    - "保留统一的 L3 finance-engine 路径注入"
