@@ -1,0 +1,133 @@
+# 各运行时部署映射
+# 将 system-assets.yaml 中的资产映射到目标运行时的原生路径
+# 最后更新: 2026-09-07
+
+version: "1.0"
+
+# ===== OpenClaw 部署映射 =====
+openclaw:
+  description: "OpenClaw 运行时的资产部署映射"
+  
+  # Skills → OpenClaw skills 目录
+  skills:
+    source_base: "L3-business/skills/"  # 通用业务 skills
+    dest_base: "skills/"                # OpenClaw workspace skills 目录
+    install_method: "symlink"           # symlink / copy / config-reference
+    items:
+      - contract-approval/              # 销售合同审批 skill
+      # 更多 skill...
+
+  # 工作区配置文件
+  workspace_files:
+    source_base: "./"
+    dest_base: "~/.openclaw/workspace/"
+    items:
+      - source: "AGENTS.md"
+        dest: "AGENTS.md"
+        method: "copy"                  # 首次安装复制，后续不覆盖
+      - source: "SOUL.md"
+        dest: "SOUL.md"
+        method: "copy"
+      - source: "IDENTITY.md"
+        dest: "IDENTITY.md"
+        method: "copy"
+      - source: "USER.md"
+        dest: "USER.md"
+        method: "copy"
+      - source: "MEMORY.md"
+        dest: "MEMORY.md"
+        method: "copy_if_not_exists"    # 记忆文件不覆盖已有
+
+  # 文档 → 工作区 docs 目录
+  docs:
+    source_base: "docs/"
+    dest_base: "~/.openclaw/workspace/docs/"
+    method: "symlink"
+
+  # L2 脚本 → OpenClaw 脚本目录
+  scripts:
+    source_base: "L2-infra/scripts/"
+    dest_base: "~/.openclaw/workspace/scripts/"
+    method: "symlink"
+
+  # 配置项 → openclaw.json
+  config_patches:
+    description: "安装时应用到 openclaw.json 的配置补丁"
+    items:
+      # 注意：实际值由安装时动态生成，此处仅声明 key
+      - path: "agents.defaults.autoCompaction.enabled"
+        value: true
+        protected: true                 # 通过保护通道写入
+      - path: "agents.defaults.sandbox.mode"
+        value: "docker"
+        protected: true
+      - path: "tools.profile"
+        value: "coding"
+        protected: false
+      # ... 更多配置项
+
+  # 凭据 → ~/.openclaw/secrets/
+  credentials:
+    dest_base: "~/.openclaw/secrets/"
+    method: "manual"                    # 凭据手动配置，L0 不自动写入
+    note: "L0 只验证目录存在，不写入凭据值（遵循 ADR-005）"
+
+  # 记忆 → OpenClaw memory 系统
+  memory:
+    source_base: "memory/"
+    dest: "openclaw-memory"
+    method: "import"                    # 导入到运行时记忆系统
+    note: "P0 不自动导入，由使用人按需手动导入"
+
+  # 调度任务 → OpenClaw cron
+  schedules:
+    method: "manual"
+    note: "P0 不自动创建 cron 任务，由使用人按需手动配置"
+
+  # 适配层路径
+  adapter:
+    path: "L1-runtime/adapters/openclaw/"
+    load_method: "import"               # Python import 加载
+
+# ===== Claude Code 部署映射（预留） =====
+claude-code:
+  description: "Claude Code 运行时的资产部署映射（📋 预留）"
+  status: "reserved"
+  
+  skills:
+    dest_base: "~/.claude/skills/"
+    method: "TBD"
+  
+  config:
+    dest: "~/.claude/config.json"
+    method: "TBD"
+  
+  adapter:
+    path: "L1-runtime/adapters/claude-code/"
+    status: "reserved"
+
+# ===== CrewAI 部署映射（预留） =====
+crewai:
+  description: "CrewAI 运行时的资产部署映射（📋 预留）"
+  status: "reserved"
+  
+  skills:
+    dest_base: "TBD"
+    method: "TBD"
+  
+  config:
+    dest: "TBD"
+    method: "TBD"
+  
+  adapter:
+    path: "L1-runtime/adapters/crewai/"
+    status: "reserved"
+
+# ===== 部署规则 =====
+deployment_rules:
+  - 所有配置写入走保护通道（dry-run → 写入 → validate → 读回）
+  - 凭据只引用不明文存储
+  - 记忆文件首次安装不覆盖已有
+  - 代码类资产用 symlink（方便更新）
+  - 配置类资产用 copy（避免意外修改源文件）
+  - 安装失败自动回滚到上一快照

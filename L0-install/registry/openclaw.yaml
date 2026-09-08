@@ -1,0 +1,153 @@
+# OpenClaw 运行时注册表
+# 对应 L1 适配层: L1-runtime/adapters/openclaw/
+
+meta:
+  name: openclaw
+  display_name: OpenClaw
+  official_docs_url: https://docs.openclaw.ai
+  version_constraint: ">=2026.7.0"
+  current_version: "2026.9.1"
+  platform_support:
+    - macos
+    - linux
+  license: MIT
+  category: full-platform   # full-platform / cli-first / framework
+
+capability_assessment:
+  # 对照 L1 十项最小能力契约
+  agent_loop:
+    status: native
+    mapping: "内置 agent loop + 模型路由，自动 prompt 组装与会话管理"
+    notes: "支持主会话 + subagent + cron 隔离会话"
+
+  tools:
+    status: native
+    mapping: "运行时工具系统，通过 ToolPolicy 控制可见工具集"
+    notes: "支持 built-in tools + plugin tools + skill tools，三态治理(denied/allowed-but-broken/allowed-and-working)"
+
+  memory:
+    status: native
+    mapping: "运行时记忆系统（memory_get / memory_search），支持语义检索"
+    notes: "本地 GGUF embedding 零成本/零外发；557+ chunks 索引"
+
+  schedule:
+    status: native
+    mapping: "运行时调度器，支持 cron / every / event 三种调度"
+    notes: "Gateway automation；支持 isolated / main 两种目标会话"
+
+  channel:
+    status: native
+    mapping: "运行时通道系统，多 channel 接入"
+    notes: "当前：wecom + webchat + openclaw-weixin；可扩展其他 channel"
+
+  config:
+    status: native
+    mapping: "运行时配置系统（openclaw.json），结构化配置 + 加密引用"
+    notes: "支持 config get/set/patch/validate；SecretRef 自动脱敏"
+
+  credential:
+    status: native
+    mapping: "运行时凭据系统（SecretRef），集中式安全存储"
+    notes: "支持 env/file/exec 三种 provider；支持 add/rotate/revoke/audit 生命周期"
+
+  sandbox:
+    status: native
+    mapping: "运行时沙箱（Docker 后端），非主会话隔离"
+    notes: "colima + 自定义镜像；workspaceAccess=ro / readOnlyRoot / network:none / capDrop:ALL"
+
+  context:
+    status: native
+    mapping: "运行时上下文系统，自动压缩 + 溢出防护状态机"
+    notes: "Auto-compaction + mid-turn precheck；NORMAL→WARN→DIVERT→HARD_LIMIT→RECOVERED"
+
+  health:
+    status: native
+    mapping: "运行时自检（openclaw doctor）+ 行为探针"
+    notes: "全面健康状态报告；记忆检索/模型调度/配置等组件级监控"
+
+installation:
+  install_command: "npm install -g openclaw"
+  install_method: npm_global
+  dependencies:
+    - name: node
+      version_constraint: ">=20"
+      check_command: "node --version"
+    - name: npm
+      version_constraint: ">=9"
+      check_command: "npm --version"
+  optional_dependencies:
+    - name: docker
+      version_constraint: ">=20"
+      check_command: "docker --version"
+      description: "沙箱隔离需要（可选，无 Docker 则降级为本地执行）"
+    - name: git
+      version_constraint: ">=2.30"
+      check_command: "git --version"
+      description: "知识库和备份需要"
+  post_install:
+    - "openclaw --version"
+    - "openclaw doctor"
+
+ecosystem:
+  skills:
+    bundled: 50        # OpenClaw 内置 skills
+    custodian: 4       # 托管 skills
+    extra: 22          # 插件附带 skills
+    managed: 25        # 已安装的托管 skills
+    total_available: 101
+    hub_url: "https://clawhub.openclaw.ai"
+
+  plugins:
+    bundled: 59        # 内置插件（多为 model provider）
+    global_installed: 5  # 主动安装的全局插件
+    global_installed_list:
+      - llama-cpp          # model-provider: llama-cpp
+      - openclaw-weixin    # channel: openclaw-weixin
+      - tavily             # web-search: tavily + tools: tavily_search/tavily_extract
+      - wecom-openclaw-plugin  # channel: wecom + tools: wecom_mcp
+      - xai                # web-search: grok + model-provider: xai + tools: x_search
+
+  channels:
+    - webchat           # 内置 Web 聊天界面
+    - wecom             # 企业微信（插件）
+    - openclaw-weixin   # 微信公众号（插件）
+    # 可扩展: discord / slack / telegram 等
+
+  model_providers:
+    # 内置 20 个 model provider（按需激活）
+    - anthropic
+    - clawrouter
+    - copilot-proxy
+    - fal
+    - github-copilot
+    - google
+    - huggingface
+    - litellm
+    - lmstudio
+    - microsoft-foundry
+    - minimax
+    - nvidia
+    - ollama
+    - openai
+    - opencode-go
+    - openrouter
+    - sglang
+    - together
+    - vllm
+    - xai
+
+adapter:
+  path: L1-runtime/adapters/openclaw/
+  status: ready
+  files:
+    - adapter.py     # L1 抽象接口实现
+    - config.py      # 配置映射
+    - health.py      # 健康检查
+  version: "1.0"
+
+known_limitations:
+  - "升级跟随官方版本，breaking changes 不可控（需走 ADR）"
+  - "沙箱依赖 Docker/Colima，无 Docker 环境下降级为本地执行"
+  - "部分插件能力声明与实际可用不一致（allowed-but-broken 态，需审计）"
+  - "Windows 支持不如 macOS/Linux 完善"
+  - "记忆语义检索依赖本地 embedding 模型，跨语言效果有差异"
