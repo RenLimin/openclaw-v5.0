@@ -12,7 +12,7 @@ component_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(component_root / "scripts"))
 from orchestrator.scheduler import Task
 
-import openclaw
+# 工具已经注入到运行时上下文，不需要导入模块
 from openclaw.tools import sessions_spawn
 
 class OpenClawTaskSpawner:
