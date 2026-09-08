@@ -3,8 +3,8 @@
     "coding-plan": {
       "health": {
         "status": "healthy",
-        "latency_ms": 367,
-        "last_checked": "2026-09-08T06:02:12.490313+00:00",
+        "latency_ms": 439,
+        "last_checked": "2026-09-08T07:02:12.578518+00:00",
         "models": {
           "doubao-seed-2-1-turbo": {
             "status": "available",
@@ -24,8 +24,8 @@
     "longCat": {
       "health": {
         "status": "healthy",
-        "latency_ms": 126,
-        "last_checked": "2026-09-08T06:02:17.548028+00:00",
+        "latency_ms": 154,
+        "last_checked": "2026-09-08T07:02:20.226004+00:00",
         "models": {
           "LongCat-2.0": {
             "status": "unavailable",
@@ -37,17 +37,18 @@
     },
     "model-scheduling": {
       "health": {
-        "status": "healthy",
-        "latency_ms": 2,
-        "last_checked": "2026-09-08T06:02:17.726628+00:00"
+        "status": "unreachable",
+        "latency_ms": 10001,
+        "error": "timed out",
+        "last_checked": "2026-09-08T07:02:30.448843+00:00"
       }
     },
     "llama-cpp": {
       "health": {
         "status": "unreachable",
-        "latency_ms": 0,
+        "latency_ms": 1,
         "error": "<urlopen error [Errno 61] Connection refused>",
-        "last_checked": "2026-09-08T06:02:17.727669+00:00",
+        "last_checked": "2026-09-08T07:02:30.450080+00:00",
         "models": {
           "gemma-4-e4b-it-q4_k_m": {
             "status": "unreachable",
@@ -61,5 +62,5 @@
       }
     }
   },
-  "last_health_check": "2026-09-08T06:02:17.729072+00:00"
+  "last_health_check": "2026-09-08T07:02:30.451401+00:00"
 }
