@@ -13,8 +13,9 @@ from dataclasses import dataclass
 from typing import List, Dict, Optional, Callable, Any, Tuple
 from pathlib import Path
 
-# 导入当前组件工具
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# 导入 session-isolation 工具
+# utils.py is at /Users/bangcle/.openclaw/workspace/L2-infra/components/session-isolation/scripts/utils.py
+sys.path.insert(0, '/Users/bangcle/.openclaw/workspace/L2-infra/components/session-isolation/scripts')
 from utils import get_task_path, IN_PROGRESS
 
 @dataclass
@@ -78,11 +79,11 @@ class TaskScheduler:
         task_loader: Optional[Callable[[str], Task]] = None,
     ):
         """
-        :param tasks_dir: 待办任务目录 (tasks/in-progress)
+        :param tasks_dir: 待办任务目录 relative to tasks/ (default: in-progress)
         :param default_start_interval_sec: 可并行任务启动间隔，默认 10s (避免 burst 限流)
         :param task_loader: 可选自定义任务加载器
         """
-        self.tasks_dir = tasks_dir
+        self.tasks_dir = os.path.join("tasks", tasks_dir)
         self.default_start_interval_sec = default_start_interval_sec
         self.task_loader = task_loader if task_loader else self._default_task_loader
 

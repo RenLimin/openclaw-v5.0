@@ -9,11 +9,11 @@ import argparse
 import sys
 from pathlib import Path
 
-# 添加当前组件路径
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# 添加当前组件根路径
+root_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(root_dir))
 
 from scripts.orchestrator.scheduler import TaskScheduler
-from adapters.openclaw.spawner import OpenClawTaskSpawner
 
 def main():
     parser = argparse.ArgumentParser(description="Run task scheduler for pending tasks")
@@ -30,6 +30,7 @@ def main():
         print("=== DRY RUN MODE ===")
         stats = scheduler.run(lambda t: True, dry_run=True)
     else:
+        from adapters.openclaw.spawner import OpenClawTaskSpawner
         # 创建 OpenClaw spawner
         spawner = OpenClawTaskSpawner(
             default_model=args.model,
