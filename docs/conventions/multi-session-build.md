@@ -62,6 +62,7 @@ cp tasks/_templates/TASK.yml tasks/in-progress/task-YYYYMMDD-NNN/TASK.yml
 
 子会话收到任务后，按顺序执行：
 
+0. **读全局开发规范**：`docs/conventions/dev-standards.md`（三查 + 六问，所有开发设计强制）
 1. **读架构**：`docs/architecture/00-system-architecture.md`
    - 确认任务所属层级（L2/L3/L4）和分层依赖方向
    - 确认任务对应组件是否有 DESIGN.md / ADR，有则先读
@@ -136,6 +137,7 @@ cp tasks/_templates/TASK.yml tasks/in-progress/task-YYYYMMDD-NNN/TASK.yml
 ## 相关文档
 
 - 系统架构：`docs/architecture/00-system-architecture.md`
+- 全局开发规范：`docs/conventions/dev-standards.md`（三查 + 六问，所有开发强制）
 - 会话隔离组件：`L2-infra/components/session-isolation/DESIGN.md`（含 ADR-202609-024）
 - 任务模板：`tasks/_templates/TASK.yml`
 - 提交流程：`docs/conventions/commit-and-config.md`
