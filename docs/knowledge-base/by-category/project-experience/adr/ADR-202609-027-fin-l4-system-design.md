@@ -1,7 +1,6 @@
 ---
 id: ADR-202609-027
 title: "FIN-L4 家庭理财管理系统 — 架构决策"
-layers: L4
 layers:
   - L4
 tags:

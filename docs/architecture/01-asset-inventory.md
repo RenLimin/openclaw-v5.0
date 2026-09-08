@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-08 17:29 UTC+08:00
+最后生成：2026-09-09 04:09 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -57,6 +57,8 @@
 | `main` | 🦞 main | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-coding` | 🦞 ms-coding | `coding-plan/doubao-seed-code-preview-251028` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-research` | 🦞 ms-research | `coding-plan/doubao-seed-2-1-turbo` | `/Users/bangcle/.openclaw/workspace` | — |
+| `ms-reasoning` | 🦞 ms-reasoning | `coding-plan/deepseek-v4-flash` | `/Users/bangcle/.openclaw/workspace` | — |
+| `ms-chat` | 🦞 ms-chat | `coding-plan/doubao-seed-2.0-lite` | `/Users/bangcle/.openclaw/workspace` | — |
 
 ## L2 — 工具策略资产
 
@@ -101,8 +103,8 @@
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
 | Heartbeat (main) | ✅ | 每 1800s | `main` |
-| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 每日观测摘要投递 | ✅ | cron `50 23 * * *` | `isolated` |
@@ -113,7 +115,7 @@
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 29 |
+| ADR（架构决策记录） | 30 |
 | EXP（经验卡片） | 21 |
 | 模板 | 4 |
 
@@ -149,6 +151,7 @@
 | [`ADR-202609-025-delivery-management-framework`](../knowledge-base/by-category/project-experience/adr/ADR-202609-025-delivery-management-framework.md) | accepted |
 | [`ADR-202609-026-personal-finance-framework-L3`](../knowledge-base/by-category/project-experience/adr/ADR-202609-026-personal-finance-framework-L3.md) | accepted |
 | [`ADR-202609-027-fin-l4-system-design`](../knowledge-base/by-category/project-experience/adr/ADR-202609-027-fin-l4-system-design.md) | accepted |
+| [`ADR-202609-028-l0-installation-layer`](../knowledge-base/by-category/project-experience/adr/ADR-202609-028-l0-installation-layer.md) | proposed |
 | [`ADR-202609-029-l3-office-business-dimension`](../knowledge-base/by-category/project-experience/adr/ADR-202609-029-l3-office-business-dimension.md) | proposed |
 
 ### 经验卡片清单
@@ -182,8 +185,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `116ff7da` |
-| Commit 数 | 272 |
+| HEAD | `084a60da` |
+| Commit 数 | 273 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
