@@ -182,8 +182,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `e685b7ba` |
-| Commit 数 | 270 |
+| HEAD | `8d66541c` |
+| Commit 数 | 271 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
