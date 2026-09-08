@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}保单详情 - FIN-L4{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">🛡️ {{ policy.product_name }}</h1>
+
+<div class="grid grid-2" style="margin-bottom: 1.5rem;">
+    <div class="card">
+        <div class="card-title">保单信息</div>
+        <table style="width:100%">
+            <tr><td>保单号</td><td style="text-align:right">{{ policy.policy_number }}</td></tr>
+            <tr><td>险种</td><td style="text-align:right">{{ policy.policy_type }}</td></tr>
+            <tr><td>年缴保费</td><td style="text-align:right;font-weight:bold">¥{{ policy.annual_premium }}</td></tr>
+            <tr><td>保额</td><td style="text-align:right;font-weight:bold">¥{{ policy.sum_assured }}</td></tr>
+            <tr><td>生效日期</td><td style="text-align:right">{{ policy.start_date }}</td></tr>
+            <tr><td>状态</td><td style="text-align:right">
+                {% if policy.status == 'active' %}<span class="badge badge-green">有效</span>
+                {% else %}<span class="badge">{{ policy.status }}</span>{% endif %}
+            </td></tr>
+        </table>
+    </div>
+    <div class="card">
+        <div class="card-title">保障缺口分析</div>
+        {% if coverage_gap %}
+        <table style="width:100%">
+            <tr><td>当前保额</td><td style="text-align:right">¥{{ coverage_gap.current }}</td></tr>
+            <tr><td>建议保额</td><td style="text-align:right">¥{{ coverage_gap.recommended }}</td></tr>
+            <tr><td>缺口</td><td style="text-align:right;color:red;font-weight:bold">¥{{ coverage_gap.gap }}</td></tr>
+        </table>
+        {% else %}
+        <p style="color:var(--text-muted)">暂无缺口数据</p>
+        {% endif %}
+    </div>
+</div>
+
+{% if policy.status == 'active' %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">退保</div>
+    <p style="color:var(--text-muted);margin-bottom:1rem">退保将返还现金价值，保单终止。</p>
+    <form action="/insurance/{{ policy.id }}/surrender" method="post" style="display:inline">
+        <button type="submit" class="btn btn-danger" onclick="return confirm('确定退保？此操作不可逆。')">退保</button>
+    </form>
+    {% if surrender_value is not none %}
+    <div style="margin-top:1rem;padding:1rem;background:#fff3e0;border-radius:4px;">
+        💰 退保现金价值: <strong>¥{{ surrender_value }}</strong>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{% if cash_value_table %}
+<div class="card">
+    <div class="card-title">现金价值表</div>
+    <table style="width:100%">
+        <thead><tr><th>年度</th><th>现金价值</th><th>累计保费</th><th>净收益</th></tr></thead>
+        <tbody>
+        {% for row in cash_value_table %}
+            <tr>
+                <td>第 {{ row.year }} 年</td>
+                <td>¥{{ row.cash_value }}</td>
+                <td>¥{{ row.cumulative_premium }}</td>
+                <td>¥{{ row.net_gain }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+<a href="/insurance" class="btn" style="margin-top:1rem">← 返回保单列表</a>
+{% endblock %}

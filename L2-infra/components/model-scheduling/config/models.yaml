@@ -5,24 +5,11 @@
 # status: active | disabled | exhausted
 # tags: coding | reasoning | cheap | fast | image | embedding
 #
-# 生成时间: 2026-08-24T21:50:15+0800
-# 模型总数: 10
+# 生成时间: 2026-09-09T07:56:52+0800
+# 模型总数: 7
 
 models:
   # Provider: coding-plan
-  - id: "coding-plan/ark-code-latest"
-    provider: "coding-plan"
-    model_id: "ark-code-latest"
-    name: "ark-code-latest"
-    context_window: 229376
-    max_tokens: 8192
-    input_types: ["text"]
-    reasoning: false
-    cost_input: 0
-    cost_output: 0
-    status: "active"
-    tags: []
-
   - id: "coding-plan/doubao-seed-2-1-turbo"
     provider: "coding-plan"
     model_id: "doubao-seed-2-1-turbo"
@@ -36,90 +23,25 @@ models:
     status: "active"
     tags: []
 
-  - id: "coding-plan/doubao-seed-2.0-lite"
+  - id: "coding-plan/doubao-seed-2-0-lite-260215"
     provider: "coding-plan"
-    model_id: "doubao-seed-2.0-lite"
-    name: "doubao-seed-2.0-lite"
+    model_id: "doubao-seed-2-0-lite-260215"
+    name: "doubao-seed-2-0-lite"
     context_window: 262144
     max_tokens: 131072
-    input_types: ["text", "image", "video", "audio"]
+    input_types: ["text", "image", "video"]
     reasoning: false
     cost_input: 0
     cost_output: 0
     status: "active"
     tags: []
 
-  - id: "coding-plan/glm-5.3"
+  - id: "coding-plan/doubao-seed-code-preview-251028"
     provider: "coding-plan"
-    model_id: "glm-5.3"
-    name: "glm-5.3"
-    context_window: 1048576
-    max_tokens: 131072
-    input_types: ["text"]
-    reasoning: false
-    cost_input: 0
-    cost_output: 0
-    status: "active"
-    tags: []
-
-  - id: "coding-plan/deepseek-v4-flash"
-    provider: "coding-plan"
-    model_id: "deepseek-v4-flash"
-    name: "deepseek-v4-flash"
-    context_window: 1048576
-    max_tokens: 393216
-    input_types: ["text"]
-    reasoning: false
-    cost_input: 0
-    cost_output: 0
-    status: "active"
-    tags: []
-
-  - id: "coding-plan/glm-5.2"
-    provider: "coding-plan"
-    model_id: "glm-5.2"
-    name: "glm-5.2"
-    context_window: 1048576
-    max_tokens: 131072
-    input_types: ["text"]
-    reasoning: false
-    cost_input: 0
-    cost_output: 0
-    status: "active"
-    tags: []
-
-  - id: "coding-plan/kimi-k2.7-code"
-    provider: "coding-plan"
-    model_id: "kimi-k2.7-code"
-    name: "kimi-k2.7-code"
+    model_id: "doubao-seed-code-preview-251028"
+    name: "doubao-seed-code"
     context_window: 262144
-    max_tokens: 262144
-    input_types: ["text"]
-    reasoning: false
-    cost_input: 0
-    cost_output: 0
-    status: "active"
-    tags: []
-
-  - id: "coding-plan/minimax-m3"
-    provider: "coding-plan"
-    model_id: "minimax-m3"
-    name: "minimax-m3"
-    context_window: 1048576
     max_tokens: 131072
-    input_types: ["text"]
-    reasoning: false
-    cost_input: 0
-    cost_output: 0
-    status: "active"
-    tags: []
-
-  - id: "coding-plan/deepseek-v4-pro"
-    provider: "coding-plan"
-    model_id: "deepseek-v4-pro"
-    name: "deepseek-v4-pro"
-    context_window: 1048576
-    max_tokens: 393216
     input_types: ["text"]
     reasoning: false
     cost_input: 0
@@ -136,7 +58,48 @@ models:
     max_tokens: 131072
     input_types: ["text"]
     reasoning: false
+    cost_input: 0.75
+    cost_output: 2.95
+    status: "active"
+    tags: []
+
+  # Provider: model-scheduling
+  - id: "model-scheduling/auto"
+    provider: "model-scheduling"
+    model_id: "auto"
+    name: "Auto (智能调度)"
+    context_window: 229376
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
     cost_input: 0
     cost_output: 0
-    status: "disabled"
+    status: "active"
+    tags: []
+
+  # Provider: llama-cpp
+  - id: "llama-cpp/gemma-4-e4b-it-q4_k_m"
+    provider: "llama-cpp"
+    model_id: "gemma-4-e4b-it-q4_k_m"
+    name: "Gemma 4 E4B (Q4_K_M)"
+    context_window: 512
+    max_tokens: 1
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "llama-cpp/embeddinggemma-300m-qat-q8_0"
+    provider: "llama-cpp"
+    model_id: "embeddinggemma-300m-qat-q8_0"
+    name: "Gemma Embedding 300M (Q8_0)"
+    context_window: 512
+    max_tokens: 1
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
     tags: []

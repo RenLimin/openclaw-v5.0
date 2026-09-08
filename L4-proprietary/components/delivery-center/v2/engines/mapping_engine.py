@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 
-CONFIG_DIR = Path(__file__).parent.parent.parent / "delivery_center" / "config"
+CONFIG_DIR = Path(__file__).parent.parent.parent / "v1" / "config"
 
 
 def load_pm_dept_map() -> dict:

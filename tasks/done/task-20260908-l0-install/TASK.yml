@@ -1,0 +1,32 @@
+id: task-20260908-l0-install
+name: L0安装层一键部署
+status: pending
+dependencies: []
+priority: high
+created_at: 2026-09-08T15:54:00+08:00
+updated_at: 2026-09-08T15:54:00+08:00
+owner: main-agent
+
+scope:
+  project: openclaw-v5
+  component: l0-bootstrap
+  version: v1.0
+
+goals:
+  - id: g1
+    description: 创建 L0 安装层设计文档/DESIGN.md + ADR
+    status: pending
+  - id: g2
+    description: 编写一键部署脚本 + 环境检查
+    status: pending
+  - id: g3
+    description: 测试验证 + 提交
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+
+artifacts: []

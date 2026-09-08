@@ -2,6 +2,7 @@
 FIN-L4-PF01 Rex 家庭理财系统 — 集成测试
 """
 import sys, os
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '../../../../../../L3-business/components/finance-engine')))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from decimal import Decimal

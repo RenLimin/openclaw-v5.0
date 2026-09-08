@@ -1,0 +1,50 @@
+id: task-20260908-6-l0-install
+name: L0安装层一键部署
+status: in-progress
+priority: high
+created_at: 2026-09-08T17:10:00+08:00
+updated_at: 2026-09-08T17:10:00+08:00
+owner: subagent
+
+scope:
+  project: openclaw-core
+  component: L0-install
+  version: v1.0
+
+goals:
+  - id: g1
+    description: 设计L0安装层架构，撰写DESIGN.md和ADR
+    status: in-progress
+  - id: g2
+    description: 实现六步流水线：env_probe → select → install → init_adapter → verify → snapshot
+    status: pending
+  - id: g3
+    description: 实现四模块架构：registry + installer + contract + manifest
+    status: pending
+  - id: g4
+    description: 契约测试10/10 pass
+    status: pending
+  - id: g5
+    description: dry-run全流程验证
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/conventions/multi-session-build.md
+
+artifacts:
+  - name: L0 DESIGN.md
+    path: docs/architecture/components/l0-install/DESIGN.md
+    status: pending
+  - name: L0 ADR
+    path: docs/knowledge-base/by-category/project-experience/adr/ADR-202609-028-l0-installation-layer.md
+    status: pending
+  - name: install.sh主入口
+    path: L0-install/install.sh
+    status: pending
+  - name: 契约测试
+    path: L0-install/tests/test_contract.py
+    status: pending

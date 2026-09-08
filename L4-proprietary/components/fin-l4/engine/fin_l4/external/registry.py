@@ -1,5 +1,3 @@
-import sys, os
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
 
 """数据源注册表 — 注册所有数据源到 DataSourceRegistry
 
@@ -8,7 +6,6 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from fin_l4.external.base import DataSourceRegistry
 from fin_l4.external.rate_source import RateSource

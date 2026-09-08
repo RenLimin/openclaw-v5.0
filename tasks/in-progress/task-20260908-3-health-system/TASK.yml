@@ -1,0 +1,47 @@
+id: task-20260908-3-health-system
+name: 健康管理系统L3+L4建设
+status: in-progress
+priority: high
+created_at: 2026-09-08T17:07:00+08:00
+updated_at: 2026-09-08T17:07:00+08:00
+owner: subagent
+
+scope:
+  project: personal-health
+  component: health-management
+  version: v1.0
+
+goals:
+  - id: g1
+    description: 设计L3通用健康管理组件架构，撰写DESIGN.md
+    status: in-progress
+  - id: g2
+    description: 实现L3通用健康维度核心能力
+    status: pending
+  - id: g3
+    description: L4个人健康管理实例落地
+    status: pending
+  - id: g4
+    description: 测试验证
+    status: pending
+  - id: g5
+    description: 文档入库
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/conventions/multi-session-build.md
+
+artifacts:
+  - name: L3健康管理设计文档
+    path: docs/architecture/components/personal-health-management/DESIGN.md
+    status: pending
+  - name: L3通用组件代码
+    path: L3-business/components/health-management/
+    status: pending
+  - name: L4个人健康实例
+    path: L4-proprietary/components/personal-health/
+    status: pending

@@ -1,11 +1,8 @@
-import sys, os
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../../../../../../L3-business/components/finance-engine")))
 
 """利率数据源 — 基于 FIN-004 引擎"""
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from fin_l4.external.base import DataSource, DataSnapshot
 from decimal import Decimal

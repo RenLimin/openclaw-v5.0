@@ -1,0 +1,30 @@
+id: task-20260908-cissp-l3
+name: 补全CISSP L3 security-engineering维度知识库
+status: pending
+dependencies: []
+priority: high
+created_at: 2026-09-08T15:56:00+08:00
+updated_at: 2026-09-08T15:56:00+08:00
+owner: main-agent
+
+scope:
+  project: generic-business
+  component: security-engineering
+  version: v1.0
+
+goals:
+  - id: g1
+    description: 按规范补全8个CBK域知识库 + 角色模板
+    status: pending
+  - id: g2
+    description: 验证知识库索引 + 提交
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/architecture/02-generic-business-layer.md
+
+artifacts: []

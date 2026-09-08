@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}贷款管理 - FIN-L4{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">贷款管理</h1>
+{% if loans %}
+<table class="table">
+    <thead><tr><th>名称</th><th>本金</th><th>利率</th><th>期限</th><th>状态</th></tr></thead>
+    <tbody>
+    {% for loan in loans %}
+    <tr>
+        <td><a href="/loans/{{ loan.id }}">{{ loan.name }}</a></td>
+        
+        <td>¥{{ loan.principal }}</td>
+        <td>{{ loan.annual_rate }}%</td>
+        <td>{{ loan.term_months }}期</td>
+        <td>{{ loan.status }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="card">
+    <div class="card-title">暂无贷款</div>
+    <p style="color: var(--text-muted);">还没有创建贷款记录。</p>
+</div>
+{% endif %}
+{% endblock %}

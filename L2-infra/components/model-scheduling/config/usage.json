@@ -2,53 +2,53 @@
   "providers": {
     "coding-plan": {
       "health": {
-        "status": "healthy",
-        "latency_ms": 439,
-        "last_checked": "2026-09-08T07:02:12.578518+00:00",
+        "status": "unreachable",
+        "latency_ms": 6,
+        "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>",
+        "last_checked": "2026-09-08T12:08:05.052359+00:00",
         "models": {
           "doubao-seed-2-1-turbo": {
-            "status": "available",
-            "http_code": 200
+            "status": "unreachable",
+            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
           },
           "doubao-seed-2-0-lite-260215": {
-            "status": "available",
-            "http_code": 200
+            "status": "unreachable",
+            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
           },
           "doubao-seed-code-preview-251028": {
-            "status": "available",
-            "http_code": 200
+            "status": "unreachable",
+            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
           }
         }
       }
     },
     "longCat": {
       "health": {
-        "status": "healthy",
-        "latency_ms": 154,
-        "last_checked": "2026-09-08T07:02:20.226004+00:00",
+        "status": "unreachable",
+        "latency_ms": 2,
+        "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>",
+        "last_checked": "2026-09-08T12:08:05.061715+00:00",
         "models": {
           "LongCat-2.0": {
-            "status": "unavailable",
-            "http_code": 402,
-            "error": "{\"error\":{\"code\":\"too_many_requests\",\"message\":\"Call failed: Insufficient token quota.\",\"type\":\"rate_limit_error\"}}"
+            "status": "unreachable",
+            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
           }
         }
       }
     },
     "model-scheduling": {
       "health": {
-        "status": "unreachable",
-        "latency_ms": 10001,
-        "error": "timed out",
-        "last_checked": "2026-09-08T07:02:30.448843+00:00"
+        "status": "healthy",
+        "latency_ms": 0,
+        "last_checked": "2026-09-08T12:08:05.066627+00:00"
       }
     },
     "llama-cpp": {
       "health": {
         "status": "unreachable",
-        "latency_ms": 1,
+        "latency_ms": 0,
         "error": "<urlopen error [Errno 61] Connection refused>",
-        "last_checked": "2026-09-08T07:02:30.450080+00:00",
+        "last_checked": "2026-09-08T12:08:05.066740+00:00",
         "models": {
           "gemma-4-e4b-it-q4_k_m": {
             "status": "unreachable",
@@ -62,5 +62,5 @@
       }
     }
   },
-  "last_health_check": "2026-09-08T07:02:30.451401+00:00"
+  "last_health_check": "2026-09-08T12:08:05.066891+00:00"
 }

@@ -7,6 +7,9 @@ L4 专有业务层实例：
 - 生成报表 + 理财建议
 """
 
+import sys, os
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '../../../../../L3-business/components/finance-engine')))
+
 from datetime import date, datetime
 from decimal import Decimal
 from dataclasses import dataclass, field

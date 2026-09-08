@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}保障缺口分析 - FIN-L4{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">🛡️ 保障缺口分析</h1>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-title">各险种保障情况</div>
+    <table style="width:100%">
+        <thead>
+            <tr><th>险种</th><th>当前保额</th><th>建议保额</th><th>缺口</th><th>状态</th></tr>
+        </thead>
+        <tbody>
+        {% for item in gaps %}
+            <tr>
+                <td>{{ item.type_name }}</td>
+                <td>¥{{ item.current }}</td>
+                <td>¥{{ item.recommended }}</td>
+                <td style="color:{% if item.gap == '0' %}green{% else %}red{% endif %};font-weight:bold">
+                    ¥{{ item.gap }}
+                </td>
+                <td>
+                    {% if item.gap == '0' %}
+                        <span class="badge badge-green">充足</span>
+                    {% else %}
+                        <span class="badge badge-red">不足</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <div class="card-title">总览</div>
+    <div class="grid grid-3">
+        <div style="text-align:center">
+            <div style="font-size:2rem;font-weight:bold">¥{{ total_current }}</div>
+            <div style="color:var(--text-muted)">总保额</div>
+        </div>
+        <div style="text-align:center">
+            <div style="font-size:2rem;font-weight:bold">¥{{ total_recommended }}</div>
+            <div style="color:var(--text-muted)">建议总额</div>
+        </div>
+        <div style="text-align:center">
+            <div style="font-size:2rem;font-weight:bold;color:red">¥{{ total_gap }}</div>
+            <div style="color:var(--text-muted)">总缺口</div>
+        </div>
+    </div>
+</div>
+
+<a href="/insurance" class="btn" style="margin-top:1rem">← 返回保单列表</a>
+{% endblock %}

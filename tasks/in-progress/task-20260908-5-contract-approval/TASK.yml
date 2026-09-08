@@ -1,0 +1,35 @@
+id: task-20260908-5-contract-approval
+name: Office合同审批工作流收尾
+status: in-progress
+priority: high
+created_at: 2026-09-08T17:09:00+08:00
+updated_at: 2026-09-08T17:09:00+08:00
+owner: subagent
+
+scope:
+  project: office-business
+  component: contract-approval
+  version: v1.0
+
+goals:
+  - id: g1
+    description: 验证现有产出完整
+    status: in-progress
+  - id: g2
+    description: 补全缺失文档（如果有）
+    status: pending
+  - id: g3
+    description: 更新任务卡状态为done，归档
+    status: pending
+
+blockers: []
+
+context:
+  - path: docs/architecture/00-system-architecture.md
+  - path: docs/conventions/dev-standards.md
+  - path: docs/architecture/components/contract-approval/DESIGN.md
+
+artifacts:
+  - name: 任务归档
+    path: tasks/in-progress/ → done/
+    status: pending
