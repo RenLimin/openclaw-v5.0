@@ -33,7 +33,7 @@ delivery_result = subprocess.run(
     [
         "openclaw", "message", "send",
         "--channel", "wecom",
-        "--target", "user:1313",
+        "--target", "1313",
         "--message", summary
     ],
     capture_output=False,
