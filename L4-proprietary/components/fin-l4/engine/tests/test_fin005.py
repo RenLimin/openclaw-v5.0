@@ -4,8 +4,6 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../
 """
 FIN-005 投资持仓核算测试
 """
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from decimal import Decimal
 from fin005_portfolio import PortfolioEngine, AssetType, RiskLevel

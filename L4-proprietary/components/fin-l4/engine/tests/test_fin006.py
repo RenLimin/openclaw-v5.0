@@ -4,8 +4,6 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../
 """
 FIN-006 理财建议引擎测试
 """
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from decimal import Decimal
 from fin006_advisor import (

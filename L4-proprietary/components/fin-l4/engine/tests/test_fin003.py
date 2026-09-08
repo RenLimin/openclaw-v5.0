@@ -4,8 +4,6 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), "../
 """
 FIN-003 保险产品核算测试
 """
-import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from decimal import Decimal
 from datetime import date
