@@ -1,0 +1,1 @@
+from .contractctl import main
