@@ -259,11 +259,6 @@ def build_sign_sheet_df(df_sign_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.D
     """构建签约 Sheet 完整 DataFrame（83 列）"""
     df = df_sign_raw.copy()
 
-    # 过滤条件：只保留立项日期 <= 报告月份最后一天（2026-06-30）
-    # 差异来源：ONES 导出在 2026-09 包含了 7-9 月新增数据，手工报表是截止 2026-06-30
-    df["_立项_date"] = pd.to_datetime(df["立项日期"].astype(str).str[:10], errors="coerce")
-    df = df[df["_立项_date"] <= pd.to_datetime(REPORT_DATE)]
-    df.drop(columns=["_立项_date"], inplace=True)
 
     # 列 41-44：简单计算列
     df = add_simple_computed_columns(df)
@@ -365,10 +360,6 @@ def build_poc_sheet_df(df_poc_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.Dat
     """构建 POC&提前实施 Sheet 完整 DataFrame（84 列）"""
     df = df_poc_raw.copy()
 
-    # 过滤条件：和签约一样，只保留立项日期 <= 报告月份最后一天（2026-06-30）
-    df["_立项_date"] = pd.to_datetime(df["立项日期"].astype(str).str[:10], errors="coerce")
-    df = df[df["_立项_date"] <= pd.to_datetime(REPORT_DATE)]
-    df.drop(columns=["_立项_date"], inplace=True)
 
     # 列 41-44：简单计算列
     df = add_simple_computed_columns(df)

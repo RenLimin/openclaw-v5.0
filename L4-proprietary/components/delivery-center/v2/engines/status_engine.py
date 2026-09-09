@@ -112,10 +112,29 @@ def add_status_columns(df: pd.DataFrame, report_date: str) -> pd.DataFrame:
     df["履约项合计"] = df[status_list].sum(axis=1)
     df["校验"] = ""  # 保留列
 
+
+    # 状态值 → 带编号显示名的映射
+    STATUS_DISPLAY_MAP = {
+        "正常交付": "1：正常交付",
+        "应交未交": "2：应交未交",
+        "交付异常": "3：交付异常",
+        "正常验收": "4：正常验收",
+        "应验未验": "5：应验未验",
+        "验收异常": "6：验收异常",
+        "正常服务": "7：正常服务",
+        "应结未结": "8：应结未结",
+        "已结项": "9：已结项",
+    }
+
     # 列 55-67：项目统计状态 + 9 种履约统计状态
     df["项目统计状态"] = df["项目状态"]  # 保留列
-    df["履约项统计状态（即，财报-交付/确收状态）"] = df.apply(
+    # 先算纯文本状态（内部比对用）
+    df["_status_text"] = df.apply(
         lambda r: determine_status(r, report_date), axis=1
+    )
+    # 显示列带编号前缀（对齐参考报表格式）
+    df["履约项统计状态（即，财报-交付/确收状态）"] = df["_status_text"].map(
+        lambda s: STATUS_DISPLAY_MAP.get(s, s)
     )
 
     # 9 种状态标记列
@@ -131,13 +150,15 @@ def add_status_columns(df: pd.DataFrame, report_date: str) -> pd.DataFrame:
         ("9：已结项", "已结项"),
     ]
     for col_name, status_val in status_names:
-        df[col_name] = (df["履约项统计状态（即，财报-交付/确收状态）"] == status_val).astype(int)
+        df[col_name] = (df["_status_text"] == status_val).astype(int)
 
     df["统计校验"] = ""  # 保留列
     df["项目验收状态（即，财报-验收状态）"] = df.apply(
-        lambda r: "正常验收" if r["履约项统计状态（即，财报-交付/确收状态）"] in ["正常验收", "正常服务", "已结项"]
-        else "验收异常" if r["履约项统计状态（即，财报-交付/确收状态）"] == "验收异常"
+        lambda r: "正常验收" if r["_status_text"] in ["正常验收", "正常服务", "已结项"]
+        else "验收异常" if r["_status_text"] == "验收异常"
         else "未验收", axis=1
     )
+    # 清理临时列
+    df.drop(columns=["_status_text"], inplace=True)
 
     return df
