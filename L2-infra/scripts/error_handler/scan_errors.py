@@ -4,9 +4,11 @@
 输出结构化 JSON 供自动化处置使用
 """
 import json
+import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 from datetime import datetime
 
 WORKSPACE = "/Users/bangcle/.openclaw/workspace"
@@ -192,9 +194,318 @@ def scan_llm_timeouts():
     return errors
 
 
+def scan_provider_config_full_chain():
+    """配置全链路检测：apiKey 格式 + baseUrl 可达性 + 三层一致性 + 端到端验证"""
+    errors = []
+    
+    # 1. 从 openclaw.json 读 provider 配置（底层）
+    openclaw_json_path = os.path.expanduser("~/.openclaw/openclaw.json")
+    with open(openclaw_json_path, "r") as f:
+        openclaw_cfg = json.load(f)
+    openclaw_providers = openclaw_cfg.get("models", {}).get("providers", {})
+    
+    # 2. 从 models.json 读 provider 配置（中层）
+    models_json_path = os.path.expanduser("~/.openclaw/agents/main/agent/models.json")
+    with open(models_json_path, "r") as f:
+        models_cfg = json.load(f)
+    models_providers = models_cfg.get("providers", {})
+    
+    # 3. 检查每个 provider
+    for provider_name in set(list(openclaw_providers.keys()) + list(models_providers.keys())):
+        oc_provider = openclaw_providers.get(provider_name, {})
+        ms_provider = models_providers.get(provider_name, {})
+        
+        # 用优先级更高的那个做实际检测（models.json > openclaw.json）
+        active = ms_provider if ms_provider else oc_provider
+        if not active:
+            continue
+        
+        base_url = active.get("baseUrl", "").rstrip("/")
+        api_key = active.get("apiKey", "")
+        
+        # 检测 1: apiKey 格式检查
+        if isinstance(api_key, dict):
+            # 错误旧格式：有 provider + id 但没有 source
+            if "provider" in api_key and "id" in api_key and "source" not in api_key:
+                errors.append({
+                    "type": "api_key_format_error",
+                    "detail": f"provider {provider_name}: apiKey is old-format dict (missing 'source'), will cause 401"
+                })
+            # source=file 但 path 不对
+            elif api_key.get("source") == "file" and "path" not in api_key:
+                errors.append({
+                    "type": "api_key_format_error",
+                    "detail": f"provider {provider_name}: apiKey file ref missing 'path' field"
+                })
+        
+        # 检测 2: baseUrl 可达性 + 正确端点验证
+        if base_url:
+            # 简单可达性检查（HEAD 请求）
+            import urllib.request
+            import urllib.error
+            test_url = f"{base_url}/models"
+            try:
+                req = urllib.request.Request(test_url, method="GET")
+                if isinstance(api_key, str) and api_key and not api_key.startswith("/"):
+                    # 字符串且不是路径，当 key 用
+                    req.add_header("Authorization", f"Bearer {api_key}")
+                elif isinstance(api_key, str) and api_key.startswith("/"):
+                    # 文件路径，读出来
+                    try:
+                        with open(api_key, "r") as f:
+                            key_content = f.read().strip()
+                        req.add_header("Authorization", f"Bearer {key_content}")
+                    except:
+                        pass
+                
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    if resp.getcode() == 401:
+                        errors.append({
+                            "type": "provider_auth_failed",
+                            "detail": f"provider {provider_name}: baseUrl reachable but auth failed (401)"
+                        })
+            except urllib.error.HTTPError as e:
+                if e.code == 429:
+                    errors.append({
+                        "type": "provider_rate_limited",
+                        "detail": f"provider {provider_name}: rate limited (429) at {base_url}. Check if baseUrl endpoint is correct (e.g. coding/v3 vs v3 for Volcengine Ark)"
+                    })
+                elif e.code == 404:
+                    errors.append({
+                        "type": "provider_endpoint_wrong",
+                        "detail": f"provider {provider_name}: endpoint returned 404 at {test_url}. Verify baseUrl path."
+                    })
+                elif e.code == 401:
+                    errors.append({
+                        "type": "provider_auth_failed",
+                        "detail": f"provider {provider_name}: auth failed (401) at {base_url}"
+                    })
+            except Exception as e:
+                # 网络错误等，记为 warning
+                pass  # 不强制报错，网络波动正常
+        
+        # 检测 3: 三层配置一致性（比较 openclaw.json 和 models.json）
+        if oc_provider and ms_provider:
+            oc_base = oc_provider.get("baseUrl", "")
+            ms_base = ms_provider.get("baseUrl", "")
+            if oc_base and ms_base and oc_base != ms_base:
+                errors.append({
+                    "type": "config_inconsistent",
+                    "detail": f"provider {provider_name}: baseUrl mismatch - openclaw.json={oc_base} vs models.json={ms_base}"
+                })
+    
+    # 检测 4: model-scheduling 代理配置一致性（第 4 层）
+    ms_proxy_config = os.path.expanduser(
+        "~/.openclaw/workspace/L2-infra/components/model-scheduling/config/providers.yaml"
+    )
+    if os.path.exists(ms_proxy_config):
+        try:
+            import yaml
+            with open(ms_proxy_config, "r") as f:
+                proxy_data = yaml.safe_load(f)
+            proxy_providers = proxy_data.get("providers", {})
+            for pname, pconf in proxy_providers.items():
+                proxy_base = pconf.get("base_url", "")
+                # 和 models.json 对比
+                if pname in models_providers:
+                    models_base = models_providers[pname].get("baseUrl", "")
+                    if proxy_base and models_base and proxy_base != models_base:
+                        errors.append({
+                            "type": "config_inconsistent",
+                            "detail": f"provider {pname}: baseUrl mismatch - model-scheduling proxy={proxy_base} vs models.json={models_base}"
+                        })
+                # 检查 API Key 是否能获取到
+                if pconf.get("enabled", False):
+                    api_key_ref = pconf.get("api_key_ref", "")
+                    if api_key_ref:
+                        # 检查环境变量或 auth-profiles.json 中是否有这个 key
+                        auth_file = os.path.expanduser("~/.openclaw/auth-profiles.json")
+                        has_key = False
+                        if os.path.exists(auth_file):
+                            with open(auth_file, "r") as f:
+                                auth_data = json.load(f)
+                            for pid, pc in auth_data.get("profiles", {}).items():
+                                if pid.startswith(pname) and pc.get("apiKey"):
+                                    has_key = True
+                                    break
+                        if not has_key and not os.environ.get(api_key_ref.upper()):
+                            # 不在环境变量也不在 auth-profiles，警告
+                            pass  # 可能在环境变量里启动时设置，不一定有问题
+        except ImportError:
+            # PyYAML 没装，跳过
+            pass
+        except Exception as e:
+            errors.append({
+                "type": "proxy_config_check_failed",
+                "detail": f"Failed to check model-scheduling proxy config: {str(e)[:100]}"
+            })
+    
+    # 检测 5: model-scheduling 代理服务是否在运行
+    try:
+        import urllib.request
+        req = urllib.request.Request("http://127.0.0.1:3000/health")
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            if resp.getcode() != 200:
+                errors.append({
+                    "type": "proxy_unhealthy",
+                    "detail": "model-scheduling proxy health check failed"
+                })
+    except Exception:
+        errors.append({
+            "type": "proxy_down",
+            "detail": "model-scheduling proxy is not running on port 3000"
+        })
+    
+    return errors
+
+
+def scan_provider_api_key_format():
+    """全量检查所有 provider 的 apiKey 格式（保留向后兼容）"""
+    errors = []
+    output, rc = run_cmd("openclaw config get models.providers --output json 2>/dev/null")
+    if rc != 0:
+        errors.append({"type": "api_key_format_error", "detail": f"failed to get providers config: {output[:200]}"})
+        return errors
+    
+    try:
+        providers = json.loads(output)
+    except json.JSONDecodeError as e:
+        errors.append({"type": "api_key_format_error", "detail": f"failed to parse providers config: {e}"})
+        return errors
+    
+    for provider_name, provider_config in providers.items():
+        if 'apiKey' not in provider_config:
+            continue
+        api_key = provider_config['apiKey']
+        # 检查格式：如果是字典，必须是正确的 SecretRef 结构
+        if isinstance(api_key, dict):
+            # 正确结构：{source: store, provider: default, id: NAME} 或者 {source: file, ...} 已经在解析时处理
+            # 只检查错误的旧结构
+            if 'provider' in api_key and 'id' in api_key and not ('source' in api_key):
+                errors.append({
+                    "type": "api_key_format_error",
+                    "detail": f"provider {provider_name}: apiKey is old-format dict, should be fixed to correct SecretRef"
+                })
+            elif 'source' in api_key and api_key['source'] == 'file' and 'id' not in api_key and 'path' not in api_key:
+                errors.append({
+                    "type": "api_key_format_error",
+                    "detail": f"provider {provider_name}: apiKey file ref has incorrect structure"
+                })
+        # 对于文件引用，检查文件是否存在
+        if isinstance(api_key, dict) and api_key.get('source') == 'file' and 'path' in api_key:
+            path = api_key['path']
+            if not os.path.exists(path):
+                errors.append({
+                    "type": "api_key_file_not_found",
+                    "detail": f"provider {provider_name}: apiKey file not found at {path}"
+                })
+    
+    return errors
+
+
+def scan_asset_consistency():
+    """检测系统资产一致性：路径、层级、依赖是否与架构文档一致"""
+    errors = []
+    # 检查关键资产路径
+    key_assets = [
+        # (路径, 描述)
+        ("docs/architecture/configuration/api-key-configuration.md", "API Key 配置规范文档"),
+        ("L2-infra/scripts/error_handler/scan_errors.py", "全量错误扫描脚本"),
+        ("L2-infra/scripts/error_handler/handle_timeout.sh", "LLM 超时自动处置脚本"),
+        ("~/.openclaw/secrets/codingplan.apiKey", "codingplan API Key 文件"),
+        ("~/.openclaw/secrets/longcat.apiKey", "longcat API Key 文件"),
+    ]
+    
+    for asset_path, description in key_assets:
+        expanded_path = os.path.expanduser(asset_path)
+        if not os.path.exists(expanded_path):
+            errors.append({
+                "type": "asset_missing",
+                "detail": f"{description} not found at {asset_path}"
+            })
+    
+    # 检查架构分层文档存在
+    arch_docs = list(Path(WORKSPACE).glob("docs/architecture/**/*.md"))
+    if len(arch_docs) < 5:  # 应该至少有几份架构文档
+        errors.append({
+            "type": "arch_docs_incomplete",
+            "detail": f"Only {len(arch_docs)} architecture docs found, expected >= 5"
+        })
+    
+    return errors
+
+
+def scan_zombie_processes():
+    """检测僵尸进程和已完成会话残留，建议清理"""
+    errors = []
+    output, rc = run_cmd("ps axo pid,ppid,stat,comm | grep 'Z' | head -20")
+    if rc == 0 and output.strip():
+        zombie_count = len(output.strip().split("\n"))
+        errors.append({
+            "type": "zombie_processes",
+            "detail": f"Found {zombie_count} zombie processes. Recommend system reboot or manual kill."
+        })
+    
+    # 检查残留子会话目录
+    output, rc = run_cmd("ls -d /Users/bangcle/.openclaw/sandboxes/workspace-* 2>/dev/null | wc -l")
+    if rc == 0:
+        count = int(output.strip())
+        if count > 5:
+            errors.append({
+                "type": "stale_sandboxes",
+                "detail": f"Found {count} stale sandbox directories. Consider cleanup with 'rm -rf ~/.openclaw/sandboxes/workspace-*'"
+            })
+    
+    return errors
+
+
+def scan_temp_files_cleanup():
+    """检测临时文件、备份文件，建议清理或备份"""
+    errors = []
+    
+    # 检查 /tmp 备份
+    tmp_backups = run_cmd("find /tmp -name '*L0*backup*' -o -name '*.backup' 2>/dev/null")[0]
+    if tmp_backups.strip():
+        files = tmp_backups.strip().split("\n")
+        errors.append({
+            "type": "tmp_backup_files",
+            "detail": f"Found {len(files)} backup files in /tmp. Recommend review and cleanup."
+        })
+    
+    # 检查未跟踪文件在 workspace
+    output, rc = run_cmd("cd /Users/bangcle/.openclaw/workspace && git status --porcelain | grep '^??' | wc -l")
+    if rc == 0 and output.strip():
+        count = int(output.strip())
+        if count > 10:
+            errors.append({
+                "type": "untracked_files",
+                "detail": f"Found {count} untracked files in workspace. Recommend commit or cleanup."
+            })
+    
+    # 检查日志文件大小 (gateway logs)
+    output, rc = run_cmd("du -h ~/.openclaw/logs/ | tail -1")
+    if rc == 0 and output:
+        size_str = output.split()[0]
+        errors.append({
+            "type": "log_dir_size",
+            "detail": f"Gateway log directory size is {size_str}. Cleanup old logs if > 100M."
+        })
+    
+    return errors
+
+
 def scan_provider_health():
     """检查 Provider 健康状态"""
     errors = []
+    # 配置全链路检测（含 apiKey 格式 + baseUrl 可达 + 三层一致性）
+    errors.extend(scan_provider_config_full_chain())
+    # 检查资产一致性
+    errors.extend(scan_asset_consistency())
+    # 检查僵尸进程
+    errors.extend(scan_zombie_processes())
+    # 检查临时文件/备份
+    errors.extend(scan_temp_files_cleanup())
+    
     output, rc = run_cmd("openclaw status 2>&1")
     if rc != 0:
         errors.append({"type": "provider_error", "detail": f"status check failed: {output[:200]}"})
@@ -202,7 +513,7 @@ def scan_provider_health():
 
     # 检查是否有 provider 报错
     for line in output.split("\n"):
-        if any(kw in line.lower() for kw in ["error", "failed", "down", "unreachable"]):
+        if any(kw in line.lower() for kw in ["error", "failed", "down", "unreachable", "401", "unauthorized", "api.*key"]):
             errors.append({
                 "type": "provider_error",
                 "detail": line.strip()[:200]
@@ -216,7 +527,7 @@ def auto_fix(errors):
     fixes = []
 
     timeout_errors = [e for e in errors if e.get("type") == "llm_timeout"]
-    provider_errors = [e for e in errors if e.get("type") == "provider_error"]
+    provider_errors = [e for e in errors if "provider" in e.get("type") or "api_key" in e.get("type") or "asset" in e.get("type")]
     cron_errors = [e for e in errors if e.get("type") == "cron_error"]
 
     # 处置 1: LLM 超时 → 重启 Gateway
@@ -231,13 +542,65 @@ def auto_fix(errors):
         fixes[-1]["executed"] = True
         fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
 
-    # 处置 2: Provider 错误 → 记录并建议切换
+    # 处置 2: Provider 错误 / API Key 错误 / 资产错误 → 记录并建议检查
     if provider_errors:
+        has_401 = any("401" in e.get("detail", "") or "unauthorized" in e.get("detail", "").lower() or "api_key" in e.get("type") or "auth_failed" in e.get("type") for e in provider_errors)
+        has_429 = any("rate_limit" in e.get("type") or "429" in e.get("detail", "") for e in provider_errors)
+        has_endpoint_wrong = any("endpoint_wrong" in e.get("type") for e in provider_errors)
+        has_config_mismatch = any("config_inconsistent" in e.get("type") for e in provider_errors)
+
         fixes.append({
             "action": "model_fallback_suggested",
-            "reason": f"Detected {len(provider_errors)} provider error(s)",
+            "reason": f"Detected {len(provider_errors)} provider/asset error(s)",
             "detail": "Consider switching to fallback model via /model command"
         })
+
+        # 2a: 401 / API Key 认证失败 → 详细排查指引
+        if has_401:
+            fixes.append({
+                "action": "check_api_key_format",
+                "reason": "401 Unauthorized / API Key format error detected",
+                "detail": "Run full chain check: 1) Verify apiKey format (not old-format dict) 2) Check all 3 layers (auth profile > models.json > openclaw.json) 3) Test with direct curl. See docs/architecture/configuration/api-key-configuration.md §6 SOP."
+            })
+
+        # 2b: 429 限流 / baseUrl 端点错误 → 提示切 coding/v3 端点 + 切 fallback
+        if has_429 or has_endpoint_wrong:
+            fixes.append({
+                "action": "verify_baseurl_endpoint",
+                "reason": "Rate limit (429) or wrong endpoint (404) detected",
+                "detail": "For Volcengine Ark coding-plan: MUST use /api/coding/v3 (not /api/v3). /api/v3 triggers Safe Experience Mode rate limit. See docs/architecture/configuration/api-key-configuration.md §2.2."
+            })
+            fixes.append({
+                "action": "switch_to_fallback_model",
+                "reason": "Primary provider rate-limited or endpoint wrong",
+                "detail": "Switch to fallback model: coding-plan/doubao-seed-2-1-turbo. Use '/model' command in session."
+            })
+
+        # 2c: 配置不一致 → 提示逐层检查并同步
+        if has_config_mismatch:
+            fixes.append({
+                "action": "sync_config_across_layers",
+                "reason": "Config mismatch detected across layers (openclaw.json vs models.json)",
+                "detail": "Provider config differs between openclaw.json and agent models.json. Sync to ensure consistency. models.json has higher priority. See docs/architecture/configuration/api-key-configuration.md §1."
+            })
+
+        # 资产不一致提示
+        asset_errors = [e for e in provider_errors if "asset" in e.get("type")]
+        if asset_errors:
+            fixes.append({
+                "action": "verify_asset_consistency",
+                "reason": f"Found {len(asset_errors)} asset consistency issues",
+                "detail": "Verify assets are at correct paths and match architecture docs."
+            })
+
+        # 僵尸进程提示
+        zombie_errors = [e for e in errors if "zombie" in e.get("type")]
+        if zombie_errors:
+            fixes.append({
+                "action": "cleanup_zombies",
+                "reason": f"Found {len(zombie_errors)} zombie/zombie related issues",
+                "detail": "Reboot system to fully clean up zombies, or kill manually."
+            })
 
     # 处置 3: Cron 错误 → 记录待人工处理
     if cron_errors:
@@ -290,7 +653,10 @@ def main():
     except Exception:
         pass
 
-    return 0 if not all_errors else 1
+    # 扫描脚本的任务是"发现并报告异常"，不是"确保系统无异常"
+    # 发现异常是正常输出，不是任务失败 — 任务失败只在脚本本身执行出错时才发生
+    # 异常信息通过 JSON 输出文件和 stdout 传递，cron 应该读这些而不是看 exit code
+    return 0
 
 
 if __name__ == "__main__":

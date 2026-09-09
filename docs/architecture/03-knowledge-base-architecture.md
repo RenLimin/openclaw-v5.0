@@ -161,7 +161,7 @@ sub_area: "pmbok-8th"                 # 子领域
 type: "industry"                      # industry / theory / experience
 tags: ["tag1", "tag2", "tag3"]        # ≥ 3 个
 xref:                                # 交叉引用（可选）
-  - path: "by-layer/L2-infrastructure/observability/DESIGN.md"
+  - path: "by-layer/L2-infra/observability/DESIGN.md"
     relation: "implements"            # implements / extends / related
   - path: "by-category/project-management/roles/project-manager/AGENTS.md"
     relation: "referenced_by"
