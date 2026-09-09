@@ -1436,7 +1436,7 @@ def build_abnormal_ledger(ws):
 def build_legend(ws):
     """图例 Sheet：项目经理 → 所属部门映射，34行 × 2列
     从旧版配置文件 `legend_pm_dept.json` 读取"""
-    legend_path = Path(__file__).parent.parent / "delivery_center" / "config" / "legend_pm_dept.json"
+    legend_path = Path(__file__).parent.parent / "v1" / "config" / "legend_pm_dept.json"
     if legend_path.exists():
         legend = json.loads(legend_path.read_text(encoding="utf-8"))
     else:

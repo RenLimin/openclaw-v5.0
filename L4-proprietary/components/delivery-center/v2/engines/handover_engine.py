@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 
 # 图例路径（复用旧版配置）
-LEGEND_PATH = Path(__file__).parent.parent / "delivery_center" / "config" / "legend_pm_dept.json"
+LEGEND_PATH = Path(__file__).parent.parent / "v1" / "config" / "legend_pm_dept.json"
 
 
 def _load_pm_dept_map():
