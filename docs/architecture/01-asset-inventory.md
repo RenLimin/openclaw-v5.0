@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-09 07:57 UTC+08:00
+最后生成：2026-09-09 13:20 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -54,7 +54,7 @@
 
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
-| `main` | 🦞 main | `coding-plan/doubao-seed-2-0-lite-260215` | `/Users/bangcle/.openclaw/workspace` | — |
+| `main` | 🦞 main | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-coding` | 🦞 ms-coding | `coding-plan/doubao-seed-code-preview-251028` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-research` | 🦞 ms-research | `coding-plan/doubao-seed-2-1-turbo` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-reasoning` | 🦞 ms-reasoning | `coding-plan/deepseek-v4-flash` | `/Users/bangcle/.openclaw/workspace` | — |
@@ -92,6 +92,7 @@
 | `~/.openclaw/secrets/codingplan.apiKey` | `600` | 46 B |
 | `~/.openclaw/secrets/gateway.auth.token` | `600` | 48 B |
 | `~/.openclaw/secrets/github.token` | `600` | 40 B |
+| `~/.openclaw/secrets/llama-cpp.apiKey` | `600` | 15 B |
 | `~/.openclaw/secrets/longcat.apiKey` | `600` | 32 B |
 | `~/.openclaw/secrets/memory.search.remote.apiKey` | `600` | 9 B |
 | `~/.openclaw/secrets/tavily.apiKey` | `600` | 58 B |
@@ -102,10 +103,10 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
+| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
-| Heartbeat (main) | ✅ | 每 1800s | `main` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 每日观测摘要投递 | ✅ | cron `50 23 * * *` | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
@@ -185,8 +186,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `743f55e4` |
-| Commit 数 | 277 |
+| HEAD | `eef69fc5` |
+| Commit 数 | 278 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

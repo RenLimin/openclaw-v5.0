@@ -20,6 +20,31 @@ Do not manually reread startup files unless:
 2. The provided context is missing something you need
 3. You need a deeper follow-up read beyond the provided startup context
 
+### 会话恢复自检（必做）
+
+**每次主会话启动后（包括 reset 后、heartbeat 唤醒后），第一步先检查 `memory/current-task.md`：**
+
+```bash
+python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --json
+```
+
+判断逻辑：
+
+| 条件 | 动作 |
+|---|---|
+| 没有 current-task | 正常开始，不用管 |
+| 有任务 + failure_count = 0 | 说明是正常进行中，等用户指令 |
+| 有任务 + failure_count ≥ 1 且 < 2 | **自动从断点继续** — 先说明"检测到上次运行失败，从断点恢复"，然后读任务描述接着干 |
+| 有任务 + failure_count ≥ 2 | **停止自动重试** — 告知用户"已连续失败 N 次，等你拍板下一步"，附上任务信息和失败记录 |
+
+**恢复策略：**
+- 从 `progress_entries` 中最新的一条确定做到哪了
+- 跳过已完成的步骤，从当前 step_index 继续
+- 不要从头再来，除非明确知道之前的产出物无效了
+- 恢复后第一条消息明确说：从哪里恢复、上次失败在哪一步
+
+**重要任务必须登记：** 任何预计 > 5 步 exec / 批量文件操作 / 长构建的任务，开工前先 `task_tracker start` 写 current-task.md。成本 < 3 秒，崩了能省几十分钟。
+
 ## Memory
 
 You wake up fresh each session. These files are your continuity:
@@ -140,6 +165,19 @@ This avoids repeated failed remote attempts and improves response speed.
 ## 长任务隔离（L1 防压缩冲突）
 
 长任务（>5 步 exec / 大量文件读写 / 批量操作 / KB 文档生成）必须用 `sessions_spawn(mode="run")` 隔离到 subagent，主会话只做调度和汇总。
+
+**开工前必做：写 current-task.md**
+
+```bash
+python3 L2-infra/components/session-recovery/scripts/task_tracker.py start \
+  --task-id "task-YYYYMMDD-slug" \
+  --name "任务名称" \
+  --description "任务描述" \
+  --phase "启动" \
+  --steps '["步骤1","步骤2","步骤3"]'
+```
+
+成本 < 3 秒，崩了能省几十分钟。完成后用 `task_tracker.py complete` 归档。
 
 **为什么**：主会话跑长任务会快速累积 token，触发 auto-compaction，正在执行的 exec 被中断 → 会话状态不一致。subagent 有独立上下文，完成后自动回报结果，主会话不累积执行 token。
 
