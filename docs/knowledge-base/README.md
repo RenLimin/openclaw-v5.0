@@ -38,7 +38,7 @@ knowledge-base/
 │
 ├── by-layer/                    (按层级 — 纵深视角)
 │   ├── L1-system/
-│   ├── L2-infrastructure/
+│   ├── L2-infra/
 │   ├── L3-generic-business/
 │   └── L4-proprietary-business/
 │

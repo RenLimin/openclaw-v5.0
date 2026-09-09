@@ -9,10 +9,10 @@ updated: 2026-09-04
 confidence: high
 sources:
   - title: KB-001-css-design-system
-    url: ../L2-infrastructure/knowledge/KB-001-css-design-system.md
+    url: ../L2-infra/knowledge/KB-001-css-design-system.md
     accessed: 2026-09-04
   - title: KB-002-dashboard-ui-patterns
-    url: ../L2-infrastructure/knowledge/KB-002-dashboard-ui-patterns.md
+    url: ../L2-infra/knowledge/KB-002-dashboard-ui-patterns.md
     accessed: 2026-09-04
   - title: KB-001-finance-dashboard-design
     url: ../L3-generic-business/knowledge/KB-001-finance-dashboard-design.md

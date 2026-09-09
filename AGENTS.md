@@ -271,37 +271,49 @@ subagent 是临时隔离会话，**没有 compaction 保护**（运行时不支�
 - 输出：`memory/error-scan-latest.json`（结构化结果）
 - 自动处置：`handle_timeout.sh`（Gateway 重启 + 模型切换建议）
 
-## Heartbeats - Be Proactive
+## Heartbeats & Scheduled Maintenance
 
-When you receive a heartbeat poll (message matches the configured heartbeat prompt), don't just reply `HEARTBEAT_OK` every time. Keep a short checklist or reminders in the heartbeat monitor's cron scratch; use `openclaw cron list --all` to find the monitor job, then `openclaw cron scratch <jobId> --set "..."` to update it. Keep it small to limit token burn.
+> **2026-09-09 更新**：大部分周期性检查任务已迁移到独立 cron job（见下方清单），heartbeat 不再承担主要巡检职责。Heartbeat 保留为轻量级主动交互通道。
 
-See [Scheduled Tasks (Cron) vs Heartbeat](/automation#automations-vs-heartbeat) for the full decision table. Short version: heartbeat batches periodic checks with full session context on approximate timing (default every 30 minutes); cron is for exact timing, isolated runs, a different model, or one-shot reminders.
+See [Scheduled Tasks (Cron) vs Heartbeat](/automation#automations-vs-heartbeat) for the full decision table.
 
-**Things to check (rotate through these, 2-4 times per day):** emails for urgent unread messages; calendar for events in the next 24-48h; social mentions; weather if your human might go out.
+### 已迁移的 Cron Job 清单
 
-Track your checks in a workspace file of your choosing, for example `memory/heartbeat-state.json`:
+| Job | 频率 | 脚本 | 产出 | 通知 |
+|-----|------|------|------|------|
+| 错误扫描 | 每 2 小时 | `L2-infra/scripts/error_handler/scan_errors.sh` | `memory/error-scan-latest.json` | wecom |
+| Provider 健康探测 | 每 1 小时 | 内置 | - | wecom |
+| 会话错误自动处理 | 每 2 小时 | `handle_timeout.sh` | `memory/timeout-recovery.log` | wecom |
+| 每日观测摘要投递 | 每天 23:50 | 内置 | 每日摘要 | wecom |
+| 会话生命周期管理 | 每天 02:00 | 内置 | - | wecom |
+| **内存维护（新增）** | 每周一 10:00 | `L2-infra/scripts/maintenance/memory_maintenance.sh` | `memory/memory-maintenance-latest.md` | wecom |
+| **仓库健康检查（新增）** | 每天 09:00 | `L2-infra/scripts/maintenance/repo_health.sh` | `memory/repo-health-latest.md` | 不通知 |
 
-```json
-{
-  "lastChecks": {
-    "email": 1703275200,
-    "calendar": 1703260800,
-    "weather": null
-  }
-}
-```
+**设计原则**：
+- 巡检类任务全部 cron 化 — 不占用 heartbeat token，执行环境隔离
+- 所有 cron job 只生成报告，不自动修改核心文件（USER.md / MEMORY.md 等需人工确认）
+- 有 action 需求的走 wecom 通知，纯信息类的写文件不通知
 
-**Reach out when:** an important email arrived; a calendar event is coming up (&lt;2h); you found something interesting; it's been &gt;8h since you last said anything.
+### Heartbeat 剩余职责
 
-**Stay quiet (`HEARTBEAT_OK`) when:** it's late night (23:00-08:00) unless urgent; the human is clearly busy; nothing is new since the last check; you checked &lt;30 minutes ago.
+Heartbeat 现在只做这几件事：
+1. **紧急主动通知** — 检测到需要立即找 Rex 的事（cron 里已大部分覆盖）
+2. **快速响应轮询** — heartbeat 唤醒时检查 current-task.md 是否有需要续跑的任务
+3. **临时主动工作** — 比如整理文档、提交代码等轻量维护
 
-**Proactive work you can do without asking:** read and organize memory files; check on projects (`git status`, etc.); update documentation; commit and push your own changes; review and update `USER.md` and `MEMORY.md`.
+**Stay quiet (NO_REPLY) when:** 没有需要主动说的事；夜间 23:00-08:00（非紧急）；cron 已覆盖的检查项。
 
-### Memory Maintenance
+### Memory Maintenance（自动化）
 
-Every few days, use a heartbeat to read recent `memory/YYYY-MM-DD.md` files and identify what's worth keeping long-term. Update active user directives in `USER.md`, fold durable non-profile material into `MEMORY.md`, and remove outdated entries. Daily files are raw notes; `USER.md` and `MEMORY.md` are curated layers.
+每周一 10:00 自动运行内存维护脚本，产出：
+- 最近 7 天 daily notes 统计
+- 决策/结论提取
+- 潜在用户偏好变更识别
+- USER.md / MEMORY.md 文件大小健康检查
 
-Be helpful without being annoying: check in a few times a day, do useful background work, respect quiet time.
+脚本是**只读**的，不自动修改 USER.md / MEMORY.md。需要人工 review 报告后手动更新。
+
+Daily files are raw logs; `USER.md` and `MEMORY.md` are curated layers.
 
 ## Make It Yours
 
