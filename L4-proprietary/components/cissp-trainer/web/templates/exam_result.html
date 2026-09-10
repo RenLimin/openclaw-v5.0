@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="resultContainer">
+    <div class="text-muted">加载中...</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const examId = {{ exam_id }};
+
+async function loadResult() {
+    try {
+        const data = await fetch(`/api/exams/${examId}/result`).then(r => r.json());
+        if (data.error) throw new Error(data.error);
+
+        const passed = data.passed;
+        const container = document.getElementById('resultContainer');
+
+        // 领域成绩
+        const domainScores = Object.values(data.domain_scores || {}).sort((a,b) => a.domain - b.domain);
+        const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+
+        container.innerHTML = `
+            <div class="page-header">
+                <div>
+                    <h1>${data.title}</h1>
+                    <p>考试完成，以下是你的成绩分析</p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="/exam" class="btn">返回列表</a>
+                    <a href="/exam" class="btn btn-primary">再考一次</a>
+                </div>
+            </div>
+
+            <!-- 成绩卡片 -->
+            <div class="card score-card">
+                <div class="score-label">考试得分</div>
+                <div class="score-value ${passed ? 'pass' : 'fail'}">${data.score}</div>
+                <div>
+                    <span class="badge ${passed ? 'success' : 'danger'}" style="font-size:1rem;padding:6px 16px">
+                        ${passed ? '🎉 恭喜通过！' : '💪 继续加油！'}
+                    </span>
+                </div>
+                <div class="score-meta">
+                    <div class="score-meta-item">
+                        <div class="num">${data.total_correct}</div>
+                        <div class="lbl">正确</div>
+                    </div>
+                    <div class="score-meta-item">
+                        <div class="num">${data.total_questions - data.total_correct}</div>
+                        <div class="lbl">错误</div>
+                    </div>
+                    <div class="score-meta-item">
+                        <div class="num">${data.total_answered}</div>
+                        <div class="lbl">已答</div>
+                    </div>
+                    <div class="score-meta-item">
+                        <div class="num">70</div>
+                        <div class="lbl">及格线</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 领域分析 -->
+            <div class="card">
+                <div class="card-title"><span>📊 各领域得分</span></div>
+                <div class="domain-list">
+                    ${domainScores.map(d => {
+                        const pct = d.score;
+                        const cls = pct >= 70 ? 'success' : (pct >= 50 ? 'warning' : 'danger');
+                        return `
+                        <div class="domain-item">
+                            <div class="domain-badge" style="background:${colors[d.domain-1]}">${d.domain}</div>
+                            <div class="domain-name">${d.domain_name} <span class="text-muted" style="font-size:0.78rem">(${d.correct}/${d.total})</span></div>
+                            <div class="domain-bar"><div class="domain-bar-fill" style="width:${pct}%;background:${colors[d.domain-1]}"></div></div>
+                            <div class="domain-pct" style="color:${pct >= 70 ? 'var(--c-success)' : pct >= 50 ? 'var(--c-warning)' : 'var(--c-danger)'}">${pct.toFixed(1)}%</div>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- 错题解析 -->
+            ${data.wrong_questions && data.wrong_questions.length ? `
+            <div class="card">
+                <div class="card-title">
+                    <span>❌ 错题解析（共 ${data.wrong_questions.length} 题）</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:var(--s-5)">
+                    ${data.wrong_questions.map((q, i) => `
+                        <div style="padding-bottom:var(--s-5);border-bottom:1px solid var(--c-border);${i === data.wrong_questions.length - 1 ? 'border-bottom:none;padding-bottom:0' : ''}">
+                            <div style="margin-bottom:var(--s-2);display:flex;gap:var(--s-2);align-items:center;flex-wrap:wrap">
+                                <span class="badge domain-${q.domain}">域${q.domain} ${q.domain_name}</span>
+                                <span class="text-muted" style="font-size:0.8rem">第 ${q.index} 题</span>
+                            </div>
+                            <div style="font-weight:500;margin-bottom:var(--s-3)">${q.stem}</div>
+                            ${q.options ? `
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s-2);font-size:0.88rem;margin-bottom:var(--s-3)">
+                                ${Object.entries(q.options).map(([k, v]) => {
+                                    const isCorrect = q.correct_answer.split(',').includes(k);
+                                    const isUser = q.user_answer.split(',').includes(k);
+                                    let cls = '';
+                                    if (isCorrect) cls = 'correct';
+                                    else if (isUser) cls = 'wrong';
+                                    return `
+                                    <div class="option-item ${cls}" style="padding:var(--s-2) var(--s-3);cursor:default">
+                                        <div class="option-letter">${k}</div>
+                                        <div class="option-text">${v}</div>
+                                    </div>`;
+                                }).join('')}
+                            </div>` : ''}
+                            <div style="padding:var(--s-3);background:var(--c-surface-2);border-radius:var(--r-sm);font-size:0.85rem">
+                                <div style="margin-bottom:4px">
+                                    <span class="text-muted">你的答案：</span>
+                                    <span style="color:var(--c-danger);font-weight:600">${q.user_answer || '未作答'}</span>
+                                    <span style="margin:0 8px;color:var(--c-muted)">|</span>
+                                    <span class="text-muted">正确答案：</span>
+                                    <span style="color:var(--c-success);font-weight:600">${q.correct_answer}</span>
+                                </div>
+                                <div>
+                                    <strong>解析：</strong>${q.explanation || '暂无解析'}
+                                </div>
+                                ${q.tags && q.tags.length ? `
+                                <div style="margin-top:var(--s-2);display:flex;gap:4px;flex-wrap:wrap">
+                                    ${q.tags.map(t => `<span class="badge muted" style="font-size:0.7rem">#${t}</span>`).join('')}
+                                </div>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>` : ''}
+        `;
+    } catch(e) {
+        showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+loadResult();
+</script>
+{% endblock %}

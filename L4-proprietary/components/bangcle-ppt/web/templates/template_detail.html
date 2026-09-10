@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="detail-header">
+    <a href="/" class="back-link">← 返回模板库</a>
+    <div class="detail-title-row">
+        <h1 id="tplTitle">加载中...</h1>
+        <div class="detail-actions">
+            <button class="btn btn-secondary" onclick="copySampleDsl()">📋 复制示例 DSL</button>
+            <a id="previewBtn" class="btn btn-primary" href="#" download>⬇️ 下载预览 PPT</a>
+        </div>
+    </div>
+    <div id="tplMeta" class="detail-meta"></div>
+</div>
+
+<div class="detail-grid">
+    <div class="detail-section">
+        <h2>📐 Schema 字段</h2>
+        <div id="schemaList" class="schema-list">加载中...</div>
+    </div>
+    <div class="detail-section">
+        <h2>📝 示例 DSL</h2>
+        <div class="code-block">
+            <pre id="sampleDsl">加载中...</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const TPL_NAME = "{{ template_name }}";
+
+async function loadDetail() {
+    try {
+        const res = await fetch('/api/templates/' + encodeURIComponent(TPL_NAME));
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+
+        document.getElementById('tplTitle').textContent = data.meta.title + ' (' + data.name + ')';
+        document.getElementById('tplMeta').innerHTML = `
+            <span class="meta-badge theme-${data.theme}">${data.theme === 'light' ? '☀️ 浅色' : '🌙 深色'}</span>
+            <span class="meta-item">📁 ${data.meta.category || 'general'}</span>
+            <span class="meta-item">📦 v${data.meta.version}</span>
+            <span class="meta-item">📝 ${data.meta.description || '—'}</span>
+        `;
+
+        // Schema 字段
+        const schemaEl = document.getElementById('schemaList');
+        if (data.layout_fields && data.layout_fields.length) {
+            schemaEl.innerHTML = data.layout_fields.map(f => `
+                <div class="schema-item">
+                    <div class="schema-name"><code>${f.name}</code></div>
+                    <div class="schema-type">${f.type}</div>
+                    <div class="schema-desc">${f.description || '—'}</div>
+                    ${f.default !== null && f.default !== '' ? `<div class="schema-default">默认: ${f.default}</div>` : ''}
+                </div>
+            `).join('');
+        } else {
+            schemaEl.innerHTML = '<div class="empty">无 layout 字段</div>';
+        }
+
+        // 示例 DSL
+        document.getElementById('sampleDsl').textContent = data.sample_dsl || '';
+
+        // 预览按钮
+        document.getElementById('previewBtn').href = '/api/templates/' + encodeURIComponent(TPL_NAME) + '/preview';
+
+    } catch (e) {
+        document.querySelector('.detail-header').innerHTML +=
+            '<div class="error-msg">加载失败: ' + e.message + '</div>';
+    }
+}
+
+function copySampleDsl() {
+    const text = document.getElementById('sampleDsl').textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        showToast('已复制示例 DSL', 'success');
+    }).catch(() => {
+        showToast('复制失败', 'error');
+    });
+}
+
+loadDetail();
+</script>
+{% endblock %}

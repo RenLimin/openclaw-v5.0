@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>⚡ 在线生成</h1>
+        <p class="subtitle">粘贴 DSL YAML，选择主题，一键生成 PPT</p>
+    </div>
+</div>
+
+<div class="generator-layout">
+    <div class="generator-left">
+        <div class="panel">
+            <div class="panel-header">
+                <span>📝 DSL 输入</span>
+                <div class="panel-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="loadExample()">📋 加载示例</button>
+                    <button class="btn btn-sm btn-secondary" onclick="clearEditor()">🗑️ 清空</button>
+                </div>
+            </div>
+            <textarea id="dslInput" placeholder="在此粘贴 PPT DSL YAML..." spellcheck="false"></textarea>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>⚙️ 选项</span>
+            </div>
+            <div class="options-form">
+                <div class="form-row">
+                    <label>主题</label>
+                    <select id="themeSelect">
+                        <option value="">跟随 DSL 设定</option>
+                        <option value="light">☀️ 浅色</option>
+                        <option value="dark">🌙 深色</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label>文件名</label>
+                    <input type="text" id="filenameInput" placeholder="presentation.pptx">
+                </div>
+            </div>
+        </div>
+
+        <div class="generator-actions">
+            <button class="btn btn-secondary" onclick="validateDsl()">🔍 校验 DSL</button>
+            <button class="btn btn-primary btn-large" onclick="renderPpt()">🎨 生成 PPT</button>
+        </div>
+    </div>
+
+    <div class="generator-right">
+        <div class="panel">
+            <div class="panel-header">
+                <span>📋 校验结果</span>
+            </div>
+            <div id="validateResult" class="validate-result empty">点击"校验 DSL"查看结果</div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">
+                <span>💡 使用说明</span>
+            </div>
+            <div class="help-content">
+                <ol>
+                    <li>左侧输入完整的 DSL YAML（包含 title、theme、slides）</li>
+                    <li>点击"校验 DSL"检查语法和 schema</li>
+                    <li>选择主题（可选，默认跟随 DSL）</li>
+                    <li>点击"生成 PPT"下载文件</li>
+                </ol>
+                <p>模板详情页可复制单页示例 DSL。</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const EXAMPLE_DSL = `title: "示例演示文稿"
+theme: "light"
+slides:
+  - meta:
+      name: "封面"
+      page_type: "cover-light"
+      theme: "light"
+    data:
+      title: "汇报标题"
+      subtitle: "SUBTITLE"
+      presenter: "汇报人"
+      company: "梆梆安全"
+      date: "2025年1月"
+
+  - meta:
+      name: "目录"
+      page_type: "toc-light"
+      theme: "light"
+    data:
+      items:
+        - number: "01"
+          title: "第一部分"
+          subtitle: "PART ONE"
+        - number: "02"
+          title: "第二部分"
+          subtitle: "PART TWO"
+        - number: "03"
+          title: "第三部分"
+          subtitle: "PART THREE"
+
+  - meta:
+      name: "结束"
+      page_type: "closing-light"
+      theme: "light"
+    data:
+      main_text: "谢谢观看"
+      subtitle: "THANK YOU"
+      contact: "www.bangcle.com"
+`;
+
+function loadExample() {
+    document.getElementById('dslInput').value = EXAMPLE_DSL;
+    showToast('已加载示例 DSL', 'success');
+}
+
+function clearEditor() {
+    document.getElementById('dslInput').value = '';
+    document.getElementById('validateResult').innerHTML = '点击"校验 DSL"查看结果';
+    document.getElementById('validateResult').className = 'validate-result empty';
+}
+
+async function validateDsl() {
+    const dsl = document.getElementById('dslInput').value.trim();
+    const resultEl = document.getElementById('validateResult');
+
+    if (!dsl) {
+        resultEl.className = 'validate-result error';
+        resultEl.textContent = '⚠️ 请先输入 DSL YAML';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dsl_yaml: dsl }),
+        });
+        const data = await res.json();
+
+        if (data.valid) {
+            resultEl.className = 'validate-result success';
+            resultEl.innerHTML = `
+                <div class="vr-title">✅ DSL 校验通过</div>
+                <div class="vr-info">
+                    <div><strong>标题:</strong> ${data.title || '—'}</div>
+                    <div><strong>主题:</strong> ${data.theme || '—'}</div>
+                    <div><strong>幻灯片:</strong> ${data.slide_count || 0} 页</div>
+                </div>
+            `;
+        } else {
+            resultEl.className = 'validate-result error';
+            resultEl.innerHTML = `
+                <div class="vr-title">❌ 校验未通过</div>
+                <ul class="vr-errors">
+                    ${data.errors.map(e => '<li>' + e + '</li>').join('')}
+                </ul>
+            `;
+        }
+    } catch (e) {
+        resultEl.className = 'validate-result error';
+        resultEl.textContent = '请求失败: ' + e.message;
+    }
+}
+
+async function renderPpt() {
+    const dsl = document.getElementById('dslInput').value.trim();
+    const theme = document.getElementById('themeSelect').value;
+    const filename = document.getElementById('filenameInput').value.trim();
+
+    if (!dsl) {
+        showToast('请先输入 DSL YAML', 'warning');
+        return;
+    }
+
+    const body = { dsl_yaml: dsl };
+    if (theme) body.theme = theme;
+    if (filename) body.filename = filename;
+
+    try {
+        const res = await fetch('/api/render', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: res.statusText }));
+            showToast('生成失败: ' + (err.error || err.detail || '未知错误'), 'error');
+            return;
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        // 从 Content-Disposition 取文件名
+        const cd = res.headers.get('Content-Disposition');
+        const match = cd && cd.match(/filename="?([^"]+)"?/);
+        a.download = match ? match[1] : 'presentation.pptx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('PPT 生成成功，正在下载...', 'success');
+    } catch (e) {
+        showToast('生成失败: ' + e.message, 'error');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- 考试顶部栏 -->
+<div class="exam-header">
+    <div>
+        <strong id="examTitle">CISSP 模拟考试</strong>
+        <span class="text-muted" style="margin-left:12px;font-size:0.85rem" id="examProgress">加载中...</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--s-4)">
+        <div class="exam-timer" id="examTimer">--:--:--</div>
+        <button class="btn btn-sm" onclick="pauseExam()">⏸ 暂停</button>
+        <button class="btn btn-danger btn-sm" onclick="submitConfirm()">交卷</button>
+    </div>
+</div>
+
+<div class="grid-2" style="gap:var(--s-6)">
+    <!-- 题目区 -->
+    <div>
+        <div class="question-card" id="questionCard">
+            <div class="text-muted">加载中...</div>
+        </div>
+
+        <div class="exam-nav">
+            <button class="btn" onclick="prevQuestion()" id="prevBtn">← 上一题</button>
+            <div style="display:flex;gap:var(--s-2)">
+                <button class="btn" onclick="flagQuestion()" id="flagBtn">🚩 标记</button>
+                <button class="btn btn-primary" onclick="nextQuestion()" id="nextBtn">下一题 →</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 答题卡 -->
+    <div class="card">
+        <div class="card-title"><span>📋 答题卡</span></div>
+        <div class="question-grid" id="questionGrid"></div>
+        <div style="display:flex;gap:var(--s-3);font-size:0.78rem;margin-top:var(--s-4);flex-wrap:wrap">
+            <span><span style="display:inline-block;width:12px;height:12px;background:var(--c-surface-2);border-radius:2px;vertical-align:middle;margin-right:4px"></span>未答</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:var(--c-primary);border-radius:2px;vertical-align:middle;margin-right:4px"></span>已答</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:var(--c-surface-2);border:2px solid var(--c-warning);border-radius:2px;vertical-align:middle;margin-right:4px"></span>已标记</span>
+        </div>
+    </div>
+</div>
+
+<!-- 暂停弹窗 -->
+<div id="pauseModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center">
+    <div style="background:var(--c-surface);border-radius:var(--r-lg);padding:var(--s-6);max-width:400px;width:90%;box-shadow:var(--sh-xl)">
+        <h3 style="margin-bottom:var(--s-4)">⏸ 考试已暂停</h3>
+        <p class="text-muted" style="margin-bottom:var(--s-5)">考试计时已暂停，点击继续恢复考试。</p>
+        <button class="btn btn-primary btn-block" onclick="resumeExam()">继续考试</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const examId = {{ exam_id }};
+let currentIndex = 0;
+let totalQuestions = 0;
+let timeRemaining = 0;
+let timerInterval = null;
+let answered = {};  // index -> answer
+let flagged = {};   // index -> bool
+let currentQuestion = null;
+
+function formatTime(sec) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function typeLabel(t) {
+    return { single: '单选题', multiple: '多选题', truefalse: '判断题' }[t] || t;
+}
+
+function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(function() {
+        timeRemaining--;
+        document.getElementById('examTimer').textContent = formatTime(timeRemaining);
+        const timer = document.getElementById('examTimer');
+        timer.classList.remove('warning', 'danger');
+        if (timeRemaining < 300) timer.classList.add('danger');
+        else if (timeRemaining < 600) timer.classList.add('warning');
+
+        if (timeRemaining <= 0) {
+            clearInterval(timerInterval);
+            showToast('时间到！自动交卷', 'warning');
+            setTimeout(submitExam, 1000);
+        }
+    }, 1000);
+}
+
+function renderQuestionGrid() {
+    const grid = document.getElementById('questionGrid');
+    let html = '';
+    for (let i = 0; i < totalQuestions; i++) {
+        let cls = 'q-dot';
+        if (answered[i]) cls += ' answered';
+        if (flagged[i]) cls += ' flagged';
+        if (i === currentIndex) cls += ' current';
+        html += `<div class="${cls}" onclick="gotoQuestion(${i})">${i+1}</div>`;
+    }
+    grid.innerHTML = html;
+}
+
+function renderQuestion() {
+    const card = document.getElementById('questionCard');
+    if (!currentQuestion) {
+        card.innerHTML = '<div class="text-muted">加载失败</div>';
+        return;
+    }
+
+    const options = currentQuestion.options || {};
+    const currentAnswer = answered[currentIndex] || '';
+    const selectedArr = currentAnswer ? currentAnswer.split(',') : [];
+
+    document.getElementById('examProgress').textContent =
+        `第 ${currentIndex + 1} / ${totalQuestions} 题 · ${typeLabel(currentQuestion.question_type)}`;
+
+    document.getElementById('examTitle').textContent = currentQuestion.domain_name
+        ? `域${currentQuestion.domain} ${currentQuestion.domain_name}`
+        : 'CISSP 模拟考试';
+
+    card.innerHTML = `
+        <div class="question-meta">
+            <span class="badge domain-${currentQuestion.domain}">域${currentQuestion.domain}</span>
+            <span class="badge muted">${typeLabel(currentQuestion.question_type)}</span>
+            <span class="difficulty">${'★'.repeat(currentQuestion.difficulty)}${'☆'.repeat(5-currentQuestion.difficulty)}</span>
+        </div>
+        <div class="question-stem">${currentQuestion.stem}</div>
+        <div class="options-list" id="optionsList">
+            ${Object.entries(options).map(([k, v]) => `
+                <div class="option-item ${selectedArr.includes(k) ? 'selected' : ''}" data-key="${k}" onclick="selectOption('${k}')">
+                    <div class="option-letter">${k}</div>
+                    <div class="option-text">${v}</div>
+                </div>`).join('')}
+        </div>
+        ${currentQuestion.question_type === 'multiple' ? '<div class="text-muted" style="font-size:0.8rem;margin-top:var(--s-3)">💡 本题为多选题，选择所有正确答案</div>' : ''}
+    `;
+
+    // 更新按钮状态
+    document.getElementById('prevBtn').disabled = currentIndex === 0;
+    document.getElementById('nextBtn').textContent = currentIndex === totalQuestions - 1 ? '交卷 →' : '下一题 →';
+
+    const isFlagged = !!flagged[currentIndex];
+    const flagBtn = document.getElementById('flagBtn');
+    flagBtn.textContent = isFlagged ? '🚩 取消标记' : '🚩 标记';
+    flagBtn.classList.toggle('btn-primary', isFlagged);
+
+    renderQuestionGrid();
+}
+
+function selectOption(key) {
+    const qtype = currentQuestion.question_type;
+    const current = answered[currentIndex] || '';
+
+    if (qtype === 'multiple') {
+        // 多选：切换
+        const arr = current ? current.split(',') : [];
+        const idx = arr.indexOf(key);
+        if (idx >= 0) arr.splice(idx, 1);
+        else arr.push(key);
+        arr.sort();
+        answered[currentIndex] = arr.join(',');
+    } else {
+        // 单选/判断：直接选
+        answered[currentIndex] = key;
+    }
+
+    // 自动保存答案到后端
+    saveAnswer(answered[currentIndex]);
+    renderQuestion();
+}
+
+async function saveAnswer(answer) {
+    try {
+        await fetch(`/api/exams/${examId}/answer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_answer: answer, time_spent_sec: 1 })
+        });
+    } catch(e) {
+        console.error('Save answer failed:', e);
+    }
+}
+
+async function loadCurrent() {
+    try {
+        const data = await fetch(`/api/exams/${examId}/current`).then(r => r.json());
+        if (data.error) throw new Error(data.error);
+        currentQuestion = data;
+        currentIndex = data.index - 1;
+        totalQuestions = data.total;
+        timeRemaining = data.time_remaining_sec || 0;
+        if (data.user_answer) answered[currentIndex] = data.user_answer;
+        if (data.is_flagged) flagged[currentIndex] = true;
+        renderQuestion();
+        startTimer();
+    } catch(e) {
+        showToast('加载题目失败: ' + e.message, 'error');
+    }
+}
+
+async function gotoQuestion(idx) {
+    if (idx < 0 || idx >= totalQuestions) return;
+    try {
+        await fetch(`/api/exams/${examId}/goto?index=${idx}`, { method: 'POST' }).then(r => r.json());
+        const data = await fetch(`/api/exams/${examId}/current`).then(r => r.json());
+        currentQuestion = data;
+        currentIndex = data.index - 1;
+        // 从后端同步答案状态
+        if (data.user_answer) answered[currentIndex] = data.user_answer;
+        else delete answered[currentIndex];
+        if (data.is_flagged) flagged[currentIndex] = true;
+        else delete flagged[currentIndex];
+        renderQuestion();
+    } catch(e) {
+        showToast('跳转失败: ' + e.message, 'error');
+    }
+}
+
+function prevQuestion() { gotoQuestion(currentIndex - 1); }
+function nextQuestion() {
+    if (currentIndex === totalQuestions - 1) {
+        submitConfirm();
+    } else {
+        gotoQuestion(currentIndex + 1);
+    }
+}
+
+async function flagQuestion() {
+    try {
+        const res = await fetch(`/api/exams/${examId}/flag`, { method: 'POST' }).then(r => r.json());
+        if (res.success) {
+            flagged[currentIndex] = res.flagged;
+            renderQuestion();
+        }
+    } catch(e) {
+        showToast('标记失败', 'error');
+    }
+}
+
+async function pauseExam() {
+    try {
+        clearInterval(timerInterval);
+        await fetch(`/api/exams/${examId}/pause`, { method: 'POST' });
+        document.getElementById('pauseModal').style.display = 'flex';
+    } catch(e) {
+        showToast('暂停失败', 'error');
+        startTimer();
+    }
+}
+
+async function resumeExam() {
+    try {
+        const res = await fetch(`/api/exams/${examId}/resume`, { method: 'POST' }).then(r => r.json());
+        if (res.success) {
+            timeRemaining = res.time_remaining_sec;
+            document.getElementById('pauseModal').style.display = 'none';
+            startTimer();
+        }
+    } catch(e) {
+        showToast('恢复失败', 'error');
+    }
+}
+
+function submitConfirm() {
+    const answeredCount = Object.keys(answered).length;
+    const msg = answeredCount < totalQuestions
+        ? `已答 ${answeredCount}/${totalQuestions} 题，还有 ${totalQuestions - answeredCount} 题未答。确定交卷吗？`
+        : `已答完全部 ${totalQuestions} 题，确定交卷吗？`;
+    if (confirm(msg)) {
+        submitExam();
+    }
+}
+
+async function submitExam() {
+    clearInterval(timerInterval);
+    try {
+        const res = await fetch(`/api/exams/${examId}/submit`, { method: 'POST' }).then(r => r.json());
+        if (res.success) {
+            window.location.href = `/exam/${examId}/result`;
+        } else {
+            showToast(res.error || '交卷失败', 'error');
+        }
+    } catch(e) {
+        showToast('交卷失败: ' + e.message, 'error');
+    }
+}
+
+// 初始化
+loadCurrent();
+</script>
+{% endblock %}

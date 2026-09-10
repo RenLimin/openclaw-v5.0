@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>题库浏览</h1>
+        <p>按领域、难度、题型筛选题目</p>
+    </div>
+</div>
+
+<!-- 筛选栏 -->
+<div class="filter-bar">
+    <div class="form-group">
+        <label>领域</label>
+        <select id="filterDomain">
+            <option value="">全部领域</option>
+            <option value="1">域1 安全与风险管理</option>
+            <option value="2">域2 资产安全</option>
+            <option value="3">域3 安全架构与工程</option>
+            <option value="4">域4 通信与网络安全</option>
+            <option value="5">域5 身份与访问管理</option>
+            <option value="6">域6 安全评估与测试</option>
+            <option value="7">域7 安全运营</option>
+            <option value="8">域8 软件开发安全</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>难度</label>
+        <select id="filterDifficulty">
+            <option value="">全部难度</option>
+            <option value="1">1 - 入门</option>
+            <option value="2">2 - 基础</option>
+            <option value="3">3 - 中等</option>
+            <option value="4">4 - 进阶</option>
+            <option value="5">5 - 专家</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>题型</label>
+        <select id="filterType">
+            <option value="">全部题型</option>
+            <option value="single">单选题</option>
+            <option value="multiple">多选题</option>
+            <option value="truefalse">判断题</option>
+        </select>
+    </div>
+    <div class="form-group" style="flex:2;min-width:200px">
+        <label>关键词</label>
+        <input type="text" id="filterKeyword" placeholder="搜索题干关键词...">
+    </div>
+    <div class="form-group" style="display:flex;align-items:flex-end">
+        <button class="btn btn-primary" onclick="loadQuestions(1)">🔍 搜索</button>
+    </div>
+</div>
+
+<!-- 结果统计 -->
+<div class="flex-between mb-4" style="margin-bottom:var(--s-4)">
+    <div class="text-muted" id="resultInfo">加载中...</div>
+</div>
+
+<!-- 题目列表 -->
+<div id="questionList" class="card" style="padding:0;overflow:hidden">
+    <div style="padding:var(--s-6);color:var(--c-muted)">加载中...</div>
+</div>
+
+<!-- 分页 -->
+<div class="pagination" id="pagination"></div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentPage = 1;
+let totalPages = 1;
+
+function stars(d) {
+    return '★'.repeat(d) + '☆'.repeat(5 - d);
+}
+
+function typeLabel(t) {
+    return { single: '单选', multiple: '多选', truefalse: '判断' }[t] || t;
+}
+
+async function loadQuestions(page) {
+    currentPage = page || 1;
+    const domain = document.getElementById('filterDomain').value;
+    const difficulty = document.getElementById('filterDifficulty').value;
+    const qtype = document.getElementById('filterType').value;
+    const keyword = document.getElementById('filterKeyword').value;
+
+    const params = new URLSearchParams({ page: currentPage, page_size: 10 });
+    if (domain) params.set('domain', domain);
+    if (difficulty) params.set('difficulty', difficulty);
+    if (qtype) params.set('question_type', qtype);
+    if (keyword) params.set('keyword', keyword);
+
+    try {
+        const data = await fetch('/api/questions?' + params).then(r => r.json());
+        totalPages = data.total_pages;
+
+        document.getElementById('resultInfo').textContent =
+            `共 ${data.total} 道题，第 ${data.page}/${data.total_pages || 1} 页`;
+
+        const list = document.getElementById('questionList');
+        if (data.items.length === 0) {
+            list.innerHTML = '<div style="padding:var(--s-8);text-align:center;color:var(--c-muted)">没有找到符合条件的题目</div>';
+        } else {
+            list.innerHTML = data.items.map((q, i) => `
+                <div style="padding:var(--s-5) var(--s-6);border-bottom:1px solid var(--c-border);${i === data.items.length-1 ? 'border-bottom:none' : ''}">
+                    <div class="flex-between" style="margin-bottom:var(--s-2)">
+                        <div style="display:flex;gap:var(--s-2);align-items:center;flex-wrap:wrap">
+                            <span class="badge domain-${q.domain}">域${q.domain} ${q.domain_name}</span>
+                            <span class="badge muted">${typeLabel(q.question_type)}</span>
+                            <span class="difficulty">${stars(q.difficulty)}</span>
+                        </div>
+                        <span class="text-muted" style="font-size:0.8rem">#${q.id}</span>
+                    </div>
+                    <div style="font-size:0.95rem;line-height:1.7;margin-bottom:var(--s-3)">${q.stem}</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--s-2);font-size:0.88rem;margin-bottom:var(--s-3)">
+                        ${Object.entries(q.options).map(([k, v]) => `
+                            <div style="display:flex;gap:var(--s-2);align-items:flex-start">
+                                <strong style="color:var(--c-primary)">${k}.</strong>
+                                <span>${v}</span>
+                            </div>`).join('')}
+                    </div>
+                    <details style="font-size:0.85rem">
+                        <summary style="cursor:pointer;color:var(--c-primary);font-weight:500">查看答案与解析</summary>
+                        <div style="margin-top:var(--s-2);padding:var(--s-3);background:var(--c-surface-2);border-radius:var(--r-sm)">
+                            <div><strong>正确答案：</strong><span style="color:var(--c-success)">${q.correct_answer}</span></div>
+                            <div style="margin-top:var(--s-2)"><strong>解析：</strong>${q.explanation || '暂无解析'}</div>
+                        </div>
+                    </details>
+                    ${q.tags && q.tags.length ? `
+                    <div style="margin-top:var(--s-3);display:flex;gap:4px;flex-wrap:wrap">
+                        ${q.tags.map(t => `<span class="badge muted" style="font-size:0.7rem">#${t}</span>`).join('')}
+                    </div>` : ''}
+                </div>`).join('');
+        }
+
+        renderPagination();
+    } catch (e) {
+        console.error(e);
+        showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+function renderPagination() {
+    const p = document.getElementById('pagination');
+    let html = '';
+    html += `<button class="btn btn-sm" onclick="loadQuestions(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>上一页</button>`;
+    html += `<span class="page-info">第 ${currentPage} / ${totalPages || 1} 页</span>`;
+    html += `<button class="btn btn-sm" onclick="loadQuestions(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>下一页</button>`;
+    p.innerHTML = html;
+}
+
+document.getElementById('filterKeyword').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') loadQuestions(1);
+});
+
+loadQuestions(1);
+</script>
+{% endblock %}

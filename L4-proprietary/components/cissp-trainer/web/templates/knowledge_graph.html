@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>知识图谱</h1>
+        <p>探索 CISSP 8 大领域知识点关联</p>
+    </div>
+</div>
+
+<!-- 领域选择 -->
+<div class="filter-bar">
+    <div class="form-group" style="min-width:200px;flex:0 0 200px">
+        <label>选择领域</label>
+        <select id="domainSelect" onchange="loadDomainGraph()">
+            <option value="1">域1 安全与风险管理</option>
+            <option value="2">域2 资产安全</option>
+            <option value="3">域3 安全架构与工程</option>
+            <option value="4">域4 通信与网络安全</option>
+            <option value="5">域5 身份与访问管理</option>
+            <option value="6">域6 安全评估与测试</option>
+            <option value="7">域7 安全运营</option>
+            <option value="8">域8 软件开发安全</option>
+        </select>
+    </div>
+    <div class="form-group" style="flex:2;min-width:250px">
+        <label>搜索知识点</label>
+        <input type="text" id="kpSearch" placeholder="输入知识点名称查询依赖关系..." onkeydown="if(event.key==='Enter')searchKp()">
+    </div>
+    <div class="form-group" style="display:flex;align-items:flex-end">
+        <button class="btn btn-primary" onclick="searchKp()">🔍 查询</button>
+    </div>
+</div>
+
+<div class="grid-2" style="gap:var(--s-6)">
+    <!-- 知识点列表 -->
+    <div class="card">
+        <div class="card-title">
+            <span id="domainTitle">📚 知识点列表</span>
+            <span class="text-muted" id="kpCount">加载中...</span>
+        </div>
+        <div class="kg-node-grid" id="nodeGrid">
+            <div class="text-muted">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 知识点详情 -->
+    <div class="card">
+        <div class="card-title"><span>🔍 知识点详情</span></div>
+        <div id="kpDetail">
+            <div class="text-muted">点击左侧知识点查看详情</div>
+        </div>
+    </div>
+</div>
+
+<!-- 关系图 -->
+<div class="card">
+    <div class="card-title">
+        <span>🕸️ 知识关系图</span>
+        <span class="text-muted" id="edgeCount">--</span>
+    </div>
+    <div id="graphContainer">
+        <div class="kg-edge-list" id="edgeList">
+            <div class="text-muted">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 薄弱点传播 -->
+<div class="card" id="propagationCard" style="display:none">
+    <div class="card-title">
+        <span>⚠️ 薄弱点传播分析</span>
+    </div>
+    <div id="propagationResult"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentDomain = 1;
+let currentGraph = null;
+
+const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+
+function masteryColor(mastery) {
+    if (mastery >= 0.8) return 'var(--c-success)';
+    if (mastery >= 0.5) return 'var(--c-warning)';
+    if (mastery > 0) return 'var(--c-danger)';
+    return 'var(--c-muted)';
+}
+
+async function loadDomainGraph() {
+    const domain = parseInt(document.getElementById('domainSelect').value);
+    currentDomain = domain;
+
+    try {
+        const data = await fetch(`/api/kg/domains/${domain}`).then(r => r.json());
+        currentGraph = data;
+
+        document.getElementById('domainTitle').textContent = `📚 ${data.domain_name} 知识点`;
+        document.getElementById('kpCount').textContent = `${data.nodes.length} 个节点`;
+        document.getElementById('edgeCount').textContent = `${data.edges.length} 条关系`;
+
+        // 节点列表
+        const grid = document.getElementById('nodeGrid');
+        if (data.nodes.length === 0) {
+            grid.innerHTML = '<div class="text-muted" style="grid-column:1/-1">该领域暂无知识点数据</div>';
+        } else {
+            const sorted = [...data.nodes].sort((a, b) => b.mastery - a.mastery);
+            grid.innerHTML = sorted.map(n => `
+                <div class="kg-node-card" onclick="showKpDetail('${n.name.replace(/'/g, "\\'")}', ${domain})">
+                    <div class="kg-node-name">${n.name}</div>
+                    <div class="kg-node-mastery">
+                        <div class="kg-mastery-bar"><div class="kg-mastery-fill" style="width:${(n.mastery*100).toFixed(0)}%;background:${masteryColor(n.mastery)}"></div></div>
+                        <span>${(n.mastery*100).toFixed(0)}%</span>
+                    </div>
+                    ${n.review_count ? `<div style="font-size:0.72rem;color:var(--c-muted);margin-top:2px">复习 ${n.review_count} 次</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // 边列表
+        const edgeList = document.getElementById('edgeList');
+        if (data.edges.length === 0) {
+            edgeList.innerHTML = '<div class="text-muted">该领域暂无知识点关联数据</div>';
+        } else {
+            const typeLabels = { prerequisite: '前置依赖', related: '相关', part_of: '包含' };
+            edgeList.innerHTML = data.edges.slice(0, 50).map(e => `
+                <div class="kg-edge-item">
+                    <span style="flex:1;text-align:right">${e.source}</span>
+                    <span class="kg-edge-arrow">${e.edge_type === 'prerequisite' ? '→' : '↔'}</span>
+                    <span style="flex:1">${e.target}</span>
+                    <span class="badge muted" style="font-size:0.68rem">${typeLabels[e.edge_type] || e.edge_type}</span>
+                </div>
+            `).join('') + (data.edges.length > 50 ? `<div class="text-muted" style="text-align:center;font-size:0.8rem;padding-top:var(--s-2)">还有 ${data.edges.length - 50} 条关系...</div>` : '');
+        }
+    } catch(e) {
+        showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+async function showKpDetail(name, domain) {
+    try {
+        const [prereqs, successors, related, propagation] = await Promise.all([
+            fetch(`/api/kg/prerequisites?kp_name=${encodeURIComponent(name)}&domain=${domain}&depth=3`).then(r => r.json()),
+            fetch(`/api/kg/successors?kp_name=${encodeURIComponent(name)}&domain=${domain}&depth=3`).then(r => r.json()),
+            fetch(`/api/kg/suggest-next?kp_name=${encodeURIComponent(name)}&domain=${domain}&top_n=5`).then(r => r.json()),
+            fetch(`/api/kg/weak-propagation?kp_name=${encodeURIComponent(name)}&domain=${domain}&max_depth=5`).then(r => r.json()),
+        ]);
+
+        const detail = document.getElementById('kpDetail');
+        detail.innerHTML = `
+            <div style="margin-bottom:var(--s-4)">
+                <h3 style="font-family:var(--font-display);margin-bottom:var(--s-2)">${name}</h3>
+                <span class="badge domain-${domain}">域${domain}</span>
+            </div>
+
+            <div style="margin-bottom:var(--s-5)">
+                <div class="text-muted" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--s-2)">📖 前置依赖 (${prereqs.length})</div>
+                ${prereqs.length === 0 ? '<div class="text-muted" style="font-size:0.85rem">无前置知识点</div>' :
+                    `<div style="display:flex;flex-wrap:wrap;gap:6px">${prereqs.map(p =>
+                        `<span class="badge muted" style="cursor:pointer" onclick="showKpDetail('${p.name.replace(/'/g, "\\'")}', ${p.domain})" title="掌握度 ${(p.mastery*100).toFixed(0)}%">${p.name}</span>`
+                    ).join('')}</div>`
+                }
+            </div>
+
+            <div style="margin-bottom:var(--s-5)">
+                <div class="text-muted" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--s-2)">🚀 后继知识点 (${successors.length})</div>
+                ${successors.length === 0 ? '<div class="text-muted" style="font-size:0.85rem">无后继知识点</div>' :
+                    `<div style="display:flex;flex-wrap:wrap;gap:6px">${successors.map(s =>
+                        `<span class="badge ${s.mastery >= 0.7 ? 'success' : s.mastery >= 0.5 ? 'warning' : 'danger'}" style="cursor:pointer" onclick="showKpDetail('${s.name.replace(/'/g, "\\'")}', ${s.domain})" title="掌握度 ${(s.mastery*100).toFixed(0)}%">${s.name}</span>`
+                    ).join('')}</div>`
+                }
+            </div>
+
+            <div>
+                <div class="text-muted" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:var(--s-2)">💡 建议下一步学习</div>
+                ${related.length === 0 ? '<div class="text-muted" style="font-size:0.85rem">暂无推荐</div>' :
+                    `<div style="display:flex;flex-direction:column;gap:var(--s-2)">${related.slice(0, 5).map(r => `
+                        <div class="kg-edge-item" style="cursor:pointer" onclick="showKpDetail('${r.name.replace(/'/g, "\\'")}', ${r.domain})">
+                            <span style="flex:1">${r.name}</span>
+                            <span style="font-size:0.8rem;color:var(--c-muted)">掌握度 ${(r.mastery*100).toFixed(0)}%</span>
+                        </div>
+                    `).join('')}</div>`
+                }
+            </div>
+        `;
+
+        // 薄弱点传播
+        const card = document.getElementById('propagationCard');
+        if (propagation.total_affected > 0) {
+            card.style.display = 'block';
+            document.getElementById('propagationResult').innerHTML = `
+                <p class="text-muted" style="margin-bottom:var(--s-3)">
+                    若「${propagation.source_kp}」薄弱，将影响 <strong>${propagation.total_affected}</strong> 个后继知识点：
+                </p>
+                <div style="display:flex;flex-direction:column;gap:var(--s-2)">
+                    ${propagation.affected_kps.slice(0, 10).map(a => `
+                        <div class="kg-edge-item">
+                            <span style="flex:1">${a.name}</span>
+                            <span class="badge muted">距离 ${a.distance}</span>
+                            <span style="width:80px;text-align:right;font-size:0.8rem">影响度 ${(a.impact*100).toFixed(0)}%</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            card.style.display = 'none';
+        }
+
+    } catch(e) {
+        console.error(e);
+        showToast('加载详情失败: ' + e.message, 'error');
+    }
+}
+
+async function searchKp() {
+    const q = document.getElementById('kpSearch').value.trim();
+    if (!q) return;
+    showKpDetail(q, currentDomain);
+}
+
+loadDomainGraph();
+</script>
+{% endblock %}

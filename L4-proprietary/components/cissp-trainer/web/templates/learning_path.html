@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>学习路径</h1>
+        <p>科学规划，循序渐进通过 CISSP</p>
+    </div>
+</div>
+
+<!-- 当前路径 -->
+<div class="card" id="currentPathCard" style="display:none">
+    <div class="card-title"><span>🚀 当前进行中</span></div>
+    <div id="currentPathContent"></div>
+</div>
+
+<!-- 所有路径 -->
+<div class="card">
+    <div class="card-title">
+        <span>📚 学习路径列表</span>
+        <span class="text-muted" id="pathCount">加载中...</span>
+    </div>
+    <div id="pathList">
+        <div class="text-muted">加载中...</div>
+    </div>
+</div>
+
+<!-- 路径详情 & 里程碑 -->
+<div class="card" id="pathDetailCard" style="display:none">
+    <div class="card-title">
+        <span id="detailTitle">路径详情</span>
+        <button class="btn btn-sm" onclick="hideDetail()">返回列表</button>
+    </div>
+    <div id="pathDetailContent"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let allPaths = [];
+let currentPath = null;
+
+async function loadPaths() {
+    try {
+        const paths = await fetch('/api/paths').then(r => r.json());
+        allPaths = paths;
+        document.getElementById('pathCount').textContent = `${paths.length} 条路径`;
+
+        const list = document.getElementById('pathList');
+        list.innerHTML = paths.map((p, i) => `
+            <div class="path-card" data-idx="${i}">
+                <div class="flex-between" style="margin-bottom:var(--s-2)">
+                    <div class="path-title">${p.name}</div>
+                    <span class="badge primary">${p.estimated_days} 天</span>
+                </div>
+                <div class="path-desc">${p.description}</div>
+                <div class="path-meta">
+                    <span>🎯 ${p.goal}</span>
+                    <span>📝 每日 ${p.daily_question_target} 题</span>
+                    <span>📊 难度 ${p.difficulty_range}</span>
+                    <span>🏁 ${p.milestone_count} 个里程碑</span>
+                </div>
+                <div style="margin-top:var(--s-4);display:flex;gap:var(--s-2)">
+                    <button class="btn btn-primary btn-sm" onclick="startPath('${p.slug}')">开始学习</button>
+                    <button class="btn btn-sm" onclick="showDetail(${i})">查看详情</button>
+                </div>
+            </div>
+        `).join('');
+
+        // 加载当前路径
+        const current = await fetch('/api/paths/current').then(r => r.json());
+        if (current.has_path) {
+            currentPath = current;
+            document.getElementById('currentPathCard').style.display = 'block';
+            renderCurrentPath(current);
+        }
+    } catch(e) {
+        showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+function renderCurrentPath(data) {
+    const p = data.path;
+    const prog = data.progress;
+    const ms = data.current_milestone;
+    const mstat = data.milestone_status || [];
+
+    const html = `
+        <div class="path-card current">
+            <div class="flex-between" style="margin-bottom:var(--s-2)">
+                <div class="path-title">${p.name}</div>
+                <span class="badge success">进行中</span>
+            </div>
+            <div style="margin-bottom:var(--s-4)">
+                <div class="flex-between" style="margin-bottom:4px">
+                    <span style="font-size:0.85rem">整体进度</span>
+                    <span style="font-weight:600">${prog.completion_percent}%</span>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width:${prog.completion_percent}%"></div></div>
+            </div>
+            <div class="path-meta">
+                <span>📅 开始于 ${prog.start_date}</span>
+                <span>⏱️ 预计 ${p.estimated_days} 天</span>
+                <span>✅ 已完成 ${prog.total_questions_done} 题</span>
+                <span>🔥 连续 ${prog.streak_days} 天</span>
+            </div>
+        </div>
+
+        <div style="margin-top:var(--s-6)">
+            <h3 style="font-family:var(--font-display);margin-bottom:var(--s-4)">🏆 里程碑</h3>
+            <div class="milestone-list">
+                ${mstat.map((m, i) => `
+                    <div class="milestone-item ${m.completed ? 'completed' : (i === prog.current_milestone_index ? 'current' : '')}">
+                        <div class="milestone-dot"></div>
+                        <div class="milestone-name">${m.name}</div>
+                        <div class="milestone-desc">
+                            ${m.completed ? '✅ 已完成' : (i === prog.current_milestone_index ? '🎯 进行中' : '⏳ 待完成')}
+                            · 掌握度 ${(m.avg_mastery * 100).toFixed(1)}% / 目标 ${(m.threshold * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    document.getElementById('currentPathContent').innerHTML = html;
+}
+
+async function startPath(slug) {
+    try {
+        const res = await fetch('/api/paths/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug })
+        }).then(r => r.json());
+        if (res.error) {
+            showToast(res.error, 'warning');
+        } else {
+            showToast('路径已启动！', 'success');
+            setTimeout(() => location.reload(), 800);
+        }
+    } catch(e) {
+        showToast('启动失败: ' + e.message, 'error');
+    }
+}
+
+function showDetail(idx) {
+    const p = allPaths[idx];
+    document.getElementById('detailTitle').textContent = p.name + ' - 详情';
+    document.getElementById('pathDetailCard').style.display = 'block';
+    document.querySelector('.card:nth-of-type(2)').style.display = 'none';
+
+    // 里程碑信息从路径数据中提取
+    const milestones = p.milestones || [];
+    // 我们从路径对象中获取里程碑数据
+    // 这里使用预设数据的大致结构
+    const msHtml = (Array.isArray(milestones) && milestones.length > 0)
+        ? milestones.map((m, i) => `
+            <div class="milestone-item">
+                <div class="milestone-dot"></div>
+                <div class="milestone-name">${m.name || `里程碑 ${i+1}`}</div>
+                <div class="milestone-desc">
+                    ${m.description || ''}
+                    ${m.mastery_threshold ? `· 目标掌握度 ${(m.mastery_threshold * 100).toFixed(0)}%` : ''}
+                </div>
+            </div>
+        `).join('')
+        : '<div class="text-muted">暂无里程碑数据</div>';
+
+    document.getElementById('pathDetailContent').innerHTML = `
+        <div class="path-card" style="margin-bottom:var(--s-6)">
+            <div class="path-title">${p.name}</div>
+            <div class="path-desc">${p.description}</div>
+            <div style="margin-bottom:var(--s-3)"><strong>目标：</strong>${p.goal}</div>
+            <div class="path-meta">
+                <span>⏱️ ${p.estimated_days} 天</span>
+                <span>📝 每日 ${p.daily_question_target} 题</span>
+                <span>📊 难度 ${p.difficulty_range}</span>
+                ${p.prerequisites && p.prerequisites.length ? `<span>📋 前置: ${p.prerequisites.join(', ')}</span>` : ''}
+            </div>
+        </div>
+        <h3 style="font-family:var(--font-display);margin-bottom:var(--s-4)">🏆 里程碑规划</h3>
+        <div class="milestone-list">${msHtml}</div>
+        <div style="margin-top:var(--s-6)">
+            <button class="btn btn-primary" onclick="startPath('${p.slug}')">开始此路径</button>
+        </div>
+    `;
+}
+
+function hideDetail() {
+    document.getElementById('pathDetailCard').style.display = 'none';
+    document.querySelector('.card:nth-of-type(2)').style.display = 'block';
+}
+
+loadPaths();
+</script>
+{% endblock %}

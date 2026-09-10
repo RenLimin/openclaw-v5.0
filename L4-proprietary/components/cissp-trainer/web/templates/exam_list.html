@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>模拟考试</h1>
+        <p>全真模拟 CISSP 考试，检验学习成果</p>
+    </div>
+</div>
+
+<!-- 创建考试 -->
+<div class="card">
+    <div class="card-title"><span>🚀 开始新考试</span></div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>考试标题</label>
+            <input type="text" id="examTitle" value="CISSP 模拟考试">
+        </div>
+        <div class="form-group">
+            <label>题目数量</label>
+            <input type="number" id="examCount" value="20" min="5" max="500">
+        </div>
+        <div class="form-group">
+            <label>考试时长（分钟）</label>
+            <input type="number" id="examDuration" value="60" min="10" max="480">
+        </div>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>难度下限</label>
+            <select id="diffMin">
+                <option value="1" selected>1 - 入门</option>
+                <option value="2">2 - 基础</option>
+                <option value="3">3 - 中等</option>
+                <option value="4">4 - 进阶</option>
+                <option value="5">5 - 专家</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>难度上限</label>
+            <select id="diffMax">
+                <option value="1">1 - 入门</option>
+                <option value="2">2 - 基础</option>
+                <option value="3">3 - 中等</option>
+                <option value="4">4 - 进阶</option>
+                <option value="5" selected>5 - 专家</option>
+            </select>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>指定领域（不选=全部 8 域）</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+            {# 用 JS 生成 #}
+            <div id="domainChecks" style="display:flex;flex-wrap:wrap;gap:6px;width:100%"></div>
+        </div>
+    </div>
+    <button class="btn btn-primary btn-lg" onclick="createExam()">开始考试</button>
+</div>
+
+<!-- 历史记录 -->
+<div class="card">
+    <div class="card-title">
+        <span>📋 考试历史</span>
+        <span class="text-muted" id="examCountLabel">加载中...</span>
+    </div>
+    <div id="examHistory">
+        <div class="text-muted">加载中...</div>
+    </div>
+</div>
+
+<!-- 成绩曲线 -->
+<div class="card" id="scoreCurveCard" style="display:none">
+    <div class="card-title"><span>📈 成绩曲线</span></div>
+    <div id="scoreCurve" style="height:200px;display:flex;align-items:flex-end;gap:4px;border-bottom:2px solid var(--c-border);padding-bottom:4px">
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const domains = [
+    {id:1,name:'安全与风险管理'}, {id:2,name:'资产安全'},
+    {id:3,name:'安全架构与工程'}, {id:4,name:'通信与网络安全'},
+    {id:5,name:'身份与访问管理'}, {id:6,name:'安全评估与测试'},
+    {id:7,name:'安全运营'}, {id:8,name:'软件开发安全'},
+];
+
+// 生成领域复选框
+const dc = document.getElementById('domainChecks');
+dc.innerHTML = domains.map(d => `
+    <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer">
+        <input type="checkbox" class="domain-check" value="${d.id}"> 域${d.id} ${d.name}
+    </label>
+`).join('');
+
+async function createExam() {
+    const title = document.getElementById('examTitle').value.trim() || 'CISSP 模拟考试';
+    const count = parseInt(document.getElementById('examCount').value);
+    const duration = parseInt(document.getElementById('examDuration').value);
+    const diffMin = parseInt(document.getElementById('diffMin').value);
+    const diffMax = parseInt(document.getElementById('diffMax').value);
+
+    const checked = Array.from(document.querySelectorAll('.domain-check:checked')).map(c => parseInt(c.value));
+    const domainFilter = checked.length > 0 ? checked : null;
+
+    try {
+        const res = await fetch('/api/exams', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, question_count: count, duration_minutes: duration,
+                domain_filter: domainFilter, difficulty_min: diffMin, difficulty_max: diffMax })
+        }).then(r => r.json());
+
+        if (res.success) {
+            showToast('考试创建成功，正在进入...', 'success');
+            // 自动开始并跳转
+            await fetch(`/api/exams/${res.exam_id}/start`, { method: 'POST' });
+            setTimeout(() => { window.location.href = `/exam/${res.exam_id}`; }, 500);
+        } else {
+            showToast(res.error || '创建失败', 'error');
+        }
+    } catch (e) {
+        showToast('创建失败: ' + e.message, 'error');
+    }
+}
+
+async function loadHistory() {
+    try {
+        const data = await fetch('/api/exams/history?limit=20').then(r => r.json());
+        document.getElementById('examCountLabel').textContent = `共 ${data.length} 次`;
+
+        const eh = document.getElementById('examHistory');
+        if (data.length === 0) {
+            eh.innerHTML = '<div class="text-muted">暂无考试记录，开始你的第一次模拟考试吧！</div>';
+            return;
+        }
+
+        eh.innerHTML = `
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr><th>考试</th><th>分数</th><th>状态</th><th>正确/总数</th><th>时长</th><th>完成时间</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(e => `
+                            <tr>
+                                <td>${e.title}</td>
+                                <td class="num"><strong style="color:${e.passed ? 'var(--c-success)' : 'var(--c-danger)'};font-size:1.05rem">${e.score}</strong></td>
+                                <td><span class="badge ${e.passed ? 'success' : 'danger'}">${e.passed ? '✅ 通过' : '❌ 未通过'}</span></td>
+                                <td class="num">${e.total_correct}/${e.total_questions}</td>
+                                <td>${e.duration_minutes} 分钟</td>
+                                <td style="font-size:0.82rem">${e.submitted_at ? e.submitted_at.slice(0,16).replace('T',' ') : '--'}</td>
+                                <td><a href="/exam/${e.exam_id}/result" class="btn btn-sm">查看成绩</a></td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+
+        // 成绩曲线
+        if (data.length >= 2) {
+            const curve = await fetch('/api/exams/score-curve').then(r => r.json());
+            if (curve.length > 0) {
+                document.getElementById('scoreCurveCard').style.display = 'block';
+                const maxScore = 100;
+                const minScore = 0;
+                const chart = document.getElementById('scoreCurve');
+                chart.innerHTML = curve.map(d => {
+                    const h = ((d.score - minScore) / (maxScore - minScore)) * 100;
+                    const color = d.score >= 70 ? 'var(--c-success)' : 'var(--c-danger)';
+                    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                        <div style="font-size:0.7rem;color:var(--c-muted)">${d.score}</div>
+                        <div style="width:100%;height:${h}%;background:${color};border-radius:4px 4px 0 0;min-height:4px;position:relative" title="${d.date}: ${d.score}分"></div>
+                        <div style="font-size:0.65rem;color:var(--c-muted-2)">${d.date.slice(5)}</div>
+                    </div>`;
+                }).join('');
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+loadHistory();
+</script>
+{% endblock %}
