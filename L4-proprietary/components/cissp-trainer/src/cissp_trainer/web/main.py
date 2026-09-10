@@ -8,27 +8,49 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
+from jinja2 import FileSystemLoader
 
 # 路径设置
-_WEB_DIR = os.path.dirname(os.path.abspath(__file__))
-_PKG_DIR = os.path.dirname(_WEB_DIR)
-_SRC_DIR = os.path.dirname(_PKG_DIR)
+_WEB_DIR = Path(__file__).resolve().parent
+_PKG_DIR = _WEB_DIR.parent
+_SRC_DIR = _PKG_DIR.parent
+_PROJECT_ROOT = _WEB_DIR.parents[5]
 for _p in [_SRC_DIR, _WEB_DIR]:
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from cissp_trainer.web.api import router as api_router
 from cissp_trainer.database import init_db
 from cissp_trainer.learning_path import init_preset_paths
 
-STATIC_DIR = os.path.join(_WEB_DIR, "static")
-TEMPLATES_DIR = os.path.join(_WEB_DIR, "templates")
+STATIC_DIR = _WEB_DIR / "static"
+TEMPLATES_DIR = _WEB_DIR / "templates"
+_WEB_COMMON_MACROS = _PROJECT_ROOT / "L2-infra" / "components" / "web-common" / "macros"
+_WEB_COMMON_STATIC = _PROJECT_ROOT / "L2-infra" / "components" / "web-common" / "static"
+
+
+def setup_web_common(app: FastAPI, templates: Jinja2Templates, brand_name: str = "CISSP Trainer",
+                     brand_icon: str = "🛡️", storage_key: str = "cissp_trainer_sidebar",
+                     sidebar_items: list | None = None):
+    """挂载 web-common 静态资源 + 注册模板加载器 + 注入全局变量"""
+    # 静态资源
+    app.mount("/static/web-common", StaticFiles(directory=str(_WEB_COMMON_STATIC)), name="web-common-static")
+
+    # 模板加载器（业务模板 + 组件库宏）
+    templates.env.loader = FileSystemLoader([str(TEMPLATES_DIR), str(_WEB_COMMON_MACROS)])
+
+    # 全局变量
+    templates.env.globals["brand_name"] = brand_name
+    templates.env.globals["brand_icon"] = brand_icon
+    templates.env.globals["storage_key"] = storage_key
+    templates.env.globals["sidebar_items"] = sidebar_items or []
 
 
 @asynccontextmanager
@@ -36,14 +58,12 @@ async def lifespan(app: FastAPI):
     """启动时初始化数据库（幂等）"""
     try:
         init_db()
-        # 初始化预设学习路径
         from cissp_trainer.database import session_scope
         with session_scope() as session:
             init_preset_paths(session)
     except Exception as e:
         print(f"[WARN] DB init: {e}")
     yield
-    # shutdown: 暂无需清理
 
 
 app = FastAPI(
@@ -53,11 +73,44 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 静态文件
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# 静态文件（业务）
+app.mount("/static/app", StaticFiles(directory=str(STATIC_DIR)), name="app-static")
 
 # 模板
-templates = Jinja2Templates(directory=TEMPLATES_DIR)
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+# 侧边栏配置
+_SIDEBAR_ITEMS = [
+    {
+        "title": "概览",
+        "items": [
+            {"id": "dashboard", "label": "学习仪表盘", "url": "/", "icon": "📊"},
+        ]
+    },
+    {
+        "title": "学习",
+        "items": [
+            {"id": "questions", "label": "题库浏览", "url": "/questions", "icon": "📚"},
+            {"id": "path", "label": "学习路径", "url": "/learning-path", "icon": "🛤️"},
+            {"id": "kg", "label": "知识图谱", "url": "/knowledge-graph", "icon": "🕸️"},
+        ]
+    },
+    {
+        "title": "考试",
+        "items": [
+            {"id": "exam", "label": "模拟考试", "url": "/exam", "icon": "📝"},
+        ]
+    },
+]
+
+# 集成 web-common
+setup_web_common(
+    app, templates,
+    brand_name="CISSP Trainer",
+    brand_icon="🛡️",
+    storage_key="cissp_trainer_sidebar",
+    sidebar_items=_SIDEBAR_ITEMS,
+)
 
 
 # ============================================================
@@ -113,7 +166,6 @@ async def page_dashboard(request: Request):
     return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "active_page": "dashboard",
-        "page_title": "学习仪表盘",
     })
 
 
@@ -123,7 +175,6 @@ async def page_questions(request: Request):
     return templates.TemplateResponse(request, "question_bank.html", {
         "request": request,
         "active_page": "questions",
-        "page_title": "题库浏览",
     })
 
 
@@ -133,7 +184,6 @@ async def page_exam_list(request: Request):
     return templates.TemplateResponse(request, "exam_list.html", {
         "request": request,
         "active_page": "exam",
-        "page_title": "模拟考试",
     })
 
 
@@ -143,7 +193,6 @@ async def page_exam_take(request: Request, exam_id: int):
     return templates.TemplateResponse(request, "exam_take.html", {
         "request": request,
         "active_page": "exam",
-        "page_title": "模拟考试",
         "exam_id": exam_id,
     })
 
@@ -154,7 +203,6 @@ async def page_exam_result(request: Request, exam_id: int):
     return templates.TemplateResponse(request, "exam_result.html", {
         "request": request,
         "active_page": "exam",
-        "page_title": "考试成绩",
         "exam_id": exam_id,
     })
 
@@ -165,7 +213,6 @@ async def page_learning_path(request: Request):
     return templates.TemplateResponse(request, "learning_path.html", {
         "request": request,
         "active_page": "path",
-        "page_title": "学习路径",
     })
 
 
@@ -175,7 +222,6 @@ async def page_knowledge_graph(request: Request):
     return templates.TemplateResponse(request, "knowledge_graph.html", {
         "request": request,
         "active_page": "kg",
-        "page_title": "知识图谱",
     })
 
 

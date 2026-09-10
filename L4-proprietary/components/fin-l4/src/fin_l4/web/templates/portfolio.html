@@ -1,26 +1,36 @@
 {% extends "base.html" %}
-{% block title %}投资持仓 - FIN-L4{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '投资持仓 - FIN-L4' %}
+
 {% block content %}
-<h1 style="margin-bottom: 1.5rem;">投资持仓</h1>
+{{ page_header(title='投资持仓', subtitle='投资组合与收益分析') }}
+
 {% if portfolios %}
-<table class="table">
-    <thead><tr><th>名称</th><th>类型</th><th>总成本</th><th>总市值</th><th>盈亏</th></tr></thead>
-    <tbody>
-    {% for p in portfolios %}
-    <tr>
-        <td><a href="/portfolio/{{ p.id }}">{{ p.name }}</a></td>
-        <td>{{ p.type }}</td>
-        <td>¥{{ p.total_cost }}</td>
-        <td>¥{{ p.total_value }}</td>
-        <td style="color: {% if p.total_gain_loss and p.total_gain_loss.startswith('-') %}red{% else %}green{% endif %};">¥{{ p.total_gain_loss }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% call card() %}
+    <div class="table-wrapper">
+        <table class="table">
+            <thead><tr><th>名称</th><th>类型</th><th class="num">总成本</th><th class="num">总市值</th><th class="num">盈亏</th></tr></thead>
+            <tbody>
+            {% for p in portfolios %}
+            <tr>
+                <td><a href="/portfolio/{{ p.id }}">{{ p.name }}</a></td>
+                <td>{{ p.type }}</td>
+                <td class="num mono">¥{{ p.total_cost }}</td>
+                <td class="num mono">¥{{ p.total_value }}</td>
+                <td class="num mono {% if p.total_gain_loss and p.total_gain_loss.startswith('-') %}negative{% else %}positive{% endif %}">
+                    ¥{{ p.total_gain_loss }}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endcall %}
 {% else %}
-<div class="card">
-    <div class="card-title">暂无投资组合</div>
-    <p style="color: var(--text-muted);">还没有创建投资组合。</p>
-</div>
+{% call card(title='暂无投资组合') %}
+    <p class="text-muted">还没有创建投资组合。</p>
+{% endcall %}
 {% endif %}
 {% endblock %}

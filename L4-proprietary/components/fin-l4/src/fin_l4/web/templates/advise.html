@@ -1,32 +1,31 @@
 {% extends "base.html" %}
-{% block title %}理财建议 - FIN-L4{% endblock %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '理财建议 - FIN-L4' %}
+
 {% block content %}
 <h1 style="margin-bottom: 1.5rem;">理财建议</h1>
 
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-title">财务健康评分</div>
-    <div style="font-size: 3rem; font-weight: bold; color: var(--primary);">{{ health.health_score }}</div>
-    <p style="color: var(--text-muted); margin-top: 0.5rem;">{{ health.summary }}</p>
-</div>
+{% call card(title='财务健康评分') %}
+    <div style="font-size: 3rem; font-weight: bold; color: var(--c-primary);">{{ health.health_score }}</div>
+    <p class="text-muted" style="margin-top: 0.5rem;">{{ health.summary }}</p>
+{% endcall %}
 
 {% if health.allocation %}
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-title">资产配置建议</div>
+{% call card(title='资产配置建议') %}
     <p>{{ health.allocation }}</p>
-</div>
+{% endcall %}
 {% endif %}
 
 {% if health.debt_plan %}
-<div class="card" style="margin-bottom: 1.5rem;">
-    <div class="card-title">债务优化</div>
+{% call card(title='债务优化') %}
     <p>{{ health.debt_plan }}</p>
-</div>
+{% endcall %}
 {% endif %}
 
 {% if health.insurance_gap %}
-<div class="card">
-    <div class="card-title">保障缺口</div>
+{% call card(title='保障缺口') %}
     <p>{{ health.insurance_gap }}</p>
-</div>
+{% endcall %}
 {% endif %}
 {% endblock %}

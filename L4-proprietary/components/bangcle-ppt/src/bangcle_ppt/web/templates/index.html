@@ -1,21 +1,22 @@
 {% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+
+{% set page_title = '模板库' %}
+
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>📦 模板库</h1>
-        <p class="subtitle">内置 <span id="templateCount">—</span> 个 PPT 模板，基于梆梆安全官方 VI 规范</p>
-    </div>
-    <div class="filter-bar">
-        <select id="themeFilter" onchange="filterTemplates()">
-            <option value="">全部主题</option>
-            <option value="light">浅色</option>
-            <option value="dark">深色</option>
-        </select>
-        <select id="categoryFilter" onchange="filterTemplates()">
-            <option value="">全部分类</option>
-        </select>
-        <input type="text" id="searchInput" placeholder="🔍 搜索模板..." oninput="filterTemplates()">
-    </div>
+{{ page_header(title='📦 模板库', subtitle='内置 <span id="templateCount">—</span> 个 PPT 模板，基于梆梆安全官方 VI 规范') }}
+
+<!-- 筛选栏 -->
+<div class="filter-bar">
+    <select id="themeFilter" onchange="filterTemplates()">
+        <option value="">全部主题</option>
+        <option value="light">浅色</option>
+        <option value="dark">深色</option>
+    </select>
+    <select id="categoryFilter" onchange="filterTemplates()">
+        <option value="">全部分类</option>
+    </select>
+    <input type="text" id="searchInput" placeholder="🔍 搜索模板..." oninput="filterTemplates()" style="flex:1;min-width:200px">
 </div>
 
 <div class="template-grid" id="templateGrid">

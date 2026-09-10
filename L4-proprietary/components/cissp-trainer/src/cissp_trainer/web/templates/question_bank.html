@@ -1,11 +1,12 @@
 {% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, pagination with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '题库浏览' %}
+
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>题库浏览</h1>
-        <p>按领域、难度、题型筛选题目</p>
-    </div>
-</div>
+{{ page_header(title='题库浏览', subtitle='按领域、难度、题型筛选题目') }}
 
 <!-- 筛选栏 -->
 <div class="filter-bar">
@@ -48,22 +49,21 @@
         <input type="text" id="filterKeyword" placeholder="搜索题干关键词...">
     </div>
     <div class="form-group" style="display:flex;align-items:flex-end">
-        <button class="btn btn-primary" onclick="loadQuestions(1)">🔍 搜索</button>
+        {{ button('🔍 搜索', variant='primary', onclick='loadQuestions(1)') }}
     </div>
 </div>
 
 <!-- 结果统计 -->
-<div class="flex-between mb-4" style="margin-bottom:var(--s-4)">
+<div class="flex-between" style="margin-bottom:var(--s-4)">
     <div class="text-muted" id="resultInfo">加载中...</div>
 </div>
 
 <!-- 题目列表 -->
-<div id="questionList" class="card" style="padding:0;overflow:hidden">
-    <div style="padding:var(--s-6);color:var(--c-muted)">加载中...</div>
-</div>
+{% call card() %}
+    <div id="questionList"></div>
+{% endcall %}
 
-<!-- 分页 -->
-<div class="pagination" id="pagination"></div>
+<div id="pagination" class="pagination"></div>
 {% endblock %}
 
 {% block extra_scripts %}

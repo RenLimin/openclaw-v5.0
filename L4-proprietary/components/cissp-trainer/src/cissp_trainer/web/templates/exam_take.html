@@ -1,4 +1,9 @@
 {% extends "base.html" %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '模拟考试' %}
+
 {% block content %}
 <!-- 考试顶部栏 -->
 <div class="exam-header">
@@ -8,12 +13,12 @@
     </div>
     <div style="display:flex;align-items:center;gap:var(--s-4)">
         <div class="exam-timer" id="examTimer">--:--:--</div>
-        <button class="btn btn-sm" onclick="pauseExam()">⏸ 暂停</button>
-        <button class="btn btn-danger btn-sm" onclick="submitConfirm()">交卷</button>
+        {{ button('⏸ 暂停', size='sm', onclick='pauseExam()') }}
+        {{ button('交卷', variant='danger', size='sm', onclick='submitConfirm()') }}
     </div>
 </div>
 
-<div class="grid-2" style="gap:var(--s-6)">
+<div class="grid-2">
     <!-- 题目区 -->
     <div>
         <div class="question-card" id="questionCard">
@@ -21,32 +26,31 @@
         </div>
 
         <div class="exam-nav">
-            <button class="btn" onclick="prevQuestion()" id="prevBtn">← 上一题</button>
+            {{ button('← 上一题', onclick='prevQuestion()', id='prevBtn') }}
             <div style="display:flex;gap:var(--s-2)">
-                <button class="btn" onclick="flagQuestion()" id="flagBtn">🚩 标记</button>
-                <button class="btn btn-primary" onclick="nextQuestion()" id="nextBtn">下一题 →</button>
+                {{ button('🚩 标记', onclick='flagQuestion()', id='flagBtn') }}
+                {{ button('下一题 →', variant='primary', onclick='nextQuestion()', id='nextBtn') }}
             </div>
         </div>
     </div>
 
     <!-- 答题卡 -->
-    <div class="card">
-        <div class="card-title"><span>📋 答题卡</span></div>
+    {% call card(title='📋 答题卡') %}
         <div class="question-grid" id="questionGrid"></div>
         <div style="display:flex;gap:var(--s-3);font-size:0.78rem;margin-top:var(--s-4);flex-wrap:wrap">
             <span><span style="display:inline-block;width:12px;height:12px;background:var(--c-surface-2);border-radius:2px;vertical-align:middle;margin-right:4px"></span>未答</span>
             <span><span style="display:inline-block;width:12px;height:12px;background:var(--c-primary);border-radius:2px;vertical-align:middle;margin-right:4px"></span>已答</span>
             <span><span style="display:inline-block;width:12px;height:12px;background:var(--c-surface-2);border:2px solid var(--c-warning);border-radius:2px;vertical-align:middle;margin-right:4px"></span>已标记</span>
         </div>
-    </div>
+    {% endcall %}
 </div>
 
 <!-- 暂停弹窗 -->
-<div id="pauseModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center">
+<div id="pauseModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
     <div style="background:var(--c-surface);border-radius:var(--r-lg);padding:var(--s-6);max-width:400px;width:90%;box-shadow:var(--sh-xl)">
         <h3 style="margin-bottom:var(--s-4)">⏸ 考试已暂停</h3>
         <p class="text-muted" style="margin-bottom:var(--s-5)">考试计时已暂停，点击继续恢复考试。</p>
-        <button class="btn btn-primary btn-block" onclick="resumeExam()">继续考试</button>
+        {{ button('继续考试', variant='primary', class='btn-block', onclick='resumeExam()') }}
     </div>
 </div>
 {% endblock %}

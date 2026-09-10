@@ -1,38 +1,40 @@
 {% extends "base.html" %}
-{% block title %}记账 - FIN-L4{% endblock %}
-{% block content %}
-<div class="page-header">
-    <h1>最近交易</h1>
-    <p>查看所有最近记录的交易</p>
-</div>
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
 
-<div class="card">
-    <div class="card-title">最新 20 笔交易</div>
+{% set page_title = '记账 - FIN-L4' %}
+
+{% block content %}
+{{ page_header(title='最近交易', subtitle='查看所有最近记录的交易') }}
+
+{% call card(title='最新 20 笔交易') %}
     {% if transactions %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>日期</th>
-                <th>摘要</th>
-                <th>分类</th>
-                <th class="num">金额</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for txn in transactions %}
-            <tr>
-                <td>{{ txn.date }}</td>
-                <td>{{ txn.note }}</td>
-                <td>{{ txn.category }}</td>
-                <td class="num {% if txn.amount > 0 %}text-success{% else %}text-danger{% endif %}">
-                    {{ "+" if txn.amount > 0 else "" }}¥{{ txn.amount }}
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>摘要</th>
+                    <th>分类</th>
+                    <th class="num">金额</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for txn in transactions %}
+                <tr>
+                    <td>{{ txn.date }}</td>
+                    <td>{{ txn.note }}</td>
+                    <td>{{ txn.category }}</td>
+                    <td class="num mono {% if txn.amount > 0 %}positive{% else %}negative{% endif %}">
+                        {{ "+" if txn.amount > 0 else "" }}¥{{ txn.amount }}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <p class="text-muted">暂无交易记录</p>
     {% endif %}
-</div>
+{% endcall %}
 {% endblock %}

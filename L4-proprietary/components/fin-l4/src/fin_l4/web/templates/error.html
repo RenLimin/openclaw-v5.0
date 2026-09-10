@@ -1,13 +1,17 @@
 {% extends "base.html" %}
-{% block title %}出错了 - FIN-L4{% endblock %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '出错了 - FIN-L4' %}
+
 {% block content %}
-<div class="container mt-5">
-  <div class="card shadow-sm">
-    <div class="card-body text-center py-5">
-      <h2 class="text-danger mb-3">⚠️ 出错了</h2>
-      <p class="lead text-muted">{{ error }}</p>
-      <a href="/" class="btn btn-outline-primary mt-3">返回首页</a>
+{% call card() %}
+    <div style="text-align: center; padding: 2rem 0;">
+        <h2 style="color: var(--c-danger); margin-bottom: 1rem;">⚠️ 出错了</h2>
+        <p class="text-muted">{{ error }}</p>
+        <div style="margin-top: 1.5rem;">
+            {{ button('返回首页', variant='primary', url='/') }}
+        </div>
     </div>
-  </div>
-</div>
+{% endcall %}
 {% endblock %}

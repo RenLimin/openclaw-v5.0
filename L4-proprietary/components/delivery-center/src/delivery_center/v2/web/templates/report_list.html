@@ -1,19 +1,20 @@
 {% extends "base.html" %}
-{% block title %}月报列表 — BDMS v2{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, badge, progress_bar with context %}
+
+{% set page_title = '月报列表 — BDMS v2' %}
+
 {% block content %}
+{{ page_header(
+    title='月报列表',
+    subtitle='历史月报生成记录',
+    actions=[{"label": "+ 生成新月报", "url": "/generate", "variant": "primary"}]
+) }}
 
-<div class="page-header">
-    <div>
-        <h1 class="page-title">月报列表</h1>
-        <div class="page-subtitle">历史月报生成记录</div>
-    </div>
-    <a href="/generate" class="btn btn-primary">+ 生成新月报</a>
-</div>
-
-<div class="card">
-    <div class="card-body" style="padding: 0;">
-        {% if reports %}
-        <table class="data-table">
+{% call card() %}
+    {% if reports %}
+    <div class="table-wrapper">
+        <table class="table">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -27,28 +28,21 @@
             <tbody>
                 {% for r in reports %}
                 <tr>
-                    <td>#{{ r.id }}</td>
+                    <td style="font-family: var(--font-mono); font-size: 0.85rem;">#{{ r.id }}</td>
                     <td><strong>{{ r.month[:4] }}年{{ r.month[4:] }}月</strong></td>
                     <td>
-                        <span class="badge badge-{{ r.status }}">
-                            {% if r.status == 'pending' %}等待中
-                            {% elif r.status == 'running' %}生成中
-                            {% elif r.status == 'completed' %}已完成
-                            {% elif r.status == 'failed' %}失败
-                            {% else %}{{ r.status }}
-                            {% endif %}
-                        </span>
+                        {% if r.status == 'pending' %}{{ badge('等待中', 'muted') }}
+                        {% elif r.status == 'running' %}{{ badge('生成中', 'primary') }}
+                        {% elif r.status == 'completed' %}{{ badge('已完成', 'success') }}
+                        {% elif r.status == 'failed' %}{{ badge('失败', 'danger') }}
+                        {% else %}{{ badge(r.status, 'muted') }}
+                        {% endif %}
                     </td>
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 8px; min-width: 120px;">
-                            <div class="progress-wrap" style="flex: 1;">
-                                <div class="progress-bar {% if r.status == 'completed' %}success{% elif r.status == 'failed' %}failed{% endif %}"
-                                     style="width: {{ r.progress }}%;"></div>
-                            </div>
-                            <span style="font-size: 12px; color: var(--c-muted);">{{ r.progress }}%</span>
-                        </div>
+                    <td style="min-width: 140px;">
+                        {% set pb_variant = 'success' if r.status == 'completed' else 'danger' if r.status == 'failed' else 'primary' %}
+                        {{ progress_bar(r.progress, pb_variant, r.progress ~ '%') }}
                     </td>
-                    <td style="color: var(--c-muted); font-size: 12px;">{{ r.created_at_display }}</td>
+                    <td style="color: var(--c-muted); font-size: 0.8rem;">{{ r.created_at_display }}</td>
                     <td>
                         <div class="actions">
                             <a href="/reports/{{ r.id }}" class="btn btn-sm">预览</a>
@@ -56,7 +50,7 @@
                             <a href="/api/reports/{{ r.id }}/download" class="btn btn-sm btn-success">下载</a>
                             {% endif %}
                             {% if r.status == 'failed' %}
-                            <span title="{{ r.error_msg }}" style="color: var(--c-danger); cursor: help;" class="btn btn-sm">查看错误</span>
+                            <span title="{{ r.error_msg or '' }}" style="color: var(--c-danger); cursor: help;" class="btn btn-sm">查看错误</span>
                             {% endif %}
                         </div>
                     </td>
@@ -64,14 +58,14 @@
                 {% endfor %}
             </tbody>
         </table>
-        {% else %}
-        <div class="empty-state">
-            <div class="icon">📭</div>
-            <h3>暂无月报记录</h3>
-            <p>点击右上角「生成新月报」开始生成第一份月报</p>
-        </div>
-        {% endif %}
     </div>
-</div>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">📭</div>
+        <h3>暂无月报记录</h3>
+        <p>点击右上角「生成新月报」开始生成第一份月报</p>
+    </div>
+    {% endif %}
+{% endcall %}
 
 {% endblock %}

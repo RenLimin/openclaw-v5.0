@@ -1,104 +1,87 @@
 {% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, dashboard_grid, stat_card with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '学习仪表盘' %}
+
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>学习仪表盘</h1>
-        <p>掌握全局，科学备考 CISSP</p>
-    </div>
-    <div class="flex gap-2">
-        <a href="/exam" class="btn btn-primary btn-lg">🚀 开始模考</a>
-    </div>
-</div>
+{{ page_header(title='学习仪表盘', subtitle='掌握全局，科学备考 CISSP') }}
 
 <!-- 核心指标 -->
 <div class="dashboard-grid" id="statsGrid">
     <div class="stat-card">
-        <div class="stat-label">题库总量</div>
+        <div class="stat-label">📊 题库总量</div>
         <div class="stat-value primary" id="statTotalQuestions">--</div>
         <div class="stat-sub">覆盖 8 大领域</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">累计答题</div>
+        <div class="stat-label">📝 累计答题</div>
         <div class="stat-value" id="statTotalRecords">--</div>
         <div class="stat-sub">总练习次数</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">整体正确率</div>
+        <div class="stat-label">✅ 整体正确率</div>
         <div class="stat-value success" id="statAccuracy">--</div>
         <div class="stat-sub">所有答题记录</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">今日学习</div>
+        <div class="stat-label">📅 今日学习</div>
         <div class="stat-value warning" id="statToday">0</div>
         <div class="stat-sub" id="statTodayAcc">今日正确率 --</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">待复习</div>
+        <div class="stat-label">🔄 待复习</div>
         <div class="stat-value danger" id="statDue">0</div>
         <div class="stat-sub">间隔重复到期</div>
     </div>
     <div class="stat-card">
-        <div class="stat-label">知识点数量</div>
+        <div class="stat-label">🧠 知识点数量</div>
         <div class="stat-value" id="statKps">--</div>
         <div class="stat-sub">知识图谱节点</div>
     </div>
 </div>
 
 <div class="grid-2">
-    <!-- 8 领域掌握度 -->
-    <div class="card">
-        <div class="card-title">
-            <span>📊 8 大领域掌握度</span>
-        </div>
+    {% call card(title='📊 8 大领域掌握度') %}
         <div class="domain-list" id="domainList">
             <div class="text-muted">加载中...</div>
         </div>
-    </div>
+    {% endcall %}
 
-    <!-- 今日任务 -->
-    <div class="card">
-        <div class="card-title">
-            <span>📅 今日学习计划</span>
-            <a href="/learning-path" class="btn btn-sm">查看路径</a>
+    {% call card(title='📅 今日学习计划') %}
+        <div class="card-actions">
+            {{ button('查看路径', size='sm', url='/learning-path') }}
         </div>
         <div id="dailyPlan">
             <div class="text-muted">加载中...</div>
         </div>
-    </div>
+    {% endcall %}
 </div>
 
 <div class="grid-2">
-    <!-- 学习进度曲线 -->
-    <div class="card">
-        <div class="card-title">
-            <span>📈 近 30 天学习趋势</span>
-        </div>
-        <div class="trend-chart" id="trendChart" style="height:160px;display:flex;align-items:flex-end;gap:3px;">
-        </div>
-    </div>
+    {% call card(title='📈 近 30 天学习趋势') %}
+        <div id="trendChart" style="height:160px;display:flex;align-items:flex-end;gap:3px;"></div>
+    {% endcall %}
 
-    <!-- 薄弱知识点 -->
-    <div class="card">
-        <div class="card-title">
-            <span>⚠️ 最薄弱知识点 Top 10</span>
-            <a href="/knowledge-graph" class="btn btn-sm">知识图谱</a>
+    {% call card(title='⚠️ 最薄弱知识点 Top 10') %}
+        <div class="card-actions">
+            {{ button('知识图谱', size='sm', url='/knowledge-graph') }}
         </div>
         <div id="weakKpList" class="domain-list">
             <div class="text-muted">加载中...</div>
         </div>
-    </div>
+    {% endcall %}
 </div>
 
-<!-- 最近考试 -->
-<div class="card">
-    <div class="card-title">
-        <span>📝 最近模拟考试</span>
-        <a href="/exam" class="btn btn-sm">全部记录</a>
+{% call card(title='📝 最近模拟考试') %}
+    <div class="card-actions">
+        {{ button('全部记录', size='sm', url='/exam') }}
     </div>
     <div id="examHistory">
         <div class="text-muted">加载中...</div>
     </div>
-</div>
+{% endcall %}
 {% endblock %}
 
 {% block extra_scripts %}

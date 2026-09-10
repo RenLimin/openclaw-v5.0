@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}错误 — BDMS v2{% endblock %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '错误 — BDMS v2' %}
+
 {% block content %}
-<div class="card">
-    <div class="card-header">错误</div>
-    <div class="card-body">
-        <div class="alert alert-error">{{ error }}</div>
-        <a href="/" class="btn btn-primary">← 返回列表</a>
-    </div>
-</div>
+{% call card(title="错误") %}
+    <div class="alert alert-error">{{ error }}</div>
+    {{ button('← 返回列表', variant='primary', url='/') }}
+{% endcall %}
 {% endblock %}
