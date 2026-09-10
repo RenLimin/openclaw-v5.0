@@ -8,10 +8,10 @@ import tempfile
 import shutil
 import pytest
 
-MODULE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+MODULE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, MODULE_DIR)
 
-import config
+from office_contract import config
 
 
 @pytest.fixture(scope="module")
@@ -28,7 +28,7 @@ def setup():
         shutil.rmtree(test_out)
     os.makedirs(test_out, exist_ok=True)
 
-    from services import init_db, create_contract
+    from office_contract.services import init_db, create_contract
     init_db()
     cid = create_contract(
         title="文档生成测试合同",
@@ -51,7 +51,7 @@ def setup():
 
 class TestDocGenerationFormats:
     def test_generate_docx(self, setup):
-        from services import generate_contract_doc
+        from office_contract.services import generate_contract_doc
         result = generate_contract_doc(setup["contract_id"], format="docx")
         assert result["format"] == "docx"
         assert os.path.exists(result["output_path"])
@@ -59,7 +59,7 @@ class TestDocGenerationFormats:
         assert os.path.getsize(result["output_path"]) > 1000
 
     def test_generate_markdown(self, setup):
-        from services import generate_contract_doc
+        from office_contract.services import generate_contract_doc
         result = generate_contract_doc(setup["contract_id"], format="md")
         assert result["format"] == "markdown"
         assert os.path.exists(result["output_path"])
@@ -78,13 +78,13 @@ class TestDocGenerationFormats:
         assert "壹拾伍万元整" in content  # 15 万大写
 
     def test_generate_markdown_full_alias(self, setup):
-        from services import generate_contract_doc
+        from office_contract.services import generate_contract_doc
         result = generate_contract_doc(setup["contract_id"], format="markdown")
         assert result["format"] == "markdown"
         assert result["output_path"].endswith(".md")
 
     def test_generate_text(self, setup):
-        from services import generate_contract_doc
+        from office_contract.services import generate_contract_doc
         result = generate_contract_doc(setup["contract_id"], format="txt")
         assert result["format"] == "text"
         assert os.path.exists(result["output_path"])
@@ -99,20 +99,20 @@ class TestDocGenerationFormats:
 
 class TestAmountToChinese:
     def test_amount_small(self):
-        from services.contract_service import _amount_to_chinese
+        from office_contract.services.contract_service import _amount_to_chinese
         assert "伍万元" in _amount_to_chinese(50000)
 
     def test_amount_large(self):
-        from services.contract_service import _amount_to_chinese
+        from office_contract.services.contract_service import _amount_to_chinese
         cn = _amount_to_chinese(1000000)
         assert "壹佰万元" in cn or "壹佰万" in cn
 
     def test_amount_with_decimal(self):
-        from services.contract_service import _amount_to_chinese
+        from office_contract.services.contract_service import _amount_to_chinese
         cn = _amount_to_chinese(12345.67)
         assert "陆角" in cn or "柒分" in cn or "陆角柒分" in cn
 
     def test_amount_zero(self):
-        from services.contract_service import _amount_to_chinese
+        from office_contract.services.contract_service import _amount_to_chinese
         cn = _amount_to_chinese(0)
         assert "零元" in cn

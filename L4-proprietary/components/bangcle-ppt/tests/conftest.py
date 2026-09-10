@@ -11,9 +11,9 @@ import pytest
 
 # 确保 bangcle_ppt 包可被导入
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PKG_ROOT = os.path.dirname(_HERE)
-if _PKG_ROOT not in sys.path:
-    sys.path.insert(0, _PKG_ROOT)
+_SRC_DIR = os.path.join(os.path.dirname(_HERE), "src")
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
 
 
 @pytest.fixture

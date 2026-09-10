@@ -13,9 +13,10 @@ import pytest
 
 # 路径设置
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PKG_ROOT = os.path.dirname(_HERE)
-if _PKG_ROOT not in sys.path:
-    sys.path.insert(0, _PKG_ROOT)
+_PROJ_ROOT = os.path.dirname(_HERE)
+_SRC_DIR = os.path.join(_PROJ_ROOT, "src")
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
 
 from bangcle_ppt.cli.pptgen import main as cli_main
 
@@ -274,9 +275,11 @@ def test_no_command_shows_help():
 def test_module_entry_point():
     """验证 python -m bangcle_ppt.cli 入口可用。"""
     import subprocess
+    env = os.environ.copy()
+    env["PYTHONPATH"] = _SRC_DIR
     result = subprocess.run(
         [sys.executable, "-m", "bangcle_ppt.cli", "--help"],
-        capture_output=True, text=True, cwd=_PKG_ROOT,
+        capture_output=True, text=True, cwd=_PROJ_ROOT, env=env,
     )
     assert result.returncode == 0
     assert "pptgen" in result.stdout
@@ -285,12 +288,13 @@ def test_module_entry_point():
 # ── 测试 18: cli/pptgen.py 直接运行 ─────────────────────────────────
 
 def test_direct_cli_script():
-    """验证 cli/pptgen.py 直接运行可用。"""
+    """验证 python -m bangcle_ppt.cli.pptgen 直接运行可用。"""
     import subprocess
-    cli_script = os.path.join(_PKG_ROOT, "cli", "pptgen.py")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = _SRC_DIR
     result = subprocess.run(
-        [sys.executable, cli_script, "list-templates", "--json"],
-        capture_output=True, text=True, cwd=_PKG_ROOT,
+        [sys.executable, "-m", "bangcle_ppt.cli.pptgen", "list-templates", "--json"],
+        capture_output=True, text=True, cwd=_PROJ_ROOT, env=env,
     )
     assert result.returncode == 0
     import json

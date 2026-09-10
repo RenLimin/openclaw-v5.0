@@ -7,7 +7,7 @@ from pathlib import Path
 
 def test_delivery_report_generation():
     """测试交付月报生成"""
-    from v1.generators.delivery_report import generate_delivery_report
+    from delivery_center.v1.generators.delivery_report import generate_delivery_report
 
     # 创建测试数据
     contract_df = pd.DataFrame({
@@ -39,7 +39,7 @@ def test_delivery_report_generation():
 
 def test_revenue_report_generation():
     """测试确收月报生成"""
-    from v1.generators.revenue_report import generate_revenue_report
+    from delivery_center.v1.generators.revenue_report import generate_revenue_report
 
     revenue_df = pd.DataFrame({
         "合同编号": ["C001"],

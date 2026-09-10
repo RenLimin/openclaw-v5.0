@@ -11,11 +11,11 @@ import pytest
 
 # 路径设置
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-MODULE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+MODULE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, MODULE_DIR)
 
 # 在 import services 前覆盖配置
-import config
+from office_contract import config
 
 # ============================================================
 # Fixtures
@@ -56,7 +56,7 @@ def test_env():
 @pytest.fixture(scope="module")
 def services(test_env):
     """导入 service 层（配置已覆盖）"""
-    from services import (
+    from office_contract.services import (
         init_db, create_contract, submit_for_approval,
         approve, reject, sign_contract, archive_contract,
         risk_scan, generate_contract_doc, get_contract, list_contracts,
@@ -85,7 +85,7 @@ def services(test_env):
 
 class TestInit:
     def test_db_init(self, test_env):
-        from services import init_db
+        from office_contract.services import init_db
         init_db()
         assert os.path.exists(test_env["db_path"]), "数据库文件未创建"
 

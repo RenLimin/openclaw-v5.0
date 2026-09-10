@@ -9,7 +9,7 @@ TEST_DATA_DIR = Path.home() / "Bangcle Workspace/01. Management/2026/2026团队�
 
 def test_full_pipeline_dry_run():
     """端到端流水线 dry-run 测试"""
-    from v1.main import run_full_pipeline
+    from delivery_center.v1.main import run_full_pipeline
 
     # dry_run=True 仅验证结构，不生成报告
     result = run_full_pipeline(

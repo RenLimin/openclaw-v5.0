@@ -13,8 +13,7 @@ from pathlib import Path
 # 路径设置
 _COMP_DIR = Path(__file__).resolve().parents[1]
 _SRC_DIR = _COMP_DIR / "src"
-_WEB_DIR = _COMP_DIR / "web"
-for _p in [str(_SRC_DIR), str(_COMP_DIR), str(_WEB_DIR)]:
+for _p in [str(_SRC_DIR)]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
@@ -26,8 +25,8 @@ from cissp_trainer.importer import import_questions
 from cissp_trainer.learning_path import init_preset_paths
 from cissp_trainer.knowledge_graph import add_edge
 
-from web.main import app
-from web.api import router as api_router
+from cissp_trainer.web.main import app
+from cissp_trainer.web.api import router as api_router
 
 
 # ============================================================
