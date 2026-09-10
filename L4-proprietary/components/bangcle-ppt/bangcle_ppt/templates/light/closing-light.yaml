@@ -1,0 +1,14 @@
+filename: closing-light.yaml
+meta:
+  name: 二维码结尾页
+  page_type: closing-light
+  theme: light
+  description: 谢谢观看 + 大尺寸二维码结尾页
+  version: 1.0.0
+  category: 结尾
+layout: {}
+data:
+  main_text: 谢谢观看
+  subtitle: THANK YOU
+  contact: www.bangcle.com | 400-xxx-xxxx
+  slogan: 稳如泰山·值得托付

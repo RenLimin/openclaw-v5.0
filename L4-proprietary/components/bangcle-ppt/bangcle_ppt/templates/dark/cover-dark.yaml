@@ -1,0 +1,15 @@
+filename: cover-dark.yaml
+meta:
+  name: 深色封面页
+  page_type: cover-dark
+  theme: dark
+  description: 深色主题封面页，大标题 + 分割线 + 汇报人
+  version: 1.0.0
+  category: 封面
+layout: {}
+data:
+  title: 产品发布会
+  subtitle: PRODUCT LAUNCH
+  presenter: 梆梆安全
+  date: '2025.01'
+  slogan: 稳如泰山·值得托付

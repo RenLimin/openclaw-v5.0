@@ -1,0 +1,21 @@
+filename: list-light.yaml
+meta:
+  name: 列表页
+  page_type: list-light
+  theme: light
+  description: 要点列表/编号列表页
+  version: 1.0.0
+  category: 内容
+layout:
+  numbered: true
+data:
+  title: 功能特性清单
+  subtitle: FEATURE LIST
+  items:
+  - 移动应用安全检测：静态+动态双引擎深度检测
+  - 应用加固保护：DEX加密、资源混淆、防调试
+  - 威胁监测预警：实时监测应用运行态安全
+  - 漏洞情报推送：第一时间推送高危漏洞情报
+  - 安全态势分析：多维度数据可视化分析报告
+  - 自动化集成：CI/CD流水线无缝集成
+  numbered: true

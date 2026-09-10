@@ -1,0 +1,22 @@
+filename: cover-light.yaml
+meta:
+  name: 浅色封面页
+  page_type: cover-light
+  theme: light
+  description: 浅色主题封面页，左侧竖条装饰 + 汇报人信息
+  version: 1.0.0
+  category: 封面
+layout:
+  title: 点击输入主标题
+  subtitle: CLICK HERE TO ADD TITLE
+  presenter: 汇报人
+  company: 梆梆安全
+  date: '2025.01'
+  slogan: 稳如泰山·值得托付
+  show_logo: true
+data:
+  title: 年度工作汇报
+  subtitle: ANNUAL REPORT
+  presenter: 张三
+  company: 梆梆安全
+  date: 2025年1月

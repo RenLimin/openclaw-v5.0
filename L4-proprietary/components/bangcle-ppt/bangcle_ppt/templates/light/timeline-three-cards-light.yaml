@@ -1,0 +1,22 @@
+filename: timeline-three-cards-light.yaml
+meta:
+  name: 时间轴+三卡片页
+  page_type: timeline-three-cards-light
+  theme: light
+  description: 横向箭头时间轴 + 下方3张卡片
+  version: 1.0.0
+  category: 时间轴
+layout: {}
+data:
+  title: 发展历程
+  subtitle: MILESTONES
+  items:
+  - step: '01'
+    title: 创立阶段
+    body: 2010年公司成立，专注移动安全领域，核心团队来自知名安全厂商。
+  - step: '02'
+    title: 快速发展
+    body: 2015年产品矩阵完善，服务客户超过500家，成为行业领先厂商。
+  - step: '03'
+    title: 生态布局
+    body: 2020年构建安全生态，推出一站式移动安全解决方案平台。

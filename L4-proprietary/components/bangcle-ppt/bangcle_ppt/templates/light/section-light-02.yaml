@@ -1,0 +1,16 @@
+filename: section-light-02.yaml
+meta:
+  name: 浅色章节过渡页（第二部分）
+  page_type: section-light
+  theme: light
+  description: 第二章节过渡页
+  version: 1.0.0
+  category: 导航
+layout:
+  part_label: Part Two
+  chapter_number: '02'
+  show_silhouette: true
+  show_logo: true
+data:
+  title: 第二部分标题
+  subtitle: CHAPTER TWO SUBTITLE

@@ -1,0 +1,16 @@
+filename: section-light-04.yaml
+meta:
+  name: 浅色章节过渡页（第四部分）
+  page_type: section-light
+  theme: light
+  description: 第四章节过渡页
+  version: 1.0.0
+  category: 导航
+layout:
+  part_label: Part Four
+  chapter_number: '04'
+  show_silhouette: true
+  show_logo: true
+data:
+  title: 第四部分标题
+  subtitle: CHAPTER FOUR SUBTITLE

@@ -1,0 +1,13 @@
+filename: blank-dark.yaml
+meta:
+  name: 空白模板（深色）
+  page_type: blank-light
+  theme: light
+  description: 自由排版空白页（深色）
+  version: 1.0.0
+  category: 通用
+layout:
+  show_left_bar: true
+data:
+  title: 自由内容页
+  subtitle: FREE LAYOUT

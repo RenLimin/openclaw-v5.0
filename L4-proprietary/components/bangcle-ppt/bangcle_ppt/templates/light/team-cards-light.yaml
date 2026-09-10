@@ -1,0 +1,25 @@
+filename: team-cards-light.yaml
+meta:
+  name: 团队介绍页
+  page_type: team-cards-light
+  theme: light
+  description: 4列人物卡片团队介绍
+  version: 1.0.0
+  category: 团队
+layout: {}
+data:
+  title: 核心团队
+  subtitle: OUR TEAM
+  members:
+  - name: 张安全
+    role: CEO / 创始人
+    description: 15年信息安全行业经验
+  - name: 李技术
+    role: CTO
+    description: 前BAT安全架构师
+  - name: 王产品
+    role: 产品总监
+    description: 10年ToB产品经验
+  - name: 赵运营
+    role: 运营总监
+    description: SaaS增长运营专家

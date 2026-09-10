@@ -1,0 +1,16 @@
+filename: section-light.yaml
+meta:
+  name: 浅色章节过渡页
+  page_type: section-light
+  theme: light
+  description: 浅色主题章节过渡页，左侧标题 + 右侧人物剪影
+  version: 1.0.0
+  category: 导航
+layout:
+  part_label: Part One
+  chapter_number: '01'
+  show_silhouette: true
+  show_logo: true
+data:
+  title: 第一部分标题
+  subtitle: CHAPTER SUBTITLE

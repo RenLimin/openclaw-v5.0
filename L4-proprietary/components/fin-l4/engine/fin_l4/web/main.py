@@ -365,6 +365,14 @@ async def rates_page(request: Request):
     })
 
 
+@app.get("/rules", response_class=HTMLResponse)
+async def rules_page(request: Request):
+    """分类规则管理页"""
+    return templates.TemplateResponse(request, "rules.html", {
+        "request": request, "active_page": "rules",
+    })
+
+
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
     """设置页"""

@@ -1,0 +1,262 @@
+# 智能分类规则 — 基于规则引擎
+# 每条规则：id, category_id, 匹配条件, priority, confidence_level
+# confidence_level: high / medium / low
+
+rules:
+  # ===== 收入类 =====
+  - id: rule_salary
+    category_id: cat_salary
+    name: 工资薪资
+    priority: 100
+    confidence_level: high
+    conditions:
+      all:
+        - keywords_in: [counterparty, summary]
+          keywords: ["工资", "薪资", "代发工资", "薪酬", "奖金", "年终奖"]
+        - amount_range: [5000, 200000]
+          direction: income
+
+  - id: rule_investment_income
+    category_id: cat_invest_income
+    name: 投资收益
+    priority: 90
+    confidence_level: high
+    conditions:
+      any:
+        - keywords_in: [summary, counterparty]
+          keywords: ["利息", "股息", "分红", "理财收益", "基金收益", "余额宝", "朝朝宝"]
+      direction: income
+
+  - id: rule_transfer_income
+    category_id: cat_other_income
+    name: 转账收入
+    priority: 30
+    confidence_level: medium
+    conditions:
+      all:
+        - keywords_in: [summary, counterparty]
+          keywords: ["转账", "转入", "退款", "回款", "报销"]
+        - direction: income
+
+  # ===== 餐饮美食 =====
+  - id: rule_food_strong
+    category_id: cat_food
+    name: 餐饮美食（强匹配）
+    priority: 80
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, product, summary]
+      keywords: [
+        "麦当劳", "肯德基", "星巴克", "瑞幸", "喜茶", "奈雪", "海底捞",
+        "美团外卖", "饿了么", "外卖", "餐饮", "餐厅", "饭店", "食堂",
+        "咖啡", "奶茶", "茶百道", "蜜雪冰城"
+      ]
+      direction: expense
+
+  - id: rule_food_weak
+    category_id: cat_food
+    name: 餐饮美食（弱匹配）
+    priority: 40
+    confidence_level: medium
+    conditions:
+      keywords_in: [summary, counterparty, product]
+      keywords: ["饭", "餐", "面", "粉", "烧烤", "火锅", "料理"]
+      direction: expense
+      amount_range: [5, 500]
+
+  # ===== 交通出行 =====
+  - id: rule_transport_strong
+    category_id: cat_transport
+    name: 交通出行（强匹配）
+    priority: 85
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, product, summary]
+      keywords: [
+        "滴滴", "高德打车", "曹操出行", "T3出行", "Uber", "地铁",
+        "公交", "轨道交通", "12306", "铁路", "高铁", "动车",
+        "加油", "中石化", "中石油", "停车", "ETC", "高速"
+      ]
+      direction: expense
+
+  - id: rule_transport_weak
+    category_id: cat_transport
+    name: 交通出行（弱匹配）
+    priority: 40
+    confidence_level: medium
+    conditions:
+      keywords_in: [summary, counterparty]
+      keywords: ["打车", "出行", "机票", "航空", "航班"]
+      direction: expense
+
+  # ===== 购物消费 =====
+  - id: rule_shopping_strong
+    category_id: cat_shopping
+    name: 购物消费（强匹配）
+    priority: 80
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, product, summary]
+      keywords: [
+        "淘宝", "天猫", "京东", "拼多多", "苏宁易购", "唯品会",
+        "亚马逊", "Amazon", "得物", "小米商城", "华为商城",
+        "超市", "便利店", "沃尔玛", "家乐福", "永辉", "盒马",
+        "7-11", "全家", "罗森", "屈臣氏"
+      ]
+      direction: expense
+
+  # ===== 居家生活 =====
+  - id: rule_housing_rent
+    category_id: cat_housing
+    name: 房租/房贷
+    priority: 95
+    confidence_level: high
+    conditions:
+      all:
+        - keywords_in: [counterparty, summary]
+          keywords: ["房租", "租金", "房贷", "按揭", "物业费", "物业"]
+        - direction: expense
+        - amount_range: [500, 50000]
+
+  - id: rule_utilities
+    category_id: cat_housing
+    name: 水电燃气
+    priority: 80
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, summary]
+      keywords: [
+        "水费", "电费", "燃气费", "煤气费", "供暖费", "暖气费",
+        "自来水", "国家电网", "南方电网", "燃气集团"
+      ]
+      direction: expense
+
+  - id: rule_housing_other
+    category_id: cat_housing
+    name: 居家生活
+    priority: 50
+    confidence_level: medium
+    conditions:
+      keywords_in: [summary, counterparty]
+      keywords: ["家居", "装修", "家具", "家电", "宜家", "居然之家"]
+      direction: expense
+
+  # ===== 医疗健康 =====
+  - id: rule_medical_strong
+    category_id: cat_medical
+    name: 医疗健康（强匹配）
+    priority: 90
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, summary]
+      keywords: ["医院", "人民医院", "中医院", "诊所", "药房", "药店", "大药房"]
+      direction: expense
+
+  - id: rule_medical_weak
+    category_id: cat_medical
+    name: 医疗健康（弱匹配）
+    priority: 50
+    confidence_level: medium
+    conditions:
+      keywords_in: [summary, product, counterparty]
+      keywords: ["药", "体检", "挂号", "诊疗", "检查", "体检中心"]
+      direction: expense
+
+  # ===== 教育学习 =====
+  - id: rule_education_strong
+    category_id: cat_education
+    name: 教育学习（强匹配）
+    priority: 85
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, summary, product]
+      keywords: [
+        "学费", "培训费", "课程", "网课", "得到", "极客时间",
+        "新东方", "学而思", "学校", "大学", "学院"
+      ]
+      direction: expense
+
+  - id: rule_education_weak
+    category_id: cat_education
+    name: 教育学习（弱匹配）
+    priority: 40
+    confidence_level: medium
+    conditions:
+      keywords_in: [summary, product]
+      keywords: ["书", "图书", "书店", "当当", "kindle"]
+      direction: expense
+
+  # ===== 休闲娱乐 =====
+  - id: rule_entertainment_strong
+    category_id: cat_entertainment
+    name: 休闲娱乐（强匹配）
+    priority: 80
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, product, summary]
+      keywords: [
+        "电影", "影院", "影城", "KTV", "游戏", "Steam", "腾讯游戏",
+        "网易游戏", "B站", "哔哩哔哩", "爱奇艺", "腾讯视频",
+        "优酷", "芒果TV", "Spotify", "QQ音乐", "网易云音乐"
+      ]
+      direction: expense
+
+  - id: rule_travel
+    category_id: cat_entertainment
+    name: 旅游度假
+    priority: 75
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, summary, product]
+      keywords: [
+        "携程", "去哪儿", "飞猪", "同程", "途牛", "酒店", "宾馆",
+        "民宿", "景区", "门票", "旅游", "旅行"
+      ]
+      direction: expense
+
+  # ===== 保险 =====
+  - id: rule_insurance_strong
+    category_id: cat_insurance
+    name: 保险
+    priority: 90
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, summary]
+      keywords: [
+        "保险", "保费", "中国平安", "中国人寿", "太平洋保险",
+        "泰康", "友邦", "新华保险", "医保", "社保"
+      ]
+      direction: expense
+
+  # ===== 通讯 =====
+  - id: rule_telecom
+    category_id: cat_telecom
+    name: 通讯
+    priority: 80
+    confidence_level: high
+    conditions:
+      keywords_in: [counterparty, summary]
+      keywords: [
+        "中国移动", "中国联通", "中国电信", "话费", "流量",
+        "宽带", "网费", "5G"
+      ]
+      direction: expense
+
+  # ===== 转账（不计入收支，内部转账） =====
+  - id: rule_internal_transfer
+    category_id: cat_transfer
+    name: 内部转账
+    priority: 60
+    confidence_level: medium
+    conditions:
+      keywords_in: [summary, txn_type, counterparty]
+      keywords: ["转账", "转存", "转取", "划转", "还款", "信用卡还款"]
+
+  # ===== 默认分类 =====
+  - id: rule_default
+    category_id: cat_other
+    name: 其他
+    priority: 0
+    confidence_level: low
+    conditions:
+      always_true: true

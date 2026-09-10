@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}仪表盘{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>仪表盘</h1>
+        <p>合同审批全景概览</p>
+    </div>
+    <a href="/new" class="btn btn-primary">➕ 新建合同</a>
+</div>
+
+<!-- 统计卡片 -->
+<div class="dashboard-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="stat-label">待审批</div>
+        <div class="stat-value primary" id="statPending">--</div>
+        <div class="stat-sub">等待处理</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">本月新增</div>
+        <div class="stat-value" id="statMonthly">--</div>
+        <div class="stat-sub">{{ current_month or '本月' }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">已通过</div>
+        <div class="stat-value success" id="statApproved">--</div>
+        <div class="stat-sub">累计通过</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">通过率</div>
+        <div class="stat-value" id="statRate">--%</div>
+        <div class="stat-sub">通过 / (通过+驳回)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">平均审批时长</div>
+        <div class="stat-value" id="statDuration">--</div>
+        <div class="stat-sub">工作日</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">起草中</div>
+        <div class="stat-value warning" id="statDraft">--</div>
+        <div class="stat-sub">未提交</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- 趋势图 -->
+    <div class="card">
+        <div class="card-title">
+            <span>近 30 天合同趋势</span>
+        </div>
+        <div class="trend-chart" id="trendChart">
+            <div class="text-muted" style="text-align:center; width:100%; padding: 40px 0;">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 风险预警 -->
+    <div class="card">
+        <div class="card-title">
+            <span>⚠️ 高风险合同</span>
+            <a href="/contracts" class="btn btn-sm">查看全部</a>
+        </div>
+        <div id="highRiskList">
+            <div class="text-muted" style="padding: 20px 0; text-align: center;">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 待审批列表 -->
+<div class="card">
+    <div class="card-title">
+        <span>待审批合同</span>
+        <a href="/contracts?status=review" class="btn btn-sm">查看全部</a>
+    </div>
+    <div class="table-wrapper">
+        <table class="table" id="pendingTable">
+            <thead>
+                <tr>
+                    <th>合同号</th>
+                    <th>客户</th>
+                    <th class="num">金额</th>
+                    <th>状态</th>
+                    <th>当前审批人</th>
+                    <th>提交时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="7" class="text-muted" style="text-align:center; padding: 20px;">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// 加载统计数据
+async function loadStats() {
+    try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        
+        document.getElementById('statPending').textContent = data.pending_count || 0;
+        document.getElementById('statMonthly').textContent = data.monthly_new || 0;
+        document.getElementById('statApproved').textContent = data.approved_count || 0;
+        document.getElementById('statRate').textContent = (data.approval_rate || 0) + '%';
+        document.getElementById('statDuration').textContent = data.avg_duration_days || 0;
+        document.getElementById('statDraft').textContent = data.draft_count || 0;
+
+        // 趋势图
+        renderTrend(data.trend_30d || {});
+
+        // 高风险
+        renderHighRisk(data.high_risk || []);
+    } catch (e) {
+        console.error('加载统计失败:', e);
+    }
+}
+
+function renderTrend(trend) {
+    const chart = document.getElementById('trendChart');
+    chart.innerHTML = '';
+    
+    // 生成近 30 天的日期
+    const days = [];
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split('T')[0];
+        days.push({ date: key, count: trend[key] || 0 });
+    }
+    
+    const maxCount = Math.max(...days.map(d => d.count), 1);
+    
+    days.forEach(day => {
+        const bar = document.createElement('div');
+        bar.className = 'trend-bar';
+        const height = (day.count / maxCount) * 100;
+        bar.style.height = Math.max(height, 2) + '%';
+        bar.setAttribute('data-count', `${day.date}: ${day.count} 份`);
+        bar.title = `${day.date}: ${day.count} 份`;
+        chart.appendChild(bar);
+    });
+}
+
+function renderHighRisk(items) {
+    const list = document.getElementById('highRiskList');
+    if (!items || items.length === 0) {
+        list.innerHTML = '<div class="text-muted" style="padding: 20px 0; text-align: center;">暂无高风险合同 ✅</div>';
+        return;
+    }
+    
+    list.innerHTML = items.map(item => `
+        <div style="padding: var(--s-2) 0; border-bottom: 1px solid var(--c-border); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-weight: 500; font-size: 0.88rem;">${item.contract_no} - ${item.title}</div>
+                <div style="font-size: 0.78rem; color: var(--c-muted);">${item.party_b}</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="mono">${formatAmount(item.amount)}</div>
+                <span class="${statusBadgeClass(item.status)}">${statusLabels[item.status] || item.status}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// 加载待审批列表
+async function loadPending() {
+    try {
+        // 分别获取各级审批
+        const [r1, r2, r3] = await Promise.all([
+            fetch('/api/contracts?status=review1&page_size=5').then(r => r.json()),
+            fetch('/api/contracts?status=review2&page_size=5').then(r => r.json()),
+            fetch('/api/contracts?status=review3&page_size=5').then(r => r.json()),
+        ]);
+        
+        const all = [...(r1.items || []), ...(r2.items || []), ...(r3.items || [])]
+            .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+            .slice(0, 10);
+        
+        const tbody = document.querySelector('#pendingTable tbody');
+        if (all.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-muted" style="text-align:center; padding: 20px;">暂无待审批合同 🎉</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = all.map(c => `
+            <tr>
+                <td style="font-family: var(--font-mono); font-size: 0.85rem;">${c.contract_no}</td>
+                <td>${c.party_b}</td>
+                <td class="num mono">${formatAmount(c.amount)}</td>
+                <td><span class="${statusBadgeClass(c.status)}">${statusLabels[c.status] || c.status}</span></td>
+                <td>${c.current_approver || '--'}</td>
+                <td style="font-size: 0.82rem; color: var(--c-muted);">${c.updated_at ? c.updated_at.substring(0, 16).replace('T', ' ') : '--'}</td>
+                <td><a href="/contracts/${c.id}" class="btn btn-sm">查看</a></td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error('加载待审批失败:', e);
+    }
+}
+
+loadStats();
+loadPending();
+</script>
+{% endblock %}

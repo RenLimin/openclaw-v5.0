@@ -107,7 +107,7 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 | [ADR-202608-020](./by-category/project-experience/adr/ADR-202608-020-model-scheduling.md) | L2 模型调度 — 智能模型路由 + 多级 fallback | L2 | — | accepted |
 | [ADR-202608-021](./by-category/project-experience/adr/ADR-202608-021-system-backup.md) | L2 系统备份 — 每日自动 Git 备份 + 手动备份 | L2 | — | accepted |
 | [ADR-202608-022](./by-category/project-experience/adr/ADR-202608-022-bdms-delivery-center.md) | L4 BDMS 交付中心运营引擎 — 数据采集 + 业务引擎 + 报告生成 | L4 | — | accepted |
-| [ADR-202609-024](./by-category/project-experience/adr/ADR-202609-024-session-isolation-sharing.md) | L2 会话隔离与共享 — 跨会话状态协作机制 | L2 | design | proposed |
+| [ADR-202609-024](./by-category/project-experience/adr/ADR-202609-024-session-isolation-sharing.md) | L2 会话隔离（含调度编排） — 跨会话状态协作机制 | L2 | design | proposed |
 | [ADR-202609-025](./by-category/project-experience/adr/ADR-202609-025-delivery-management-framework.md) | L3 通用交付管理框架设计（DMS-Framework） | L3,L4 | — | accepted |
 | [ADR-202609-026](./by-category/project-experience/adr/ADR-202609-026-personal-finance-framework-L3.md) | L3 家庭及个人理财通用框架（FIN）建设与层级归属 | L3,L4 | — | accepted |
 | [ADR-202609-027](./by-category/project-experience/adr/ADR-202609-027-fin-l4-system-design.md) | FIN-L4 家庭理财管理系统 — 架构决策 | L4 | design | accepted |

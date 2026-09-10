@@ -1,0 +1,129 @@
+# PPT 规格文件示例
+# 使用方法: engine.render_from_yaml("sample-spec.yaml", "output.pptx")
+title: "2025年度工作汇报"
+theme: "light"
+slides:
+  # 封面
+  - meta:
+      name: "封面"
+      page_type: "cover-light"
+      theme: "light"
+    layout:
+      show_logo: true
+    data:
+      title: "2025年度工作汇报"
+      subtitle: "ANNUAL REPORT 2025"
+      presenter: "张三"
+      company: "梆梆安全"
+      date: "2025年1月"
+      slogan: "稳如泰山·值得托付"
+
+  # 目录
+  - meta:
+      name: "目录"
+      page_type: "toc-light"
+      theme: "light"
+    layout: {}
+    data:
+      items:
+        - number: "01"
+          title: "项目概述"
+          subtitle: "OVERVIEW"
+        - number: "02"
+          title: "核心成果"
+          subtitle: "ACHIEVEMENTS"
+        - number: "03"
+          title: "技术方案"
+          subtitle: "SOLUTION"
+        - number: "04"
+          title: "未来规划"
+          subtitle: "FUTURE PLAN"
+
+  # 章节
+  - meta:
+      name: "第一章"
+      page_type: "section-light"
+      theme: "light"
+    layout:
+      part_label: "PART ONE"
+      chapter_number: "01"
+    data:
+      title: "项目概述"
+      subtitle: "PROJECT OVERVIEW"
+
+  # 内容页
+  - meta:
+      name: "项目背景"
+      page_type: "content-two-col-light"
+      theme: "light"
+    data:
+      title: "项目背景与目标"
+      subtitle: "BACKGROUND & GOALS"
+      highlights:
+        - title: "业务挑战"
+          description: "移动安全威胁持续增长"
+        - title: "合规驱动"
+          description: "数据安全法等合规要求"
+        - title: "效率提升"
+          description: "安全运营效率亟待提升"
+        - title: "品牌升级"
+          description: "统一品牌形象输出"
+      card_title: "项目目标"
+      card_body: "构建一站式移动安全平台，\n全面提升企业安全防护能力。\n\n• 检测准确率 > 99%\n• 响应时间 < 5 分钟\n• 客户满意度 > 95%"
+
+  # 三卡片
+  - meta:
+      name: "核心能力"
+      page_type: "content-three-cards-light"
+      theme: "light"
+    data:
+      title: "三大核心能力"
+      subtitle: "CORE CAPABILITIES"
+      cards:
+        - number: "01"
+          title: "安全检测"
+          body: "静态+动态双引擎深度检测，全面发现应用安全漏洞。"
+        - number: "02"
+          title: "加固保护"
+          body: "DEX加密、资源混淆、防调试，全方位保护应用安全。"
+        - number: "03"
+          title: "监测预警"
+          body: "7×24小时实时监测，秒级响应，全面掌控安全态势。"
+
+  # 数据
+  - meta:
+      name: "数据成果"
+      page_type: "data-chart-light"
+      theme: "light"
+    data:
+      title: "年度数据概览"
+      subtitle: "KEY METRICS"
+      kpis:
+        - value: "99.9%"
+          label: "检测准确率"
+        - value: "500+"
+          label: "企业客户"
+        - value: "10亿"
+          label: "累计检测次数"
+        - value: "5min"
+          label: "平均响应时间"
+      chart_title: "2024年月度增长趋势"
+      right_title: "年度亮点"
+      right_body: |
+        2024年度取得显著成绩：
+
+        • 客户数增长 67%
+        • 收入增长 45%
+        • 产品矩阵完善
+        • 行业口碑领先
+
+  # 结束
+  - meta:
+      name: "谢谢观看"
+      page_type: "closing-light"
+      theme: "light"
+    data:
+      main_text: "谢谢观看"
+      subtitle: "THANK YOU"
+      contact: "www.bangcle.com | 400-123-4567"
+      slogan: "稳如泰山·值得托付"

@@ -1,0 +1,14 @@
+filename: closing-dark.yaml
+meta:
+  name: 深色结束页
+  page_type: closing-dark
+  theme: dark
+  description: 深色主题谢谢观看结束页
+  version: 1.0.0
+  category: 结尾
+layout: {}
+data:
+  main_text: 谢谢观看
+  subtitle: THANK YOU
+  contact: www.bangcle.com | 400-xxx-xxxx
+  slogan: 稳如泰山·值得托付

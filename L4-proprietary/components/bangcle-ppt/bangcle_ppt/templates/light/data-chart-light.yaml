@@ -1,0 +1,49 @@
+filename: data-chart-light.yaml
+meta:
+  name: 数据图表页
+  page_type: data-chart-light
+  theme: light
+  description: 顶部4个KPI指标 + 下方左图表右说明
+  version: 1.0.0
+  category: 数据
+layout:
+  chart_type: column
+data:
+  title: 年度数据总览
+  subtitle: ANNUAL DATA REVIEW
+  kpis:
+  - value: 99.9%
+    label: 安全防护率
+    suffix: ''
+  - value: '500'
+    label: 企业客户
+    suffix: +
+  - value: 50亿
+    label: 日检测量
+    suffix: 次
+  - value: 24/7
+    label: 全天候监控
+    suffix: ''
+  chart_title: 2024年度安全事件趋势
+  chart_categories:
+  - Q1
+  - Q2
+  - Q3
+  - Q4
+  chart_data:
+    攻击拦截:
+    - 120
+    - 180
+    - 210
+    - 280
+  right_title: 关键发现
+  right_body: '2024年度安全态势整体向好：
+
+
+    • 攻击拦截量同比增长 45%
+
+    • 客户满意度达 98%
+
+    • 零重大安全事故
+
+    • 威胁响应时间缩短 60%'

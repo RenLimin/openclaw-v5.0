@@ -1,0 +1,32 @@
+filename: text-only-dark.yaml
+meta:
+  name: 纯文本页（深色）
+  page_type: text-only-light
+  theme: light
+  description: VI规范说明文字页
+  version: 1.0.0
+  category: 通用
+layout:
+  is_quote: false
+data:
+  title: 设计规范说明
+  subtitle: DESIGN GUIDELINES
+  body: '本深色模板适用于发布会、产品推介、重要客户汇报等高端商务场景。
+
+
+    配色原则：
+
+    • 主背景使用深藏青 #00122B
+
+    • 文字以白色为主，浅蓝为辅
+
+    • 强调色使用金色 #EFBA20
+
+    • 装饰线条使用主色 #2D74BB
+
+
+    字体规范：
+
+    • 标题：思源黑体 Heavy
+
+    • 正文：思源黑体 Medium'

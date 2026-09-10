@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 3.7 (2026-09-08 — 会话任务编排并入 session-isolation-sharing 子模块,不新建独立组件;多子会话并行编排设计落库) |
+| 文档版本 | 3.7 (2026-09-08 — 会话任务编排并入 session-isolation 子模块,不新建独立组件;多子会话并行编排设计落库) |
 | 文档状态 | active |
 | 运行时 cron | 7 个活跃业务 cron（错误扫描/provider健康探测/会话错误处理/备份/会话生命周期/记忆健康/每日观测投递）；3 个任务 disabled（2 个 ms 心跳 + 1 个技能审阅） |
 | 决策状态 | 5 层架构已锁定(ADR-012); 28 份 ADR accepted; L3 FIN 引擎已迁 L3; L4 五个组件已上线(新增 CISSP 学习系统) |
@@ -342,10 +342,10 @@ adapters/
 | 持久化 | 006 | `components/persistence/` | `persistence/` (connection/repository/migration/schemas) | 迁移幂等测试 |
 | 配置管理 | 007 | `components/config/` | `scripts/config.sh` | `config.sh diff` 漂移检测 |
 | 工具策略 | 008 | `components/tool-policy/` | `scripts/tool_policy_audit.sh` | 六项审计 |
-| 记忆语义检索 | 009 | `components/memory-embedding/` | 配置态 + `scripts/observability/memory_search_monitor.py` | 行为探针三态判据 |
-| 知识库能力 | 010 | `components/knowledge-base/` | `scripts/kb_index.py`(六项子能力全备) | pre-commit 阻塞实测 |
+| 记忆嵌入计算 | 009 | `components/memory-embedding/` | 本地 GGUF 嵌入模型管理 + 向量计算 | memory_search / knowledge-base 依赖 |
+| 知识库能力 | 010 | `components/knowledge-base/` | 通用向量知识库(解析/分块/向量化/索引/检索/管理) + kb_index 工具 | 43 个单元测试 + pre-commit 阻塞 |
 | Office 文档生成 | 011 | `components/office-generation/` | unified SDK: create/read/update/parse/convert (v2.0.0) + 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
-| 文档数字化(OCR) | 023 | `components/ocr-digitalization/` | `contract_ocr.py`(RapidOCR主+Paddle可选+8版本预处理+40+规则纠错) | 10页扫描件合同实测通过 |
+| 文档数字化(OCR) | 023 | `components/ocr-digitalization/` | L2标准组件: OCREngine统一API + 4后端自动发现 + 预处理管线 + 质量评分 + 后处理纠错 + PDF原生提取 | v2.0升级 · 113个测试通过 |
 
 **已建设组件清单**(详细):
 
@@ -503,7 +503,7 @@ adapters/
       - 实现: P1 阶段扩展(scripts/ + 适配层),见 DESIGN.md §6
     - 当前状态: ✅ 已落地(CLI 可用: task-init/state-write/event-log; 协议层 + 任务卡模板已验证)
     - ADR: ADR-202609-024
-    - 设计: `components/session-isolation-sharing/DESIGN.md`
+    - 设计: `components/session-isolation/DESIGN.md`
 
 
 ### 新增 L2 基础设施组件（2026-09-07 补全）
@@ -513,15 +513,15 @@ adapters/
 | 系统备份 | ADR-021 | `components/backup/` | `config_snapshot.py` | ✅ 已上线 |
 | MCP Server 适配 | 无 | `components/mcp-server/` | 适配层契约 | ✅ 已上线（但无 ADR） |
 | 可观测性适配 | ADR-004 | `components/observability/` | `agent_observer.py` | ✅ 已上线 |
-| OCR 文档数字化 | ADR-023 | `components/ocr-digitalization/` | 文档 OCR + 规则纠错工具链 | ✅ 已上线 |
-| ~~会话任务编排~~ | — | ~~`components/session-orchestrator/`~~ | ~~独立组件~~ → **并入 session-isolation-sharing 子模块** | ❌ 已废弃 |
+| OCR 文档数字化 | ADR-023 | `L2-infra/components/ocr-digitalization/` | L2标准组件: 多后端引擎 + 预处理管线 + 质量评分 + 后处理纠错 + 批量处理 | ✅ v2.0 已上线 |
+| ~~会话任务编排~~ | — | ~~`components/session-orchestrator/`~~ | ~~独立组件~~ → **并入 session-isolation 子模块** | ❌ 已废弃 |
 
 **L2 组件职责边界（避免重复建设，全组件适用）**：
 
 | 组件 | 管什么 | 不管什么 | 协同关系 |
 |---|---|---|---|
 | **model-scheduling** | 用哪个模型（路由/健康/用量/预算） | 什么时候发、发多少个 | 编排发起任务前调用它选模型 |
-| **session-isolation-sharing** | 任务卡/状态/事件协议 + **任务编排子模块**(依赖排序/错峰发起/批量调度) | 并发上限/限流/嵌套深度（复用原生） | 调用原生 `sessions_spawn` 发起，并发由运行时控制 |
+| **session-isolation** | 任务卡/状态/事件协议 + **任务编排子模块**(依赖排序/错峰发起/批量调度) | 并发上限/限流/嵌套深度（复用原生） | 调用原生 `sessions_spawn` 发起，并发由运行时控制 |
 | **context-management** | 上下文窗口估算/分段策略 | 任务编排/并发控制 | 编排参考它的预算决定是否错峰 |
 
 > 以上边界基于「原生优先」原则；任何新组件加入前先过 §1.3.2 Checklist + `docs/conventions/dev-standards.md`。
@@ -790,7 +790,7 @@ L4 专有业务
 
 | 项 | 状态 | 标记 |
 |---|---|---|
-| L2 工具链层(`kb_index.py`) | 已上线 | ✅ |
+| L2 通用知识库组件(解析/分块/向量化/索引/检索/管理 + kb_index) | 已上线 (2026-09-10 独立化) | ✅ |
 | L2 服务层(DB + Web 渲染) | 架构预留 | 📋 |
 | 人机协作阅读、跨系统移植 | CLI 已就绪 / 服务形态预留 | 🚧 |
 | 文档/经验/ADR 全部迁入自建系统 | 架构预留 | 📋 |

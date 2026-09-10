@@ -1,0 +1,23 @@
+filename: toc-dark.yaml
+meta:
+  name: 深色目录页
+  page_type: toc-dark
+  theme: dark
+  description: 深色主题目录页，圆形数字编号列表
+  version: 1.0.0
+  category: 导航
+layout: {}
+data:
+  items:
+  - number: '01'
+    title: 产品概览
+    subtitle: OVERVIEW
+  - number: '02'
+    title: 核心功能
+    subtitle: FEATURES
+  - number: '03'
+    title: 技术架构
+    subtitle: ARCHITECTURE
+  - number: '04'
+    title: 方案优势
+    subtitle: ADVANTAGES

@@ -1,0 +1,46 @@
+filename: table-light.yaml
+meta:
+  name: 数据表格页
+  page_type: table-light
+  theme: light
+  description: 数据表格展示页
+  version: 1.0.0
+  category: 数据
+layout:
+  has_header: true
+data:
+  title: VI标准色卡
+  subtitle: VI COLOR PALETTE
+  table_data:
+  - - 色号
+    - 颜色名称
+    - HEX
+    - 用途
+  - - C-01
+    - 主色（梆梆蓝）
+    - '#2D74BB'
+    - 标题、重点元素
+  - - C-02
+    - 浅蓝
+    - '#3FA1DA'
+    - 辅助背景、渐变
+  - - C-03
+    - 青色
+    - '#27AABF'
+    - 辅助色、图表色
+  - - C-04
+    - 青绿
+    - '#33ADA0'
+    - 成功/正面指标
+  - - C-05
+    - 金色
+    - '#EFBA20'
+    - 强调色、高亮
+  - - C-06
+    - 深藏青
+    - '#00122B'
+    - 深色模板背景
+  - - C-07
+    - 深灰
+    - '#595757'
+    - 辅助文字、分割线

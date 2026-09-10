@@ -1,0 +1,29 @@
+# 招商银行 信用卡/借记卡 流水模板
+bank_id: cmb
+bank_name: 招商银行
+encoding: [utf-8, gbk]
+skip_rows: 0
+has_header: true
+
+# 列映射：目标字段 -> CSV/Excel 列名（支持多个候选，匹配到第一个为止）
+column_mapping:
+  txn_date: ["记账日期", "交易日期", "日期"]
+  txn_time: ["交易时间", "时间"]
+  amount: ["交易金额", "金额"]
+  currency: ["币种", "币别"]
+  balance: ["余额"]
+  direction: ["收支", "借贷标志", "收付标志"]
+  counterparty: ["对方户名", "对方账户名", "收款方", "付款方"]
+  counterparty_account: ["对方账号", "对方账户"]
+  summary: ["摘要", "交易摘要", "备注"]
+  category: ["分类"]
+  txn_type: ["交易类型", "类型"]
+
+direction_rules:
+  income_keywords: ["收入", "贷", "收", "入账"]
+  expense_keywords: ["支出", "借", "付", "扣费"]
+  amount_sign: true
+
+detection:
+  column_keywords: ["招商银行", "招行", "CMB"]
+  header_keywords: ["记账日期", "交易金额", "币种", "余额"]

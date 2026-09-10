@@ -255,3 +255,94 @@ def _add_insurance_start_date():
         pass
 
 MIGRATIONS.append(_add_insurance_start_date)
+
+
+# V4: 银行流水导入 — 批次表 + 去重哈希 + 分类反馈
+def _v4_migration():
+    conn = _global_conn
+    if conn is None:
+        return
+
+    # 导入批次表
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS fin4_import_batches (
+            id TEXT PRIMARY KEY,
+            family_id TEXT NOT NULL,
+            file_name TEXT,
+            source_type TEXT,        -- auto / cmb / icbc / alipay / wechat
+            detected_bank TEXT,
+            total_count INTEGER DEFAULT 0,
+            new_count INTEGER DEFAULT 0,
+            duplicate_count INTEGER DEFAULT 0,
+            error_count INTEGER DEFAULT 0,
+            high_confidence INTEGER DEFAULT 0,
+            medium_confidence INTEGER DEFAULT 0,
+            low_confidence INTEGER DEFAULT 0,
+            status TEXT DEFAULT 'pending',  -- pending / previewed / confirmed / cancelled
+            preview_data TEXT,              -- JSON: 预览数据缓存
+            adjustments TEXT,               -- JSON: 用户调整
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP,
+            FOREIGN KEY (family_id) REFERENCES fin4_family(id)
+        );
+    """)
+
+    # 交易表增加去重哈希 + 批次 ID + 置信度
+    try:
+        conn.execute("ALTER TABLE fin4_transactions ADD COLUMN import_hash TEXT")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE fin4_transactions ADD COLUMN import_batch_id TEXT")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE fin4_transactions ADD COLUMN category_confidence TEXT DEFAULT 'low'")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE fin4_transactions ADD COLUMN source_bank TEXT")
+    except Exception:
+        pass
+    try:
+        conn.execute("ALTER TABLE fin4_transactions ADD COLUMN counterparty TEXT")
+    except Exception:
+        pass
+
+    # 去重索引
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_txn_import_hash "
+            "ON fin4_transactions(family_id, import_hash)"
+        )
+    except Exception:
+        pass
+
+    # 分类反馈学习表（用户修改分类后，用于强化规则频次）
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS fin4_category_feedback (
+            id TEXT PRIMARY KEY,
+            family_id TEXT NOT NULL,
+            original_category_id TEXT,
+            corrected_category_id TEXT,
+            counterparty TEXT,
+            summary TEXT,
+            amount TEXT,
+            hit_count INTEGER DEFAULT 1,
+            last_hit_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (family_id) REFERENCES fin4_family(id)
+        );
+    """)
+
+    try:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_feedback_key "
+            "ON fin4_category_feedback(family_id, counterparty, summary)"
+        )
+    except Exception:
+        pass
+
+    conn.commit()
+
+
+MIGRATIONS.append(_v4_migration)

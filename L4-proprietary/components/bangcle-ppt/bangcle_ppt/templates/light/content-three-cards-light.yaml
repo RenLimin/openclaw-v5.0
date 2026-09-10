@@ -1,0 +1,22 @@
+filename: content-three-cards-light.yaml
+meta:
+  name: 三卡片+横幅图页
+  page_type: content-three-cards-light
+  theme: light
+  description: 浅色主题三卡片页，顶部横幅图 + 下方3浮动卡片
+  version: 1.0.0
+  category: 内容
+layout: {}
+data:
+  title: 核心能力
+  subtitle: CORE CAPABILITIES
+  cards:
+  - number: '01'
+    title: 移动应用安全
+    body: 全面覆盖App安全检测、加固、监测全流程，确保应用生命周期安全。
+  - number: '02'
+    title: 威胁情报
+    body: 实时收集全球威胁情报，AI智能分析，提前预警潜在安全风险。
+  - number: '03'
+    title: 安全咨询
+    body: 专业安全团队提供定制化安全咨询服务，助力企业安全建设。

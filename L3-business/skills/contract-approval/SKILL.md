@@ -1,12 +1,20 @@
 ---
 name: contract-approval
-description: "销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。可独立使用，也可整合至自建系统。"
+description: "销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4 持久化编排。"
 user-invocable: true
 ---
 
 # 销售合同审批模块 (SCA-001)
 
 > L4 专有业务层组件，基于《民法典》合同编 + CLM 7 阶段方法论。
+
+
+> **架构说明**（2026-09-10 重构）：
+> - **L3 core/** — 纯逻辑核心（状态机 + 风险扫描 + 数据模型 + 工具函数），零副作用，可单元测试
+> - **L3 scripts/** — CLI 演示入口（DEPRECATED，保留兼容），内部调用 L3 core
+> - **L4 office-contract/** — 生产用 Service 层 + CLI + 持久化 + Office 场景定制
+> - 调用方向：L4 → L3，L3 绝不依赖 L4
+> - 详细架构：[ARCHITECTURE.md](./ARCHITECTURE.md) / [ADR-031](../../../docs/architecture/adr/ADR-202609-031-contract-approval-l3-l4-boundary.md)
 
 ## 依赖组件
 

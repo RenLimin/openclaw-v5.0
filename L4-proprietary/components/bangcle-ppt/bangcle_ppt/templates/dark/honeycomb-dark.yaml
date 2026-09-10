@@ -1,0 +1,26 @@
+filename: honeycomb-dark.yaml
+meta:
+  name: 蜂巢/产品矩阵
+  page_type: honeycomb-dark
+  theme: dark
+  description: 中心+周围6六边形产品矩阵
+  version: 1.0.0
+  category: 架构
+layout: {}
+data:
+  title: 产品矩阵
+  subtitle: PRODUCT PORTFOLIO
+  center_title: 安全大脑
+  nodes:
+  - label: App安全
+    icon: 📱
+  - label: 小程序
+    icon: 🔍
+  - label: SDK安全
+    icon: 📦
+  - label: 威胁情报
+    icon: 🛡️
+  - label: 业务风控
+    icon: 📊
+  - label: 合规服务
+    icon: ✅

@@ -1,0 +1,31 @@
+filename: phase-timeline-dark.yaml
+meta:
+  name: 6阶段时间轴（深色）
+  page_type: phase-timeline-dark
+  theme: dark
+  description: 上下交错6阶段路线图（深色版）
+  version: 1.0.0
+  category: 时间轴
+layout: {}
+data:
+  title: 产品路线图
+  subtitle: PRODUCT ROADMAP
+  items:
+  - phase: Phase 1
+    title: 基础版本
+    body: 核心功能MVP发布。
+  - phase: Phase 2
+    title: 能力扩展
+    body: 完善功能矩阵。
+  - phase: Phase 3
+    title: 生态建设
+    body: 开放API与合作伙伴。
+  - phase: Phase 4
+    title: 智能化
+    body: AI能力深度融合。
+  - phase: Phase 5
+    title: 平台化
+    body: 统一安全平台。
+  - phase: Phase 6
+    title: 生态领先
+    body: 行业标准制定。

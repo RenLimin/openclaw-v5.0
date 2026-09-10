@@ -1,0 +1,27 @@
+filename: radial-structure-light.yaml
+meta:
+  name: 放射结构图页
+  page_type: radial-structure-light
+  theme: light
+  description: 中心圆形 + 放射6节点架构图
+  version: 1.0.0
+  category: 架构
+layout: {}
+data:
+  title: 产品架构
+  subtitle: PRODUCT ARCHITECTURE
+  center_title: 核心平台
+  center_subtitle: CORE PLATFORM
+  nodes:
+  - label: 数据采集层
+    icon: ①
+  - label: 分析引擎
+    icon: ②
+  - label: 威胁检测
+    icon: ③
+  - label: 响应处置
+    icon: ④
+  - label: 可视化
+    icon: ⑤
+  - label: 开放接口
+    icon: ⑥

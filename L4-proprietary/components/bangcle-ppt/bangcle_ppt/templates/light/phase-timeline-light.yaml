@@ -1,0 +1,31 @@
+filename: phase-timeline-light.yaml
+meta:
+  name: 6阶段时间轴页
+  page_type: phase-timeline-light
+  theme: light
+  description: 上下交错6阶段时间轴路线图
+  version: 1.0.0
+  category: 时间轴
+layout: {}
+data:
+  title: 项目路线图
+  subtitle: PROJECT ROADMAP
+  items:
+  - phase: Phase 1
+    title: 需求分析
+    body: 业务需求调研与技术可行性评估。
+  - phase: Phase 2
+    title: 方案设计
+    body: 系统架构设计与技术选型。
+  - phase: Phase 3
+    title: 开发实施
+    body: 核心模块开发与单元测试。
+  - phase: Phase 4
+    title: 集成测试
+    body: 系统集成与性能优化。
+  - phase: Phase 5
+    title: 试点运行
+    body: 小范围试点与用户反馈收集。
+  - phase: Phase 6
+    title: 全面上线
+    body: 全量上线与持续运营。
