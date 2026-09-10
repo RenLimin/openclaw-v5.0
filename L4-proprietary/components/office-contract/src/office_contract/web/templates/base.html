@@ -1,142 +1,45 @@
-<!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ page_title or '合同审批' }} | 合同审批管理系统{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css?v=1.0">
-    {% block extra_head %}{% endblock %}
-</head>
-<body>
-    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="菜单">☰</button>
-    <div class="app-layout">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-brand">
-                <span class="brand-icon">📋</span> <span>合同审批</span>
-            </div>
-            <nav class="sidebar-nav">
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">概览</div>
-                    <ul class="sidebar-links">
-                        <li><a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">
-                            <span class="nav-icon">📊</span>仪表盘
-                        </a></li>
-                    </ul>
-                </div>
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">合同管理</div>
-                    <ul class="sidebar-links">
-                        <li><a href="/contracts" class="{% if active_page == 'contracts' %}active{% endif %}">
-                            <span class="nav-icon">📄</span>合同列表
-                        </a></li>
-                        <li><a href="/new" class="{% if active_page == 'new' %}active{% endif %}">
-                            <span class="nav-icon">➕</span>新建合同
-                        </a></li>
-                    </ul>
-                </div>
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">风险管理</div>
-                    <ul class="sidebar-links">
-                        <li><a href="/risk-rules" class="{% if active_page == 'risk_rules' %}active{% endif %}">
-                            <span class="nav-icon">⚠️</span>风险规则
-                        </a></li>
-                    </ul>
-                </div>
-            </nav>
-            <div class="sidebar-footer">
-                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
-                    🌙 深色
-                </button>
-            </div>
-        </aside>
-        <main class="main">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
+{% from "layout.html" import base_layout with context %}
+{% call base_layout(
+    title=page_title or '',
+    brand_name=brand_name,
+    brand_icon=brand_icon,
+    active_page=active_page or '',
+    storage_key=storage_key,
+    sidebar_items=sidebar_items,
+    extra_head=extra_head if extra_head is defined else '',
+) %}
+    {# 业务特有样式 #}
+    <link rel="stylesheet" href="/static/app/style.css?v=2.0">
+    {% block content %}{% endblock %}
 
-    <div class="toast-container" id="toastContainer"></div>
-
+    {# 业务全局 JS 工具函数 #}
     <script>
-        // Theme toggle
-        (function() {
-            const html = document.documentElement;
-            const btn = document.getElementById('themeToggle');
-            
-            const saved = localStorage.getItem('contract-ui-theme');
-            if (saved) {
-                html.setAttribute('data-theme', saved);
-                btn.textContent = saved === 'dark' ? '☀️ 浅色' : '🌙 深色';
-            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                html.setAttribute('data-theme', 'dark');
-                btn.textContent = '☀️ 浅色';
-            }
-            
-            btn.addEventListener('click', function() {
-                const current = html.getAttribute('data-theme');
-                const next = current === 'dark' ? 'light' : 'dark';
-                html.setAttribute('data-theme', next);
-                localStorage.setItem('contract-ui-theme', next);
-                btn.textContent = next === 'dark' ? '☀️ 浅色' : '🌙 深色';
-            });
-        })();
+    // 格式化金额
+    window.formatAmount = function(num) {
+        if (num === null || num === undefined) return '--';
+        return '¥' + Number(num).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
 
-        // Mobile menu
-        (function() {
-            const btn = document.getElementById('mobileMenuBtn');
-            const sidebar = document.getElementById('sidebar');
-            btn.addEventListener('click', function() {
-                sidebar.classList.toggle('open');
-            });
-            // 点击链接后关闭
-            sidebar.querySelectorAll('a').forEach(a => {
-                a.addEventListener('click', () => sidebar.classList.remove('open'));
-            });
-        })();
+    // 状态显示名
+    window.statusLabels = {
+        'draft': '起草中',
+        'review1': '一级审批',
+        'review2': '二级审批',
+        'review3': '三级审批',
+        'approved': '已通过',
+        'signed': '已签署',
+        'archived': '已归档',
+        'rejected': '已驳回'
+    };
 
-        // Toast utility
-        window.showToast = function(message, type = 'info', duration = 3000) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast ' + type;
-            
-            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-            toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${message}</span>`;
-            
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'fadeOut 0.3s ease-out forwards';
-                setTimeout(() => toast.remove(), 300);
-            }, duration);
-        };
-
-        // 格式化金额
-        window.formatAmount = function(num) {
-            if (num === null || num === undefined) return '--';
-            return '¥' + Number(num).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        };
-
-        // 状态显示名
-        window.statusLabels = {
-            'draft': '起草中',
-            'review1': '一级审批',
-            'review2': '二级审批',
-            'review3': '三级审批',
-            'approved': '已通过',
-            'signed': '已签署',
-            'archived': '已归档',
-            'rejected': '已驳回'
-        };
-
-        // 状态 CSS 类
-        window.statusBadgeClass = function(status) {
-            if (status === 'draft') return 'badge status-draft';
-            if (status && status.startsWith('review')) return 'badge status-review';
-            if (['approved', 'signed', 'archived'].includes(status)) return 'badge status-approved';
-            if (status === 'rejected') return 'badge status-rejected';
-            return 'badge muted';
-        };
+    // 状态 CSS 类
+    window.statusBadgeClass = function(status) {
+        if (status === 'draft') return 'badge status-draft';
+        if (status && status.startsWith('review')) return 'badge status-review';
+        if (['approved', 'signed', 'archived'].includes(status)) return 'badge status-approved';
+        if (status === 'rejected') return 'badge status-rejected';
+        return 'badge muted';
+    };
     </script>
     {% block extra_scripts %}{% endblock %}
-</body>
-</html>
+{% endcall %}

@@ -1,67 +1,45 @@
 {% extends "base.html" %}
-{% block title %}合同列表{% endblock %}
-{% block content %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, filter_bar, table, pagination, badge with context %}
 
-<div class="page-header">
-    <div>
-        <h1>合同列表</h1>
-        <p>管理所有合同审批流程</p>
-    </div>
-    <a href="/new" class="btn btn-primary">➕ 新建合同</a>
-</div>
+{% block content %}
+{{ page_header(
+    title="合同列表",
+    subtitle="管理所有合同审批流程",
+    actions=[{"label": "新建合同", "url": "/new", "variant": "primary", "icon": "➕"}]
+) }}
 
 <!-- 筛选栏 -->
-<div class="filter-bar">
-    <div class="form-group">
-        <label>状态</label>
-        <select id="filterStatus">
-            <option value="">全部</option>
-            <option value="draft">起草中</option>
-            <option value="review1">一级审批</option>
-            <option value="review2">二级审批</option>
-            <option value="review3">三级审批</option>
-            <option value="approved">已通过</option>
-            <option value="signed">已签署</option>
-            <option value="archived">已归档</option>
-            <option value="rejected">已驳回</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label>客户名称</label>
-        <input type="text" id="filterPartyB" placeholder="搜索客户...">
-    </div>
-    <div class="form-group">
-        <label>最小金额</label>
-        <input type="number" id="filterMinAmount" placeholder="0">
-    </div>
-    <div class="form-group">
-        <label>最大金额</label>
-        <input type="number" id="filterMaxAmount" placeholder="">
-    </div>
-    <div class="form-group">
-        <label>开始日期</label>
-        <input type="date" id="filterDateFrom">
-    </div>
-    <div class="form-group">
-        <label>结束日期</label>
-        <input type="date" id="filterDateTo">
-    </div>
-    <div class="form-group" style="display: flex; align-items: flex-end;">
-        <button class="btn btn-primary" onclick="loadContracts()">筛选</button>
-    </div>
-    <div class="form-group" style="display: flex; align-items: flex-end;">
-        <button class="btn" onclick="resetFilters()">重置</button>
-    </div>
-</div>
+{{ filter_bar(
+    fields=[
+        {"type": "select", "label": "状态", "id": "filterStatus", "placeholder": "全部", "options": [
+            ("draft", "起草中"),
+            ("review1", "一级审批"),
+            ("review2", "二级审批"),
+            ("review3", "三级审批"),
+            ("approved", "已通过"),
+            ("signed", "已签署"),
+            ("archived", "已归档"),
+            ("rejected", "已驳回"),
+        ]},
+        {"type": "text", "label": "客户名称", "id": "filterPartyB", "placeholder": "搜索客户..."},
+        {"type": "number", "label": "最小金额", "id": "filterMinAmount", "placeholder": "0"},
+        {"type": "number", "label": "最大金额", "id": "filterMaxAmount", "placeholder": ""},
+        {"type": "date", "label": "开始日期", "id": "filterDateFrom"},
+        {"type": "date", "label": "结束日期", "id": "filterDateTo"},
+    ],
+    submit_onclick="loadContracts(1)",
+    reset_onclick="resetFilters()"
+) }}
 
 <!-- 合同表格 -->
-<div class="card mb-0">
+{% call card(class_="mb-0") %}
     <div class="card-title">
         <span>合同清单</span>
         <span id="totalInfo" class="text-muted" style="text-transform: none; font-weight: 400; font-size: 0.85rem;">--</span>
     </div>
     <div class="table-wrapper">
-        <table class="table">
+        <table class="table" id="contractTable">
             <thead>
                 <tr>
                     <th>合同号</th>
@@ -79,8 +57,8 @@
             </tbody>
         </table>
     </div>
-    <div class="pagination" id="pagination"></div>
-</div>
+    <div id="paginationContainer"></div>
+{% endcall %}
 
 {% endblock %}
 
@@ -152,7 +130,7 @@ function renderTable(data) {
 }
 
 function renderPagination(data) {
-    const pag = document.getElementById('pagination');
+    const pag = document.getElementById('paginationContainer');
     const totalPages = data.total_pages || 1;
     const current = data.page || 1;
     
@@ -166,7 +144,7 @@ function renderPagination(data) {
     html += `<span class="page-info">第 ${current} / ${totalPages} 页</span>`;
     html += `<button class="btn btn-sm" ${current >= totalPages ? 'disabled' : ''} onclick="loadContracts(${current + 1})">下一页</button>`;
     
-    pag.innerHTML = html;
+    pag.innerHTML = `<div class="pagination">${html}</div>`;
 }
 
 function resetFilters() {

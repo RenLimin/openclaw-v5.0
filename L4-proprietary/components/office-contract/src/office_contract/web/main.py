@@ -1,15 +1,17 @@
 """
 Office Contract Web UI — FastAPI 主入口
-启动: uvicorn main:app --host 0.0.0.0 --port 8081
+基于 L2 web-common 组件库构建
 """
 
 import os
 import sys
+import importlib.util
 from pathlib import Path
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from jinja2 import FileSystemLoader
 
 # 模块路径
 _WEB_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,25 +27,63 @@ from office_contract import config
 STATIC_DIR = os.path.join(_WEB_DIR, "static")
 TEMPLATES_DIR = os.path.join(_WEB_DIR, "templates")
 
+# ── L2 web-common 组件库 ──
+# 从 openclaw-v5.0 根目录定位 web-common
+_PROJECT_ROOT = Path(_WEB_DIR).resolve().parents[5]  # openclaw-v5.0/
+_WEB_COMMON_DIR = _PROJECT_ROOT / "L2-infra" / "components" / "web-common"
+_WEB_COMMON_MACROS = _WEB_COMMON_DIR / "macros"
+_WEB_COMMON_STATIC = _WEB_COMMON_DIR / "static"
+
 app = FastAPI(
     title="合同审批管理系统",
     version="1.0.0",
     description="销售合同审批工作流 Web UI",
 )
 
-# 静态文件
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# ── 静态资源 ──
+# 业务特有静态资源
+app.mount("/static/app", StaticFiles(directory=STATIC_DIR), name="static-app")
+# web-common 通用静态资源
+app.mount("/static/web-common", StaticFiles(directory=str(_WEB_COMMON_STATIC)), name="web-common-static")
 
-# 模板
+# ── Jinja2 模板：业务模板 + web-common 宏 ──
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+templates.env.loader = FileSystemLoader([TEMPLATES_DIR, str(_WEB_COMMON_MACROS)])
+
+# 全局模板变量（所有页面共用）
+templates.env.globals.update({
+    "brand_name": "合同审批",
+    "brand_icon": "📋",
+    "storage_key": "contract-ui-theme",
+    "sidebar_items": [
+        {
+            "title": "概览",
+            "items": [
+                {"id": "dashboard", "label": "仪表盘", "url": "/", "icon": "📊"},
+            ]
+        },
+        {
+            "title": "合同管理",
+            "items": [
+                {"id": "contracts", "label": "合同列表", "url": "/contracts", "icon": "📄"},
+                {"id": "new", "label": "新建合同", "url": "/new", "icon": "➕"},
+            ]
+        },
+        {
+            "title": "风险管理",
+            "items": [
+                {"id": "risk_rules", "label": "风险规则", "url": "/risk-rules", "icon": "⚠️"},
+            ]
+        },
+    ],
+})
 
 
 # ============================================================
-# 启动事件：确保数据库存在
+# 启动事件
 # ============================================================
 @app.on_event("startup")
 async def startup_event():
-    """启动时初始化数据库（幂等）"""
     try:
         init_db()
     except Exception as e:
@@ -69,10 +109,7 @@ async def value_error_handler(request: Request, exc: ValueError):
 async def http_exception_handler(request: Request, exc: HTTPException):
     path = request.url.path
     if path.startswith("/api/"):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"error": exc.detail},
-        )
+        return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
     return templates.TemplateResponse(
         request, "error.html",
         {"error": exc.detail, "active_page": ""},
@@ -99,31 +136,25 @@ async def generic_error_handler(request: Request, exc: Exception):
 
 @app.get("/", response_class=HTMLResponse)
 async def page_dashboard(request: Request):
-    """仪表盘首页"""
     return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "active_page": "dashboard",
-        "page_title": "仪表盘",
     })
 
 
 @app.get("/contracts", response_class=HTMLResponse)
 async def page_contracts(request: Request):
-    """合同列表页"""
     return templates.TemplateResponse(request, "contract_list.html", {
         "request": request,
         "active_page": "contracts",
-        "page_title": "合同列表",
     })
 
 
 @app.get("/contracts/{contract_id}", response_class=HTMLResponse)
 async def page_contract_detail(request: Request, contract_id: int):
-    """合同详情页"""
     return templates.TemplateResponse(request, "contract_detail.html", {
         "request": request,
         "active_page": "contracts",
-        "page_title": "合同详情",
         "contract_id": contract_id,
     })
 
@@ -131,31 +162,25 @@ async def page_contract_detail(request: Request, contract_id: int):
 @app.get("/new", response_class=HTMLResponse)
 @app.get("/contracts/new", response_class=HTMLResponse)
 async def page_new_contract(request: Request):
-    """新建合同页"""
     return templates.TemplateResponse(request, "contract_new.html", {
         "request": request,
         "active_page": "new",
-        "page_title": "新建合同",
     })
 
 
 @app.get("/risk-rules", response_class=HTMLResponse)
 async def page_risk_rules(request: Request):
-    """风险规则页（可选）"""
     return templates.TemplateResponse(request, "risk_rules.html", {
         "request": request,
         "active_page": "risk_rules",
-        "page_title": "风险规则",
     })
 
 
 @app.get("/health")
 async def health():
-    """健康检查"""
     return {"status": "ok", "version": "1.0.0", "db": config.DB_PATH}
 
 
-# 注册 API 路由
 app.include_router(api_router)
 
 

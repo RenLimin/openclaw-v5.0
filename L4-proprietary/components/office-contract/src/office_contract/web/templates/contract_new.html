@@ -1,84 +1,58 @@
 {% extends "base.html" %}
-{% block title %}新建合同{% endblock %}
-{% block content %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import input, select, textarea, button, form_row with context %}
 
-<div class="page-header">
-    <div>
-        <h1>新建合同</h1>
-        <p>填写合同基本信息后提交审批</p>
-    </div>
-    <button class="btn" onclick="history.back()">← 返回</button>
-</div>
+{% block content %}
+{{ page_header(
+    title="新建合同",
+    subtitle="填写合同基本信息后提交审批",
+    actions=[{"label": "← 返回", "onclick": "history.back()", "variant": ""}]
+) }}
 
 <div class="grid-2">
-    <div class="card">
-        <div class="card-title"><span>合同信息</span></div>
+    {% call card(title="合同信息") %}
         <form id="contractForm">
-            <div class="form-group">
-                <label>合同名称 *</label>
-                <input type="text" id="title" required placeholder="如：XX系统技术服务合同">
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>合同类型</label>
-                    <select id="contractType">
-                        <option value="tech_service">技术服务合同</option>
-                        <option value="software_license">软件许可合同</option>
-                        <option value="sow">工作说明书(SOW)</option>
-                        <option value="purchase">采购合同</option>
-                        <option value="nda">保密协议</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>合同金额（元）*</label>
-                    <input type="number" id="amount" min="0.01" step="0.01" required placeholder="0.00">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>乙方（客户）*</label>
-                    <input type="text" id="partyB" required placeholder="客户公司名称">
-                </div>
-                <div class="form-group">
-                    <label>甲方（我方）</label>
-                    <input type="text" id="partyA" placeholder="默认使用配置的甲方">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>生效日期</label>
-                    <input type="date" id="effectiveDate">
-                </div>
-                <div class="form-group">
-                    <label>到期日期</label>
-                    <input type="date" id="expiryDate">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>创建人</label>
-                <input type="text" id="operator" value="web-user">
-            </div>
-            <div class="form-group">
-                <label>合同内容（可选，用于风险扫描）</label>
-                <textarea id="contractContent" rows="6" placeholder="粘贴合同正文内容，用于风险扫描分析..."></textarea>
-            </div>
-            <div class="form-actions mt-4">
-                <button type="button" class="btn" onclick="previewRisk()">🔍 预览风险</button>
-                <button type="submit" class="btn btn-primary">保存合同</button>
+            {{ input(name="title", label="合同名称", placeholder="如：XX系统技术服务合同", required=true) }}
+
+            {% call form_row(cols=2) %}
+                {{ select(name="contract_type", label="合同类型", options=[
+                    ("tech_service", "技术服务合同"),
+                    ("software_license", "软件许可合同"),
+                    ("sow", "工作说明书(SOW)"),
+                    ("purchase", "采购合同"),
+                    ("nda", "保密协议"),
+                ], placeholder="") }}
+                {{ input(name="amount", label="合同金额（元）", type="number", placeholder="0.00", required=true) }}
+            {% endcall %}
+
+            {% call form_row(cols=2) %}
+                {{ input(name="party_b", label="乙方（客户）", placeholder="客户公司名称", required=true) }}
+                {{ input(name="party_a", label="甲方（我方）", placeholder="默认使用配置的甲方") }}
+            {% endcall %}
+
+            {% call form_row(cols=2) %}
+                {{ input(name="effective_date", label="生效日期", type="date") }}
+                {{ input(name="expiry_date", label="到期日期", type="date") }}
+            {% endcall %}
+
+            {{ input(name="operator", label="创建人", value="web-user") }}
+            {{ textarea(name="contract_content", label="合同内容（可选，用于风险扫描）", placeholder="粘贴合同正文内容，用于风险扫描分析...", rows=6) }}
+
+            <div class="form-actions mt-4" style="display: flex; gap: 8px;">
+                {{ button("🔍 预览风险", onclick="previewRisk()") }}
+                {{ button("保存合同", variant="primary", type="submit") }}
             </div>
         </form>
-    </div>
+    {% endcall %}
 
-    <div class="card">
-        <div class="card-title">
-            <span>📊 实时预览</span>
-        </div>
+    {% call card(title="📊 实时预览") %}
         <div id="previewPanel">
             <div class="text-muted" style="text-align:center; padding: 40px 0;">
                 填写金额后显示审批级别等信息
             </div>
         </div>
-    </div>
+    {% endcall %}
 </div>
 
 <!-- 风险预览区域 -->
@@ -102,7 +76,7 @@ const approvalLevels = [
 ];
 
 function updatePreview() {
-    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const amount = parseFloat(document.querySelector('[name="amount"]').value) || 0;
     const panel = document.getElementById('previewPanel');
     
     if (amount <= 0) {
@@ -152,21 +126,21 @@ function updatePreview() {
     `;
 }
 
-document.getElementById('amount').addEventListener('input', updatePreview);
+document.querySelector('[name="amount"]').addEventListener('input', updatePreview);
 
 // 表单提交
 document.getElementById('contractForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
     const data = {
-        title: document.getElementById('title').value.trim(),
-        party_b: document.getElementById('partyB').value.trim(),
-        amount: parseFloat(document.getElementById('amount').value),
-        contract_type: document.getElementById('contractType').value,
-        effective_date: document.getElementById('effectiveDate').value || null,
-        expiry_date: document.getElementById('expiryDate').value || null,
-        party_a: document.getElementById('partyA').value.trim() || null,
-        operator: document.getElementById('operator').value.trim() || 'web-user',
+        title: document.querySelector('[name="title"]').value.trim(),
+        party_b: document.querySelector('[name="party_b"]').value.trim(),
+        amount: parseFloat(document.querySelector('[name="amount"]').value),
+        contract_type: document.querySelector('[name="contract_type"]').value,
+        effective_date: document.querySelector('[name="effective_date"]').value || null,
+        expiry_date: document.querySelector('[name="expiry_date"]').value || null,
+        party_a: document.querySelector('[name="party_a"]').value.trim() || null,
+        operator: document.querySelector('[name="operator"]').value.trim() || 'web-user',
     };
     
     if (!data.title) { showToast('请填写合同名称', 'warning'); return; }
@@ -196,16 +170,15 @@ document.getElementById('contractForm').addEventListener('submit', async functio
 
 // 风险预览
 async function previewRisk() {
-    const content = document.getElementById('contractContent').value.trim();
+    const content = document.querySelector('[name="contract_content"]').value.trim();
     if (!content) {
         showToast('请先填写合同内容再预览风险', 'warning');
         return;
     }
     
-    // 先创建一个临时合同用于扫描
-    const title = document.getElementById('title').value.trim() || '风险预览合同';
-    const partyB = document.getElementById('partyB').value.trim() || '预览客户';
-    const amount = parseFloat(document.getElementById('amount').value) || 10000;
+    const title = document.querySelector('[name="title"]').value.trim() || '风险预览合同';
+    const partyB = document.querySelector('[name="party_b"]').value.trim() || '预览客户';
+    const amount = parseFloat(document.querySelector('[name="amount"]').value) || 10000;
     
     const card = document.getElementById('riskPreviewCard');
     const contentDiv = document.getElementById('riskPreviewContent');
@@ -213,20 +186,18 @@ async function previewRisk() {
     contentDiv.innerHTML = '<div class="text-muted" style="text-align:center; padding: 20px;"><span class="loading"></span> 扫描中...</div>';
     
     try {
-        // 创建临时合同
         const createRes = await fetch('/api/contracts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 title, party_b: partyB, amount,
-                contract_type: document.getElementById('contractType').value,
+                contract_type: document.querySelector('[name="contract_type"]').value,
             }),
         });
         const created = await createRes.json();
         
         if (!createRes.ok) throw new Error(created.detail || '创建失败');
         
-        // 风险扫描
         const scanRes = await fetch(`/api/contracts/${created.id}/risk-scan`);
         const scanData = await scanRes.json();
         

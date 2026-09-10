@@ -1,78 +1,42 @@
 {% extends "base.html" %}
-{% block title %}仪表盘{% endblock %}
-{% block content %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, stat_card, dashboard_grid, chart_container with context %}
 
-<div class="page-header">
-    <div>
-        <h1>仪表盘</h1>
-        <p>合同审批全景概览</p>
-    </div>
-    <a href="/new" class="btn btn-primary">➕ 新建合同</a>
-</div>
+{% block content %}
+{{ page_header(
+    title="仪表盘",
+    subtitle="合同审批全景概览",
+    actions=[{"label": "新建合同", "url": "/new", "variant": "primary", "icon": "➕"}]
+) }}
 
 <!-- 统计卡片 -->
-<div class="dashboard-grid" id="statsGrid">
-    <div class="stat-card">
-        <div class="stat-label">待审批</div>
-        <div class="stat-value primary" id="statPending">--</div>
-        <div class="stat-sub">等待处理</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">本月新增</div>
-        <div class="stat-value" id="statMonthly">--</div>
-        <div class="stat-sub">{{ current_month or '本月' }}</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">已通过</div>
-        <div class="stat-value success" id="statApproved">--</div>
-        <div class="stat-sub">累计通过</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">通过率</div>
-        <div class="stat-value" id="statRate">--%</div>
-        <div class="stat-sub">通过 / (通过+驳回)</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">平均审批时长</div>
-        <div class="stat-value" id="statDuration">--</div>
-        <div class="stat-sub">工作日</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">起草中</div>
-        <div class="stat-value warning" id="statDraft">--</div>
-        <div class="stat-sub">未提交</div>
-    </div>
-</div>
+{% call dashboard_grid() %}
+    <div id="statPendingCard">{{ stat_card(label="待审批", value="--", variant="primary", sub="等待处理") }}</div>
+    <div id="statMonthlyCard">{{ stat_card(label="本月新增", value="--", sub=current_month or '本月') }}</div>
+    <div id="statApprovedCard">{{ stat_card(label="已通过", value="--", variant="success", sub="累计通过") }}</div>
+    <div id="statRateCard">{{ stat_card(label="通过率", value="--%", sub="通过 / (通过+驳回)") }}</div>
+    <div id="statDurationCard">{{ stat_card(label="平均审批时长", value="--", sub="工作日") }}</div>
+    <div id="statDraftCard">{{ stat_card(label="起草中", value="--", variant="warning", sub="未提交") }}</div>
+{% endcall %}
 
 <div class="grid-2">
     <!-- 趋势图 -->
-    <div class="card">
-        <div class="card-title">
-            <span>近 30 天合同趋势</span>
-        </div>
-        <div class="trend-chart" id="trendChart">
+    {% call chart_container(title="近 30 天合同趋势", height=160) %}
+        <div class="trend-chart" id="trendChart" style="width: 100%;">
             <div class="text-muted" style="text-align:center; width:100%; padding: 40px 0;">加载中...</div>
         </div>
-    </div>
+    {% endcall %}
 
     <!-- 风险预警 -->
-    <div class="card">
-        <div class="card-title">
-            <span>⚠️ 高风险合同</span>
-            <a href="/contracts" class="btn btn-sm">查看全部</a>
-        </div>
+    {% call card(title="⚠️ 高风险合同", actions=[{"label": "查看全部", "url": "/contracts", "variant": ""}]) %}
         <div id="highRiskList">
             <div class="text-muted" style="padding: 20px 0; text-align: center;">加载中...</div>
         </div>
-    </div>
+    {% endcall %}
 </div>
 
 <!-- 待审批列表 -->
-<div class="card">
-    <div class="card-title">
-        <span>待审批合同</span>
-        <a href="/contracts?status=review" class="btn btn-sm">查看全部</a>
-    </div>
+{% call card(title="待审批合同", actions=[{"label": "查看全部", "url": "/contracts?status=review", "variant": ""}]) %}
     <div class="table-wrapper">
         <table class="table" id="pendingTable">
             <thead>
@@ -91,29 +55,31 @@
             </tbody>
         </table>
     </div>
-</div>
+{% endcall %}
 
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-// 加载统计数据
+// 设置统计卡片数值
+function setStat(cardId, value) {
+    const el = document.querySelector('#' + cardId + ' .stat-value');
+    if (el) el.textContent = value;
+}
+
 async function loadStats() {
     try {
         const res = await fetch('/api/stats');
         const data = await res.json();
         
-        document.getElementById('statPending').textContent = data.pending_count || 0;
-        document.getElementById('statMonthly').textContent = data.monthly_new || 0;
-        document.getElementById('statApproved').textContent = data.approved_count || 0;
-        document.getElementById('statRate').textContent = (data.approval_rate || 0) + '%';
-        document.getElementById('statDuration').textContent = data.avg_duration_days || 0;
-        document.getElementById('statDraft').textContent = data.draft_count || 0;
+        setStat('statPendingCard', data.pending_count || 0);
+        setStat('statMonthlyCard', data.monthly_new || 0);
+        setStat('statApprovedCard', data.approved_count || 0);
+        setStat('statRateCard', (data.approval_rate || 0) + '%');
+        setStat('statDurationCard', data.avg_duration_days || 0);
+        setStat('statDraftCard', data.draft_count || 0);
 
-        // 趋势图
         renderTrend(data.trend_30d || {});
-
-        // 高风险
         renderHighRisk(data.high_risk || []);
     } catch (e) {
         console.error('加载统计失败:', e);
@@ -124,7 +90,6 @@ function renderTrend(trend) {
     const chart = document.getElementById('trendChart');
     chart.innerHTML = '';
     
-    // 生成近 30 天的日期
     const days = [];
     const today = new Date();
     for (let i = 29; i >= 0; i--) {
@@ -168,10 +133,8 @@ function renderHighRisk(items) {
     `).join('');
 }
 
-// 加载待审批列表
 async function loadPending() {
     try {
-        // 分别获取各级审批
         const [r1, r2, r3] = await Promise.all([
             fetch('/api/contracts?status=review1&page_size=5').then(r => r.json()),
             fetch('/api/contracts?status=review2&page_size=5').then(r => r.json()),

@@ -1,10 +1,12 @@
 {% extends "base.html" %}
-{% block title %}错误{% endblock %}
+{% from "components.html" import card with context %}
 {% block content %}
-<div class="card" style="max-width: 600px; margin: 100px auto; text-align: center;">
-    <div style="font-size: 4rem; margin-bottom: var(--s-4);">⚠️</div>
-    <h2 style="font-family: var(--font-display); margin-bottom: var(--s-3);">出错了</h2>
-    <p class="text-muted" style="margin-bottom: var(--s-6);">{{ error }}</p>
-    <a href="/" class="btn btn-primary">返回首页</a>
+<div style="max-width: 600px; margin: 100px auto; text-align: center;">
+    {% call card() %}
+        <div style="font-size: 4rem; margin-bottom: var(--s-4);">⚠️</div>
+        <h2 style="font-family: var(--font-display); margin-bottom: var(--s-3);">出错了</h2>
+        <p class="text-muted" style="margin-bottom: var(--s-6);">{{ error }}</p>
+        <a href="/" class="btn btn-primary">返回首页</a>
+    {% endcall %}
 </div>
 {% endblock %}
