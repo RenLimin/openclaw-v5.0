@@ -1,0 +1,84 @@
+
+{% from "layout.html" import base_layout, page_header with context %}
+{% from "components.html" import card, stat_card, dashboard_grid, table, badge, progress_bar, chart_container, pagination, filter_bar, info_grid with context %}
+{% from "forms.html" import input, select, textarea, button, form_row, checkbox, switch with context %}
+{% from "icons.html" import icon_home, icon_settings, icon_plus, icon_check with context %}
+
+{% call base_layout(
+    title="组件演示",
+    brand_name="Web Common",
+    brand_icon="🧩",
+    active_page=active_page,
+    storage_key="web-common-demo-theme",
+    sidebar_items=[
+        {"title": "演示", "items": [
+            {"id": "dashboard", "label": "仪表盘", "url": "/", "icon": "📊"},
+            {"id": "tables", "label": "表格", "url": "/tables", "icon": "📋"},
+            {"id": "forms", "label": "表单", "url": "/forms", "icon": "📝"},
+            {"id": "components", "label": "组件", "url": "/components", "icon": "🧩"},
+        ]}
+    ]
+) %}
+    
+    {{ page_header(title="仪表盘演示", subtitle="统计卡片 + 图表 + 列表", actions=[
+        {"label": "新建", "url": "#", "variant": "primary", "icon": "➕"}
+    ]) }}
+
+    {% call dashboard_grid() %}
+        {{ stat_card(label="总用户", value=12847, variant="primary", sub="较上月 +12%") }}
+        {{ stat_card(label="活跃用户", value=8932, variant="success", sub="日活 DAU") }}
+        {{ stat_card(label="待处理", value=256, variant="warning", sub="需要审核") }}
+        {{ stat_card(label="异常数", value=12, variant="danger", sub="需关注") }}
+    {% endcall %}
+
+    <div class="grid-2">
+        {% call chart_container(title="近 30 天趋势", height=200) %}
+            <div class="trend-chart" style="display:flex;align-items:flex-end;gap:3px;height:160px;width:100%;">
+                {% for i in range(30) %}
+                    <div style="flex:1;background:var(--c-primary);border-radius:3px 3px 0 0;opacity:0.7;height:{{ (i % 10 + 1) * 10 }}%;"></div>
+                {% endfor %}
+            </div>
+        {% endcall %}
+
+        {% call card(title="状态分布") %}
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;">
+                        <span>已完成</span><span class="mono">65%</span>
+                    </div>
+                    {{ progress_bar(percent=65, variant="success") }}
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;">
+                        <span>进行中</span><span class="mono">25%</span>
+                    </div>
+                    {{ progress_bar(percent=25, variant="primary") }}
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;">
+                        <span>待处理</span><span class="mono">10%</span>
+                    </div>
+                    {{ progress_bar(percent=10, variant="warning") }}
+                </div>
+            </div>
+        {% endcall %}
+    </div>
+
+    {% call card(title="最近活动", actions=[{"label": "查看全部", "url": "#", "variant": ""}]) %}
+        {{ table(
+            columns=[
+                {"key": "time", "label": "时间"},
+                {"key": "user", "label": "用户"},
+                {"key": "action", "label": "操作"},
+                {"key": "status", "label": "状态"}
+            ],
+            rows=[
+                {"time": "10:32", "user": "张三", "action": "登录系统", "status": badge("成功", "success")|safe},
+                {"time": "10:15", "user": "李四", "action": "提交审批", "status": badge("进行中", "warning")|safe},
+                {"time": "09:48", "user": "王五", "action": "上传文件", "status": badge("成功", "success")|safe},
+                {"time": "09:20", "user": "赵六", "action": "删除记录", "status": badge("失败", "danger")|safe},
+            ]
+        ) }}
+    {% endcall %}
+    
+{% endcall %}

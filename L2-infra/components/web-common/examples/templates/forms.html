@@ -1,0 +1,57 @@
+
+{% from "layout.html" import base_layout, page_header with context %}
+{% from "components.html" import card, stat_card, dashboard_grid, table, badge, progress_bar, chart_container, pagination, filter_bar, info_grid with context %}
+{% from "forms.html" import input, select, textarea, button, form_row, checkbox, switch with context %}
+{% from "icons.html" import icon_home, icon_settings, icon_plus, icon_check with context %}
+
+{% call base_layout(
+    title="组件演示",
+    brand_name="Web Common",
+    brand_icon="🧩",
+    active_page=active_page,
+    storage_key="web-common-demo-theme",
+    sidebar_items=[
+        {"title": "演示", "items": [
+            {"id": "dashboard", "label": "仪表盘", "url": "/", "icon": "📊"},
+            {"id": "tables", "label": "表格", "url": "/tables", "icon": "📋"},
+            {"id": "forms", "label": "表单", "url": "/forms", "icon": "📝"},
+            {"id": "components", "label": "组件", "url": "/components", "icon": "🧩"},
+        ]}
+    ]
+) %}
+    
+    {{ page_header(title="表单演示", subtitle="输入框 / 选择器 / 开关 / 按钮") }}
+
+    <div class="grid-2">
+        {% call card(title="基础表单") %}
+            {{ input(name="username", label="用户名", value="", placeholder="请输入用户名", required=true) }}
+            {{ input(name="email", label="邮箱", type="email", placeholder="name@example.com") }}
+            {{ input(name="password", label="密码", type="password", placeholder="至少 8 位") }}
+            {{ select(name="role", label="角色", options=[
+                ("admin", "管理员"),
+                ("editor", "编辑"),
+                ("user", "普通用户"),
+            ], placeholder="请选择角色") }}
+            {{ textarea(name="bio", label="个人简介", placeholder="介绍一下自己...", rows=4, help_text="最多 500 字") }}
+            {{ checkbox(name="agree", label="我已阅读并同意用户协议", checked=false) }}
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                {{ button("提交", variant="primary", type="submit", onclick="showToast('提交成功！', 'success')") }}
+                {{ button("重置", variant="", onclick="showToast('已重置', 'info')") }}
+            </div>
+        {% endcall %}
+
+        {% call card(title="更多组件") %}
+            {% call form_row(cols=2) %}
+                {{ input(name="first_name", label="名", value="") }}
+                {{ input(name="last_name", label="姓", value="") }}
+            {% endcall %}
+            {{ input(name="age", label="年龄", type="number", value="25") }}
+            {{ input(name="birthday", label="生日", type="date") }}
+            {{ switch(name="notifications", label="邮件通知", checked=true) }}
+            {{ switch(name="dark_mode", label="深色模式", checked=false) }}
+            {{ input(name="disabled_field", label="只读字段", value="不可编辑", readonly=true, help_text="该字段为系统自动生成") }}
+            {{ input(name="error_field", label="有错误的字段", value="", error="该字段不能为空") }}
+        {% endcall %}
+    </div>
+    
+{% endcall %}

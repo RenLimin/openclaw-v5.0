@@ -1,0 +1,194 @@
+{# =============================================================
+   forms.html — 表单组件宏
+   ============================================================= #}
+
+{# ---------------------------------------------------------
+   form_group — 表单字段组
+   用法:
+     {% from "macros/forms.html" import form_group %}
+     {% call form_group(label="姓名", id="name") %}
+         <input type="text" ...>
+     {% endcall %}
+   --------------------------------------------------------- #}
+{% macro form_group(label="", id="", help_text="", error="") %}
+<div class="form-group">
+    {% if label %}
+        <label for="{{ id }}">{{ label }}</label>
+    {% endif %}
+    {{ caller() if caller else '' }}
+    {% if help_text %}
+        <div class="form-help text-muted" style="font-size: 0.75rem; margin-top: 4px;">{{ help_text }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="form-error" style="color: var(--c-danger); font-size: 0.75rem; margin-top: 4px;">{{ error }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   input — 文本输入框
+   用法:
+     {{ input(name="username", label="用户名", value="", placeholder="请输入", type="text") }}
+   --------------------------------------------------------- #}
+{% macro input(name, label="", value="", type="text", placeholder="", id="", required=false, disabled=false, readonly=false, help_text="", error="") %}
+{% set _id = id or name %}
+<div class="form-group">
+    {% if label %}
+        <label for="{{ _id }}">{{ label }}{% if required %} <span style="color: var(--c-danger);">*</span>{% endif %}</label>
+    {% endif %}
+    <input type="{{ type }}"
+           id="{{ _id }}"
+           name="{{ name }}"
+           value="{{ value }}"
+           placeholder="{{ placeholder }}"
+           {% if required %}required{% endif %}
+           {% if disabled %}disabled{% endif %}
+           {% if readonly %}readonly{% endif %}>
+    {% if help_text %}
+        <div class="form-help text-muted" style="font-size: 0.75rem; margin-top: 4px;">{{ help_text }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="form-error" style="color: var(--c-danger); font-size: 0.75rem; margin-top: 4px;">{{ error }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   textarea — 多行文本域
+   用法:
+     {{ textarea(name="content", label="内容", value="", rows=5) }}
+   --------------------------------------------------------- #}
+{% macro textarea(name, label="", value="", placeholder="", id="", rows=4, required=false, disabled=false, readonly=false, help_text="", error="") %}
+{% set _id = id or name %}
+<div class="form-group">
+    {% if label %}
+        <label for="{{ _id }}">{{ label }}{% if required %} <span style="color: var(--c-danger);">*</span>{% endif %}</label>
+    {% endif %}
+    <textarea id="{{ _id }}"
+              name="{{ name }}"
+              rows="{{ rows }}"
+              placeholder="{{ placeholder }}"
+              {% if required %}required{% endif %}
+              {% if disabled %}disabled{% endif %}
+              {% if readonly %}readonly{% endif %}>{{ value }}</textarea>
+    {% if help_text %}
+        <div class="form-help text-muted" style="font-size: 0.75rem; margin-top: 4px;">{{ help_text }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="form-error" style="color: var(--c-danger); font-size: 0.75rem; margin-top: 4px;">{{ error }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   select — 下拉选择
+   用法:
+     {{ select(name="status", label="状态", options=[("1","通过"),("2","驳回")], value="1") }}
+   --------------------------------------------------------- #}
+{% macro select(name, label="", options=None, value="", id="", placeholder="请选择", required=false, disabled=false, help_text="", error="") %}
+{% set _id = id or name %}
+<div class="form-group">
+    {% if label %}
+        <label for="{{ _id }}">{{ label }}{% if required %} <span style="color: var(--c-danger);">*</span>{% endif %}</label>
+    {% endif %}
+    <select id="{{ _id }}" name="{{ name }}"
+            {% if required %}required{% endif %}
+            {% if disabled %}disabled{% endif %}>
+        {% if placeholder %}
+            <option value="">{{ placeholder }}</option>
+        {% endif %}
+        {% for opt in options or [] %}
+            {% set opt_val = opt.0 if opt is iterable and opt is not mapping else opt.value %}
+            {% set opt_label = opt.1 if opt is iterable and opt is not mapping else opt.label %}
+            <option value="{{ opt_val }}"
+                    {% if value == opt_val %}selected{% endif %}>{{ opt_label }}</option>
+        {% endfor %}
+    </select>
+    {% if help_text %}
+        <div class="form-help text-muted" style="font-size: 0.75rem; margin-top: 4px;">{{ help_text }}</div>
+    {% endif %}
+    {% if error %}
+        <div class="form-error" style="color: var(--c-danger); font-size: 0.75rem; margin-top: 4px;">{{ error }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   button — 按钮
+   用法:
+     {{ button("提交", variant="primary", type="submit") }}
+   --------------------------------------------------------- #}
+{% macro button(text, variant="", type="button", size="", id="", name="", value="", disabled=false, onclick="", url="") %}
+{% if url %}
+<a href="{{ url }}"
+   class="btn {% if variant %}btn-{{ variant }}{% endif %} {% if size %}btn-{{ size }}{% endif %}">
+    {{ text }}
+</a>
+{% else %}
+<button type="{{ type }}"
+        class="btn {% if variant %}btn-{{ variant }}{% endif %} {% if size %}btn-{{ size }}{% endif %}"
+        {% if id %}id="{{ id }}"{% endif %}
+        {% if name %}name="{{ name }}"{% endif %}
+        {% if value %}value="{{ value }}"{% endif %}
+        {% if disabled %}disabled{% endif %}
+        {% if onclick %}onclick="{{ onclick }}"{% endif %}>
+    {{ text }}
+</button>
+{% endif %}
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   form_row — 表单行（多列布局）
+   用法:
+     {% call form_row(cols=2) %}
+         {{ input(...) }}
+         {{ input(...) }}
+     {% endcall %}
+   --------------------------------------------------------- #}
+{% macro form_row(cols=2) %}
+<div class="form-row{% if cols == 3 %}-3{% endif %}{% if cols == 4 %}-4{% endif %}">
+    {{ caller() if caller else '' }}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   checkbox — 复选框
+   用法:
+     {{ checkbox(name="agree", label="同意条款", checked=false) }}
+   --------------------------------------------------------- #}
+{% macro checkbox(name, label="", checked=false, id="", value="1", disabled=false, help_text="") %}
+{% set _id = id or name %}
+<div class="form-group">
+    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+        <input type="checkbox"
+               id="{{ _id }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               {% if checked %}checked{% endif %}
+               {% if disabled %}disabled{% endif %}
+               style="width: auto;">
+        <span>{{ label }}</span>
+    </label>
+    {% if help_text %}
+        <div class="form-help text-muted" style="font-size: 0.75rem; margin-top: 4px; margin-left: 28px;">{{ help_text }}</div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   switch — 开关切换
+   用法:
+     {{ switch(name="enabled", label="启用", checked=true) }}
+   --------------------------------------------------------- #}
+{% macro switch(name, label="", checked=false, id="", disabled=false) %}
+{% set _id = id or name %}
+<div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+    {% if label %}<label for="{{ _id }}" style="margin-bottom: 0;">{{ label }}</label>{% endif %}
+    <label class="switch">
+        <input type="checkbox" id="{{ _id }}" name="{{ name }}"
+               {% if checked %}checked{% endif %}
+               {% if disabled %}disabled{% endif %}>
+        <span class="slider"></span>
+    </label>
+</div>
+{% endmacro %}
