@@ -25,7 +25,7 @@ DATA_DIR = Path.home() / ".openclaw" / "data"
 BACKUP_DIR = Path.home() / ".openclaw" / "backups"
 DOCS_DIR = WORKSPACE / "docs" / "architecture"
 L4_COMPONENTS = WORKSPACE / "L4-proprietary" / "components"
-KB_INDEX = WORKSPACE / "L2-infra" / "components" / "memory-embedding" / "kb_index.py"
+KB_INDEX = WORKSPACE / "L2-infra" / "components" / "knowledge-base" / "kb_index.py"
 KB_DIR = WORKSPACE / "docs" / "knowledge-base" / "by-category" / "project-experience"
 
 # 验证路径存在（对齐 L3/L4 分层后的目录结构，ADR-026）

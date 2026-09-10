@@ -1,10 +1,12 @@
 """
-会话隔离与共享组件 — 任务初始化
+会话隔离组件 — 任务初始化
 Copyright (c) 2026 Bangcle, Inc. All rights reserved.
 """
 import os
 from typing import Optional, Tuple, Dict, Any, List
 import shutil
+import yaml
+
 from utils import (
     TEMPLATES_ROOT,
     IN_PROGRESS,
@@ -15,8 +17,9 @@ from utils import (
     ensure_directory
 )
 
+
 class TaskInitializer:
-    """任务初始化器 — 创建任务卡目录结构 + 模板填充"""
+    """任务初始化器 — 创建任务卡目录结构 + YAML 填充"""
 
     def create_task(
         self,
@@ -28,7 +31,9 @@ class TaskInitializer:
         scope_version: str,
         goals: List[Dict[str, str]],
         context_paths: Optional[List[str]] = None,
-        priority: str = "medium"
+        priority: str = "medium",
+        initial_status: str = "in-progress",
+        dependencies: Optional[List[str]] = None,
     ) -> Tuple[bool, str]:
         """
         创建新任务
@@ -41,6 +46,8 @@ class TaskInitializer:
         :param goals: 目标列表 [{"id": "g1", "description": "...", "status": "pending"}, ...]
         :param context_paths: 上下文文件路径列表 (相对 workspace 根)
         :param priority: 优先级 low/medium/high/urgent
+        :param initial_status: 初始状态 (pending / in-progress)
+        :param dependencies: 依赖任务ID列表
         :return: (success, message)
         """
         # 验证ID
@@ -57,47 +64,58 @@ class TaskInitializer:
         if not ok:
             return False, err
 
-        # 复制模板
-        template_path = os.path.join(TEMPLATES_ROOT, "TASK.yml")
-        try:
-            with open(template_path, "r", encoding="utf-8") as f:
-                template = f.read()
-        except Exception as e:
-            shutil.rmtree(task_path)
-            return False, f"Failed to read template: {str(e)}"
-
-        # 填充模板
         now = get_current_datetime()
-        filled = template\
-            .replace("task-YYYYMMDD-NNN", task_id)\
-            .replace("<任务名称>", name)\
-            .replace("pending", "in-progress")\
-            .replace("<负责人: main-agent / subagent-xxx / rex>", owner)\
-            .replace("<项目名>", scope_project)\
-            .replace("<组件名>", scope_component)\
-            .replace("<版本号>", scope_version)\
-            .replace("medium", priority)\
-            .replace("YYYY-MM-DDTHH:MM:SS+08:00", now)
 
-        # 写入TASK.yml
+        # 结构化构建任务数据（不再做脆弱的字符串替换）
+        task_data = {
+            "id": task_id,
+            "name": name,
+            "status": initial_status,
+            "priority": priority,
+            "created_at": now,
+            "updated_at": now,
+            "owner": owner,
+            "scope": {
+                "project": scope_project,
+                "component": scope_component,
+                "version": scope_version,
+            },
+            "goals": goals if goals else [],
+            "dependencies": dependencies or [],
+            "blockers": [],
+            "context": [{"path": p} for p in (context_paths or [])],
+            "artifacts": [],
+        }
+
+        # 写入 TASK.yml
         task_yaml_path = os.path.join(task_path, "TASK.yml")
         try:
             with open(task_yaml_path, "w", encoding="utf-8") as f:
-                f.write(filled)
+                yaml.dump(
+                    task_data, f,
+                    default_flow_style=False,
+                    sort_keys=False,
+                    allow_unicode=True,
+                )
         except Exception as e:
             shutil.rmtree(task_path)
             return False, f"Failed to write TASK.yml: {str(e)}"
 
-        # 创建默认CONTEXT.md
+        # 创建默认 CONTEXT.md
         context_path = os.path.join(task_path, "CONTEXT.md")
         try:
             with open(context_path, "w", encoding="utf-8") as f:
-                f.write(f"# CONTEXT.md — {name}\n\n> 本文件存储任务现场上下文，会话重置后读取即可恢复\n\n## 任务ID: {task_id}\n\n## 待填\n")
+                f.write(
+                    f"# CONTEXT.md — {name}\n\n"
+                    f"> 本文件存储任务现场上下文，会话重置后读取即可恢复\n\n"
+                    f"## 任务ID: {task_id}\n\n"
+                    f"## 待填\n"
+                )
         except Exception as e:
             shutil.rmtree(task_path)
             return False, f"Failed to write CONTEXT.md: {str(e)}"
 
-        # 创建默认events.jsonl
+        # 创建空 events.jsonl
         events_path = os.path.join(task_path, "events.jsonl")
         try:
             with open(events_path, "w", encoding="utf-8") as f:
@@ -105,18 +123,5 @@ class TaskInitializer:
         except Exception as e:
             shutil.rmtree(task_path)
             return False, f"Failed to write events.jsonl: {str(e)}"
-
-        # 如果有上下文路径，添加到TASK.yml
-        if context_paths:
-            from utils import load_task_yaml
-            data, err = load_task_yaml(task_id)
-            if err:
-                shutil.rmtree(task_path)
-                return False, err
-            data["context"] = [{"path": p} for p in context_paths]
-            ok, err = save_task_yaml(task_id, data)
-            if not ok:
-                shutil.rmtree(task_path)
-                return False, err
 
         return True, f"Task {task_id} created successfully at {task_path}"
