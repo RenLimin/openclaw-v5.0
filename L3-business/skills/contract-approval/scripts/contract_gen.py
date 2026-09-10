@@ -27,34 +27,84 @@ def amount_to_chinese(amount):
     int_part = int(amount)
     dec_part = round((amount - int_part) * 100)
 
-    # 整数部分
+    # 整数部分：按万分段处理（个级、万级、亿级）
     int_str = str(int_part)
-    result = ""
-    zero_flag = False
-    for i, ch in enumerate(int_str):
-        digit = int(ch)
-        pos = len(int_str) - 1 - i
-        if digit == 0:
-            zero_flag = True
-        else:
-            if zero_flag:
-                result += "零"
-                zero_flag = False
-            result += DIGITS[digit] + UNITS[pos]
+    n = len(int_str)
 
-    # 处理末尾的万/亿单位
-    if result.endswith("零"):
-        result = result[:-1]
-    result += "元"
+    def four_digits_to_cn(s):
+        """4位数字转中文（仟佰拾个），处理中间零"""
+        result = ""
+        zero_flag = False
+        units4 = ["", "拾", "佰", "仟"]
+        for i, ch in enumerate(s):
+            digit = int(ch)
+            pos = len(s) - 1 - i
+            if digit == 0:
+                zero_flag = True
+            else:
+                if zero_flag:
+                    result += "零"
+                    zero_flag = False
+                result += DIGITS[digit] + units4[pos]
+        return result
+
+    # 分段：从右往左每4位一段
+    # 例如 12345678 → [1234, 5678]，对应 [万级, 个级]
+    sections = []
+    remaining = int_str
+    while len(remaining) > 4:
+        sections.append(remaining[-4:])
+        remaining = remaining[:-4]
+    sections.append(remaining)
+    sections.reverse()  # 从高位到低位
+
+    section_units = ["", "万", "亿"]
+    result = ""
+    zero_between = False  # 段之间是否需要补零
+
+    for idx, sec in enumerate(sections):
+        sec_num = int(sec)
+        sec_unit = section_units[len(sections) - 1 - idx]
+
+        if sec_num == 0:
+            # 整段为零，标记后续段可能需要补零
+            if result:
+                zero_between = True
+            continue
+
+        sec_cn = four_digits_to_cn(sec)
+
+        # 段之间补零（前段有零段，本段需要以零开头时合并）
+        if zero_between:
+            if sec_cn.startswith("零"):
+                # 段内已经有零了，去掉重复
+                result += sec_cn
+            else:
+                result += "零" + sec_cn
+            zero_between = False
+        else:
+            result += sec_cn
+
+        result += sec_unit
 
     # 小数部分
     jiao = dec_part // 10
     fen = dec_part % 10
+
+    # 整数部分为 0 时不加"元"，直接从小数部分开始
+    if int_part == 0:
+        result = ""
+    else:
+        result += "元"
+
     if jiao == 0 and fen == 0:
         result += "整"
     else:
         if jiao > 0:
             result += DIGITS[jiao] + "角"
+        elif int_part > 0 and fen > 0:
+            # 整数有值，角为0，分有值 → 加"零"
+            result += "零"
         if fen > 0:
             result += DIGITS[fen] + "分"
 

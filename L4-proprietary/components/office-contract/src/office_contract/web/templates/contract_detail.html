@@ -1,78 +1,56 @@
 {% extends "base.html" %}
-{% block title %}合同详情{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, info_grid with context %}
+
 {% block content %}
 
 <div id="detailContent" style="opacity: 0.5;">
-    <div class="page-header">
-        <div>
-            <h1>加载中...</h1>
-            <p>正在获取合同详情</p>
-        </div>
-        <div>
-            <button class="btn" onclick="history.back()">← 返回</button>
-        </div>
-    </div>
+    {{ page_header(title="加载中...", subtitle="正在获取合同详情") }}
     <div class="card"><div class="text-muted">请稍候...</div></div>
 </div>
 
 <div id="detailLoaded" style="display: none;">
-    <div class="page-header">
-        <div>
-            <h1 id="contractTitle">--</h1>
-            <p>
-                <span id="contractNo" style="font-family: var(--font-mono);">--</span>
-                <span class="text-muted" style="margin: 0 var(--s-3);">·</span>
-                <span id="contractStatusBadge">--</span>
-            </p>
-        </div>
-        <div class="flex gap-3">
-            <button class="btn" onclick="history.back()">← 返回</button>
-            <button id="btnRiskScan" class="btn" onclick="scanRisk()">🔍 风险扫描</button>
-            <button id="btnSubmit" class="btn btn-primary" onclick="submitApproval()" style="display:none;">📤 提交审批</button>
-            <button id="btnApprove" class="btn btn-success" onclick="showApproveModal()" style="display:none;">✅ 审批通过</button>
-            <button id="btnReject" class="btn btn-danger" onclick="showRejectModal()" style="display:none;">❌ 驳回</button>
-        </div>
-    </div>
+    {{ page_header(
+        title="--",
+        subtitle="--",
+        actions=[
+            {"label": "← 返回", "onclick": "history.back()", "variant": ""},
+            {"label": "🔍 风险扫描", "id": "btnRiskScan", "onclick": "scanRisk()", "variant": ""},
+            {"label": "📤 提交审批", "id": "btnSubmit", "onclick": "submitApproval()", "variant": "primary"},
+            {"label": "✅ 审批通过", "id": "btnApprove", "onclick": "showApproveModal()", "variant": "success"},
+            {"label": "❌ 驳回", "id": "btnReject", "onclick": "showRejectModal()", "variant": "danger"},
+        ]
+    ) }}
 
     <div class="grid-2">
         <!-- 基本信息 -->
-        <div class="card">
-            <div class="card-title"><span>基本信息</span></div>
+        {% call card(title="基本信息") %}
             <div class="info-grid" id="infoGrid">
                 <!-- 动态填充 -->
             </div>
-        </div>
+        {% endcall %}
 
         <!-- 审批流程时间线 -->
-        <div class="card">
-            <div class="card-title">
-                <span>审批流程</span>
-                <span id="approvalLevelBadge" class="text-muted" style="text-transform:none; font-weight:400; font-size:0.85rem;">--</span>
-            </div>
+        {% call card(title="审批流程") %}
             <div class="timeline" id="approvalTimeline">
                 <!-- 动态填充 -->
             </div>
-        </div>
+        {% endcall %}
     </div>
 
     <!-- 风险扫描结果 -->
-    <div class="card" id="riskCard">
-        <div class="card-title">
-            <span>⚠️ 风险扫描结果</span>
-            <button class="btn btn-sm" onclick="scanRisk()">重新扫描</button>
-        </div>
+    {% call card(title="⚠️ 风险扫描结果", actions=[{"label": "重新扫描", "onclick": "scanRisk()", "variant": ""}]) %}
         <div id="riskContent">
             <div class="text-muted" style="text-align:center; padding: 20px;">点击"风险扫描"查看结果</div>
         </div>
-    </div>
+    {% endcall %}
 
     <!-- 审批历史 -->
-    <div class="card">
-        <div class="card-title"><span>操作历史</span></div>
+    {% call card(title="操作历史") %}
         <div class="timeline" id="historyTimeline">
             <!-- 动态填充 -->
         </div>
-    </div>
+    {% endcall %}
 </div>
 
 <!-- 审批通过弹窗 -->
@@ -150,10 +128,21 @@ function renderDetail(data) {
     document.getElementById('detailLoaded').style.display = 'block';
     
     document.title = `${c.title} | 合同详情`;
-    document.getElementById('contractTitle').textContent = c.title;
-    document.getElementById('contractNo').textContent = c.contract_no;
-    document.getElementById('contractStatusBadge').innerHTML = 
-        `<span class="${statusBadgeClass(c.status)}">${statusLabels[c.status] || c.status}</span>`;
+    
+    // 更新 page_header 的标题和副标题
+    const header = document.querySelector('#detailLoaded .page-header');
+    if (header) {
+        const h1 = header.querySelector('h1');
+        if (h1) h1.textContent = c.title;
+        const p = header.querySelector('p');
+        if (p) {
+            p.innerHTML = `
+                <span style="font-family: var(--font-mono);">${c.contract_no}</span>
+                <span class="text-muted" style="margin: 0 var(--s-3);">·</span>
+                <span class="${statusBadgeClass(c.status)}">${statusLabels[c.status] || c.status}</span>
+            `;
+        }
+    }
     
     // 基本信息
     const infoGrid = document.getElementById('infoGrid');
@@ -176,17 +165,13 @@ function renderDetail(data) {
         </div>
     `).join('');
     
-    // 操作按钮
-    document.getElementById('btnSubmit').style.display = c.status === 'draft' ? 'inline-flex' : 'none';
+    // 操作按钮显示控制
+    document.getElementById('btnSubmit').style.display = c.status === 'draft' ? '' : 'none';
     const isReview = c.status && c.status.startsWith('review');
-    document.getElementById('btnApprove').style.display = isReview ? 'inline-flex' : 'none';
-    document.getElementById('btnReject').style.display = isReview ? 'inline-flex' : 'none';
+    document.getElementById('btnApprove').style.display = isReview ? '' : 'none';
+    document.getElementById('btnReject').style.display = isReview ? '' : 'none';
     
-    // 审批层级
-    document.getElementById('approvalLevelBadge').textContent = 
-        `${data.approval_level} 级审批 · SLA ${data.sla_days} 工作日`;
-    
-    // 审批流程时间线
+    // 审批流程
     renderApprovalTimeline(data);
     
     // 操作历史
@@ -202,11 +187,9 @@ function renderApprovalTimeline(data) {
     const timeline = document.getElementById('approvalTimeline');
     let html = '';
     
-    // 起草节点
     html += timelineItem('completed', '起草创建', 
         `创建人: ${c.created_by}`, c.created_at);
     
-    // 各审批节点
     for (let i = 0; i < level; i++) {
         const lvl = i + 1;
         const reviewStatus = `review${lvl}`;
@@ -228,7 +211,6 @@ function renderApprovalTimeline(data) {
         html += timelineItem(cls, title, meta, '', approval ? approval.comment : '');
     }
     
-    // 通过/签署/归档
     if (['approved', 'signed', 'archived'].includes(c.status)) {
         html += timelineItem('completed', '审批通过', '', '');
     }
