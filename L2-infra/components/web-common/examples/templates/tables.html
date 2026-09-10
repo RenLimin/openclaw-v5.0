@@ -1,0 +1,61 @@
+
+{% from "layout.html" import base_layout, page_header with context %}
+{% from "components.html" import card, stat_card, dashboard_grid, table, badge, progress_bar, chart_container, pagination, filter_bar, info_grid with context %}
+{% from "forms.html" import input, select, textarea, button, form_row, checkbox, switch with context %}
+{% from "icons.html" import icon_home, icon_settings, icon_plus, icon_check with context %}
+
+{% call base_layout(
+    title="组件演示",
+    brand_name="Web Common",
+    brand_icon="🧩",
+    active_page=active_page,
+    storage_key="web-common-demo-theme",
+    sidebar_items=[
+        {"title": "演示", "items": [
+            {"id": "dashboard", "label": "仪表盘", "url": "/", "icon": "📊"},
+            {"id": "tables", "label": "表格", "url": "/tables", "icon": "📋"},
+            {"id": "forms", "label": "表单", "url": "/forms", "icon": "📝"},
+            {"id": "components", "label": "组件", "url": "/components", "icon": "🧩"},
+        ]}
+    ]
+) %}
+    
+    {{ page_header(title="表格演示", subtitle="数据表格 + 筛选 + 分页") }}
+
+    {{ filter_bar(
+        fields=[
+            {"type": "select", "label": "状态", "id": "status", "options": [("all","全部"),("active","活跃"),("inactive","停用")]},
+            {"type": "text", "label": "关键词", "id": "keyword", "placeholder": "搜索名称..."},
+            {"type": "date", "label": "开始日期", "id": "date_from"},
+            {"type": "date", "label": "结束日期", "id": "date_to"},
+        ],
+        submit_onclick="showToast('筛选已应用', 'success')",
+        reset_onclick="showToast('已重置', 'info')"
+    ) }}
+
+    {% call card(title="用户列表") %}
+        {{ table(
+            columns=[
+                {"key": "id", "label": "ID"},
+                {"key": "name", "label": "姓名"},
+                {"key": "email", "label": "邮箱"},
+                {"key": "role", "label": "角色"},
+                {"key": "amount", "label": "金额", "align": "right", "num": true},
+                {"key": "status", "label": "状态"}
+            ],
+            rows=[
+                {"id": 1, "name": "张三", "email": "zhang@example.com", "role": "管理员", "amount": 12500, "status": badge("活跃", "success")|safe},
+                {"id": 2, "name": "李四", "email": "li@example.com", "role": "编辑", "amount": 8300, "status": badge("活跃", "success")|safe},
+                {"id": 3, "name": "王五", "email": "wang@example.com", "role": "用户", "amount": 3200, "status": badge("待审核", "warning")|safe},
+                {"id": 4, "name": "赵六", "email": "zhao@example.com", "role": "用户", "amount": 1500, "status": badge("停用", "muted")|safe},
+                {"id": 5, "name": "孙七", "email": "sun@example.com", "role": "编辑", "amount": 9800, "status": badge("活跃", "success")|safe},
+            ],
+            row_actions=[
+                {"label": "查看", "url_key": "#", "variant": ""},
+                {"label": "编辑", "url_key": "#", "variant": "primary"},
+            ]
+        ) }}
+        {{ pagination(current=3, total_pages=10, on_click="showToast('切换到第 ' + arguments[0] + ' 页', 'info')") }}
+    {% endcall %}
+    
+{% endcall %}

@@ -1,0 +1,76 @@
+
+{% from "layout.html" import base_layout, page_header with context %}
+{% from "components.html" import card, stat_card, dashboard_grid, table, badge, progress_bar, chart_container, pagination, filter_bar, info_grid with context %}
+{% from "forms.html" import input, select, textarea, button, form_row, checkbox, switch with context %}
+{% from "icons.html" import icon_home, icon_settings, icon_plus, icon_check with context %}
+
+{% call base_layout(
+    title="组件演示",
+    brand_name="Web Common",
+    brand_icon="🧩",
+    active_page=active_page,
+    storage_key="web-common-demo-theme",
+    sidebar_items=[
+        {"title": "演示", "items": [
+            {"id": "dashboard", "label": "仪表盘", "url": "/", "icon": "📊"},
+            {"id": "tables", "label": "表格", "url": "/tables", "icon": "📋"},
+            {"id": "forms", "label": "表单", "url": "/forms", "icon": "📝"},
+            {"id": "components", "label": "组件", "url": "/components", "icon": "🧩"},
+        ]}
+    ]
+) %}
+    
+    {{ page_header(title="组件演示", subtitle="徽章 / 进度条 / 信息网格 / 时间线") }}
+
+    <div class="grid-2">
+        {% call card(title="徽章 Badges") %}
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                {{ badge("成功", "success") }}
+                {{ badge("警告", "warning") }}
+                {{ badge("错误", "danger") }}
+                {{ badge("信息", "info") }}
+                {{ badge("主要", "primary") }}
+                {{ badge("次要", "muted") }}
+            </div>
+        {% endcall %}
+
+        {% call card(title="进度条 Progress") %}
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div>{{ progress_bar(percent=100, variant="success", label="100% 完成") }}</div>
+                <div>{{ progress_bar(percent=75, variant="primary", label="75% 进行中") }}</div>
+                <div>{{ progress_bar(percent=50, variant="warning", label="50% 待处理") }}</div>
+                <div>{{ progress_bar(percent=25, variant="danger", label="25% 延迟") }}</div>
+            </div>
+        {% endcall %}
+    </div>
+
+    {% call card(title="信息网格 Info Grid") %}
+        {{ info_grid(items=[
+            {"label": "订单号", "value": "ORD-2026-001234"},
+            {"label": "客户名称", "value": "某某科技有限公司"},
+            {"label": "订单金额", "value": "¥128,500.00"},
+            {"label": "订单状态", "value": "处理中", "badge_variant": "warning"},
+            {"label": "创建时间", "value": "2026-01-15 10:30"},
+            {"label": "负责人", "value": "张三"},
+            {"label": "交付日期", "value": "2026-02-28"},
+            {"label": "优先级", "value": "高", "badge_variant": "danger"},
+        ]) }}
+    {% endcall %}
+
+    {% call card(title="按钮 Buttons") %}
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            {{ button("主要按钮", variant="primary", onclick="showToast('主要按钮', 'success')") }}
+            {{ button("成功", variant="success", onclick="showToast('成功', 'success')") }}
+            {{ button("警告", variant="warning", onclick="showToast('警告', 'warning')") }}
+            {{ button("危险", variant="danger", onclick="showToast('危险', 'error')") }}
+            {{ button("默认", variant="", onclick="showToast('默认', 'info')") }}
+            {{ button("禁用", variant="", disabled=true) }}
+        </div>
+        <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+            {{ button("小按钮", variant="primary", size="sm") }}
+            {{ button("默认大小", variant="primary") }}
+            {{ button("大按钮", variant="primary", size="lg") }}
+        </div>
+    {% endcall %}
+    
+{% endcall %}

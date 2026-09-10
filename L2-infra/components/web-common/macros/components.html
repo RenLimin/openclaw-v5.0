@@ -1,0 +1,313 @@
+{# =============================================================
+   components.html — 通用组件宏
+   ============================================================= #}
+
+{# ---------------------------------------------------------
+   card — 卡片容器
+   用法:
+     {% from "macros/components.html" import card with context %}
+     {% call card(title="标题", actions=[...]) %}
+         卡片内容
+     {% endcall %}
+   --------------------------------------------------------- #}
+{% macro card(title="", actions=None, class_="") %}
+<div class="card {{ class_ }}">
+    {% if title or actions %}
+    <div class="card-title">
+        <span>{{ title }}</span>
+        {% if actions %}
+        <div class="card-actions">
+            {% for action in actions %}
+                {% if action.url %}
+                    <a href="{{ action.url }}"
+                       class="btn btn-sm {% if action.variant %}btn-{{ action.variant }}{% endif %}">
+                        {{ action.label }}
+                    </a>
+                {% else %}
+                    <button class="btn btn-sm {% if action.variant %}btn-{{ action.variant }}{% endif %}"
+                            {% if action.onclick %}onclick="{{ action.onclick }}"{% endif %}>
+                        {{ action.label }}
+                    </button>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    {{ caller() if caller else '' }}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   stat_card — 统计数字卡片
+   用法:
+     {{ stat_card(label="待审批", value=42, variant="primary", sub="等待处理") }}
+   --------------------------------------------------------- #}
+{% macro stat_card(label, value, variant="", sub="", icon="") %}
+<div class="stat-card">
+    <div class="stat-label">
+        {% if icon %}<span>{{ icon }}</span> {% endif %}{{ label }}
+    </div>
+    <div class="stat-value {% if variant %}{{ variant }}{% endif %}">{{ value }}</div>
+    {% if sub %}<div class="stat-sub">{{ sub }}</div>{% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   dashboard_grid — 统计卡片网格容器
+   用法:
+     {% call dashboard_grid() %}
+         {{ stat_card(...) }}
+         {{ stat_card(...) }}
+     {% endcall %}
+   --------------------------------------------------------- #}
+{% macro dashboard_grid() %}
+<div class="dashboard-grid">
+    {{ caller() if caller else '' }}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   table — 数据表格
+   用法:
+     {% from "macros/components.html" import table with context %}
+     {{ table(
+         columns=[
+             {"key": "name", "label": "名称"},
+             {"key": "amount", "label": "金额", "align": "right", "num": true}
+         ],
+         rows=[{name: "A", amount: 100}, ...],
+         row_actions=[...]
+     ) }}
+   --------------------------------------------------------- #}
+{% macro table(columns, rows, row_actions=None, empty_text="暂无数据", id="") %}
+<div class="table-wrapper">
+    <table class="table" {% if id %}id="{{ id }}"{% endif %}>
+        <thead>
+            <tr>
+                {% for col in columns %}
+                    <th class="{% if col.align == 'right' or col.num %}num{% endif %}">
+                        {{ col.label }}
+                    </th>
+                {% endfor %}
+                {% if row_actions %}
+                    <th>操作</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% if not rows or rows|length == 0 %}
+                <tr>
+                    <td colspan="{{ columns|length + (1 if row_actions else 0) }}"
+                        class="text-muted" style="text-align:center; padding: 30px;">
+                        {{ empty_text }}
+                    </td>
+                </tr>
+            {% else %}
+                {% for row in rows %}
+                    <tr>
+                        {% for col in columns %}
+                            <td class="{% if col.align == 'right' or col.num %}num{% endif %}">
+                                {% if col.render %}{{ col.render(row)|safe }}{% else %}{{ row[col.key] if col.key in row else '' }}{% endif %}
+                            </td>
+                        {% endfor %}
+                        {% if row_actions %}
+                            <td>
+                                <div class="actions">
+                                    {% for action in row_actions %}
+                                        {% if action.url_key %}
+                                            <a href="{{ row[action.url_key] }}"
+                                               class="btn btn-sm {% if action.variant %}btn-{{ action.variant }}{% endif %}">
+                                                {{ action.label }}
+                                            </a>
+                                        {% elif action.onclick_key %}
+                                            <button class="btn btn-sm {% if action.variant %}btn-{{ action.variant }}{% endif %}"
+                                                    onclick="{{ row[action.onclick_key] }}">
+                                                {{ action.label }}
+                                            </button>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   badge — 徽章/状态标签
+   用法:
+     {{ badge("已通过", variant="success") }}
+   --------------------------------------------------------- #}
+{% macro badge(text, variant="muted") %}
+<span class="badge {{ variant }}">{{ text }}</span>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   progress_bar — 进度条
+   用法:
+     {{ progress_bar(percent=75, variant="primary", label="75%") }}
+   --------------------------------------------------------- #}
+{% macro progress_bar(percent, variant="primary", label="") %}
+<div class="progress-bar">
+    <div class="progress-fill {{ variant }}" style="width: {{ percent }}%"></div>
+</div>
+{% if label %}<div class="progress-label text-muted" style="font-size: 0.8rem; margin-top: 4px;">{{ label }}</div>{% endif %}
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   chart_container — 图表容器
+   用法:
+     {% call chart_container(id="myChart", title="趋势图", height=300) %}
+         <canvas id="myChartCanvas"></canvas>
+     {% endcall %}
+   --------------------------------------------------------- #}
+{% macro chart_container(id="", title="", height=200, actions=None) %}
+<div class="card chart-container">
+    {% if title or actions %}
+    <div class="card-title">
+        <span>{{ title }}</span>
+        {% if actions %}
+        <div class="card-actions">
+            {% for action in actions %}
+                <button class="btn btn-sm" {% if action.onclick %}onclick="{{ action.onclick }}"{% endif %}>
+                    {{ action.label }}
+                </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    <div class="chart-body" style="height: {{ height }}px;" {% if id %}id="{{ id }}"{% endif %}>
+        {{ caller() if caller else '' }}
+    </div>
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   pagination — 分页
+   用法:
+     {{ pagination(current=2, total_pages=10, on_click="loadPage") }}
+   --------------------------------------------------------- #}
+{% macro pagination(current, total_pages, on_click="", href_template="", info_text="") %}
+<div class="pagination">
+    {% if href_template %}
+        <a href="{{ href_template.replace('{page}', (current - 1)|string) }}"
+           class="btn btn-sm {% if current <= 1 %}disabled{% endif %}"
+           {% if current <= 1 %}aria-disabled="true"{% endif %}>
+            上一页
+        </a>
+    {% else %}
+        <button class="btn btn-sm"
+                {% if current <= 1 %}disabled{% endif %}
+                {% if on_click %}onclick="{{ on_click }}({{ current - 1 }})"{% endif %}>
+            上一页
+        </button>
+    {% endif %}
+
+    <span class="page-info">
+        {% if info_text %}
+            {{ info_text }}
+        {% else %}
+            第 {{ current }} / {{ total_pages }} 页
+        {% endif %}
+    </span>
+
+    {% if href_template %}
+        <a href="{{ href_template.replace('{page}', (current + 1)|string) }}"
+           class="btn btn-sm {% if current >= total_pages %}disabled{% endif %}"
+           {% if current >= total_pages %}aria-disabled="true"{% endif %}>
+            下一页
+        </a>
+    {% else %}
+        <button class="btn btn-sm"
+                {% if current >= total_pages %}disabled{% endif %}
+                {% if on_click %}onclick="{{ on_click }}({{ current + 1 }})"{% endif %}>
+            下一页
+        </button>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   filter_bar — 筛选栏
+   用法:
+     {% call filter_bar(fields=[...]) %}{% endcall %}
+   或者用 macro 参数形式：
+     {{ filter_bar(fields=[
+         {"type": "select", "label": "状态", "id": "status", "options": [("1","通过")]},
+         {"type": "text", "label": "名称", "id": "name", "placeholder": "搜索..."},
+     ], submit_onclick="loadData()", reset_onclick="resetFilters()") }}
+   --------------------------------------------------------- #}
+{% macro filter_bar(fields, submit_label="筛选", reset_label="重置", submit_onclick="", reset_onclick="") %}
+<div class="filter-bar">
+    {% for field in fields %}
+        <div class="form-group">
+            <label>{{ field.label }}</label>
+            {% if field.type == "select" %}
+                <select id="{{ field.id }}" name="{{ field.name or field.id }}">
+                    {% if field.placeholder %}
+                        <option value="">{{ field.placeholder }}</option>
+                    {% endif %}
+                    {% for opt in field.options %}
+                        <option value="{{ opt.0 if opt is iterable and opt is not mapping else opt.value }}"
+                                {% if field.default and (opt.0 if opt is iterable and opt is not mapping else opt.value) == field.default %}selected{% endif %}>
+                            {{ opt.1 if opt is iterable and opt is not mapping else opt.label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            {% elif field.type == "date" %}
+                <input type="date" id="{{ field.id }}" name="{{ field.name or field.id }}"
+                       {% if field.default %}value="{{ field.default }}"{% endif %}>
+            {% elif field.type == "number" %}
+                <input type="number" id="{{ field.id }}" name="{{ field.name or field.id }}"
+                       placeholder="{{ field.placeholder or '' }}"
+                       {% if field.default %}value="{{ field.default }}"{% endif %}>
+            {% else %}
+                <input type="text" id="{{ field.id }}" name="{{ field.name or field.id }}"
+                       placeholder="{{ field.placeholder or '' }}"
+                       {% if field.default %}value="{{ field.default }}"{% endif %}>
+            {% endif %}
+        </div>
+    {% endfor %}
+    {% if submit_onclick %}
+    <div class="form-group" style="display: flex; align-items: flex-end;">
+        <button class="btn btn-primary" onclick="{{ submit_onclick }}">{{ submit_label }}</button>
+    </div>
+    {% endif %}
+    {% if reset_onclick %}
+    <div class="form-group" style="display: flex; align-items: flex-end;">
+        <button class="btn" onclick="{{ reset_onclick }}">{{ reset_label }}</button>
+    </div>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# ---------------------------------------------------------
+   info_grid — 详情信息网格
+   用法:
+     {{ info_grid(items=[
+         {"label": "合同号", "value": "HT2026001"},
+         {"label": "金额", "value": "¥10,000"},
+     ]) }}
+   --------------------------------------------------------- #}
+{% macro info_grid(items) %}
+<div class="info-grid">
+    {% for item in items %}
+        <div class="info-item">
+            <div class="info-label">{{ item.label }}</div>
+            <div class="info-value">
+                {% if item.badge_variant %}
+                    <span class="badge {{ item.badge_variant }}">{{ item.value }}</span>
+                {% else %}
+                    {{ item.value }}
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endmacro %}
