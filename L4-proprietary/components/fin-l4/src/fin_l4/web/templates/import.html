@@ -1,11 +1,15 @@
 {% extends "base.html" %}
-{% block title %}流水导入 — FIN-L4{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, dashboard_grid, stat_card with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '流水导入 — FIN-L4' %}
+
 {% block content %}
-<h1>📥 银行流水导入</h1>
+{{ page_header(title='银行流水导入', subtitle='支持 CSV / Excel 批量导入') }}
 
 <!-- 上传区域 -->
-<div class="card">
-    <h2>上传文件</h2>
+{% call card(title='上传文件') %}
     <div class="upload-area" id="uploadArea">
         <div class="upload-icon">📂</div>
         <p>拖拽文件到此处，或 <label class="upload-link">点击选择文件</label></p>
@@ -26,93 +30,79 @@
         </div>
     </div>
 
-    <div style="margin-top: 12px;">
-        <button class="btn btn-secondary" onclick="previewImport()" id="previewBtn" disabled>预览</button>
-        <button class="btn btn-primary" onclick="doImport()" id="importBtn" disabled>直接导入</button>
-        <span id="fileName" style="margin-left: 12px; color: #666;"></span>
+    <div style="margin-top: 12px; display: flex; gap: var(--s-2); align-items: center;">
+        {{ button('预览', onclick='previewImport()', id='previewBtn') }}
+        {{ button('直接导入', variant='primary', onclick='doImport()', id='importBtn') }}
+        <span id="fileName" class="text-muted" style="margin-left: 8px;"></span>
     </div>
-</div>
+{% endcall %}
 
 <!-- 预览结果 -->
-<div id="previewSection" class="card" style="display:none;">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>预览结果</h2>
-        <div>
-            <button class="btn btn-primary" onclick="confirmImport()">确认导入</button>
+<div id="previewSection" style="display:none;">
+    {% call card(title='预览结果') %}
+        <div class="card-actions">
+            {{ button('确认导入', variant='primary', onclick='confirmImport()') }}
         </div>
-    </div>
+        <div class="dashboard-grid" id="statsGrid" style="grid-template-columns: repeat(4, 1fr);">
+            {{ stat_card(label='总条数', value=0, icon='📊') }}
+            {{ stat_card(label='新增', value=0, variant='success', icon='✅') }}
+            {{ stat_card(label='重复', value=0, variant='warning', icon='🔄') }}
+            {{ stat_card(label='错误', value=0, variant='danger', icon='❌') }}
+        </div>
 
-    <div class="stats-grid" id="statsGrid">
-        <div class="stat-card">
-            <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">总条数</div>
+        <div id="detectInfo" style="margin: 12px 0; padding: 8px 12px; background: rgba(59,130,246,0.1); border-radius: 6px; font-size: 0.85rem;">
+            <span id="bankInfo"></span>
+            <span id="confInfo" style="margin-left: 16px;"></span>
         </div>
-        <div class="stat-card stat-success">
-            <div class="stat-value" id="statNew">0</div>
-            <div class="stat-label">新增</div>
-        </div>
-        <div class="stat-card stat-warning">
-            <div class="stat-value" id="statDup">0</div>
-            <div class="stat-label">重复</div>
-        </div>
-        <div class="stat-card stat-error">
-            <div class="stat-value" id="statErr">0</div>
-            <div class="stat-label">错误</div>
-        </div>
-    </div>
 
-    <div id="detectInfo" style="margin: 12px 0; padding: 8px 12px; background: #f0f7ff; border-radius: 6px;">
-        <span id="bankInfo"></span>
-        <span id="confInfo" style="margin-left: 16px;"></span>
-    </div>
-
-    <div style="overflow-x: auto;">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>日期</th>
-                    <th>金额</th>
-                    <th>收支</th>
-                    <th>对方</th>
-                    <th>摘要</th>
-                    <th>分类</th>
-                    <th>置信度</th>
-                    <th>状态</th>
-                </tr>
-            </thead>
-            <tbody id="previewBody"></tbody>
-        </table>
-    </div>
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th class="num">金额</th>
+                        <th>收支</th>
+                        <th>对方</th>
+                        <th>摘要</th>
+                        <th>分类</th>
+                        <th>置信度</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody id="previewBody"></tbody>
+            </table>
+        </div>
+    {% endcall %}
 </div>
 
 <!-- 导入历史 -->
-<div class="card">
-    <h2>导入历史</h2>
-    <button class="btn btn-secondary btn-sm" onclick="loadHistory()" style="margin-bottom: 8px;">刷新</button>
-    <table class="data-table" id="historyTable">
-        <thead>
-            <tr>
-                <th>时间</th>
-                <th>文件</th>
-                <th>银行</th>
-                <th>状态</th>
-                <th>新增/重复/错误</th>
-            </tr>
-        </thead>
-        <tbody id="historyBody">
-            <tr><td colspan="5" style="text-align:center; color:#999;">加载中...</td></tr>
-        </tbody>
-    </table>
-</div>
-
-<!-- 分类统计模态框（预留） -->
+{% call card(title='导入历史') %}
+    <div style="margin-bottom: 0.5rem;">
+        {{ button('刷新', size='sm', onclick='loadHistory()') }}
+    </div>
+    <div class="table-wrapper">
+        <table class="table" id="historyTable">
+            <thead>
+                <tr>
+                    <th>时间</th>
+                    <th>文件</th>
+                    <th>银行</th>
+                    <th>状态</th>
+                    <th>新增/重复/错误</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody">
+                <tr><td colspan="5" class="text-muted" style="text-align:center;">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+{% endcall %}
 
 <script>
 let currentFile = null;
 let currentPreview = null;
 let adjustments = {};
 
-// 文件选择
 const uploadArea = document.getElementById('uploadArea');
 const fileInput = document.getElementById('fileInput');
 
@@ -122,7 +112,6 @@ uploadArea.querySelector('.upload-link').addEventListener('click', (e) => {
     fileInput.click();
 });
 
-// 拖拽
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
     uploadArea.style.borderColor = '#4a90d9';
@@ -158,16 +147,11 @@ function getSourceType() {
     return document.getElementById('sourceType').value;
 }
 
-// 预览导入
 async function previewImport() {
     if (!currentFile) return;
     const btn = document.getElementById('previewBtn');
     btn.disabled = true;
     btn.textContent = '解析中...';
-
-    const formData = new FormData();
-    formData.append('file', currentFile);
-    formData.append('source_type', getSourceType());
 
     try {
         const res = await fetch('/api/v1/import/preview?source_type=' + getSourceType(), {
@@ -179,9 +163,7 @@ async function previewImport() {
             }
         });
         const data = await res.json();
-        if (!res.ok) {
-            throw new Error(data.detail || '预览失败');
-        }
+        if (!res.ok) throw new Error(data.detail || '预览失败');
         showPreview(data);
     } catch (e) {
         alert('预览失败: ' + e.message);
@@ -196,10 +178,26 @@ function showPreview(data) {
     adjustments = {};
 
     document.getElementById('previewSection').style.display = 'block';
-    document.getElementById('statTotal').textContent = data.total_count || 0;
-    document.getElementById('statNew').textContent = data.new_count || 0;
-    document.getElementById('statDup').textContent = data.duplicate_count || 0;
-    document.getElementById('statErr').textContent = data.error_count || 0;
+
+    // 更新统计卡片
+    const grid = document.getElementById('statsGrid');
+    grid.innerHTML = '';
+    const stats = [
+        { label: '总条数', value: data.total_count || 0, variant: '' },
+        { label: '新增', value: data.new_count || 0, variant: 'success' },
+        { label: '重复', value: data.duplicate_count || 0, variant: 'warning' },
+        { label: '错误', value: data.error_count || 0, variant: 'danger' },
+    ];
+    stats.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'stat-card';
+        div.innerHTML = `
+            <div class="stat-label">${s.label}</div>
+            <div class="stat-value ${s.variant}">${s.value}</div>
+        `;
+        grid.appendChild(div);
+    });
+
     document.getElementById('bankInfo').textContent =
         '识别: ' + (data.detected_bank_name || data.detected_bank || '未知') +
         ' (' + (data.format || '') + ')';
@@ -214,25 +212,25 @@ function showPreview(data) {
     tbody.innerHTML = '';
     (data.transactions || []).forEach((t, idx) => {
         const tr = document.createElement('tr');
-        const confColor = t.confidence === 'high' ? '#2ecc71' :
-                         t.confidence === 'medium' ? '#f39c12' : '#95a5a6';
+        const confColor = t.confidence === 'high' ? 'var(--c-success)' :
+                         t.confidence === 'medium' ? 'var(--c-warning)' : 'var(--c-muted)';
         const statusText = t.is_duplicate ? '重复' : (t.is_valid ? '新增' : t.error);
-        const statusClass = t.is_duplicate ? 'status-dup' :
-                           (t.is_valid ? 'status-new' : 'status-err');
+        const statusClass = t.is_duplicate ? 'badge warning' :
+                           (t.is_valid ? 'badge success' : 'badge danger');
 
         tr.innerHTML = `
             <td>${t.txn_date || ''}</td>
-            <td style="text-align:right; font-family:monospace;">${t.amount || ''}</td>
+            <td class="num mono">${t.amount || ''}</td>
             <td>${t.direction === 'income' ? '收入' : '支出'}</td>
             <td>${t.counterparty || ''}</td>
             <td>${t.summary || ''} ${t.product || ''}</td>
             <td>
                 <span class="cat-display" onclick="editCategory(${idx}, this)">${t.category_id || '未分类'}</span>
             </td>
-            <td><span style="color:${confColor}; font-weight:bold;">${
+            <td style="color:${confColor}; font-weight:bold;">${
                 t.confidence === 'high' ? '高' : t.confidence === 'medium' ? '中' : '低'
-            }</span></td>
-            <td><span class="status-tag ${statusClass}">${statusText}</span></td>
+            }</td>
+            <td><span class="${statusClass}">${statusText}</span></td>
         `;
         tbody.appendChild(tr);
     });
@@ -244,11 +242,10 @@ function editCategory(idx, el) {
     if (newCat && newCat !== current) {
         adjustments[idx] = { category_id: newCat };
         el.textContent = newCat + ' *';
-        el.style.color = '#e74c3c';
+        el.style.color = 'var(--c-danger)';
     }
 }
 
-// 直接导入
 async function doImport() {
     if (!currentFile) return;
     if (!confirm('确定直接导入文件吗？')) return;
@@ -270,7 +267,7 @@ async function doImport() {
         if (data.errors && data.errors.length > 0) {
             alert('导入完成: 新增' + (data.new_count || 0) + '条, 重复' +
                   (data.duplicate_count || 0) + '条, 错误' +
-                  (data.error_count || 0) + '条\\n错误: ' + data.errors.slice(0, 3).join('\\n'));
+                  (data.error_count || 0) + '条\n错误: ' + data.errors.slice(0, 3).join('\n'));
         } else {
             alert('导入完成: 新增' + (data.new_count || 0) + '条, 重复' +
                   (data.duplicate_count || 0) + '条');
@@ -284,7 +281,6 @@ async function doImport() {
     }
 }
 
-// 确认导入（基于预览）
 async function confirmImport() {
     if (!currentPreview || !currentPreview.import_id) return;
 
@@ -305,14 +301,13 @@ async function confirmImport() {
     }
 }
 
-// 加载历史
 async function loadHistory() {
     try {
         const res = await fetch('/api/v1/import/history');
         const data = await res.json();
         const tbody = document.getElementById('historyBody');
         if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">暂无记录</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-muted" style="text-align:center;">暂无记录</td></tr>';
             return;
         }
         tbody.innerHTML = '';
@@ -332,92 +327,6 @@ async function loadHistory() {
     }
 }
 
-// 页面加载时拉取历史
 loadHistory();
 </script>
-
-<style>
-.upload-area {
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    padding: 40px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-.upload-area:hover {
-    border-color: #4a90d9;
-    background: #fafafa;
-}
-.upload-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-}
-.upload-link {
-    color: #4a90d9;
-    cursor: pointer;
-    text-decoration: underline;
-}
-.upload-hint {
-    color: #999;
-    font-size: 12px;
-    margin-top: 8px;
-}
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    margin: 16px 0;
-}
-.stat-card {
-    text-align: center;
-    padding: 16px;
-    background: #f8f9fa;
-    border-radius: 8px;
-}
-.stat-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #333;
-}
-.stat-label {
-    font-size: 12px;
-    color: #999;
-    margin-top: 4px;
-}
-.stat-success .stat-value { color: #27ae60; }
-.stat-warning .stat-value { color: #f39c12; }
-.stat-error .stat-value { color: #e74c3c; }
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-.data-table th, .data-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #eee;
-    text-align: left;
-}
-.data-table th {
-    background: #f5f5f5;
-    font-weight: 600;
-}
-.status-tag {
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
-}
-.status-new { background: #e8f5e9; color: #2e7d32; }
-.status-dup { background: #fff3e0; color: #e65100; }
-.status-err { background: #ffebee; color: #c62828; }
-.cat-display {
-    cursor: pointer;
-    border-bottom: 1px dotted #999;
-}
-.btn-sm {
-    padding: 4px 10px;
-    font-size: 12px;
-}
-</style>
 {% endblock %}

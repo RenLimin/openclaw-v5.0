@@ -1,51 +1,44 @@
 {% extends "base.html" %}
-{% block title %}生成月报 — BDMS v2{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, progress_bar with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '生成月报 — BDMS v2' %}
+
 {% block content %}
+{{ page_header(
+    title='生成月报',
+    subtitle='选择月份，生成 15 Sheet 精确格式交付月报'
+) }}
 
-<div class="page-header">
-    <div>
-        <h1 class="page-title">生成月报</h1>
-        <div class="page-subtitle">选择月份，生成 15 Sheet 精确格式交付月报</div>
-    </div>
-</div>
+{% call card(title="新建报告任务", class_="max-w-md") %}
+    <form id="genForm">
+        <div class="form-group">
+            <label class="form-label">报告月份</label>
+            <input type="month" id="monthInput" class="form-input"
+                   value="{{ default_month[:4] }}-{{ default_month[4:] }}" required>
+            <div class="form-help">请确保对应月份的 ONES 导出数据和交接表已准备好</div>
+        </div>
 
-<div class="card" style="max-width: 500px;">
-    <div class="card-header">新建报告任务</div>
-    <div class="card-body">
-        <form id="genForm">
-            <div class="form-group">
-                <label class="form-label">报告月份</label>
-                <input type="month" id="monthInput" class="form-input"
-                       value="{{ default_month[:4] }}-{{ default_month[4:] }}" required>
-                <div style="font-size: 12px; color: var(--c-muted); margin-top: 4px;">
-                    请确保对应月份的 ONES 导出数据和交接表已准备好
-                </div>
-            </div>
+        {{ button('🚀 开始生成', variant='primary', type='submit', id='genBtn') }}
+    </form>
 
-            <button type="submit" class="btn btn-primary" id="genBtn" style="width: 100%; justify-content: center;">
-                🚀 开始生成
-            </button>
-        </form>
-
-        <div id="statusCard" style="display: none; margin-top: var(--s-6);">
-            <div class="gen-status">
-                <h2 id="statusTitle">准备中...</h2>
-                <div class="progress-wrap">
-                    <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
-                </div>
-                <div class="progress-text" id="progressText">0%</div>
-                <div id="statusActions" style="margin-top: var(--s-4); display: none;">
-                    <a id="downloadLink" href="#" class="btn btn-success" style="margin-right: var(--s-2);">
-                        ⬇️ 下载 Excel
-                    </a>
-                    <a id="previewLink" href="#" class="btn">
-                        👁 查看详情
-                    </a>
-                </div>
+    <div id="statusCard" style="display: none; margin-top: var(--s-6);">
+        <div class="gen-status">
+            <h2 id="statusTitle">准备中...</h2>
+            <div id="progressWrap"></div>
+            <div class="progress-text" id="progressText">0%</div>
+            <div id="statusActions" style="margin-top: var(--s-4); display: none;">
+                <a id="downloadLink" href="#" class="btn btn-success" style="margin-right: var(--s-2);">
+                    ⬇️ 下载 Excel
+                </a>
+                <a id="previewLink" href="#" class="btn">
+                    👁 查看详情
+                </a>
             </div>
         </div>
     </div>
-</div>
+{% endcall %}
 
 {% endblock %}
 
@@ -57,7 +50,7 @@
     const genBtn = document.getElementById('genBtn');
     const statusCard = document.getElementById('statusCard');
     const statusTitle = document.getElementById('statusTitle');
-    const progressBar = document.getElementById('progressBar');
+    const progressWrap = document.getElementById('progressWrap');
     const progressText = document.getElementById('progressText');
     const statusActions = document.getElementById('statusActions');
     const downloadLink = document.getElementById('downloadLink');
@@ -68,7 +61,6 @@
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        // 转换 month 格式 YYYY-MM → YYYYMM
         const monthVal = monthInput.value.replace('-', '');
         if (!monthVal || monthVal.length !== 6) {
             alert('请选择有效的月份');
@@ -79,7 +71,7 @@
         genBtn.textContent = '提交中...';
         statusCard.style.display = 'block';
         statusTitle.textContent = '提交任务中...';
-        progressBar.style.width = '0%';
+        progressWrap.innerHTML = '';
         progressText.textContent = '0%';
         statusActions.style.display = 'none';
 
@@ -91,21 +83,17 @@
             });
             const data = await resp.json();
 
-            if (!resp.ok) {
-                throw new Error(data.detail || '提交失败');
-            }
+            if (!resp.ok) throw new Error(data.detail || '提交失败');
 
             const jobId = data.job_id;
             previewLink.href = '/reports/' + jobId;
             downloadLink.href = '/api/reports/' + jobId + '/download';
 
-            // 开始轮询
             pollStatus(jobId);
 
         } catch (err) {
             statusTitle.textContent = '❌ 提交失败';
-            progressBar.className = 'progress-bar failed';
-            progressBar.style.width = '100%';
+            progressWrap.innerHTML = '<div class="progress-bar"><div class="progress-fill danger" style="width:100%"></div></div>';
             progressText.textContent = err.message;
             genBtn.disabled = false;
             genBtn.textContent = '🚀 开始生成';
@@ -120,30 +108,29 @@
                 const resp = await fetch('/api/reports/' + jobId + '/status');
                 const data = await resp.json();
 
-                if (!resp.ok) {
-                    throw new Error(data.detail || '查询失败');
-                }
+                if (!resp.ok) throw new Error(data.detail || '查询失败');
 
                 const progress = data.progress || 0;
-                progressBar.style.width = progress + '%';
                 progressText.textContent = progress + '%';
+
+                let variant = 'primary';
+                if (data.status === 'completed') variant = 'success';
+                if (data.status === 'failed') variant = 'danger';
+
+                progressWrap.innerHTML = '<div class="progress-bar"><div class="progress-fill ' + variant + '" style="width:' + progress + '%"></div></div>';
 
                 if (data.status === 'pending') {
                     statusTitle.textContent = '⏳ 等待生成...';
-                    progressBar.className = 'progress-bar';
                 } else if (data.status === 'running') {
                     statusTitle.textContent = '⚙️ 正在生成月报...';
-                    progressBar.className = 'progress-bar';
                 } else if (data.status === 'completed') {
                     statusTitle.textContent = '✅ 生成完成！';
-                    progressBar.className = 'progress-bar success';
                     statusActions.style.display = 'block';
                     clearInterval(pollTimer);
                     genBtn.disabled = false;
                     genBtn.textContent = '🚀 生成新月报';
                 } else if (data.status === 'failed') {
                     statusTitle.textContent = '❌ 生成失败';
-                    progressBar.className = 'progress-bar failed';
                     progressText.textContent = data.error_msg || '未知错误';
                     clearInterval(pollTimer);
                     genBtn.disabled = false;

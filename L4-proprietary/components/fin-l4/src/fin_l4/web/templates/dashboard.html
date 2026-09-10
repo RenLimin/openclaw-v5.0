@@ -1,13 +1,18 @@
 {% extends "base.html" %}
-{% block title %}仪表盘 - FIN-L4{% endblock %}
-{% block extra_head %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, dashboard_grid, chart_container with context %}
+
+{% set page_title = '仪表盘 - FIN-L4' %}
+
+{% set extra_head %}
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-{% endblock %}
+{% endset %}
+
 {% block content %}
-<div class="page-header">
-    <h1>仪表盘</h1>
-    <p>家庭财务全景概览 <span id="currentMonth" class="text-muted"></span></p>
-</div>
+{{ page_header(
+    title='仪表盘',
+    subtitle='家庭财务全景概览 <span id="currentMonth" class="text-muted"></span>' | safe
+) }}
 
 <!-- 顶部总览卡片 -->
 <div class="dashboard-grid" id="overviewCards">
@@ -21,11 +26,11 @@
 
 <!-- 图表区：收支趋势 + 分类饼图 -->
 <div class="grid-2">
-    <div class="card">
-        <div class="card-title">月度收支趋势</div>
-        <div class="chart-container" id="trendChart" style="height:360px;"></div>
-    </div>
-    <div class="card">
+    {% call card(title='月度收支趋势') %}
+        <div id="trendChart" style="height:360px;"></div>
+    {% endcall %}
+
+    {% call card() %}
         <div class="card-title">
             <span id="pieChartTitle">当月支出分类</span>
             <div class="card-actions">
@@ -33,31 +38,30 @@
                 <button class="btn btn-sm" onclick="switchPieType('income')" id="pieIncomeBtn">收入</button>
             </div>
         </div>
-        <div class="chart-container" id="pieChart" style="height:360px;"></div>
-    </div>
+        <div id="pieChart" style="height:360px;"></div>
+    {% endcall %}
 </div>
 
 <!-- 预算执行 + 投资概览 -->
 <div class="grid-2">
-    <div class="card">
-        <div class="card-title">预算执行进度</div>
+    {% call card(title='预算执行进度') %}
         <div id="budgetList" class="budget-list">
             <p class="text-muted">加载中...</p>
         </div>
-    </div>
-    <div class="card">
-        <div class="card-title">投资组合概览</div>
+    {% endcall %}
+
+    {% call card(title='投资组合概览') %}
         <div id="investmentList" class="investment-list">
             <p class="text-muted">加载中...</p>
         </div>
-    </div>
+    {% endcall %}
 </div>
 
 <!-- 最近交易 + 快捷记账 -->
 <div class="grid-2">
-    <div class="card">
+    {% call card() %}
         <div class="card-title">
-            最近交易
+            <span>最近交易</span>
             <div class="card-actions">
                 <a href="/transactions" class="btn btn-sm">全部 →</a>
             </div>
@@ -65,9 +69,9 @@
         <div id="recentTxns">
             <p class="text-muted">加载中...</p>
         </div>
-    </div>
-    <div class="card">
-        <div class="card-title">快捷记账</div>
+    {% endcall %}
+
+    {% call card(title='快捷记账') %}
         <form id="quickTxnForm" class="quick-txn-form">
             <div class="form-row">
                 <div class="form-group">
@@ -103,7 +107,7 @@
                 <span id="txnMsg" class="form-msg"></span>
             </div>
         </form>
-    </div>
+    {% endcall %}
 </div>
 
 <script>
@@ -150,11 +154,11 @@ function loadOverview() {
         document.getElementById('currentMonth').textContent = '· ' + data.month;
         const cards = [
             { label: '总资产', value: data.total_assets, cls: '' },
-            { label: '总负债', value: data.total_liabilities, cls: 'negative' },
-            { label: '净资产', value: data.net_worth, cls: 'positive' },
-            { label: '本月收入', value: data.monthly_income, cls: 'positive' },
-            { label: '本月支出', value: data.monthly_expense, cls: 'negative' },
-            { label: '储蓄率', value: data.savings_rate + '%', cls: parseFloat(data.savings_rate) >= 20 ? 'positive' : 'negative' },
+            { label: '总负债', value: data.total_liabilities, cls: 'danger' },
+            { label: '净资产', value: data.net_worth, cls: 'success' },
+            { label: '本月收入', value: data.monthly_income, cls: 'success' },
+            { label: '本月支出', value: data.monthly_expense, cls: 'danger' },
+            { label: '储蓄率', value: data.savings_rate + '%', cls: parseFloat(data.savings_rate) >= 20 ? 'success' : 'danger' },
         ];
         document.getElementById('overviewCards').innerHTML = cards.map(c => `
             <div class="stat-card">
@@ -164,7 +168,7 @@ function loadOverview() {
         `).join('');
     }).catch(err => {
         document.getElementById('overviewCards').innerHTML =
-            '<div class="stat-card"><div class="stat-label">错误</div><div class="stat-value negative">加载失败</div></div>';
+            '<div class="stat-card"><div class="stat-label">错误</div><div class="stat-value danger">加载失败</div></div>';
         console.error(err);
     });
 }
@@ -389,13 +393,11 @@ function loadRecentTxns() {
         }
 
         container.innerHTML = `
+            <div class="table-wrapper">
             <table class="table">
                 <thead><tr><th>日期</th><th>分类</th><th>备注</th><th class="num">金额</th></tr></thead>
                 <tbody>
                 ${data.map(t => {
-                    const isExpense = t.category_type === 'expense' ||
-                        (t.debit_account_id && t.amount > 0 && false);
-                    // 根据分类类型判断正负
                     const sign = t.category_type === 'expense' ? -1 : 1;
                     const amt = parseFloat(t.amount) * sign;
                     return `
@@ -404,26 +406,21 @@ function loadRecentTxns() {
                             <td>${t.category_name || (t.category_type || '--')}</td>
                             <td>${t.note || ''}</td>
                             <td class="num ${amt < 0 ? 'negative' : 'positive'}">
-                                ${amt < 0 ? '-' : '+'}${fmtMoney(Math.abs(amt)).replace('¥', '¥')}
+                                ${amt < 0 ? '-' : '+'}${fmtMoney(Math.abs(amt))}
                             </td>
                         </tr>
                     `;
                 }).join('')}
                 </tbody>
             </table>
+            </div>
         `;
     });
 }
 
 // ========== 快捷记账 ==========
 function loadCategoriesForForm() {
-    // 加载所有分类
-    api('/dashboard/categories').then(data => {
-        // 重新加载：分类列表可能为空（因为按月统计），改用分类列表 API
-    });
-    // 直接从 accounts 推导，或使用分类 API
     fetch('/api/v1/accounts').then(r => r.json()).then(accounts => {
-        // 收入类账户 + 支出类账户
         const incomeAccs = accounts.filter(a => a.type === 'INCOME');
         const expenseAccs = accounts.filter(a => a.type === 'EXPENSE');
         const assetAccs = accounts.filter(a => a.type === 'ASSET');
@@ -432,16 +429,8 @@ function loadCategoriesForForm() {
         accountCache.expense = expenseAccs;
         accountCache.asset = assetAccs;
 
-        // 同时加载分类（categories 表）
-        loadCategoryTable();
         updateCategoryOptions();
     });
-}
-
-function loadCategoryTable() {
-    // 从数据库直接查分类表，通过一个简单方式：用 accounts 的 income/expense 类型作为"分类"
-    // 注意：当前系统分类来自 fin4_categories 表，但 transactions 的 category_id 可能为空
-    // 为简化起见，快捷记账用账户类型映射
 }
 
 function updateCategoryOptions() {
@@ -470,19 +459,16 @@ async function submitQuickTxn(e) {
 
         if (!categoryAccountId) throw new Error('请选择分类');
 
-        // 找一个资产账户作为对方账户（第一个 ASSET 账户）
         const assetAcc = (accountCache.asset || [])[0];
         if (!assetAcc) throw new Error('未找到资产账户，请先创建账户');
 
-        // 支出：借=费用账户，贷=资产账户
-        // 收入：借=资产账户，贷=收入账户
         let debit_id, credit_id;
         if (type === 'expense') {
-            debit_id = categoryAccountId;   // 费用类（借方增加）
-            credit_id = assetAcc.id;         // 资产类（贷方减少）
+            debit_id = categoryAccountId;
+            credit_id = assetAcc.id;
         } else {
-            debit_id = assetAcc.id;          // 资产类（借方增加）
-            credit_id = categoryAccountId;   // 收入类（贷方增加）
+            debit_id = assetAcc.id;
+            credit_id = categoryAccountId;
         }
 
         const res = await fetch('/api/v1/transactions', {
@@ -508,7 +494,6 @@ async function submitQuickTxn(e) {
         document.getElementById('txnDate').value = new Date().toISOString().split('T')[0];
         updateCategoryOptions();
 
-        // 刷新数据
         loadOverview();
         loadTrendChart();
         loadPieChart(currentPieType);
@@ -531,12 +516,9 @@ function updateEChartsTheme() {
     if (pieChart) { pieChart.dispose(); pieChart = null; loadPieChart(currentPieType); }
 }
 
-// 监听主题切换
-const _origUpdateCharts = window.updateChartsTheme;
-window.updateChartsTheme = function(theme) {
-    if (_origUpdateCharts) _origUpdateCharts(theme);
+window.addEventListener('themechange', function(e) {
     updateEChartsTheme();
-};
+});
 
 // 窗口 resize
 window.addEventListener('resize', () => {
@@ -546,10 +528,8 @@ window.addEventListener('resize', () => {
 
 // ========== 初始化 ==========
 document.addEventListener('DOMContentLoaded', () => {
-    // 设置日期默认值
     document.getElementById('txnDate').value = new Date().toISOString().split('T')[0];
 
-    // 并行加载所有数据
     loadOverview();
     loadTrendChart();
     loadPieChart('expense');
@@ -558,7 +538,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRecentTxns();
     loadCategoriesForForm();
 
-    // 绑定表单
     document.getElementById('quickTxnForm').addEventListener('submit', submitQuickTxn);
 });
 </script>

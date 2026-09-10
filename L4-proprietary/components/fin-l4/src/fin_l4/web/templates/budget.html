@@ -1,11 +1,14 @@
 {% extends "base.html" %}
-{% block title %}预算管理 — FIN-L4{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, badge, progress_bar, dashboard_grid, stat_card with context %}
+
+{% set page_title = '预算管理 — FIN-L4' %}
+
 {% block content %}
-<h1>📊 预算管理 — {{ month }}</h1>
+{{ page_header(title='预算管理', subtitle=month) }}
 
 {% if overview.statuses %}
-<div class="card">
-    <h2>预算总览</h2>
+{% call card(title='预算总览') %}
     <div class="summary-row">
         <div class="summary-item">
             <span class="label">总预算</span>
@@ -21,56 +24,52 @@
         </div>
         <div class="summary-item">
             <span class="label">超支</span>
-            <span class="value {% if overview.exceeded > 0 %}danger{% endif %}">{{ overview.exceeded }} 项</span>
+            <span class="value {% if overview.exceeded > 0 %}negative{% endif %}">{{ overview.exceeded }} 项</span>
         </div>
     </div>
-</div>
+{% endcall %}
 
-<div class="card">
-    <h2>分类预算</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>分类</th>
-                <th>预算</th>
-                <th>已支出</th>
-                <th>剩余</th>
-                <th>进度</th>
-                <th>状态</th>
-                <th>日均可用</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for s in overview.statuses %}
-            <tr>
-                <td>{{ s.category }}</td>
-                <td>¥{{ s.budget }}</td>
-                <td>¥{{ s.spent }}</td>
-                <td>¥{{ s.remaining }}</td>
-                <td>
-                    <div class="progress-bar">
-                        <div class="progress-fill status-{{ s.status }}" style="width: {{ s.usage_pct }}%"></div>
-                    </div>
-                    <span class="progress-text">{{ s.usage_pct }}%</span>
-                </td>
-                <td>
-                    {% if s.status == 'exceeded' %}
-                    <span class="badge danger">超支</span>
-                    {% elif s.status == 'warning' %}
-                    <span class="badge warning">预警</span>
-                    {% else %}
-                    <span class="badge ok">正常</span>
-                    {% endif %}
-                </td>
-                <td>¥{{ s.daily_budget }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+{% call card(title='分类预算') %}
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>分类</th>
+                    <th class="num">预算</th>
+                    <th class="num">已支出</th>
+                    <th class="num">剩余</th>
+                    <th style="min-width: 140px;">进度</th>
+                    <th>状态</th>
+                    <th class="num">日均可用</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in overview.statuses %}
+                <tr>
+                    <td>{{ s.category }}</td>
+                    <td class="num mono">¥{{ s.budget }}</td>
+                    <td class="num mono">¥{{ s.spent }}</td>
+                    <td class="num mono">¥{{ s.remaining }}</td>
+                    <td>
+                        {% set pb_variant = 'danger' if s.status == 'exceeded' else 'warning' if s.status == 'warning' else 'success' %}
+                        {{ progress_bar(s.usage_pct, pb_variant, s.usage_pct ~ '%') }}
+                    </td>
+                    <td>
+                        {% if s.status == 'exceeded' %}{{ badge('超支', 'danger') }}
+                        {% elif s.status == 'warning' %}{{ badge('预警', 'warning') }}
+                        {% else %}{{ badge('正常', 'success') }}
+                        {% endif %}
+                    </td>
+                    <td class="num mono">¥{{ s.daily_budget }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endcall %}
 {% else %}
-<div class="card">
+{% call card() %}
     <p>本月尚未设置预算。<a href="/settings">前往设置</a></p>
-</div>
+{% endcall %}
 {% endif %}
 {% endblock %}

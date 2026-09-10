@@ -1,9 +1,14 @@
 {% extends "base.html" %}
+{% from "components.html" import card with context %}
+{% from "layout.html" import page_header with context %}
+
+{% set page_title = '错误' %}
+
 {% block content %}
-<div class="error-page">
-    <div class="error-icon">⚠️</div>
-    <h1>出错了</h1>
-    <p class="error-msg">{{ error }}</p>
+{{ page_header(title='出错了', subtitle='操作未能完成') }}
+
+{% call card() %}
+    <p style="color: var(--c-danger); margin-bottom: 1rem;">{{ error }}</p>
     <a href="/" class="btn btn-primary">返回首页</a>
-</div>
+{% endcall %}
 {% endblock %}

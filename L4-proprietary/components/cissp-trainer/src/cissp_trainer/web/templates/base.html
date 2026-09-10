@@ -1,102 +1,17 @@
-<!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ page_title or 'CISSP 训练' }} | CISSP 训练平台{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css?v=1.0">
-    {% block extra_head %}{% endblock %}
-</head>
-<body>
-    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="菜单">☰</button>
-    <div class="app-layout">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-brand">
-                <span class="brand-icon">🎯</span> <span>CISSP 训练</span>
-            </div>
-            <nav class="sidebar-nav">
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">概览</div>
-                    <ul class="sidebar-links">
-                        <li><a href="/" class="{% if active_page == 'dashboard' %}active{% endif %}">
-                            <span class="nav-icon">📊</span>学习仪表盘
-                        </a></li>
-                    </ul>
-                </div>
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">学习</div>
-                    <ul class="sidebar-links">
-                        <li><a href="/questions" class="{% if active_page == 'questions' %}active{% endif %}">
-                            <span class="nav-icon">📚</span>题库浏览
-                        </a></li>
-                        <li><a href="/learning-path" class="{% if active_page == 'path' %}active{% endif %}">
-                            <span class="nav-icon">🛤️</span>学习路径
-                        </a></li>
-                        <li><a href="/knowledge-graph" class="{% if active_page == 'kg' %}active{% endif %}">
-                            <span class="nav-icon">🕸️</span>知识图谱
-                        </a></li>
-                    </ul>
-                </div>
-                <div class="sidebar-section">
-                    <div class="sidebar-section-title">考试</div>
-                    <ul class="sidebar-links">
-                        <li><a href="/exam" class="{% if active_page == 'exam' %}active{% endif %}">
-                            <span class="nav-icon">📝</span>模拟考试
-                        </a></li>
-                    </ul>
-                </div>
-            </nav>
-            <div class="sidebar-footer">
-                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">🌙 深色</button>
-            </div>
-        </aside>
-        <main class="main">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
-
-    <div class="toast-container" id="toastContainer"></div>
+{% from "layout.html" import base_layout with context %}
+{% call base_layout(
+    title=page_title or '',
+    brand_name=brand_name,
+    brand_icon=brand_icon,
+    active_page=active_page or '',
+    storage_key=storage_key,
+    sidebar_items=sidebar_items,
+) %}
+    <link rel="stylesheet" href="/static/app/style.css?v=1.0">
+    {% block content %}{% endblock %}
 
     <script>
     (function() {
-        const html = document.documentElement;
-        const btn = document.getElementById('themeToggle');
-        const saved = localStorage.getItem('cissp-ui-theme');
-        if (saved) {
-            html.setAttribute('data-theme', saved);
-            btn.textContent = saved === 'dark' ? '☀️ 浅色' : '🌙 深色';
-        } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            html.setAttribute('data-theme', 'dark');
-            btn.textContent = '☀️ 浅色';
-        }
-        btn.addEventListener('click', function() {
-            const current = html.getAttribute('data-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('cissp-ui-theme', next);
-            btn.textContent = next === 'dark' ? '☀️ 浅色' : '🌙 深色';
-        });
-
-        const mbtn = document.getElementById('mobileMenuBtn');
-        const sidebar = document.getElementById('sidebar');
-        mbtn.addEventListener('click', function() { sidebar.classList.toggle('open'); });
-        sidebar.querySelectorAll('a').forEach(a => {
-            a.addEventListener('click', () => sidebar.classList.remove('open'));
-        });
-
-        window.showToast = function(message, type, duration) {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = 'toast ' + (type || 'info');
-            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-            toast.innerHTML = '<span>' + (icons[type] || 'ℹ️') + '</span><span>' + message + '</span>';
-            container.appendChild(toast);
-            setTimeout(function() {
-                toast.style.animation = 'fadeOut 0.3s ease-out forwards';
-                setTimeout(function() { toast.remove(); }, 300);
-            }, duration || 3000);
-        };
-
         window.DOMAIN_NAMES = {
             1: "安全与风险管理", 2: "资产安全", 3: "安全架构与工程", 4: "通信与网络安全",
             5: "身份与访问管理", 6: "安全评估与测试", 7: "安全运营", 8: "软件开发安全"
@@ -109,5 +24,4 @@
     })();
     </script>
     {% block extra_scripts %}{% endblock %}
-</body>
-</html>
+{% endcall %}

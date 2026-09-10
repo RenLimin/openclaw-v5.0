@@ -1,60 +1,39 @@
-<!DOCTYPE html>
-<html lang="zh-CN" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}BDMS v2 — 交付月报管理{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/style.css?v=2.0">
-    {% block extra_head %}{% endblock %}
-</head>
-<body>
-    <div class="app-layout">
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                📊 BDMS v2
-            </div>
-            <nav class="sidebar-nav">
-                <ul class="sidebar-links">
-                    <li><a href="/" class="{% if active_page == 'list' %}active{% endif %}">
-                        <span class="nav-icon">📋</span>月报列表
-                    </a></li>
-                    <li><a href="/generate" class="{% if active_page == 'generate' %}active{% endif %}">
-                        <span class="nav-icon">✨</span>生成月报
-                    </a></li>
-                </ul>
-            </nav>
-            <div class="sidebar-footer">
-                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
-                    🌙 深色
-                </button>
-            </div>
-        </aside>
-        <main class="main">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
+{% from "layout.html" import base_layout with context %}
+{% call base_layout(
+    title=page_title or '',
+    brand_name=brand_name,
+    brand_icon=brand_icon,
+    active_page=active_page or '',
+    storage_key=storage_key,
+    sidebar_items=sidebar_items,
+    extra_head=extra_head if extra_head is defined else '',
+) %}
+    <link rel="stylesheet" href="/static/app/css/style.css?v=2.0">
+    {% block content %}{% endblock %}
+
     <script>
-        // Theme toggle
-        (function() {
-            const html = document.documentElement;
-            const btn = document.getElementById('themeToggle');
-            const saved = localStorage.getItem('bdms-v2-theme');
-            if (saved) {
-                html.setAttribute('data-theme', saved);
-                btn.textContent = saved === 'dark' ? '☀️ 浅色' : '🌙 深色';
-            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                html.setAttribute('data-theme', 'dark');
-                btn.textContent = '☀️ 浅色';
-            }
-            btn.addEventListener('click', function() {
-                const current = html.getAttribute('data-theme');
-                const next = current === 'dark' ? 'light' : 'dark';
-                html.setAttribute('data-theme', next);
-                localStorage.setItem('bdms-v2-theme', next);
-                btn.textContent = next === 'dark' ? '☀️ 浅色' : '🌙 深色';
-            });
-        })();
+    // 状态显示名
+    window.statusLabels = {
+        'pending': '等待中',
+        'running': '生成中',
+        'completed': '已完成',
+        'failed': '失败'
+    };
+
+    // 状态 badge variant 映射
+    window.statusBadgeVariant = function(status) {
+        if (status === 'completed') return 'success';
+        if (status === 'failed') return 'danger';
+        if (status === 'running') return 'primary';
+        return 'muted';
+    };
+
+    // 进度条 variant 映射
+    window.progressVariant = function(status) {
+        if (status === 'completed') return 'success';
+        if (status === 'failed') return 'danger';
+        return 'primary';
+    };
     </script>
     {% block extra_scripts %}{% endblock %}
-</body>
-</html>
+{% endcall %}

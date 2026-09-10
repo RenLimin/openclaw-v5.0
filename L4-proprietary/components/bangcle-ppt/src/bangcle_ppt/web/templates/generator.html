@@ -1,11 +1,10 @@
 {% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+
+{% set page_title = '在线生成' %}
+
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>⚡ 在线生成</h1>
-        <p class="subtitle">粘贴 DSL YAML，选择主题，一键生成 PPT</p>
-    </div>
-</div>
+{{ page_header(title='⚡ 在线生成', subtitle='粘贴 DSL YAML，选择主题，一键生成 PPT') }}
 
 <div class="generator-layout">
     <div class="generator-left">
@@ -13,11 +12,11 @@
             <div class="panel-header">
                 <span>📝 DSL 输入</span>
                 <div class="panel-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="loadExample()">📋 加载示例</button>
-                    <button class="btn btn-sm btn-secondary" onclick="clearEditor()">🗑️ 清空</button>
+                    <button class="btn btn-sm" onclick="loadExample()">📋 加载示例</button>
+                    <button class="btn btn-sm" onclick="clearEditor()">🗑️ 清空</button>
                 </div>
             </div>
-            <textarea id="dslInput" placeholder="在此粘贴 PPT DSL YAML..." spellcheck="false"></textarea>
+            <textarea id="dslInput" placeholder="在此粘贴 PPT DSL YAML..." spellcheck="false" style="flex:1;width:100%;padding:var(--s-3);border:none;resize:none;font-family:var(--font-mono);font-size:0.8rem;background:transparent;color:var(--c-text)"></textarea>
         </div>
 
         <div class="panel">
@@ -41,8 +40,8 @@
         </div>
 
         <div class="generator-actions">
-            <button class="btn btn-secondary" onclick="validateDsl()">🔍 校验 DSL</button>
-            <button class="btn btn-primary btn-large" onclick="renderPpt()">🎨 生成 PPT</button>
+            <button class="btn" onclick="validateDsl()">🔍 校验 DSL</button>
+            <button class="btn btn-primary" onclick="renderPpt()" style="flex:1">🎨 生成 PPT</button>
         </div>
     </div>
 

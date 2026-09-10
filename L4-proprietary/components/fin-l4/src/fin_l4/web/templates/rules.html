@@ -1,10 +1,14 @@
 {% extends "base.html" %}
-{% block title %}分类规则 — FIN-L4{% endblock %}
-{% block content %}
-<h1>📋 分类规则管理</h1>
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
 
-<div class="card">
-    <h2>添加规则</h2>
+{% set page_title = '分类规则 — FIN-L4' %}
+
+{% block content %}
+{{ page_header(title='分类规则管理', subtitle='交易自动分类规则配置') }}
+
+{% call card(title='添加规则') %}
     <div class="form-row">
         <div class="form-group">
             <label>分类 ID</label>
@@ -19,62 +23,67 @@
             <input type="number" id="newPriority" value="50">
         </div>
     </div>
-    <button class="btn btn-primary" onclick="addRule()">添加规则</button>
-</div>
+    {{ button('添加规则', variant='primary', onclick='addRule()') }}
+{% endcall %}
 
-<div class="card">
-    <h2>系统内置规则</h2>
-    <p style="color: #666; font-size: 13px;">共 <span id="builtinCount">0</span> 条内置规则（YAML 配置驱动，可编辑文件修改）</p>
-    <table class="data-table" id="builtinTable">
-        <thead>
-            <tr>
-                <th>规则 ID</th>
-                <th>分类</th>
-                <th>名称</th>
-                <th>优先级</th>
-                <th>置信度</th>
-            </tr>
-        </thead>
-        <tbody id="builtinBody"></tbody>
-    </table>
-</div>
+{% call card(title='系统内置规则') %}
+    <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+        共 <span id="builtinCount">0</span> 条内置规则（YAML 配置驱动，可编辑文件修改）
+    </p>
+    <div class="table-wrapper">
+        <table class="table" id="builtinTable">
+            <thead>
+                <tr>
+                    <th>规则 ID</th>
+                    <th>分类</th>
+                    <th>名称</th>
+                    <th class="num">优先级</th>
+                    <th>置信度</th>
+                </tr>
+            </thead>
+            <tbody id="builtinBody"></tbody>
+        </table>
+    </div>
+{% endcall %}
 
-<div class="card">
-    <h2>用户自定义规则</h2>
-    <p style="color: #666; font-size: 13px;">保存在数据库中，优先级高于系统规则</p>
-    <button class="btn btn-secondary btn-sm" onclick="loadUserRules()" style="margin-bottom: 8px;">刷新</button>
-    <table class="data-table" id="userTable">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>分类</th>
-                <th>关键词模式</th>
-                <th>优先级</th>
-                <th>状态</th>
-                <th>操作</th>
-            </tr>
-        </thead>
-        <tbody id="userBody">
-            <tr><td colspan="6" style="text-align:center; color:#999;">加载中...</td></tr>
-        </tbody>
-    </table>
-</div>
+{% call card(title='用户自定义规则') %}
+    <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+        保存在数据库中，优先级高于系统规则
+    </p>
+    <div style="margin-bottom: 0.5rem;">
+        {{ button('刷新', size='sm', onclick='loadUserRules()') }}
+    </div>
+    <div class="table-wrapper">
+        <table class="table" id="userTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>分类</th>
+                    <th>关键词模式</th>
+                    <th class="num">优先级</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="userBody">
+                <tr><td colspan="6" class="text-muted" style="text-align:center;">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+{% endcall %}
 
-<div class="card">
-    <h2>支持的银行模板</h2>
-    <table class="data-table" id="bankTable">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>银行名称</th>
-            </tr>
-        </thead>
-        <tbody id="bankBody"></tbody>
-    </table>
-</div>
+{% call card(title='支持的银行模板') %}
+    <div class="table-wrapper">
+        <table class="table" id="bankTable">
+            <thead>
+                <tr><th>ID</th><th>银行名称</th></tr>
+            </thead>
+            <tbody id="bankBody"></tbody>
+        </table>
+    </div>
+{% endcall %}
 
 <script>
-// 加载内置规则
 async function loadBuiltinRules() {
     try {
         const res = await fetch('/api/v1/import/classification-rules');
@@ -87,10 +96,10 @@ async function loadBuiltinRules() {
             const confLabel = r.confidence_level === 'high' ? '高' :
                              r.confidence_level === 'medium' ? '中' : '低';
             tr.innerHTML = `
-                <td style="font-family:monospace; font-size:12px;">${r.id}</td>
+                <td style="font-family: var(--font-mono); font-size: 0.75rem;">${r.id}</td>
                 <td>${r.category_id}</td>
                 <td>${r.name || ''}</td>
-                <td style="text-align:center;">${r.priority}</td>
+                <td class="num">${r.priority}</td>
                 <td>${confLabel}</td>
             `;
             tbody.appendChild(tr);
@@ -100,24 +109,23 @@ async function loadBuiltinRules() {
     }
 }
 
-// 加载用户规则
 async function loadUserRules() {
     try {
         const res = await fetch('/api/v1/import/rules');
         const data = await res.json();
         const tbody = document.getElementById('userBody');
         if (!data.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#999;">暂无自定义规则</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted" style="text-align:center;">暂无自定义规则</td></tr>';
             return;
         }
         tbody.innerHTML = '';
         data.forEach(r => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="font-size:11px;">${r.id.substring(0, 8)}...</td>
+                <td style="font-size:0.7rem;">${r.id.substring(0, 8)}...</td>
                 <td>${r.category_id || ''}</td>
-                <td style="font-size:12px;">${r.pattern || ''}</td>
-                <td style="text-align:center;">${r.priority || 0}</td>
+                <td style="font-size:0.75rem;">${r.pattern || ''}</td>
+                <td class="num">${r.priority || 0}</td>
                 <td>${r.is_active ? '启用' : '停用'}</td>
                 <td><button class="btn btn-sm btn-danger" onclick="deleteRule('${r.id}')">删除</button></td>
             `;
@@ -128,7 +136,6 @@ async function loadUserRules() {
     }
 }
 
-// 加载银行模板
 async function loadBanks() {
     try {
         const res = await fetch('/api/v1/import/banks');
@@ -137,7 +144,7 @@ async function loadBanks() {
         tbody.innerHTML = '';
         data.forEach(b => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td style="font-family:monospace;">${b.bank_id}</td><td>${b.bank_name}</td>`;
+            tr.innerHTML = `<td style="font-family: var(--font-mono);">${b.bank_id}</td><td>${b.bank_name}</td>`;
             tbody.appendChild(tr);
         });
     } catch (e) {
@@ -145,7 +152,6 @@ async function loadBanks() {
     }
 }
 
-// 添加规则
 async function addRule() {
     const cat = document.getElementById('newCategory').value.trim();
     const kw = document.getElementById('newKeywords').value.trim();
@@ -175,10 +181,8 @@ async function addRule() {
     }
 }
 
-// 删除规则
 async function deleteRule(id) {
     if (!confirm('确定删除这条规则吗？')) return;
-    // 复用已有 API（用 DELETE 方法）
     try {
         const res = await fetch('/api/v1/import/rules/' + id, { method: 'DELETE' });
         if (res.ok) {
@@ -191,36 +195,8 @@ async function deleteRule(id) {
     }
 }
 
-// 初始化
 loadBuiltinRules();
 loadUserRules();
 loadBanks();
 </script>
-
-<style>
-.data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-}
-.data-table th, .data-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid #eee;
-    text-align: left;
-}
-.data-table th {
-    background: #f5f5f5;
-    font-weight: 600;
-}
-.btn-sm {
-    padding: 4px 10px;
-    font-size: 12px;
-}
-.btn-danger {
-    background: #e74c3c;
-    color: white;
-    border: none;
-    cursor: pointer;
-}
-</style>
 {% endblock %}

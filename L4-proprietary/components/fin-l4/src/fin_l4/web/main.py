@@ -1,17 +1,28 @@
-"""FastAPI 主应用"""
+"""
+FIN-L4 Web UI — FastAPI 主应用
+基于 L2 web-common 组件库构建
+"""
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fin_l4.web.api import router
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from jinja2 import FileSystemLoader
 from decimal import Decimal
-from fastapi.responses import HTMLResponse
 from pathlib import Path
+
+from fin_l4.web.api import router
 
 # 路径
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
+
+# ── L2 web-common 组件库 ──
+_PROJECT_ROOT = BASE_DIR.resolve().parents[5]  # openclaw-v5.0/
+_WEB_COMMON_DIR = _PROJECT_ROOT / "L2-infra" / "components" / "web-common"
+_WEB_COMMON_MACROS = _WEB_COMMON_DIR / "macros"
+_WEB_COMMON_STATIC = _WEB_COMMON_DIR / "static"
 
 app = FastAPI(
     title="FIN-L4 家庭理财管理系统",
@@ -19,21 +30,68 @@ app = FastAPI(
     description="本地优先的家庭理财管理",
 )
 
-# 静态文件
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+# ── 静态资源 ──
+app.mount("/static/app", StaticFiles(directory=str(STATIC_DIR)), name="static-app")
+app.mount("/static/web-common", StaticFiles(directory=str(_WEB_COMMON_STATIC)), name="web-common-static")
 
-# 模板
+# ── Jinja2 模板 ──
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.loader = FileSystemLoader([str(TEMPLATES_DIR), str(_WEB_COMMON_MACROS)])
+
+# 全局模板变量
+templates.env.globals.update({
+    "brand_name": "FIN-L4",
+    "brand_icon": "💰",
+    "storage_key": "fin-l4-theme",
+    "sidebar_items": [
+        {
+            "title": "概览",
+            "items": [
+                {"id": "dashboard", "label": "仪表盘", "url": "/", "icon": "📊"},
+            ]
+        },
+        {
+            "title": "资产管理",
+            "items": [
+                {"id": "accounts", "label": "账户", "url": "/accounts", "icon": "🏦"},
+                {"id": "transactions", "label": "记账", "url": "/transactions", "icon": "📝"},
+                {"id": "budget", "label": "预算", "url": "/budget", "icon": "📋"},
+                {"id": "import", "label": "导入", "url": "/import", "icon": "📤"},
+            ]
+        },
+        {
+            "title": "财务规划",
+            "items": [
+                {"id": "loans", "label": "贷款", "url": "/loans", "icon": "🏠"},
+                {"id": "insurance", "label": "保险", "url": "/insurance", "icon": "🛡️"},
+                {"id": "portfolio", "label": "投资", "url": "/portfolio", "icon": "📈"},
+            ]
+        },
+        {
+            "title": "分析工具",
+            "items": [
+                {"id": "reports", "label": "报表", "url": "/reports", "icon": "📑"},
+                {"id": "advise", "label": "建议", "url": "/advise", "icon": "💡"},
+                {"id": "rates", "label": "利率", "url": "/rates", "icon": "📉"},
+            ]
+        },
+        {
+            "title": "系统",
+            "items": [
+                {"id": "rules", "label": "规则", "url": "/rules", "icon": "📋"},
+                {"id": "settings", "label": "设置", "url": "/settings", "icon": "⚙️"},
+            ]
+        },
+    ],
+})
 
 
+# ========== 异常处理 ==========
 @app.exception_handler(ValueError)
 async def value_error_handler(request: Request, exc: ValueError):
-    """ValueError -> 400 + 错误提示页或 JSON"""
-    from fastapi.responses import JSONResponse
     path = request.url.path
     if path.startswith("/api/"):
         return JSONResponse(status_code=400, content={"error": str(exc)})
-    # 页面请求：返回错误页
     return templates.TemplateResponse(
         request, "error.html",
         {"error": str(exc), "active_page": ""},
@@ -41,10 +99,20 @@ async def value_error_handler(request: Request, exc: ValueError):
     )
 
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    path = request.url.path
+    if path.startswith("/api/"):
+        return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+    return templates.TemplateResponse(
+        request, "error.html",
+        {"error": exc.detail, "active_page": ""},
+        status_code=exc.status_code,
+    )
+
+
 @app.exception_handler(Exception)
 async def generic_error_handler(request: Request, exc: Exception):
-    """通用异常 -> 500（但不裸抛堆栈）"""
-    from fastapi.responses import JSONResponse
     path = request.url.path
     msg = str(exc) if __debug__ else "Internal Server Error"
     if path.startswith("/api/"):
@@ -56,6 +124,7 @@ async def generic_error_handler(request: Request, exc: Exception):
     )
 
 
+# ========== 页面路由 ==========
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
@@ -63,18 +132,17 @@ async def dashboard(request: Request):
     from fin_l4.db import get_db
     from fin_l4.services.report_svc import ReportService
     from fin_l4.services.account_svc import AccountService
-    
+
     conn = get_db()
     report_svc = ReportService(conn)
     account_svc = AccountService(conn)
-    
+
     try:
         bs = report_svc.balance_sheet("default")
         net_worth = bs.get("net_worth", "0")
         total_assets = bs.get("total_assets", "0")
         total_liabilities = bs.get("total_liabilities", "0")
-        
-        # 资产负债率
+
         if total_assets != "0":
             ratio = (Decimal(total_liabilities) / Decimal(total_assets) * 100).quantize(Decimal("0.1"))
             debt_ratio = f"{ratio}%"
@@ -85,20 +153,17 @@ async def dashboard(request: Request):
         total_assets = "--"
         total_liabilities = "--"
         debt_ratio = "--"
-    
-    # 获取资产分布
+
     try:
         asset_distribution = report_svc.asset_distribution("default")
     except Exception:
         asset_distribution = []
-    
-    # 获取月度现金流
+
     try:
         monthly_cashflow = report_svc.cashflow_monthly("default", 6)
     except Exception:
         monthly_cashflow = []
-    
-    # 获取账户列表
+
     try:
         accounts_raw = account_svc.list_accounts("default")
         accounts = []
@@ -108,8 +173,7 @@ async def dashboard(request: Request):
                 accounts.append({"name": acc["name"], "balance": str(balance)})
     except Exception:
         accounts = []
-    
-    # 获取最近交易
+
     try:
         txns = report_svc.conn.execute(
             "SELECT * FROM fin4_transactions WHERE family_id = ? ORDER BY date DESC LIMIT 10",
@@ -118,7 +182,7 @@ async def dashboard(request: Request):
         transactions = [{"date": t["date"], "note": t["note"] or "", "amount": t["amount"]} for t in txns]
     except Exception:
         transactions = []
-    
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "active_page": "dashboard",
@@ -131,6 +195,7 @@ async def dashboard(request: Request):
         "accounts": accounts,
         "transactions": transactions,
     })
+
 
 @app.get("/budget", response_class=HTMLResponse)
 async def budget_page(request: Request, month: str = None):
@@ -228,7 +293,6 @@ async def loan_close(request: Request, loan_id: str):
     conn = get_db()
     svc = LoanService(conn)
     svc.close_loan(loan_id)
-    from fastapi.responses import RedirectResponse
     return RedirectResponse("/loans", status_code=303)
 
 
@@ -326,7 +390,6 @@ async def portfolio_detail_page(request: Request, portfolio_id: str):
     rebalance = svc.get_rebalance(portfolio_id)
     holdings = svc.get_holdings(portfolio_id)
 
-    # 计算持仓盈亏
     for h in holdings:
         gain = (float(h.get("current_price", 0) or 0) - float(h.get("cost_basis_price", 0) or 0)) * float(h.get("shares", 0) or 0)
         h["gain"] = f"{gain:,.2f}"
@@ -387,7 +450,7 @@ async def health():
     return {"status": "ok", "version": "0.1.0", "layer": "L4"}
 
 
-@app.get("/report", response_class=HTMLResponse)
+@app.get("/reports", response_class=HTMLResponse)
 async def report_page(request: Request):
     """报表页"""
     from fin_l4.db import get_db
@@ -401,7 +464,7 @@ async def report_page(request: Request):
     cashflow = report_svc.cashflow_monthly("default")
 
     return templates.TemplateResponse(request, "reports.html", {
-        "request": request, "active_page": "report",
+        "request": request, "active_page": "reports",
         "balance_sheet": bs,
         "income_summary": income,
         "cashflow": cashflow,
@@ -421,49 +484,4 @@ async def advise_page(request: Request):
     return templates.TemplateResponse(request, "advise.html", {
         "request": request, "active_page": "advise",
         "health": health,
-    })
-    # 获取资产分布
-    try:
-        asset_distribution = report_svc.asset_distribution("default")
-    except Exception:
-        asset_distribution = []
-    
-    # 获取月度现金流
-    try:
-        monthly_cashflow = report_svc.cashflow_monthly("default", 6)
-    except Exception:
-        monthly_cashflow = []
-    
-    # 获取账户列表
-    try:
-        accounts_raw = account_svc.list_accounts("default")
-        accounts = []
-        for acc in accounts_raw:
-            balance = account_svc.get_balance(acc["id"])
-            if balance != 0:
-                accounts.append({"name": acc["name"], "balance": str(balance)})
-    except Exception:
-        accounts = []
-    
-    # 获取最近交易
-    try:
-        txns = report_svc.conn.execute(
-            "SELECT * FROM fin4_transactions WHERE family_id = ? ORDER BY date DESC LIMIT 10",
-            ("default",)
-        ).fetchall()
-        transactions = [{"date": t["date"], "note": t["note"] or "", "amount": t["amount"]} for t in txns]
-    except Exception:
-        transactions = []
-    
-    return templates.TemplateResponse(request, "dashboard.html", {
-        "request": request,
-        "active_page": "dashboard",
-        "net_worth": net_worth,
-        "total_assets": total_assets,
-        "total_liabilities": total_liabilities,
-        "debt_ratio": debt_ratio,
-        "asset_distribution": asset_distribution,
-        "monthly_cashflow": monthly_cashflow,
-        "accounts": accounts,
-        "transactions": transactions,
     })

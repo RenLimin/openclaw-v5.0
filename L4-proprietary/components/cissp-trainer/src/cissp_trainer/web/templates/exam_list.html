@@ -1,15 +1,14 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="page-header">
-    <div>
-        <h1>模拟考试</h1>
-        <p>全真模拟 CISSP 考试，检验学习成果</p>
-    </div>
-</div>
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
 
-<!-- 创建考试 -->
-<div class="card">
-    <div class="card-title"><span>🚀 开始新考试</span></div>
+{% set page_title = '模拟考试' %}
+
+{% block content %}
+{{ page_header(title='模拟考试', subtitle='全真模拟 CISSP 考试，检验学习成果') }}
+
+{% call card(title='🚀 开始新考试') %}
     <div class="form-row">
         <div class="form-group">
             <label>考试标题</label>
@@ -48,30 +47,22 @@
     </div>
     <div class="form-group">
         <label>指定领域（不选=全部 8 域）</label>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-            {# 用 JS 生成 #}
-            <div id="domainChecks" style="display:flex;flex-wrap:wrap;gap:6px;width:100%"></div>
-        </div>
+        <div id="domainChecks" style="display:flex;flex-wrap:wrap;gap:6px;width:100%"></div>
     </div>
-    <button class="btn btn-primary btn-lg" onclick="createExam()">开始考试</button>
-</div>
+    {{ button('开始考试', variant='primary', size='lg', onclick='createExam()') }}
+{% endcall %}
 
-<!-- 历史记录 -->
-<div class="card">
-    <div class="card-title">
-        <span>📋 考试历史</span>
-        <span class="text-muted" id="examCountLabel">加载中...</span>
-    </div>
+{% call card(title='📋 考试历史') %}
+    <div class="card-actions"><span class="text-muted" id="examCountLabel">加载中...</span></div>
     <div id="examHistory">
         <div class="text-muted">加载中...</div>
     </div>
-</div>
+{% endcall %}
 
-<!-- 成绩曲线 -->
-<div class="card" id="scoreCurveCard" style="display:none">
-    <div class="card-title"><span>📈 成绩曲线</span></div>
-    <div id="scoreCurve" style="height:200px;display:flex;align-items:flex-end;gap:4px;border-bottom:2px solid var(--c-border);padding-bottom:4px">
-    </div>
+<div id="scoreCurveCard" style="display:none">
+    {% call card(title='📈 成绩曲线') %}
+        <div id="scoreCurve" style="height:200px;display:flex;align-items:flex-end;gap:4px;border-bottom:2px solid var(--c-border);padding-bottom:4px"></div>
+    {% endcall %}
 </div>
 {% endblock %}
 

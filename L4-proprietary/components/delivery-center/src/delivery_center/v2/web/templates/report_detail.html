@@ -1,62 +1,49 @@
 {% extends "base.html" %}
-{% block title %}月报 #{{ report_id }} — BDMS v2{% endblock %}
-{% block content %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, badge, progress_bar with context %}
 
-<div class="page-header">
-    <div>
-        <h1 class="page-title">月报 #{{ report_id }}</h1>
-        <div class="page-subtitle">{{ job.month[:4] }}年{{ job.month[4:] }}月 交付月报</div>
-    </div>
-    <div style="display: flex; gap: var(--s-2);">
-        {% if job.status == 'completed' %}
-        <a href="/api/reports/{{ report_id }}/download" class="btn btn-success">⬇️ 下载 Excel</a>
-        {% endif %}
-        <a href="/" class="btn">← 返回列表</a>
-    </div>
-</div>
+{% set page_title = '月报 #' ~ report_id ~ ' — BDMS v2' %}
+
+{% block content %}
+{{ page_header(
+    title='月报 #' ~ report_id,
+    subtitle=job.month[:4] ~ '年' ~ job.month[4:] ~ '月 交付月报',
+    actions=[
+        {"label": "⬇️ 下载 Excel", "url": "/api/reports/" ~ report_id ~ "/download", "variant": "success"} if job.status == 'completed' else none,
+        {"label": "← 返回列表", "url": "/"}
+    ] | reject('none') | list
+) }}
 
 <!-- 状态卡片 -->
-<div class="card">
-    <div class="card-header">生成状态</div>
-    <div class="card-body">
-        <div style="display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-4);">
-            <span class="badge badge-{{ job.status }}" style="font-size: 14px; padding: 4px 12px;">
-                {% if job.status == 'pending' %}等待中
-                {% elif job.status == 'running' %}生成中
-                {% elif job.status == 'completed' %}已完成
-                {% elif job.status == 'failed' %}失败
-                {% else %}{{ job.status }}
-                {% endif %}
-            </span>
-            <span style="color: var(--c-muted); font-size: 13px;">
-                进度: {{ job.progress }}%
-            </span>
-        </div>
-
-        <div class="progress-wrap">
-            <div class="progress-bar {% if job.status == 'completed' %}success{% elif job.status == 'failed' %}failed{% endif %}"
-                 style="width: {{ job.progress }}%;"></div>
-        </div>
-
-        {% if job.error_msg %}
-        <div class="alert alert-error" style="margin-top: var(--s-4);">
-            <strong>错误信息：</strong>{{ job.error_msg }}
-        </div>
+{% call card(title="生成状态") %}
+    <div style="display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-4);">
+        {% if job.status == 'pending' %}{{ badge('等待中', 'muted') }}
+        {% elif job.status == 'running' %}{{ badge('生成中', 'primary') }}
+        {% elif job.status == 'completed' %}{{ badge('已完成', 'success') }}
+        {% elif job.status == 'failed' %}{{ badge('失败', 'danger') }}
+        {% else %}{{ badge(job.status, 'muted') }}
         {% endif %}
+        <span style="color: var(--c-muted); font-size: 0.85rem;">进度: {{ job.progress }}%</span>
     </div>
-</div>
+
+    {% set pb_variant = 'success' if job.status == 'completed' else 'danger' if job.status == 'failed' else 'primary' %}
+    {{ progress_bar(job.progress, pb_variant) }}
+
+    {% if job.error_msg %}
+    <div class="alert alert-error" style="margin-top: var(--s-4);">
+        <strong>错误信息：</strong>{{ job.error_msg }}
+    </div>
+    {% endif %}
+{% endcall %}
 
 <!-- 15 Sheet 概要 -->
-<div class="card">
-    <div class="card-header">Sheet 概览（共 15 个）</div>
-    <div class="card-body">
-        <div id="sheetGrid" class="sheet-grid">
-            <div style="grid-column: 1 / -1; text-align: center; color: var(--c-muted); padding: var(--s-6);">
-                加载中...
-            </div>
+{% call card(title="Sheet 概览（共 15 个）") %}
+    <div id="sheetGrid" class="sheet-grid">
+        <div style="grid-column: 1 / -1; text-align: center; color: var(--c-muted); padding: var(--s-6);">
+            加载中...
         </div>
     </div>
-</div>
+{% endcall %}
 
 {% endblock %}
 
@@ -69,9 +56,7 @@
     async function loadSummary() {
         try {
             const resp = await fetch('/api/reports/' + reportId + '/summary');
-            if (!resp.ok) {
-                throw new Error('加载失败');
-            }
+            if (!resp.ok) throw new Error('加载失败');
             const data = await resp.json();
             renderSheets(data.sheets || []);
         } catch (err) {
@@ -109,9 +94,7 @@
 
     function formatValue(v) {
         if (typeof v === 'number') {
-            if (Math.abs(v) >= 10000) {
-                return (v / 10000).toFixed(1) + '万';
-            }
+            if (Math.abs(v) >= 10000) return (v / 10000).toFixed(1) + '万';
             return v.toLocaleString();
         }
         return v || '—';

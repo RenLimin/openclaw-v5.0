@@ -1,34 +1,36 @@
 {% extends "base.html" %}
-{% block title %}账户管理 - FIN-L4{% endblock %}
-{% block content %}
-<div class="page-header">
-    <h1>账户管理</h1>
-    <p>管理所有资产/负债账户</p>
-</div>
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
 
-<div class="card">
-    <div class="card-title">所有账户</div>
+{% set page_title = '账户管理 - FIN-L4' %}
+
+{% block content %}
+{{ page_header(title='账户管理', subtitle='管理所有资产/负债账户') }}
+
+{% call card(title='所有账户') %}
     {% if accounts %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>名称</th>
-                <th>类型</th>
-                <th class="num">余额</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for acc in accounts %}
-            <tr>
-                <td>{{ acc.name }}</td>
-                <td>{{ acc.type }}</td>
-                <td class="num">¥{{ acc.balance }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+    <div class="table-wrapper">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th class="num">余额</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for acc in accounts %}
+                <tr>
+                    <td>{{ acc.name }}</td>
+                    <td>{{ acc.type }}</td>
+                    <td class="num mono">¥{{ acc.balance }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
     {% else %}
     <p class="text-muted">暂无账户</p>
     {% endif %}
-</div>
+{% endcall %}
 {% endblock %}

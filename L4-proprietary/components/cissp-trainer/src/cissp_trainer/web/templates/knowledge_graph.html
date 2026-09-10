@@ -1,13 +1,14 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="page-header">
-    <div>
-        <h1>知识图谱</h1>
-        <p>探索 CISSP 8 大领域知识点关联</p>
-    </div>
-</div>
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
 
-<!-- 领域选择 -->
+{% set page_title = '知识图谱' %}
+
+{% block content %}
+{{ page_header(title='知识图谱', subtitle='探索 CISSP 8 大领域知识点关联') }}
+
+<!-- 筛选栏 -->
 <div class="filter-bar">
     <div class="form-group" style="min-width:200px;flex:0 0 200px">
         <label>选择领域</label>
@@ -27,13 +28,13 @@
         <input type="text" id="kpSearch" placeholder="输入知识点名称查询依赖关系..." onkeydown="if(event.key==='Enter')searchKp()">
     </div>
     <div class="form-group" style="display:flex;align-items:flex-end">
-        <button class="btn btn-primary" onclick="searchKp()">🔍 查询</button>
+        {{ button('🔍 查询', variant='primary', onclick='searchKp()') }}
     </div>
 </div>
 
-<div class="grid-2" style="gap:var(--s-6)">
+<div class="grid-2">
     <!-- 知识点列表 -->
-    <div class="card">
+    {% call card() %}
         <div class="card-title">
             <span id="domainTitle">📚 知识点列表</span>
             <span class="text-muted" id="kpCount">加载中...</span>
@@ -41,36 +42,31 @@
         <div class="kg-node-grid" id="nodeGrid">
             <div class="text-muted">加载中...</div>
         </div>
-    </div>
+    {% endcall %}
 
     <!-- 知识点详情 -->
-    <div class="card">
-        <div class="card-title"><span>🔍 知识点详情</span></div>
+    {% call card(title='🔍 知识点详情') %}
         <div id="kpDetail">
             <div class="text-muted">点击左侧知识点查看详情</div>
         </div>
-    </div>
+    {% endcall %}
 </div>
 
 <!-- 关系图 -->
-<div class="card">
-    <div class="card-title">
-        <span>🕸️ 知识关系图</span>
-        <span class="text-muted" id="edgeCount">--</span>
-    </div>
+{% call card(title='🕸️ 知识关系图') %}
+    <div class="card-actions"><span class="text-muted" id="edgeCount">--</span></div>
     <div id="graphContainer">
         <div class="kg-edge-list" id="edgeList">
             <div class="text-muted">加载中...</div>
         </div>
     </div>
-</div>
+{% endcall %}
 
 <!-- 薄弱点传播 -->
-<div class="card" id="propagationCard" style="display:none">
-    <div class="card-title">
-        <span>⚠️ 薄弱点传播分析</span>
-    </div>
-    <div id="propagationResult"></div>
+<div id="propagationCard" style="display:none">
+    {% call card(title='⚠️ 薄弱点传播分析') %}
+        <div id="propagationResult"></div>
+    {% endcall %}
 </div>
 {% endblock %}
 

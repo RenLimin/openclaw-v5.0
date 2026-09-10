@@ -1,23 +1,24 @@
 {% extends "base.html" %}
-{% block title %}系统设置 - FIN-L4{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '系统设置 - FIN-L4' %}
+
 {% block content %}
-<div class="page-header">
-    <h1>系统设置</h1>
-    <p>基础配置和导出功能</p>
-</div>
+{{ page_header(title='系统设置', subtitle='基础配置和导出功能') }}
 
 <div class="grid-2">
-    <div class="card">
-        <div class="card-title">数据库导出</div>
+    {% call card(title='数据库导出') %}
         <p class="text-muted">
             导出 SQLite 数据库文件到本地。所有数据都在本地，隐私安全。
         </p>
         <div style="margin-top: 1rem;">
-            <a href="/api/settings/export-db" class="btn btn-primary">导出数据库</a>
+            {{ button('导出数据库', variant='primary', url='/api/settings/export-db') }}
         </div>
-    </div>
-    <div class="card">
-        <div class="card-title">关于 FIN-L4</div>
+    {% endcall %}
+
+    {% call card(title='关于 FIN-L4') %}
         <p class="text-muted">
             FIN-L4 是本地优先的个人及家庭理财管理系统，<br>
             完全离线运行，数据全存储在你的电脑上。
@@ -27,6 +28,6 @@
             <li style="margin-bottom: 0.5rem;">架构: 分层 L0-L4</li>
             <li>本地存储: SQLite</li>
         </ul>
-    </div>
+    {% endcall %}
 </div>
 {% endblock %}

@@ -1,27 +1,34 @@
 {% extends "base.html" %}
-{% block title %}贷款管理 - FIN-L4{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '贷款管理 - FIN-L4' %}
+
 {% block content %}
-<h1 style="margin-bottom: 1.5rem;">贷款管理</h1>
+{{ page_header(title='贷款管理', subtitle='贷款记录与还款计划') }}
+
 {% if loans %}
-<table class="table">
-    <thead><tr><th>名称</th><th>本金</th><th>利率</th><th>期限</th><th>状态</th></tr></thead>
-    <tbody>
-    {% for loan in loans %}
-    <tr>
-        <td><a href="/loans/{{ loan.id }}">{{ loan.name }}</a></td>
-        
-        <td>¥{{ loan.principal }}</td>
-        <td>{{ loan.annual_rate }}%</td>
-        <td>{{ loan.term_months }}期</td>
-        <td>{{ loan.status }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% call card() %}
+    <div class="table-wrapper">
+        <table class="table">
+            <thead><tr><th>名称</th><th class="num">本金</th><th class="num">利率</th><th>期限</th><th>状态</th></tr></thead>
+            <tbody>
+            {% for loan in loans %}
+            <tr>
+                <td><a href="/loans/{{ loan.id }}">{{ loan.name }}</a></td>
+                <td class="num mono">¥{{ loan.principal }}</td>
+                <td class="num">{{ loan.annual_rate }}%</td>
+                <td>{{ loan.term_months }}期</td>
+                <td>{{ loan.status }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endcall %}
 {% else %}
-<div class="card">
-    <div class="card-title">暂无贷款</div>
-    <p style="color: var(--text-muted);">还没有创建贷款记录。</p>
-</div>
+{% call card(title='暂无贷款') %}
+    <p class="text-muted">还没有创建贷款记录。</p>
+{% endcall %}
 {% endif %}
 {% endblock %}

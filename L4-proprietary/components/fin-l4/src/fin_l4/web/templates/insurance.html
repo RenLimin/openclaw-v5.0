@@ -1,28 +1,39 @@
 {% extends "base.html" %}
-{% block title %}保险管理 - FIN-L4{% endblock %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+{% from "forms.html" import button with context %}
+
+{% set page_title = '保险管理 - FIN-L4' %}
+
 {% block content %}
-<h1 style="margin-bottom: 1.5rem;">保险管理</h1>
+{{ page_header(title='保险管理', subtitle='保单管理与保障分析') }}
+
 {% if policies %}
-<table class="table">
-    <thead><tr><th>保单号</th><th>名称</th><th>类型</th><th>保额</th><th>保费</th><th>状态</th></tr></thead>
-    <tbody>
-    {% for p in policies %}
-    <tr>
-        <td><a href="/insurance/{{ p.id }}">{{ p.policy_number }}</a></td>
-        <td>{{ p.name }}</td>
-        <td>{{ p.type }}</td>
-        <td>¥{{ p.sum_assured }}</td>
-        <td>¥{{ p.premium }}</td>
-        <td>{{ p.status }}</td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
+{% call card() %}
+    <div class="table-wrapper">
+        <table class="table">
+            <thead><tr><th>保单号</th><th>名称</th><th>类型</th><th class="num">保额</th><th class="num">保费</th><th>状态</th></tr></thead>
+            <tbody>
+            {% for p in policies %}
+            <tr>
+                <td><a href="/insurance/{{ p.id }}">{{ p.policy_number }}</a></td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.type }}</td>
+                <td class="num mono">¥{{ p.sum_assured }}</td>
+                <td class="num mono">¥{{ p.premium }}</td>
+                <td>{{ p.status }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endcall %}
 {% else %}
-<div class="card">
-    <div class="card-title">暂无保单</div>
-    <p style="color: var(--text-muted);">还没有添加保险记录。</p>
-    <p style="margin-top: 1rem;"><a href="/insurance/coverage-gap" class="btn btn-secondary">保障缺口分析</a></p>
-</div>
+{% call card(title='暂无保单') %}
+    <p class="text-muted">还没有添加保险记录。</p>
+    <div style="margin-top: 1rem;">
+        {{ button('保障缺口分析', url='/insurance/coverage-gap') }}
+    </div>
+{% endcall %}
 {% endif %}
 {% endblock %}
