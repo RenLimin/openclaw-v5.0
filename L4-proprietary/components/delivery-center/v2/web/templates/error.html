@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}错误 — BDMS v2{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">错误</div>
+    <div class="card-body">
+        <div class="alert alert-error">{{ error }}</div>
+        <a href="/" class="btn btn-primary">← 返回列表</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}月报 #{{ report_id }} — BDMS v2{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">月报 #{{ report_id }}</h1>
+        <div class="page-subtitle">{{ job.month[:4] }}年{{ job.month[4:] }}月 交付月报</div>
+    </div>
+    <div style="display: flex; gap: var(--s-2);">
+        {% if job.status == 'completed' %}
+        <a href="/api/reports/{{ report_id }}/download" class="btn btn-success">⬇️ 下载 Excel</a>
+        {% endif %}
+        <a href="/" class="btn">← 返回列表</a>
+    </div>
+</div>
+
+<!-- 状态卡片 -->
+<div class="card">
+    <div class="card-header">生成状态</div>
+    <div class="card-body">
+        <div style="display: flex; align-items: center; gap: var(--s-4); margin-bottom: var(--s-4);">
+            <span class="badge badge-{{ job.status }}" style="font-size: 14px; padding: 4px 12px;">
+                {% if job.status == 'pending' %}等待中
+                {% elif job.status == 'running' %}生成中
+                {% elif job.status == 'completed' %}已完成
+                {% elif job.status == 'failed' %}失败
+                {% else %}{{ job.status }}
+                {% endif %}
+            </span>
+            <span style="color: var(--c-muted); font-size: 13px;">
+                进度: {{ job.progress }}%
+            </span>
+        </div>
+
+        <div class="progress-wrap">
+            <div class="progress-bar {% if job.status == 'completed' %}success{% elif job.status == 'failed' %}failed{% endif %}"
+                 style="width: {{ job.progress }}%;"></div>
+        </div>
+
+        {% if job.error_msg %}
+        <div class="alert alert-error" style="margin-top: var(--s-4);">
+            <strong>错误信息：</strong>{{ job.error_msg }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 15 Sheet 概要 -->
+<div class="card">
+    <div class="card-header">Sheet 概览（共 15 个）</div>
+    <div class="card-body">
+        <div id="sheetGrid" class="sheet-grid">
+            <div style="grid-column: 1 / -1; text-align: center; color: var(--c-muted); padding: var(--s-6);">
+                加载中...
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const reportId = {{ report_id }};
+    const grid = document.getElementById('sheetGrid');
+
+    async function loadSummary() {
+        try {
+            const resp = await fetch('/api/reports/' + reportId + '/summary');
+            if (!resp.ok) {
+                throw new Error('加载失败');
+            }
+            const data = await resp.json();
+            renderSheets(data.sheets || []);
+        } catch (err) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--c-danger);">' +
+                '加载概要失败：' + err.message + '</div>';
+        }
+    }
+
+    function renderSheets(sheets) {
+        if (!sheets.length) {
+            grid.innerHTML = '<div style="grid-column: 1/-1;" class="empty-state">' +
+                '<div class="icon">📊</div><h3>暂无概要数据</h3>' +
+                '<p>报告生成完成后会自动提取各 Sheet 概要</p></div>';
+            return;
+        }
+
+        grid.innerHTML = sheets.map(function(sheet) {
+            const metrics = sheet.summary && sheet.summary.top_metrics
+                ? sheet.summary.top_metrics.slice(0, 4)
+                : [];
+            const metricsHtml = metrics.length
+                ? '<div class="metric-list">' + metrics.map(function(m) {
+                    return '<div class="metric-item"><span>' + (m.label || '—') + '</span>' +
+                           '<span class="metric-value">' + formatValue(m.value) + '</span></div>';
+                }).join('') + '</div>'
+                : '';
+
+            return '<div class="sheet-card">' +
+                '<h4>' + sheet.sheet_name + '</h4>' +
+                '<div class="row-count">' + sheet.row_count + ' <span style="font-size: 12px; font-weight: 400; color: var(--c-muted);">行</span></div>' +
+                metricsHtml +
+                '</div>';
+        }).join('');
+    }
+
+    function formatValue(v) {
+        if (typeof v === 'number') {
+            if (Math.abs(v) >= 10000) {
+                return (v / 10000).toFixed(1) + '万';
+            }
+            return v.toLocaleString();
+        }
+        return v || '—';
+    }
+
+    loadSummary();
+})();
+</script>
+{% endblock %}

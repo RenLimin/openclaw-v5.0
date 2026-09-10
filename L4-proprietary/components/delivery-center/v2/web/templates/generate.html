@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}生成月报 — BDMS v2{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">生成月报</h1>
+        <div class="page-subtitle">选择月份，生成 15 Sheet 精确格式交付月报</div>
+    </div>
+</div>
+
+<div class="card" style="max-width: 500px;">
+    <div class="card-header">新建报告任务</div>
+    <div class="card-body">
+        <form id="genForm">
+            <div class="form-group">
+                <label class="form-label">报告月份</label>
+                <input type="month" id="monthInput" class="form-input"
+                       value="{{ default_month[:4] }}-{{ default_month[4:] }}" required>
+                <div style="font-size: 12px; color: var(--c-muted); margin-top: 4px;">
+                    请确保对应月份的 ONES 导出数据和交接表已准备好
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="genBtn" style="width: 100%; justify-content: center;">
+                🚀 开始生成
+            </button>
+        </form>
+
+        <div id="statusCard" style="display: none; margin-top: var(--s-6);">
+            <div class="gen-status">
+                <h2 id="statusTitle">准备中...</h2>
+                <div class="progress-wrap">
+                    <div class="progress-bar" id="progressBar" style="width: 0%;"></div>
+                </div>
+                <div class="progress-text" id="progressText">0%</div>
+                <div id="statusActions" style="margin-top: var(--s-4); display: none;">
+                    <a id="downloadLink" href="#" class="btn btn-success" style="margin-right: var(--s-2);">
+                        ⬇️ 下载 Excel
+                    </a>
+                    <a id="previewLink" href="#" class="btn">
+                        👁 查看详情
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    const form = document.getElementById('genForm');
+    const monthInput = document.getElementById('monthInput');
+    const genBtn = document.getElementById('genBtn');
+    const statusCard = document.getElementById('statusCard');
+    const statusTitle = document.getElementById('statusTitle');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    const statusActions = document.getElementById('statusActions');
+    const downloadLink = document.getElementById('downloadLink');
+    const previewLink = document.getElementById('previewLink');
+
+    let pollTimer = null;
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // 转换 month 格式 YYYY-MM → YYYYMM
+        const monthVal = monthInput.value.replace('-', '');
+        if (!monthVal || monthVal.length !== 6) {
+            alert('请选择有效的月份');
+            return;
+        }
+
+        genBtn.disabled = true;
+        genBtn.textContent = '提交中...';
+        statusCard.style.display = 'block';
+        statusTitle.textContent = '提交任务中...';
+        progressBar.style.width = '0%';
+        progressText.textContent = '0%';
+        statusActions.style.display = 'none';
+
+        try {
+            const resp = await fetch('/api/reports/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ month: monthVal })
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                throw new Error(data.detail || '提交失败');
+            }
+
+            const jobId = data.job_id;
+            previewLink.href = '/reports/' + jobId;
+            downloadLink.href = '/api/reports/' + jobId + '/download';
+
+            // 开始轮询
+            pollStatus(jobId);
+
+        } catch (err) {
+            statusTitle.textContent = '❌ 提交失败';
+            progressBar.className = 'progress-bar failed';
+            progressBar.style.width = '100%';
+            progressText.textContent = err.message;
+            genBtn.disabled = false;
+            genBtn.textContent = '🚀 开始生成';
+        }
+    });
+
+    function pollStatus(jobId) {
+        if (pollTimer) clearInterval(pollTimer);
+
+        pollTimer = setInterval(async function() {
+            try {
+                const resp = await fetch('/api/reports/' + jobId + '/status');
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    throw new Error(data.detail || '查询失败');
+                }
+
+                const progress = data.progress || 0;
+                progressBar.style.width = progress + '%';
+                progressText.textContent = progress + '%';
+
+                if (data.status === 'pending') {
+                    statusTitle.textContent = '⏳ 等待生成...';
+                    progressBar.className = 'progress-bar';
+                } else if (data.status === 'running') {
+                    statusTitle.textContent = '⚙️ 正在生成月报...';
+                    progressBar.className = 'progress-bar';
+                } else if (data.status === 'completed') {
+                    statusTitle.textContent = '✅ 生成完成！';
+                    progressBar.className = 'progress-bar success';
+                    statusActions.style.display = 'block';
+                    clearInterval(pollTimer);
+                    genBtn.disabled = false;
+                    genBtn.textContent = '🚀 生成新月报';
+                } else if (data.status === 'failed') {
+                    statusTitle.textContent = '❌ 生成失败';
+                    progressBar.className = 'progress-bar failed';
+                    progressText.textContent = data.error_msg || '未知错误';
+                    clearInterval(pollTimer);
+                    genBtn.disabled = false;
+                    genBtn.textContent = '🚀 重试';
+                }
+            } catch (err) {
+                console.error('Poll error:', err);
+            }
+        }, 2000);
+    }
+})();
+</script>
+{% endblock %}

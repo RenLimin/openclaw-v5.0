@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BDMS v2 — 交付月报管理{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css?v=2.0">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                📊 BDMS v2
+            </div>
+            <nav class="sidebar-nav">
+                <ul class="sidebar-links">
+                    <li><a href="/" class="{% if active_page == 'list' %}active{% endif %}">
+                        <span class="nav-icon">📋</span>月报列表
+                    </a></li>
+                    <li><a href="/generate" class="{% if active_page == 'generate' %}active{% endif %}">
+                        <span class="nav-icon">✨</span>生成月报
+                    </a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+                    🌙 深色
+                </button>
+            </div>
+        </aside>
+        <main class="main">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    <script>
+        // Theme toggle
+        (function() {
+            const html = document.documentElement;
+            const btn = document.getElementById('themeToggle');
+            const saved = localStorage.getItem('bdms-v2-theme');
+            if (saved) {
+                html.setAttribute('data-theme', saved);
+                btn.textContent = saved === 'dark' ? '☀️ 浅色' : '🌙 深色';
+            } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                html.setAttribute('data-theme', 'dark');
+                btn.textContent = '☀️ 浅色';
+            }
+            btn.addEventListener('click', function() {
+                const current = html.getAttribute('data-theme');
+                const next = current === 'dark' ? 'light' : 'dark';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('bdms-v2-theme', next);
+                btn.textContent = next === 'dark' ? '☀️ 浅色' : '🌙 深色';
+            });
+        })();
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
