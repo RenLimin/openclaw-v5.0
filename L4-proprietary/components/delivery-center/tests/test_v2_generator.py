@@ -16,7 +16,7 @@ import sys
 import os
 
 # 添加 v2 路径
-V2_DIR = Path(__file__).parent.parent / "v2"
+V2_DIR = Path(__file__).parent.parent / "src" / "delivery_center" / "v2"
 sys.path.insert(0, str(V2_DIR))
 sys.path.insert(0, str(V2_DIR / "engines"))
 sys.path.insert(0, str(V2_DIR / "utils"))

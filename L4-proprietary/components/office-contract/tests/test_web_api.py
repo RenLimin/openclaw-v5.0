@@ -11,12 +11,12 @@ import pytest
 
 # 路径设置
 _WEB_DIR = os.path.dirname(os.path.abspath(__file__))
-_MODULE_DIR = os.path.dirname(_WEB_DIR)
+_MODULE_DIR = os.path.join(os.path.dirname(_WEB_DIR), "src")
 if _MODULE_DIR not in sys.path:
     sys.path.insert(0, _MODULE_DIR)
 
 # 在 import 前覆盖配置
-import config
+from office_contract import config
 
 
 # ============================================================
@@ -53,9 +53,9 @@ def test_env():
 @pytest.fixture(scope="module")
 def client(test_env):
     """FastAPI TestClient（确保 DB 已初始化）"""
-    from services import init_db
+    from office_contract.services import init_db
     from fastapi.testclient import TestClient
-    from web.main import app
+    from office_contract.web.main import app
     init_db()
     return TestClient(app)
 

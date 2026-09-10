@@ -13,14 +13,10 @@ import pytest
 
 # 路径设置
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PKG_ROOT = os.path.dirname(_HERE)
-if _PKG_ROOT not in sys.path:
-    sys.path.insert(0, _PKG_ROOT)
+_SRC_DIR = os.path.join(os.path.dirname(_HERE), "src")
+if _SRC_DIR not in sys.path:
+    sys.path.insert(0, _SRC_DIR)
 
-# 需要加入 web 路径
-_WEB_DIR = os.path.join(_PKG_ROOT, "web")
-if _WEB_DIR not in sys.path:
-    sys.path.insert(0, _WEB_DIR)
 
 
 # ── Fixtures ────────────────────────────────────────────────────────
@@ -29,7 +25,7 @@ if _WEB_DIR not in sys.path:
 def client():
     """FastAPI TestClient。"""
     from fastapi.testclient import TestClient
-    from web.main import app
+    from bangcle_ppt.web.main import app
     return TestClient(app)
 
 

@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 # 路径设置
-V2_DIR = Path(__file__).parent.parent / "v2"
+V2_DIR = Path(__file__).parent.parent / "src" / "delivery_center" / "v2"
 sys.path.insert(0, str(V2_DIR / "engines"))
 
 from contract_engine import (

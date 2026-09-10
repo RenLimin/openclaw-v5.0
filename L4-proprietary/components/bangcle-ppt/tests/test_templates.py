@@ -12,7 +12,7 @@ from bangcle_ppt.dsl.schema import SlideTemplate, PAGE_LAYOUT_MAP
 
 # 模板目录
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_TEMPLATES_DIR = os.path.join(os.path.dirname(_HERE), "bangcle_ppt", "templates")
+_TEMPLATES_DIR = os.path.join(os.path.dirname(_HERE), "src", "bangcle_ppt", "templates")
 
 
 def _list_yaml_files(subdir: str) -> list[str]:

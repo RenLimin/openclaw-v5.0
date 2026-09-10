@@ -14,7 +14,7 @@ import pandas as pd
 
 # 路径设置
 BASE_DIR = Path(__file__).resolve().parent.parent
-V2_DIR = BASE_DIR / "v2"
+V2_DIR = BASE_DIR / "src" / "delivery_center" / "v2"
 sys.path.insert(0, str(V2_DIR))
 sys.path.insert(0, str(V2_DIR / "scripts"))
 
