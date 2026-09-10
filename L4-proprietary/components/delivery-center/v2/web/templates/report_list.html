@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}月报列表 — BDMS v2{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">月报列表</h1>
+        <div class="page-subtitle">历史月报生成记录</div>
+    </div>
+    <a href="/generate" class="btn btn-primary">+ 生成新月报</a>
+</div>
+
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        {% if reports %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>月份</th>
+                    <th>状态</th>
+                    <th>进度</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reports %}
+                <tr>
+                    <td>#{{ r.id }}</td>
+                    <td><strong>{{ r.month[:4] }}年{{ r.month[4:] }}月</strong></td>
+                    <td>
+                        <span class="badge badge-{{ r.status }}">
+                            {% if r.status == 'pending' %}等待中
+                            {% elif r.status == 'running' %}生成中
+                            {% elif r.status == 'completed' %}已完成
+                            {% elif r.status == 'failed' %}失败
+                            {% else %}{{ r.status }}
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px; min-width: 120px;">
+                            <div class="progress-wrap" style="flex: 1;">
+                                <div class="progress-bar {% if r.status == 'completed' %}success{% elif r.status == 'failed' %}failed{% endif %}"
+                                     style="width: {{ r.progress }}%;"></div>
+                            </div>
+                            <span style="font-size: 12px; color: var(--c-muted);">{{ r.progress }}%</span>
+                        </div>
+                    </td>
+                    <td style="color: var(--c-muted); font-size: 12px;">{{ r.created_at_display }}</td>
+                    <td>
+                        <div class="actions">
+                            <a href="/reports/{{ r.id }}" class="btn btn-sm">预览</a>
+                            {% if r.status == 'completed' %}
+                            <a href="/api/reports/{{ r.id }}/download" class="btn btn-sm btn-success">下载</a>
+                            {% endif %}
+                            {% if r.status == 'failed' %}
+                            <span title="{{ r.error_msg }}" style="color: var(--c-danger); cursor: help;" class="btn btn-sm">查看错误</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="icon">📭</div>
+            <h3>暂无月报记录</h3>
+            <p>点击右上角「生成新月报」开始生成第一份月报</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
