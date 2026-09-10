@@ -1,0 +1,13 @@
+filename: blank-light.yaml
+meta:
+  name: 空白模板页
+  page_type: blank-light
+  theme: light
+  description: 仅左侧装饰条的空白页，自由排版
+  version: 1.0.0
+  category: 通用
+layout:
+  show_left_bar: true
+data:
+  title: 自由排版页
+  subtitle: FREE LAYOUT

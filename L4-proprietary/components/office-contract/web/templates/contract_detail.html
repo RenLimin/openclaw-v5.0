@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% block title %}合同详情{% endblock %}
+{% block content %}
+
+<div id="detailContent" style="opacity: 0.5;">
+    <div class="page-header">
+        <div>
+            <h1>加载中...</h1>
+            <p>正在获取合同详情</p>
+        </div>
+        <div>
+            <button class="btn" onclick="history.back()">← 返回</button>
+        </div>
+    </div>
+    <div class="card"><div class="text-muted">请稍候...</div></div>
+</div>
+
+<div id="detailLoaded" style="display: none;">
+    <div class="page-header">
+        <div>
+            <h1 id="contractTitle">--</h1>
+            <p>
+                <span id="contractNo" style="font-family: var(--font-mono);">--</span>
+                <span class="text-muted" style="margin: 0 var(--s-3);">·</span>
+                <span id="contractStatusBadge">--</span>
+            </p>
+        </div>
+        <div class="flex gap-3">
+            <button class="btn" onclick="history.back()">← 返回</button>
+            <button id="btnRiskScan" class="btn" onclick="scanRisk()">🔍 风险扫描</button>
+            <button id="btnSubmit" class="btn btn-primary" onclick="submitApproval()" style="display:none;">📤 提交审批</button>
+            <button id="btnApprove" class="btn btn-success" onclick="showApproveModal()" style="display:none;">✅ 审批通过</button>
+            <button id="btnReject" class="btn btn-danger" onclick="showRejectModal()" style="display:none;">❌ 驳回</button>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <!-- 基本信息 -->
+        <div class="card">
+            <div class="card-title"><span>基本信息</span></div>
+            <div class="info-grid" id="infoGrid">
+                <!-- 动态填充 -->
+            </div>
+        </div>
+
+        <!-- 审批流程时间线 -->
+        <div class="card">
+            <div class="card-title">
+                <span>审批流程</span>
+                <span id="approvalLevelBadge" class="text-muted" style="text-transform:none; font-weight:400; font-size:0.85rem;">--</span>
+            </div>
+            <div class="timeline" id="approvalTimeline">
+                <!-- 动态填充 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 风险扫描结果 -->
+    <div class="card" id="riskCard">
+        <div class="card-title">
+            <span>⚠️ 风险扫描结果</span>
+            <button class="btn btn-sm" onclick="scanRisk()">重新扫描</button>
+        </div>
+        <div id="riskContent">
+            <div class="text-muted" style="text-align:center; padding: 20px;">点击"风险扫描"查看结果</div>
+        </div>
+    </div>
+
+    <!-- 审批历史 -->
+    <div class="card">
+        <div class="card-title"><span>操作历史</span></div>
+        <div class="timeline" id="historyTimeline">
+            <!-- 动态填充 -->
+        </div>
+    </div>
+</div>
+
+<!-- 审批通过弹窗 -->
+<div id="approveModal" style="display:none;">
+    <div class="modal-overlay" onclick="closeApproveModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-title">审批通过</div>
+            <div class="form-group">
+                <label>审批人姓名</label>
+                <input type="text" id="approveName" placeholder="请输入审批人姓名">
+            </div>
+            <div class="form-group">
+                <label>审批人角色</label>
+                <input type="text" id="approveRole" placeholder="如：销售经理">
+            </div>
+            <div class="form-group">
+                <label>审批意见</label>
+                <textarea id="approveComment" rows="3" placeholder="可选"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeApproveModal()">取消</button>
+                <button class="btn btn-success" onclick="confirmApprove()">确认通过</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 驳回弹窗 -->
+<div id="rejectModal" style="display:none;">
+    <div class="modal-overlay" onclick="closeRejectModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-title">审批驳回</div>
+            <div class="form-group">
+                <label>审批人姓名</label>
+                <input type="text" id="rejectName" placeholder="请输入审批人姓名">
+            </div>
+            <div class="form-group">
+                <label>审批人角色</label>
+                <input type="text" id="rejectRole" placeholder="如：销售经理">
+            </div>
+            <div class="form-group">
+                <label>驳回原因 *</label>
+                <textarea id="rejectComment" rows="3" placeholder="请填写驳回原因"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeRejectModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmReject()">确认驳回</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const contractId = {{ contract_id }};
+let contractData = null;
+
+async function loadDetail() {
+    try {
+        const res = await fetch(`/api/contracts/${contractId}`);
+        if (!res.ok) throw new Error('加载失败');
+        const data = await res.json();
+        contractData = data;
+        renderDetail(data);
+    } catch (e) {
+        showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+function renderDetail(data) {
+    const c = data.contract;
+    document.getElementById('detailContent').style.display = 'none';
+    document.getElementById('detailLoaded').style.display = 'block';
+    
+    document.title = `${c.title} | 合同详情`;
+    document.getElementById('contractTitle').textContent = c.title;
+    document.getElementById('contractNo').textContent = c.contract_no;
+    document.getElementById('contractStatusBadge').innerHTML = 
+        `<span class="${statusBadgeClass(c.status)}">${statusLabels[c.status] || c.status}</span>`;
+    
+    // 基本信息
+    const infoGrid = document.getElementById('infoGrid');
+    const infoItems = [
+        ['合同类型', c.contract_type],
+        ['甲方', c.party_a],
+        ['乙方', c.party_b],
+        ['合同金额', formatAmount(c.amount)],
+        ['税率', c.tax_rate ? (c.tax_rate * 100).toFixed(0) + '%' : '--'],
+        ['生效日期', c.effective_date || '--'],
+        ['到期日期', c.expiry_date || '--'],
+        ['创建人', c.created_by],
+        ['当前审批人', c.current_approver || '--'],
+        ['创建时间', c.created_at ? c.created_at.substring(0, 19).replace('T', ' ') : '--'],
+    ];
+    infoGrid.innerHTML = infoItems.map(([k, v]) => `
+        <div class="info-item">
+            <span class="info-label">${k}</span>
+            <span class="info-value">${v || '--'}</span>
+        </div>
+    `).join('');
+    
+    // 操作按钮
+    document.getElementById('btnSubmit').style.display = c.status === 'draft' ? 'inline-flex' : 'none';
+    const isReview = c.status && c.status.startsWith('review');
+    document.getElementById('btnApprove').style.display = isReview ? 'inline-flex' : 'none';
+    document.getElementById('btnReject').style.display = isReview ? 'inline-flex' : 'none';
+    
+    // 审批层级
+    document.getElementById('approvalLevelBadge').textContent = 
+        `${data.approval_level} 级审批 · SLA ${data.sla_days} 工作日`;
+    
+    // 审批流程时间线
+    renderApprovalTimeline(data);
+    
+    // 操作历史
+    renderHistory(data);
+}
+
+function renderApprovalTimeline(data) {
+    const c = data.contract;
+    const level = data.approval_level;
+    const roles = data.approval_roles || [];
+    const approvals = data.approvals || [];
+    
+    const timeline = document.getElementById('approvalTimeline');
+    let html = '';
+    
+    // 起草节点
+    html += timelineItem('completed', '起草创建', 
+        `创建人: ${c.created_by}`, c.created_at);
+    
+    // 各审批节点
+    for (let i = 0; i < level; i++) {
+        const lvl = i + 1;
+        const reviewStatus = `review${lvl}`;
+        const approval = approvals.find(a => a.approval_level === lvl);
+        const isCurrent = c.status === reviewStatus;
+        const isCompleted = approval && approval.action === 'approve';
+        const isRejected = approval && approval.action === 'reject';
+        
+        let cls = '';
+        if (isCompleted) cls = 'completed';
+        else if (isCurrent) cls = 'active';
+        else if (isRejected) cls = 'rejected';
+        
+        let title = `第${lvl}级审批 - ${roles[i] || '未知角色'}`;
+        let meta = approval ? 
+            `${approval.approver_name} · ${approval.created_at ? approval.created_at.substring(0,16).replace('T',' ') : ''}` :
+            (isCurrent ? '待审批' : '未开始');
+        
+        html += timelineItem(cls, title, meta, '', approval ? approval.comment : '');
+    }
+    
+    // 通过/签署/归档
+    if (['approved', 'signed', 'archived'].includes(c.status)) {
+        html += timelineItem('completed', '审批通过', '', '');
+    }
+    if (c.status === 'rejected') {
+        html += timelineItem('rejected', '已驳回', '', '');
+    }
+    if (c.status === 'signed') {
+        html += timelineItem('completed', '已签署', '', '');
+    }
+    if (c.status === 'archived') {
+        html += timelineItem('completed', '已归档', '', '');
+    }
+    
+    timeline.innerHTML = html;
+}
+
+function timelineItem(cls, title, meta, date, comment) {
+    return `
+        <div class="timeline-item ${cls}">
+            <div class="timeline-dot"></div>
+            <div class="timeline-title">${title}</div>
+            <div class="timeline-meta">${meta}</div>
+            ${comment ? `<div class="timeline-comment">${comment}</div>` : ''}
+        </div>
+    `;
+}
+
+function renderHistory(data) {
+    const logs = data.audit_logs || [];
+    const timeline = document.getElementById('historyTimeline');
+    
+    const actionLabels = {
+        'create': '创建合同',
+        'submit': '提交审批',
+        'approve': '审批通过',
+        'reject': '审批驳回',
+        'sign': '签署合同',
+        'archive': '归档合同',
+        'update': '更新合同',
+        'risk_scan': '风险扫描',
+    };
+    
+    timeline.innerHTML = logs.slice().reverse().map(log => {
+        let cls = 'completed';
+        if (log.action === 'reject') cls = 'rejected';
+        if (log.action === 'risk_scan') cls = '';
+        
+        let detail = '';
+        if (log.detail) {
+            try {
+                const d = JSON.parse(log.detail);
+                detail = JSON.stringify(d, null, 2);
+            } catch { detail = log.detail; }
+        }
+        
+        return `
+            <div class="timeline-item ${cls}">
+                <div class="timeline-dot"></div>
+                <div class="timeline-title">${actionLabels[log.action] || log.action}</div>
+                <div class="timeline-meta">${log.operator} · ${log.created_at ? log.created_at.substring(0, 19).replace('T', ' ') : ''}</div>
+                ${detail ? `<div class="timeline-comment" style="white-space: pre-wrap; font-family: var(--font-mono); font-size: 0.8rem;">${escapeHtml(detail.substring(0, 200))}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 提交审批
+async function submitApproval() {
+    if (!confirm('确定提交审批吗？提交后将进入审批流程。')) return;
+    try {
+        const res = await fetch(`/api/contracts/${contractId}/submit`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('提交成功', 'success');
+            loadDetail();
+        } else {
+            showToast(data.detail || data.error || '提交失败', 'error');
+        }
+    } catch (e) {
+        showToast('提交失败: ' + e.message, 'error');
+    }
+}
+
+// 审批弹窗
+function showApproveModal() { document.getElementById('approveModal').style.display = 'block'; }
+function closeApproveModal() { document.getElementById('approveModal').style.display = 'none'; }
+
+async function confirmApprove() {
+    const name = document.getElementById('approveName').value.trim();
+    const role = document.getElementById('approveRole').value.trim();
+    const comment = document.getElementById('approveComment').value.trim();
+    
+    if (!name) { showToast('请输入审批人姓名', 'warning'); return; }
+    if (!role) { showToast('请输入审批人角色', 'warning'); return; }
+    
+    try {
+        const res = await fetch(`/api/contracts/${contractId}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approver_name: name, approver_role: role, comment }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('审批通过', 'success');
+            closeApproveModal();
+            loadDetail();
+        } else {
+            showToast(data.detail || data.error || '审批失败', 'error');
+        }
+    } catch (e) {
+        showToast('审批失败: ' + e.message, 'error');
+    }
+}
+
+// 驳回弹窗
+function showRejectModal() { document.getElementById('rejectModal').style.display = 'block'; }
+function closeRejectModal() { document.getElementById('rejectModal').style.display = 'none'; }
+
+async function confirmReject() {
+    const name = document.getElementById('rejectName').value.trim();
+    const role = document.getElementById('rejectRole').value.trim();
+    const comment = document.getElementById('rejectComment').value.trim();
+    
+    if (!name) { showToast('请输入审批人姓名', 'warning'); return; }
+    if (!role) { showToast('请输入审批人角色', 'warning'); return; }
+    if (!comment) { showToast('请填写驳回原因', 'warning'); return; }
+    
+    try {
+        const res = await fetch(`/api/contracts/${contractId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approver_name: name, approver_role: role, comment }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('已驳回', 'success');
+            closeRejectModal();
+            loadDetail();
+        } else {
+            showToast(data.detail || data.error || '操作失败', 'error');
+        }
+    } catch (e) {
+        showToast('操作失败: ' + e.message, 'error');
+    }
+}
+
+// 风险扫描
+async function scanRisk() {
+    const btn = document.getElementById('btnRiskScan');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading"></span> 扫描中...';
+    
+    try {
+        const res = await fetch(`/api/contracts/${contractId}/risk-scan`);
+        const data = await res.json();
+        if (res.ok) {
+            renderRiskResult(data);
+            showToast('扫描完成', 'success');
+        } else {
+            showToast(data.detail || data.error || '扫描失败', 'error');
+        }
+    } catch (e) {
+        showToast('扫描失败: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🔍 风险扫描';
+    }
+}
+
+function renderRiskResult(data) {
+    const content = document.getElementById('riskContent');
+    const summary = data.summary || {};
+    const findings = data.findings || [];
+    
+    let html = `
+        <div class="risk-summary">
+            <div class="risk-overall">
+                <div class="risk-level ${data.overall_risk}">${data.overall_risk || '--'}</div>
+                <div class="risk-label">总体风险</div>
+            </div>
+            <div class="risk-counts">
+                <div class="risk-count-item">
+                    <div class="num text-success">${summary.pass || 0}</div>
+                    <div class="label">通过</div>
+                </div>
+                <div class="risk-count-item">
+                    <div class="num text-warning">${summary.warning || 0}</div>
+                    <div class="label">警告</div>
+                </div>
+                <div class="risk-count-item">
+                    <div class="num text-danger">${summary.fail || 0}</div>
+                    <div class="label">不通过</div>
+                </div>
+                ${data.scan_time ? `<div class="risk-count-item">
+                    <div class="num" style="font-size: 0.85rem; font-weight: 400;">${data.scan_time.substring(0, 19).replace('T', ' ')}</div>
+                    <div class="label">扫描时间</div>
+                </div>` : ''}
+            </div>
+        </div>
+        <div class="risk-findings">
+            ${findings.map(f => `
+                <div class="risk-finding">
+                    <div class="risk-finding-icon ${f.status}">${f.status === 'pass' ? '✓' : f.status === 'fail' ? '✕' : '!'}</div>
+                    <div class="risk-finding-body">
+                        <div class="risk-finding-title">
+                            ${f.item}
+                            <span class="risk-finding-cat">${f.category}</span>
+                        </div>
+                        ${f.law ? `<div class="risk-finding-law">依据: ${f.law}</div>` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    content.innerHTML = html;
+}
+
+loadDetail();
+</script>
+{% endblock %}

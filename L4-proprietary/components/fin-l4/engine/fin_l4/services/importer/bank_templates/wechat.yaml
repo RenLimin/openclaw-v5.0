@@ -1,0 +1,28 @@
+# 微信支付 账单流水模板
+bank_id: wechat
+bank_name: 微信支付
+encoding: [utf-8, gbk]
+skip_rows: 16
+has_header: true
+
+column_mapping:
+  txn_date: ["交易时间", "交易日期"]
+  txn_type: ["交易类型", "类型"]
+  counterparty: ["交易对方", "对方"]
+  product: ["商品", "商品名称"]
+  direction: ["收/支", "收支"]
+  amount: ["金额(元)", "金额", "交易金额"]
+  payment_method: ["支付方式", "付款方式"]
+  status: ["当前状态", "交易状态"]
+  txn_id: ["交易单号"]
+  merchant_order_id: ["商户单号"]
+  summary: ["备注", "交易备注"]
+
+direction_rules:
+  income_keywords: ["收入", "收"]
+  expense_keywords: ["支出", "付"]
+  amount_sign: false
+
+detection:
+  column_keywords: ["微信支付", "微信", "WeChat"]
+  header_keywords: ["交易时间", "交易类型", "交易对方", "金额(元)", "支付方式"]

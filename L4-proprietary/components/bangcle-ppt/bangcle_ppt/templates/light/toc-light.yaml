@@ -1,0 +1,23 @@
+filename: toc-light.yaml
+meta:
+  name: 浅色目录页
+  page_type: toc-light
+  theme: light
+  description: 浅色主题目录页，2×2 卡片式目录项
+  version: 1.0.0
+  category: 导航
+layout: {}
+data:
+  items:
+  - number: '01'
+    title: 项目概述
+    subtitle: PROJECT OVERVIEW
+  - number: '02'
+    title: 核心能力
+    subtitle: CORE CAPABILITIES
+  - number: '03'
+    title: 技术方案
+    subtitle: TECHNICAL SOLUTION
+  - number: '04'
+    title: 成果展示
+    subtitle: ACHIEVEMENTS

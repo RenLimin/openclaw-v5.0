@@ -1,0 +1,25 @@
+filename: kpi-cards-light.yaml
+meta:
+  name: KPI数据卡片（深色风格）
+  page_type: kpi-cards-light
+  theme: light
+  description: 4个核心指标大卡片（用于深色主题数据页）
+  version: 1.0.0
+  category: 数据
+layout: {}
+data:
+  title: 核心数据指标
+  subtitle: KEY METRICS
+  cards:
+  - value: 10亿+
+    label: 累计保护App
+    suffix: ''
+  - value: 99.99%
+    label: 服务可用性
+    suffix: ''
+  - value: 500+
+    label: 企业客户
+    suffix: ''
+  - value: 15年
+    label: 行业经验
+    suffix: ''

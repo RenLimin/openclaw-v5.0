@@ -197,6 +197,11 @@ def main():
     conn = get_db()
     init_db()
 
+    # 确保 default 家庭存在
+    conn.execute("INSERT OR IGNORE INTO fin4_family (id, name, currency) VALUES (?, ?, ?)",
+                 (FAMILY_ID, '默认家庭', 'CNY'))
+    conn.commit()
+
     # 清除旧数据
     clear_family_data(conn, FAMILY_ID)
 

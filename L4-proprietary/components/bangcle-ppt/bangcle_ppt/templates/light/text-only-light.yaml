@@ -1,0 +1,35 @@
+filename: text-only-light.yaml
+meta:
+  name: 纯文本页
+  page_type: text-only-light
+  theme: light
+  description: 大段文字/引文页
+  version: 1.0.0
+  category: 内容
+layout:
+  is_quote: false
+data:
+  title: 详细说明
+  subtitle: DETAILS
+  body: '本模板系统基于梆梆安全官方VI规范设计，确保所有输出材料的品牌一致性。
+
+
+    使用说明：
+
+    1. 选择合适的页面类型模板
+
+    2. 替换标题和正文内容
+
+    3. 插入对应图片和数据
+
+    4. 检查整体视觉风格
+
+
+    注意事项：
+
+    • 保持主色调统一
+
+    • 文字不超出安全区域
+
+    • 配图使用商务科技风格'
+  author: ''

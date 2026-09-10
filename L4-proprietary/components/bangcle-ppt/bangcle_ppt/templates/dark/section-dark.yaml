@@ -1,0 +1,14 @@
+filename: section-dark.yaml
+meta:
+  name: 深色章节过渡页
+  page_type: section-dark
+  theme: dark
+  description: 深色主题章节页，中心大数字 + 标题
+  version: 1.0.0
+  category: 导航
+layout: {}
+data:
+  part_label: PART ONE
+  chapter_number: '01'
+  title: 产品概览
+  subtitle: 产品背景与市场定位

@@ -12,20 +12,23 @@
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   L4 Office 层 (本模块)              │
+│           L4 Office 层 (本模块) — 持久化 + 编排      │
 │  ┌──────────┐  ┌───────────┐  ┌──────────────────┐  │
 │  │   CLI    │  │ Services  │  │  Office 特化配置  │  │
 │  │contractctl│  │  (业务)  │  │  (甲方/角色/SLA)  │  │
-│  └──────────┘  └───────────┘  └──────────────────┘  │
-└────────────────────────┬────────────────────────────┘
-                         │ 复用
-                         ▼
+│  └──────────┘  └─────┬─────┘  └──────────────────┘  │
+│                      │ 数据库读写 / 文件 I/O         │
+└──────────────────────┼──────────────────────────────┘
+                       │ 调用 (L4 → L3)
+                       ▼
 ┌─────────────────────────────────────────────────────┐
-│         L3 通用能力 (skills/contract-approval)       │
-│  审批状态机 · 风险扫描器 · 合同生成器 · 条款解析器   │
+│    L3 通用层 (skills/contract-approval/core)         │
+│     纯逻辑 · 零副作用 · 可单元测试                    │
+│  审批状态机 · 风险扫描引擎 · 数据模型 · 金额工具     │
+│  条款解析器 · 审核标准库 · 逐条审核器               │
 └─────────────────────────────────────────────────────┘
-                         │
-                         ▼
+                       │
+                       ▼
 ┌─────────────────────────────────────────────────────┐
 │              L2 基础设施层                           │
 │  SQLite 持久化 · OCR 数字化 · python-docx 文档生成  │
@@ -146,6 +149,8 @@ python3 tests/test_e2e.py
 
 ## 相关文档
 
-- 风险扫描规则：`L3-business/components/contract-approval/checklists/risk-matrix.md`
-- 审核标准库：`L3-business/components/contract-approval/checklists/sales-contract.md`
-- 架构文档：`docs/architecture/`
+- **L3 架构与职责边界**：[ARCHITECTURE.md](../../../L3-business/skills/contract-approval/ARCHITECTURE.md)
+- **架构决策记录**：[ADR-031](../../../docs/architecture/adr/ADR-202609-031-contract-approval-l3-l4-boundary.md)
+- 风险扫描规则：`L3-business/skills/contract-approval/checklists/risk-matrix.md`
+- 审核标准库：`L3-business/skills/contract-approval/checklists/sales-contract.md`
+- L3 契约测试：`L3-business/skills/contract-approval/tests/test_l3_contract.py`

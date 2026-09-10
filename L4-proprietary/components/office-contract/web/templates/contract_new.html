@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+{% block title %}新建合同{% endblock %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>新建合同</h1>
+        <p>填写合同基本信息后提交审批</p>
+    </div>
+    <button class="btn" onclick="history.back()">← 返回</button>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-title"><span>合同信息</span></div>
+        <form id="contractForm">
+            <div class="form-group">
+                <label>合同名称 *</label>
+                <input type="text" id="title" required placeholder="如：XX系统技术服务合同">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>合同类型</label>
+                    <select id="contractType">
+                        <option value="tech_service">技术服务合同</option>
+                        <option value="software_license">软件许可合同</option>
+                        <option value="sow">工作说明书(SOW)</option>
+                        <option value="purchase">采购合同</option>
+                        <option value="nda">保密协议</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>合同金额（元）*</label>
+                    <input type="number" id="amount" min="0.01" step="0.01" required placeholder="0.00">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>乙方（客户）*</label>
+                    <input type="text" id="partyB" required placeholder="客户公司名称">
+                </div>
+                <div class="form-group">
+                    <label>甲方（我方）</label>
+                    <input type="text" id="partyA" placeholder="默认使用配置的甲方">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>生效日期</label>
+                    <input type="date" id="effectiveDate">
+                </div>
+                <div class="form-group">
+                    <label>到期日期</label>
+                    <input type="date" id="expiryDate">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>创建人</label>
+                <input type="text" id="operator" value="web-user">
+            </div>
+            <div class="form-group">
+                <label>合同内容（可选，用于风险扫描）</label>
+                <textarea id="contractContent" rows="6" placeholder="粘贴合同正文内容，用于风险扫描分析..."></textarea>
+            </div>
+            <div class="form-actions mt-4">
+                <button type="button" class="btn" onclick="previewRisk()">🔍 预览风险</button>
+                <button type="submit" class="btn btn-primary">保存合同</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-title">
+            <span>📊 实时预览</span>
+        </div>
+        <div id="previewPanel">
+            <div class="text-muted" style="text-align:center; padding: 40px 0;">
+                填写金额后显示审批级别等信息
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 风险预览区域 -->
+<div class="card" id="riskPreviewCard" style="display:none;">
+    <div class="card-title"><span>⚠️ 风险扫描预览</span></div>
+    <div id="riskPreviewContent">
+        <div class="text-muted" style="text-align:center; padding: 20px;">扫描中...</div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// 审批级别预览
+const approvalLevels = [
+    { min: 0, max: 100000, level: 1, roles: ['销售经理'], sla: 1 },
+    { min: 100000, max: 500000, level: 2, roles: ['销售经理', '法务审查员'], sla: 2 },
+    { min: 500000, max: 2000000, level: 3, roles: ['销售总监', '法务审查员', '财务经理'], sla: 3 },
+    { min: 2000000, max: Infinity, level: 4, roles: ['VP/CEO', '法务总监', '财务总监'], sla: 5 },
+];
+
+function updatePreview() {
+    const amount = parseFloat(document.getElementById('amount').value) || 0;
+    const panel = document.getElementById('previewPanel');
+    
+    if (amount <= 0) {
+        panel.innerHTML = '<div class="text-muted" style="text-align:center; padding: 40px 0;">填写金额后显示审批级别等信息</div>';
+        return;
+    }
+    
+    const cfg = approvalLevels.find(l => amount >= l.min && amount < l.max) || approvalLevels[approvalLevels.length - 1];
+    
+    panel.innerHTML = `
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">合同金额</span>
+                <span class="info-value mono">${formatAmount(amount)}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">审批层级</span>
+                <span class="info-value">${cfg.level} 级审批</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">SLA</span>
+                <span class="info-value">${cfg.sla} 个工作日</span>
+            </div>
+        </div>
+        <div style="margin-top: var(--s-5);">
+            <div class="info-label" style="margin-bottom: var(--s-3);">审批流程</div>
+            <div class="timeline">
+                <div class="timeline-item completed">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-title">起草创建</div>
+                    <div class="timeline-meta">创建人填写合同信息</div>
+                </div>
+                ${cfg.roles.map((role, i) => `
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-title">第 ${i+1} 级审批</div>
+                        <div class="timeline-meta">${role}</div>
+                    </div>
+                `).join('')}
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-title">审批通过</div>
+                    <div class="timeline-meta">合同生效</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+document.getElementById('amount').addEventListener('input', updatePreview);
+
+// 表单提交
+document.getElementById('contractForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const data = {
+        title: document.getElementById('title').value.trim(),
+        party_b: document.getElementById('partyB').value.trim(),
+        amount: parseFloat(document.getElementById('amount').value),
+        contract_type: document.getElementById('contractType').value,
+        effective_date: document.getElementById('effectiveDate').value || null,
+        expiry_date: document.getElementById('expiryDate').value || null,
+        party_a: document.getElementById('partyA').value.trim() || null,
+        operator: document.getElementById('operator').value.trim() || 'web-user',
+    };
+    
+    if (!data.title) { showToast('请填写合同名称', 'warning'); return; }
+    if (!data.party_b) { showToast('请填写客户名称', 'warning'); return; }
+    if (!data.amount || data.amount <= 0) { showToast('请填写有效金额', 'warning'); return; }
+    
+    try {
+        const res = await fetch('/api/contracts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        
+        if (res.ok) {
+            showToast('合同创建成功', 'success');
+            setTimeout(() => {
+                window.location.href = `/contracts/${result.id}`;
+            }, 800);
+        } else {
+            showToast(result.detail || result.error || '创建失败', 'error');
+        }
+    } catch (e) {
+        showToast('创建失败: ' + e.message, 'error');
+    }
+});
+
+// 风险预览
+async function previewRisk() {
+    const content = document.getElementById('contractContent').value.trim();
+    if (!content) {
+        showToast('请先填写合同内容再预览风险', 'warning');
+        return;
+    }
+    
+    // 先创建一个临时合同用于扫描
+    const title = document.getElementById('title').value.trim() || '风险预览合同';
+    const partyB = document.getElementById('partyB').value.trim() || '预览客户';
+    const amount = parseFloat(document.getElementById('amount').value) || 10000;
+    
+    const card = document.getElementById('riskPreviewCard');
+    const contentDiv = document.getElementById('riskPreviewContent');
+    card.style.display = 'block';
+    contentDiv.innerHTML = '<div class="text-muted" style="text-align:center; padding: 20px;"><span class="loading"></span> 扫描中...</div>';
+    
+    try {
+        // 创建临时合同
+        const createRes = await fetch('/api/contracts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title, party_b: partyB, amount,
+                contract_type: document.getElementById('contractType').value,
+            }),
+        });
+        const created = await createRes.json();
+        
+        if (!createRes.ok) throw new Error(created.detail || '创建失败');
+        
+        // 风险扫描
+        const scanRes = await fetch(`/api/contracts/${created.id}/risk-scan`);
+        const scanData = await scanRes.json();
+        
+        if (scanRes.ok) {
+            renderRiskPreview(scanData);
+        } else {
+            contentDiv.innerHTML = `<div class="text-danger">扫描失败: ${scanData.detail || '未知错误'}</div>`;
+        }
+    } catch (e) {
+        contentDiv.innerHTML = `<div class="text-danger">扫描失败: ${e.message}</div>`;
+    }
+}
+
+function renderRiskPreview(data) {
+    const contentDiv = document.getElementById('riskPreviewContent');
+    const summary = data.summary || {};
+    const findings = data.findings || [];
+    
+    contentDiv.innerHTML = `
+        <div class="risk-summary">
+            <div class="risk-overall">
+                <div class="risk-level ${data.overall_risk}">${data.overall_risk || '--'}</div>
+                <div class="risk-label">总体风险</div>
+            </div>
+            <div class="risk-counts">
+                <div class="risk-count-item">
+                    <div class="num text-success">${summary.pass || 0}</div>
+                    <div class="label">通过</div>
+                </div>
+                <div class="risk-count-item">
+                    <div class="num text-warning">${summary.warning || 0}</div>
+                    <div class="label">警告</div>
+                </div>
+                <div class="risk-count-item">
+                    <div class="num text-danger">${summary.fail || 0}</div>
+                    <div class="label">不通过</div>
+                </div>
+            </div>
+        </div>
+        <div class="risk-findings">
+            ${findings.slice(0, 10).map(f => `
+                <div class="risk-finding">
+                    <div class="risk-finding-icon ${f.status}">${f.status === 'pass' ? '✓' : f.status === 'fail' ? '✕' : '!'}</div>
+                    <div class="risk-finding-body">
+                        <div class="risk-finding-title">
+                            ${f.item}
+                            <span class="risk-finding-cat">${f.category}</span>
+                        </div>
+                        ${f.law ? `<div class="risk-finding-law">依据: ${f.law}</div>` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// 初始化
+updatePreview();
+</script>
+{% endblock %}

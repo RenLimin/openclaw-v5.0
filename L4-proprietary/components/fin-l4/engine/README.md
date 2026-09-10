@@ -2,7 +2,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-v1.0.0-blue?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Python-3.12%2B-yellow?style=for-the-badge&logo=python" alt="Python">
-  <img src="https://img.shields.io/badge/tests-78%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-105%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/Docker-ready-2496ed?style=for-the-badge&logo=docker" alt="Docker">
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License">
   <img src="https://img.shields.io/badge/last--commit-2026--09--04-orange?style=for-the-badge" alt="Last Commit">
@@ -29,7 +29,7 @@
 - **🎯 理财建议** — 财务健康评分、应急储备分析、负债健康度诊断
 - **📋 三大报表** — 资产负债表 / 利润表 / 现金流量表，支持 Excel / Word 导出
 - **💰 Decimal 精度** — 所有金额使用 `decimal.Decimal**，杜绝浮点误差
-- **📥 CSV 导入** — 支持银行/券商账单批量导入，自动分类规则引擎
+- **📥 银行流水导入** — 4 种银行/支付格式（招行/工行/支付宝/微信），CSV + Excel 双格式，智能规则分类，自动去重
 - **🔄 数据备份** — SQLite 热备份，自动保留最近 14 份，支持一键恢复
 
 ---

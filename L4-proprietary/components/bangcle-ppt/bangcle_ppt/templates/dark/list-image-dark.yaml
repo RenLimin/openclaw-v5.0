@@ -1,0 +1,19 @@
+filename: list-image-dark.yaml
+meta:
+  name: 左图右列表页
+  page_type: list-image-dark
+  theme: dark
+  description: 左图 + 右侧功能列表
+  version: 1.0.0
+  category: 内容
+layout: {}
+data:
+  title: 功能特性
+  subtitle: KEY FEATURES
+  items:
+  - 静态应用安全测试（SAST）
+  - 动态应用安全测试（DAST）
+  - 交互式应用安全测试（IAST）
+  - 移动应用安全加固
+  - 运行时应用自保护（RASP）
+  - 安全态势感知平台

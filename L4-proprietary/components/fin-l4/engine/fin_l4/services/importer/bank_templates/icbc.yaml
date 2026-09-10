@@ -1,0 +1,28 @@
+# 工商银行 流水模板
+bank_id: icbc
+bank_name: 工商银行
+encoding: [gbk, utf-8]
+skip_rows: 0
+has_header: true
+
+column_mapping:
+  txn_date: ["交易日期", "记账日期", "日期"]
+  txn_time: ["交易时间", "时间"]
+  amount: ["交易金额", "发生额", "金额"]
+  currency: ["币种"]
+  balance: ["余额", "账户余额"]
+  direction: ["借贷标志", "收支", "收付标志"]
+  counterparty: ["对方户名", "对方名称", "收款人户名", "付款人户名"]
+  counterparty_account: ["对方账号", "对方卡号"]
+  summary: ["摘要", "交易摘要", "附言", "备注"]
+  category: ["分类"]
+  txn_type: ["交易类型"]
+
+direction_rules:
+  income_keywords: ["贷", "收入", "入账"]
+  expense_keywords: ["借", "支出", "扣费"]
+  amount_sign: true
+
+detection:
+  column_keywords: ["工商银行", "工行", "ICBC"]
+  header_keywords: ["交易日期", "交易金额", "借贷标志", "对方户名"]

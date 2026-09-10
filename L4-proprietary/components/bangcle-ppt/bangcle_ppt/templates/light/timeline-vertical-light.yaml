@@ -1,0 +1,25 @@
+filename: timeline-vertical-light.yaml
+meta:
+  name: 纵向时间轴页
+  page_type: timeline-vertical-light
+  theme: light
+  description: 左侧纵向时间线 + 右侧图片
+  version: 1.0.0
+  category: 时间轴
+layout: {}
+data:
+  title: 项目里程碑
+  subtitle: PROJECT MILESTONES
+  items:
+  - date: '2024.03'
+    title: 项目启动
+    body: 需求调研与项目立项，组建核心团队。
+  - date: '2024.06'
+    title: 方案设计
+    body: 完成技术方案设计与架构评审。
+  - date: '2024.10'
+    title: 功能上线
+    body: 核心功能开发完成，灰度上线。
+  - date: '2025.01'
+    title: 全量推广
+    body: 全量上线并投入运营使用。

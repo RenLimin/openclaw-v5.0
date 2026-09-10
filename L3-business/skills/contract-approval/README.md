@@ -1,6 +1,15 @@
 # 销售合同审批模块 (SCA-001)
 
-> L4 专有业务层组件 | 基于《民法典》合同编 + CLM 7 阶段方法论
+> L3 通用业务层（纯逻辑核心） + L4 专有业务层（持久化 + 编排）
+> 基于《民法典》合同编 + CLM 7 阶段方法论
+
+**架构速览：**
+- **L3 core/** — 纯逻辑核心（状态机 + 风险扫描 + 数据模型），零副作用
+- **L3 scripts/** — CLI 演示入口（DEPRECATED，兼容保留）
+- **L4 office-contract/** — 生产用：Service 层 + CLI + SQLite + Office 场景定制
+- **调用方向**：L4 → L3（L3 绝不依赖 L4）
+- 详细架构文档：[ARCHITECTURE.md](./ARCHITECTURE.md)
+- 架构决策记录：[ADR-031](../../../docs/architecture/adr/ADR-202609-031-contract-approval-l3-l4-boundary.md)
 
 ## 完整端到端流程（5 步）
 

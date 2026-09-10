@@ -260,3 +260,58 @@ def import_from_file(
         raise ValueError(f"不支持的文件格式: {suffix}（支持 .yaml/.yml/.json）")
 
     return import_questions(session, qs, source=source, skip_existing=skip_existing)
+
+
+# ── 知识图谱导入 ──────────────────────────────────────────
+
+def import_knowledge_graph_from_file(
+    session: Session,
+    file_path: str | Path,
+) -> dict:
+    """
+    从 YAML 文件导入知识图谱（知识点之间的关系边）
+
+    格式：
+    - domain: 1
+      edges:
+        - source: "安全基础"
+          target: "CIA三元组"
+          type: prerequisite
+          weight: 1.0
+    """
+    import yaml as _yaml
+    from .knowledge_graph import add_edge
+
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"知识图谱文件不存在: {path}")
+
+    with open(path, encoding="utf-8") as f:
+        data = _yaml.safe_load(f)
+
+    if not isinstance(data, list):
+        raise ValueError("知识图谱文件格式错误：顶层应为列表")
+
+    added = 0
+    errors = []
+
+    for entry in data:
+        domain = entry.get("domain")
+        if not domain or not isinstance(domain, int):
+            errors.append(f"无效领域: {entry}")
+            continue
+        edges = entry.get("edges", [])
+        for edge_data in edges:
+            try:
+                src = edge_data["source"]
+                tgt = edge_data["target"]
+                etype = edge_data.get("type", "prerequisite")
+                weight = float(edge_data.get("weight", 1.0))
+                desc = edge_data.get("description", "")
+                add_edge(session, src, tgt, domain, etype, weight, desc)
+                added += 1
+            except Exception as e:
+                errors.append(f"领域{domain} 边 {edge_data}: {e}")
+
+    session.flush()
+    return {"added": added, "errors": errors, "total_entries": len(data)}

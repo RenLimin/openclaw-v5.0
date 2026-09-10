@@ -560,6 +560,178 @@ def advise_health(ctx, income, expenses, age):
         click.echo(f"债务计划: {result['debt_plan']}")
 
 
+
+# ========== 银行流水导入 ==========
+
+@cli.group()
+def imp():
+    """银行流水导入（import 是 Python 关键字，用 imp 作组名）"""
+    pass
+
+
+@imp.command("file")
+@click.argument("file_path")
+@click.option("--source", "source_type", default="auto",
+              help="银行类型: auto / cmb / icbc / alipay / wechat")
+@click.option("--preview", is_flag=True, help="仅预览不入库")
+@click.pass_context
+def import_file(ctx, file_path, source_type, preview):
+    """导入银行流水文件（CSV / Excel）"""
+    import os
+    from fin_l4.services.importer import TransactionImporter
+
+    if not os.path.exists(file_path):
+        raise click.ClickException(f"文件不存在: {file_path}")
+
+    fid = _fid(ctx)
+    importer = TransactionImporter(ctx.obj["conn"])
+
+    if preview:
+        result = importer.preview_import(fid, file_path, source_type)
+        click.echo(f"文件: {result.file_name}")
+        click.echo(f"识别银行: {result.detected_bank_name} ({result.detected_bank})")
+        click.echo(f"格式: {result.format}")
+        click.echo(f"总条数: {result.total_count}")
+        click.echo(f"有效: {result.valid_count}  错误: {result.error_count}")
+        click.echo(f"新增: {result.new_count}  重复: {result.duplicate_count}")
+        click.echo("")
+        click.echo("置信度分布:")
+        for level, count in result.confidence_stats.items():
+            click.echo(f"  {level:6s}: {count} 条")
+        click.echo("")
+        click.echo("分类统计:")
+        for cat, count in sorted(result.category_stats.items(), key=lambda x: -x[1]):
+            click.echo(f"  {cat:25s}: {count} 条")
+        if result.errors:
+            click.echo("")
+            click.echo(f"错误 ({len(result.errors)} 条):")
+            for e in result.errors[:10]:
+                click.echo(f"  {e}")
+        click.echo("")
+        click.echo(f"导入批次 ID: {result.import_id}")
+        click.echo("(仅预览，未入库。确认导入请去掉 --preview)")
+    else:
+        result = importer.import_file(fid, file_path, source_type)
+        click.echo("导入完成")
+        click.echo(f"总条数: {result.total_count}")
+        click.echo(f"新增: {result.new_count}")
+        click.echo(f"重复: {result.duplicate_count}")
+        click.echo(f"错误: {result.error_count}")
+        click.echo("")
+        click.echo(f"置信度: 高={result.high_confidence} 中={result.medium_confidence} 低={result.low_confidence}")
+        if result.errors:
+            click.echo("")
+            click.echo("错误:")
+            for e in result.errors[:10]:
+                click.echo(f"  {e}")
+
+
+@imp.command("list")
+@click.option("--limit", default=20, help="显示条数")
+@click.pass_context
+def import_list(ctx, limit):
+    """查看历史导入记录"""
+    from fin_l4.services.importer import TransactionImporter
+
+    fid = _fid(ctx)
+    importer = TransactionImporter(ctx.obj["conn"])
+    history = importer.get_import_history(fid, limit)
+
+    if not history:
+        click.echo("（暂无导入记录）")
+        return
+
+    click.echo(f"{'ID':36s}  {'日期':20s}  {'银行':10s}  {'状态':10s}  新增/重复/错误")
+    click.echo("-" * 90)
+    for h in history:
+        click.echo(
+            f"{h['id']:36s}  {h.get('created_at',''):20s}  "
+            f"{h.get('detected_bank',''):10s}  {h.get('status',''):10s}  "
+            f"{h.get('new_count',0)}/{h.get('duplicate_count',0)}/{h.get('error_count',0)}"
+        )
+
+
+@imp.command("confirm")
+@click.argument("import_id")
+@click.pass_context
+def import_confirm(ctx, import_id):
+    """确认导入（基于预览的 import_id）"""
+    from fin_l4.services.importer import TransactionImporter
+
+    fid = _fid(ctx)
+    importer = TransactionImporter(ctx.obj["conn"])
+    result = importer.confirm_import(import_id, fid)
+
+    click.echo(f"导入结果: {result.status}")
+    click.echo(f"新增: {result.new_count}  重复: {result.duplicate_count}  错误: {result.error_count}")
+
+
+# ========== 分类规则 ==========
+
+@cli.group()
+def rules():
+    """分类规则管理"""
+    pass
+
+
+@rules.command("list")
+@click.pass_context
+def rules_list(ctx):
+    """查看分类规则列表"""
+    from fin_l4.services.importer.classifier import RuleClassifier
+
+    clf = RuleClassifier.default()
+    rules = clf.list_rules()
+
+    click.echo(f"共 {len(rules)} 条规则:")
+    click.echo(f"{'ID':30s}  {'分类':20s}  {'优先级':>6s}  {'置信度':8s}  名称")
+    click.echo("-" * 90)
+    for r in rules:
+        click.echo(
+            f"{r['id']:30s}  {r['category_id']:20s}  {r['priority']:>6d}  "
+            f"{r['confidence_level']:8s}  {r.get('name','')}"
+        )
+
+
+@rules.command("add")
+@click.option("--category", "category_id", required=True, help="分类 ID")
+@click.option("--keyword", "keywords", multiple=True, help="关键词（可多次指定）")
+@click.option("--priority", default=50, type=int, help="优先级（越大越优先）")
+@click.option("--confidence", default="medium",
+              type=click.Choice(["high", "medium", "low"]),
+              help="置信度等级")
+@click.pass_context
+def rules_add(ctx, category_id, keywords, priority, confidence):
+    """添加用户自定义分类规则（保存到 DB）"""
+    from fin_l4.db.repositories import ImportRuleRepository
+
+    if not keywords:
+        raise click.ClickException("至少指定一个关键词（--keyword）")
+
+    fid = _fid(ctx)
+    pattern = ",".join(keywords)
+    repo = ImportRuleRepository(ctx.obj["conn"])
+    rule_id = repo.create(fid, pattern, category_id, priority)
+
+    click.echo(f"✅ 已添加规则: {rule_id}")
+    click.echo(f"  分类: {category_id}")
+    click.echo(f"  关键词: {pattern}")
+    click.echo(f"  优先级: {priority}")
+    click.echo(f"  置信度: {confidence}")
+
+
+@rules.command("bank")
+@click.pass_context
+def rules_bank(ctx):
+    """列出支持的银行模板"""
+    from fin_l4.services.importer import load_templates
+
+    templates = load_templates()
+    click.echo(f"支持的银行模板 ({len(templates)} 种):")
+    for t in templates:
+        click.echo(f"  {t.bank_id:10s} - {t.bank_name}")
+
+
 # ========== 入口 ==========
 
 if __name__ == '__main__':

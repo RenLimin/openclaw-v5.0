@@ -1,0 +1,28 @@
+# 支付宝 账单流水模板
+bank_id: alipay
+bank_name: 支付宝
+encoding: [gbk, utf-8]
+skip_rows: 4
+has_header: true
+
+column_mapping:
+  txn_date: ["交易创建时间", "交易日期", "付款时间"]
+  amount: ["金额（元）", "金额", "交易金额"]
+  currency: ["币种"]
+  direction: ["收/支", "收支", "资金状态"]
+  counterparty: ["交易对方", "对方", "商户名称"]
+  counterparty_account: ["对方账号"]
+  product: ["商品名称", "商品说明", "商品"]
+  summary: ["备注", "交易备注", "说明"]
+  category: ["交易分类", "分类"]
+  txn_type: ["交易类型", "类型"]
+  status: ["当前状态", "交易状态"]
+
+direction_rules:
+  income_keywords: ["收入", "收"]
+  expense_keywords: ["支出", "付"]
+  amount_sign: false
+
+detection:
+  column_keywords: ["支付宝", "alipay", "蚂蚁"]
+  header_keywords: ["交易创建时间", "金额（元）", "收/支", "交易对方", "商品名称"]

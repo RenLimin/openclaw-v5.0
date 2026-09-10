@@ -1,0 +1,25 @@
+filename: four-cards-dark.yaml
+meta:
+  name: 四卡片图文页
+  page_type: four-cards-dark
+  theme: dark
+  description: 上方4内容卡片 + 下方数据图
+  version: 1.0.0
+  category: 内容
+layout: {}
+data:
+  title: 核心能力
+  subtitle: CORE CAPABILITIES
+  cards:
+  - number: '01'
+    title: 安全检测
+    body: 多维度安全检测引擎
+  - number: '02'
+    title: 加固保护
+    body: 应用安全加固方案
+  - number: '03'
+    title: 监测预警
+    body: 实时威胁监测系统
+  - number: '04'
+    title: 智能分析
+    body: AI驱动数据分析

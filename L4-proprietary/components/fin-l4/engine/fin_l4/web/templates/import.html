@@ -1,84 +1,423 @@
 {% extends "base.html" %}
-{% block title %}CSV 导入 — FIN-L4{% endblock %}
+{% block title %}流水导入 — FIN-L4{% endblock %}
 {% block content %}
-<h1>📥 CSV 导入</h1>
+<h1>📥 银行流水导入</h1>
 
+<!-- 上传区域 -->
 <div class="card">
     <h2>上传文件</h2>
-    <form id="import-form" enctype="multipart/form-data">
+    <div class="upload-area" id="uploadArea">
+        <div class="upload-icon">📂</div>
+        <p>拖拽文件到此处，或 <label class="upload-link">点击选择文件</label></p>
+        <p class="upload-hint">支持 CSV / Excel（.xlsx/.xls），支持招商银行、工商银行、支付宝、微信支付</p>
+        <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none;">
+    </div>
+
+    <div class="form-row" style="margin-top: 16px;">
         <div class="form-group">
-            <label>CSV 文件</label>
-            <input type="file" name="file" accept=".csv" required>
+            <label>银行类型</label>
+            <select id="sourceType">
+                <option value="auto">自动识别</option>
+                <option value="cmb">招商银行</option>
+                <option value="icbc">工商银行</option>
+                <option value="alipay">支付宝</option>
+                <option value="wechat">微信支付</option>
+            </select>
         </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>日期列名</label>
-                <input type="text" name="date_col" value="date">
-            </div>
-            <div class="form-group">
-                <label>金额列名</label>
-                <input type="text" name="amount_col" value="amount">
-            </div>
-            <div class="form-group">
-                <label>描述列名</label>
-                <input type="text" name="desc_col" value="description">
-            </div>
-        </div>
-        <button type="button" class="btn btn-secondary" onclick="previewCSV()">预览</button>
-        <button type="button" class="btn btn-primary" onclick="doImport()">导入</button>
-    </form>
+    </div>
+
+    <div style="margin-top: 12px;">
+        <button class="btn btn-secondary" onclick="previewImport()" id="previewBtn" disabled>预览</button>
+        <button class="btn btn-primary" onclick="doImport()" id="importBtn" disabled>直接导入</button>
+        <span id="fileName" style="margin-left: 12px; color: #666;"></span>
+    </div>
 </div>
 
-<div id="preview-section" class="card" style="display:none;">
-    <h2>预览结果</h2>
-    <table id="preview-table">
+<!-- 预览结果 -->
+<div id="previewSection" class="card" style="display:none;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>预览结果</h2>
+        <div>
+            <button class="btn btn-primary" onclick="confirmImport()">确认导入</button>
+        </div>
+    </div>
+
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">总条数</div>
+        </div>
+        <div class="stat-card stat-success">
+            <div class="stat-value" id="statNew">0</div>
+            <div class="stat-label">新增</div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-value" id="statDup">0</div>
+            <div class="stat-label">重复</div>
+        </div>
+        <div class="stat-card stat-error">
+            <div class="stat-value" id="statErr">0</div>
+            <div class="stat-label">错误</div>
+        </div>
+    </div>
+
+    <div id="detectInfo" style="margin: 12px 0; padding: 8px 12px; background: #f0f7ff; border-radius: 6px;">
+        <span id="bankInfo"></span>
+        <span id="confInfo" style="margin-left: 16px;"></span>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>金额</th>
+                    <th>收支</th>
+                    <th>对方</th>
+                    <th>摘要</th>
+                    <th>分类</th>
+                    <th>置信度</th>
+                    <th>状态</th>
+                </tr>
+            </thead>
+            <tbody id="previewBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 导入历史 -->
+<div class="card">
+    <h2>导入历史</h2>
+    <button class="btn btn-secondary btn-sm" onclick="loadHistory()" style="margin-bottom: 8px;">刷新</button>
+    <table class="data-table" id="historyTable">
         <thead>
             <tr>
-                <th>行</th>
-                <th>日期</th>
-                <th>金额</th>
-                <th>描述</th>
-                <th>建议分类</th>
-                <th>类型</th>
+                <th>时间</th>
+                <th>文件</th>
+                <th>银行</th>
+                <th>状态</th>
+                <th>新增/重复/错误</th>
             </tr>
         </thead>
-        <tbody id="preview-body"></tbody>
+        <tbody id="historyBody">
+            <tr><td colspan="5" style="text-align:center; color:#999;">加载中...</td></tr>
+        </tbody>
     </table>
 </div>
 
+<!-- 分类统计模态框（预留） -->
+
 <script>
-function previewCSV() {
-    const form = document.getElementById('import-form');
-    const formData = new FormData(form);
-    formData.set('action', 'preview');
-    fetch('/api/v1/import/preview', {method: 'POST', body: formData})
-        .then(r => r.json())
-        .then(data => {
-            const tbody = document.getElementById('preview-body');
-            tbody.innerHTML = '';
-            data.previews.forEach(p => {
-                tbody.innerHTML += `<tr>
-                    <td>${p.row}</td><td>${p.date}</td><td>${p.amount}</td>
-                    <td>${p.description}</td><td>${p.category_name}</td>
-                    <td>${p.type}</td>
-                </tr>`;
-            });
-            document.getElementById('preview-section').style.display = 'block';
-        });
+let currentFile = null;
+let currentPreview = null;
+let adjustments = {};
+
+// 文件选择
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+
+uploadArea.addEventListener('click', () => fileInput.click());
+uploadArea.querySelector('.upload-link').addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+});
+
+// 拖拽
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '#4a90d9';
+    uploadArea.style.background = '#f0f7ff';
+});
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.style.borderColor = '';
+    uploadArea.style.background = '';
+});
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.style.borderColor = '';
+    uploadArea.style.background = '';
+    if (e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+    }
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+    }
+});
+
+function handleFile(file) {
+    currentFile = file;
+    document.getElementById('fileName').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+    document.getElementById('previewBtn').disabled = false;
+    document.getElementById('importBtn').disabled = false;
 }
 
-function doImport() {
-    const form = document.getElementById('import-form');
-    const formData = new FormData(form);
-    formData.set('action', 'import');
-    fetch('/api/v1/import/do', {method: 'POST', body: formData})
-        .then(r => r.json())
-        .then(data => {
-            alert(`导入完成: ${data.imported} 条, 自动分类 ${data.auto_categorized} 条, 错误 ${data.errors.length} 条`);
-            if (data.errors.length > 0) {
-                console.error(data.errors);
+function getSourceType() {
+    return document.getElementById('sourceType').value;
+}
+
+// 预览导入
+async function previewImport() {
+    if (!currentFile) return;
+    const btn = document.getElementById('previewBtn');
+    btn.disabled = true;
+    btn.textContent = '解析中...';
+
+    const formData = new FormData();
+    formData.append('file', currentFile);
+    formData.append('source_type', getSourceType());
+
+    try {
+        const res = await fetch('/api/v1/import/preview?source_type=' + getSourceType(), {
+            method: 'POST',
+            body: currentFile,
+            headers: {
+                'Content-Type': 'application/octet-stream',
+                'X-Filename': encodeURIComponent(currentFile.name),
             }
         });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || '预览失败');
+        }
+        showPreview(data);
+    } catch (e) {
+        alert('预览失败: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '预览';
+    }
 }
+
+function showPreview(data) {
+    currentPreview = data;
+    adjustments = {};
+
+    document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('statTotal').textContent = data.total_count || 0;
+    document.getElementById('statNew').textContent = data.new_count || 0;
+    document.getElementById('statDup').textContent = data.duplicate_count || 0;
+    document.getElementById('statErr').textContent = data.error_count || 0;
+    document.getElementById('bankInfo').textContent =
+        '识别: ' + (data.detected_bank_name || data.detected_bank || '未知') +
+        ' (' + (data.format || '') + ')';
+
+    const conf = data.confidence_stats || {};
+    document.getElementById('confInfo').textContent =
+        '置信度: 高=' + (conf.high || 0) +
+        ' 中=' + (conf.medium || 0) +
+        ' 低=' + (conf.low || 0);
+
+    const tbody = document.getElementById('previewBody');
+    tbody.innerHTML = '';
+    (data.transactions || []).forEach((t, idx) => {
+        const tr = document.createElement('tr');
+        const confColor = t.confidence === 'high' ? '#2ecc71' :
+                         t.confidence === 'medium' ? '#f39c12' : '#95a5a6';
+        const statusText = t.is_duplicate ? '重复' : (t.is_valid ? '新增' : t.error);
+        const statusClass = t.is_duplicate ? 'status-dup' :
+                           (t.is_valid ? 'status-new' : 'status-err');
+
+        tr.innerHTML = `
+            <td>${t.txn_date || ''}</td>
+            <td style="text-align:right; font-family:monospace;">${t.amount || ''}</td>
+            <td>${t.direction === 'income' ? '收入' : '支出'}</td>
+            <td>${t.counterparty || ''}</td>
+            <td>${t.summary || ''} ${t.product || ''}</td>
+            <td>
+                <span class="cat-display" onclick="editCategory(${idx}, this)">${t.category_id || '未分类'}</span>
+            </td>
+            <td><span style="color:${confColor}; font-weight:bold;">${
+                t.confidence === 'high' ? '高' : t.confidence === 'medium' ? '中' : '低'
+            }</span></td>
+            <td><span class="status-tag ${statusClass}">${statusText}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function editCategory(idx, el) {
+    const current = currentPreview.transactions[idx].category_id || '';
+    const newCat = prompt('修改分类 ID:', current);
+    if (newCat && newCat !== current) {
+        adjustments[idx] = { category_id: newCat };
+        el.textContent = newCat + ' *';
+        el.style.color = '#e74c3c';
+    }
+}
+
+// 直接导入
+async function doImport() {
+    if (!currentFile) return;
+    if (!confirm('确定直接导入文件吗？')) return;
+
+    const btn = document.getElementById('importBtn');
+    btn.disabled = true;
+    btn.textContent = '导入中...';
+
+    const fd = new FormData();
+    fd.append('file', currentFile);
+    fd.append('source_type', getSourceType());
+
+    try {
+        const res = await fetch('/api/v1/import/do', {
+            method: 'POST',
+            body: fd,
+        });
+        const data = await res.json();
+        if (data.errors && data.errors.length > 0) {
+            alert('导入完成: 新增' + (data.new_count || 0) + '条, 重复' +
+                  (data.duplicate_count || 0) + '条, 错误' +
+                  (data.error_count || 0) + '条\\n错误: ' + data.errors.slice(0, 3).join('\\n'));
+        } else {
+            alert('导入完成: 新增' + (data.new_count || 0) + '条, 重复' +
+                  (data.duplicate_count || 0) + '条');
+        }
+        loadHistory();
+    } catch (e) {
+        alert('导入失败: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '直接导入';
+    }
+}
+
+// 确认导入（基于预览）
+async function confirmImport() {
+    if (!currentPreview || !currentPreview.import_id) return;
+
+    try {
+        const res = await fetch('/api/v1/import/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                import_id: currentPreview.import_id,
+                adjustments: adjustments,
+            }),
+        });
+        const data = await res.json();
+        alert('导入完成: 新增' + (data.new_count || 0) + '条');
+        loadHistory();
+    } catch (e) {
+        alert('确认导入失败: ' + e.message);
+    }
+}
+
+// 加载历史
+async function loadHistory() {
+    try {
+        const res = await fetch('/api/v1/import/history');
+        const data = await res.json();
+        const tbody = document.getElementById('historyBody');
+        if (!data.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">暂无记录</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        data.forEach(h => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${h.created_at || ''}</td>
+                <td>${h.file_name || ''}</td>
+                <td>${h.detected_bank || ''}</td>
+                <td>${h.status || ''}</td>
+                <td>${h.new_count || 0} / ${h.duplicate_count || 0} / ${h.error_count || 0}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } catch (e) {
+        console.error('加载历史失败:', e);
+    }
+}
+
+// 页面加载时拉取历史
+loadHistory();
 </script>
+
+<style>
+.upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.upload-area:hover {
+    border-color: #4a90d9;
+    background: #fafafa;
+}
+.upload-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+.upload-link {
+    color: #4a90d9;
+    cursor: pointer;
+    text-decoration: underline;
+}
+.upload-hint {
+    color: #999;
+    font-size: 12px;
+    margin-top: 8px;
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+}
+.stat-card {
+    text-align: center;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+}
+.stat-label {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+.stat-success .stat-value { color: #27ae60; }
+.stat-warning .stat-value { color: #f39c12; }
+.stat-error .stat-value { color: #e74c3c; }
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.data-table th, .data-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+.data-table th {
+    background: #f5f5f5;
+    font-weight: 600;
+}
+.status-tag {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+}
+.status-new { background: #e8f5e9; color: #2e7d32; }
+.status-dup { background: #fff3e0; color: #e65100; }
+.status-err { background: #ffebee; color: #c62828; }
+.cat-display {
+    cursor: pointer;
+    border-bottom: 1px dotted #999;
+}
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+</style>
 {% endblock %}

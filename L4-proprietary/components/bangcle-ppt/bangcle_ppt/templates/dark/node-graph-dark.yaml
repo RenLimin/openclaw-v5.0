@@ -1,0 +1,22 @@
+filename: node-graph-dark.yaml
+meta:
+  name: 节点关系图
+  page_type: node-graph-dark
+  theme: dark
+  description: 4个圆形节点 + 连线，技术架构展示
+  version: 1.0.0
+  category: 架构
+layout: {}
+data:
+  title: 技术架构
+  subtitle: TECHNOLOGY STACK
+  center_text: 核心平台
+  nodes:
+  - label: 数据层
+    icon: 📊
+  - label: 服务层
+    icon: ⚙️
+  - label: 应用层
+    icon: 📱
+  - label: 安全层
+    icon: 🔒

@@ -1,0 +1,30 @@
+# 共享设计变量（供模板引用，与 design_constants.py 保持一致）
+# 组件 ID: CPT-012
+
+colors:
+  primary: "#2D74BB"
+  light_blue: "#3FA1DA"
+  cyan: "#27AABF"
+  green: "#33ADA0"
+  gold: "#EFBA20"
+  dark_blue: "#00122B"
+  dark_gray: "#595757"
+  very_light_blue: "#BEE3FA"
+  light_gray: "#E7E6E6"
+  white: "#FFFFFF"
+
+fonts:
+  family: "Source Han Sans"
+  fallback: "Microsoft YaHei"
+
+sizes:
+  slide_width: 13.333
+  slide_height: 7.5
+  title_left: 0.54
+  title_top: 0.47
+
+brand:
+  company_name: "梆梆安全"
+  slogan_cn: "稳如泰山·值得托付"
+  slogan_en: "SECURE · TRUSTWORTHY"
+  website: "www.bangcle.com"

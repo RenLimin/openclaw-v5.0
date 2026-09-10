@@ -1,6 +1,6 @@
 """REST API 路由"""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 
@@ -395,7 +395,7 @@ def budget_status(month: str = None):
     return svc.get_overview("default", month)
 
 
-# ========== 导入 ==========
+# ========== 银行流水导入 ==========
 
 class ImportRuleRequest(BaseModel):
     pattern: str  # 逗号分隔关键词
@@ -420,6 +420,204 @@ def list_import_rules():
     conn = get_db()
     svc = ImportService(conn)
     return svc.list_rules("default")
+
+
+# ----- 银行流水导入新 API -----
+
+class ConfirmImportRequest(BaseModel):
+    import_id: str
+    adjustments: dict = {}  # {idx: {category_id: ...}}
+
+
+@router.post("/import/preview")
+async def preview_import(request: Request, source_type: str = "auto"):
+    """预览银行流水导入结果（raw body 上传，文件名从 X-Filename header 取）"""
+    from fin_l4.db import get_db
+    from fin_l4.services.importer import TransactionImporter
+    import tempfile, os
+
+    body = await request.body()
+    if not body:
+        from fastapi import HTTPException
+        raise HTTPException(400, "未上传文件")
+
+    filename = request.headers.get("X-Filename", "import.csv")
+    # URL decode
+    from urllib.parse import unquote
+    filename = unquote(filename)
+    file_content = body
+
+    conn = get_db()
+    importer = TransactionImporter(conn)
+
+    suffix = os.path.splitext(filename)[1] or ".csv"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
+        f.write(file_content)
+        tmp_path = f.name
+
+    try:
+        result = importer.preview_import("default", tmp_path, source_type)
+        return {
+            "import_id": result.import_id,
+            "file_name": result.file_name,
+            "detected_bank": result.detected_bank,
+            "detected_bank_name": result.detected_bank_name,
+            "format": result.format,
+            "total_count": result.total_count,
+            "valid_count": result.valid_count,
+            "error_count": result.error_count,
+            "duplicate_count": result.duplicate_count,
+            "new_count": result.new_count,
+            "transactions": result.transactions,
+            "errors": result.errors,
+            "confidence_stats": result.confidence_stats,
+            "category_stats": result.category_stats,
+        }
+    finally:
+        os.unlink(tmp_path)
+
+
+@router.post("/import/do")
+async def do_import(request: Request, source_type: str = "auto"):
+    """直接执行银行流水导入（raw body 上传）"""
+    from fin_l4.db import get_db
+    from fin_l4.services.importer import TransactionImporter
+    import tempfile, os
+
+    body = await request.body()
+    if not body:
+        from fastapi import HTTPException
+        raise HTTPException(400, "未上传文件")
+
+    filename = request.headers.get("X-Filename", "import.csv")
+    from urllib.parse import unquote
+    filename = unquote(filename)
+    file_content = body
+
+    conn = get_db()
+    importer = TransactionImporter(conn)
+
+    suffix = os.path.splitext(filename)[1] or ".csv"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
+        f.write(file_content)
+        tmp_path = f.name
+
+    try:
+        result = importer.import_file("default", tmp_path, source_type)
+        return {
+            "import_id": result.import_id,
+            "status": result.status,
+            "total_count": result.total_count,
+            "new_count": result.new_count,
+            "duplicate_count": result.duplicate_count,
+            "error_count": result.error_count,
+            "high_confidence": result.high_confidence,
+            "medium_confidence": result.medium_confidence,
+            "low_confidence": result.low_confidence,
+            "category_stats": result.category_stats,
+            "errors": result.errors,
+        }
+    finally:
+        os.unlink(tmp_path)
+
+
+@router.post("/import/do")
+async def do_import(
+    file: "UploadFile" = None,
+    source_type: str = "auto",
+):
+    """直接执行银行流水导入"""
+    from fastapi import UploadFile, File, HTTPException, Form
+    from fin_l4.db import get_db
+    from fin_l4.services.importer import TransactionImporter
+    import tempfile, os
+
+    if file is None or not getattr(file, 'filename', None):
+        raise HTTPException(400, "未上传文件")
+
+    conn = get_db()
+    importer = TransactionImporter(conn)
+
+    content = await file.read()
+    suffix = os.path.splitext(file.filename)[1] or ".csv"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
+        f.write(content)
+        tmp_path = f.name
+
+    try:
+        result = importer.import_file("default", tmp_path, source_type)
+        return {
+            "import_id": result.import_id,
+            "status": result.status,
+            "total_count": result.total_count,
+            "new_count": result.new_count,
+            "duplicate_count": result.duplicate_count,
+            "error_count": result.error_count,
+            "high_confidence": result.high_confidence,
+            "medium_confidence": result.medium_confidence,
+            "low_confidence": result.low_confidence,
+            "category_stats": result.category_stats,
+            "errors": result.errors,
+        }
+    finally:
+        os.unlink(tmp_path)
+
+
+@router.get("/import/banks")
+def list_supported_banks():
+    """列出支持的银行模板"""
+    from fin_l4.services.importer import load_templates
+    templates = load_templates()
+    return [
+        {"bank_id": t.bank_id, "bank_name": t.bank_name}
+        for t in templates
+    ]
+
+
+@router.get("/import/history")
+def import_history(limit: int = 20):
+    """导入历史记录"""
+    from fin_l4.db import get_db
+    from fin_l4.services.importer import TransactionImporter
+    conn = get_db()
+    importer = TransactionImporter(conn)
+    return importer.get_import_history("default", limit)
+
+
+@router.post("/import/confirm")
+def confirm_import_endpoint(req: ConfirmImportRequest):
+    """确认导入（支持分类调整）"""
+    from fin_l4.db import get_db
+    from fin_l4.services.importer import TransactionImporter
+    conn = get_db()
+    importer = TransactionImporter(conn)
+    result = importer.confirm_import(
+        req.import_id, "default",
+        adjustments=req.adjustments,
+    )
+    return {
+        "import_id": result.import_id,
+        "status": result.status,
+        "total_count": result.total_count,
+        "new_count": result.new_count,
+        "duplicate_count": result.duplicate_count,
+        "error_count": result.error_count,
+        "high_confidence": result.high_confidence,
+        "medium_confidence": result.medium_confidence,
+        "low_confidence": result.low_confidence,
+        "category_stats": result.category_stats,
+        "errors": result.errors,
+    }
+
+
+# 分类规则 API
+
+@router.get("/import/classification-rules")
+def list_classification_rules():
+    """列出所有分类规则"""
+    from fin_l4.services.importer.classifier import RuleClassifier
+    clf = RuleClassifier.default()
+    return clf.list_rules()
 
 
 # ========== M3 贷款详情 API ==========
@@ -545,3 +743,52 @@ def export_report():
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": "attachment; filename=financial_report.docx"},
     )
+
+
+# ========== 仪表盘专用 API（v1） ==========
+
+@router.get("/dashboard/overview")
+def dashboard_overview(family_id: str = "default"):
+    """总览数据：总资产、总负债、本月收入/支出/结余、储蓄率"""
+    svc = _get_services()
+    return svc["report"].dashboard_overview(family_id)
+
+
+@router.get("/dashboard/categories")
+def dashboard_categories(family_id: str = "default",
+                        month: str = None,
+                        type: str = None):
+    """分类统计（支出/收入分类汇总）
+    type: 'income' | 'expense' | None(全部)
+    month: 'YYYY-MM'，默认本月
+    """
+    svc = _get_services()
+    return svc["report"].category_summary(family_id, month, type)
+
+
+@router.get("/dashboard/monthly-trend")
+def dashboard_monthly_trend(family_id: str = "default", months: int = 12):
+    """月度收支趋势（近 N 个月）"""
+    svc = _get_services()
+    return svc["report"].monthly_trend(family_id, months)
+
+
+@router.get("/dashboard/budget")
+def dashboard_budget(family_id: str = "default", month: str = None):
+    """预算执行情况"""
+    svc = _get_services()
+    return svc["report"].budget_progress(family_id, month)
+
+
+@router.get("/dashboard/investments")
+def dashboard_investments(family_id: str = "default"):
+    """投资组合持仓 + 收益"""
+    svc = _get_services()
+    return svc["report"].investment_summary(family_id)
+
+
+@router.get("/dashboard/transactions")
+def dashboard_transactions(family_id: str = "default", limit: int = 20):
+    """最近交易记录（带分类名）"""
+    svc = _get_services()
+    return svc["report"].recent_transactions(family_id, limit)

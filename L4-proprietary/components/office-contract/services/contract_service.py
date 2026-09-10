@@ -563,3 +563,219 @@ def list_contracts(status=None):
         ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ============================================================
+# Web UI 扩展：列表分页、筛选、统计、更新
+# ============================================================
+
+def list_contracts_paged(page=1, page_size=20, status=None, party_b=None,
+                         min_amount=None, max_amount=None,
+                         date_from=None, date_to=None, sort_by="created_at",
+                         sort_order="desc"):
+    """带分页和筛选的合同列表"""
+    conn = _get_db()
+    query = "SELECT * FROM contracts WHERE 1=1"
+    count_query = "SELECT COUNT(*) as cnt FROM contracts WHERE 1=1"
+    params = []
+
+    if status:
+        query += " AND status = ?"
+        count_query += " AND status = ?"
+        params.append(status)
+    if party_b:
+        query += " AND party_b LIKE ?"
+        count_query += " AND party_b LIKE ?"
+        params.append(f"%{party_b}%")
+    if min_amount is not None:
+        query += " AND amount >= ?"
+        count_query += " AND amount >= ?"
+        params.append(min_amount)
+    if max_amount is not None:
+        query += " AND amount <= ?"
+        count_query += " AND amount <= ?"
+        params.append(max_amount)
+    if date_from:
+        query += " AND date(created_at) >= date(?)"
+        count_query += " AND date(created_at) >= date(?)"
+        params.append(date_from)
+    if date_to:
+        query += " AND date(created_at) <= date(?)"
+        count_query += " AND date(created_at) <= date(?)"
+        params.append(date_to)
+
+    # 排序
+    valid_sort = {"created_at", "updated_at", "amount", "contract_no"}
+    if sort_by not in valid_sort:
+        sort_by = "created_at"
+    if sort_order not in ("asc", "desc"):
+        sort_order = "desc"
+    query += f" ORDER BY {sort_by} {sort_order.upper()}"
+
+    # 总数
+    total = conn.execute(count_query, params).fetchone()["cnt"]
+
+    # 分页
+    offset = (page - 1) * page_size
+    query += " LIMIT ? OFFSET ?"
+    params.extend([page_size, offset])
+
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return {
+        "items": [dict(r) for r in rows],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 0,
+    }
+
+
+def update_contract(contract_id, **kwargs):
+    """更新合同字段（仅 draft 状态可更新核心字段，其他状态仅允许更新非核心字段）"""
+    conn = _get_db()
+    contract = conn.execute(
+        "SELECT * FROM contracts WHERE id = ?", (contract_id,)
+    ).fetchone()
+    if not contract:
+        conn.close()
+        raise ValueError(f"合同 ID {contract_id} 不存在")
+
+    # 可更新字段白名单
+    allowed_fields = {
+        "title", "contract_type", "party_a", "party_a_address",
+        "party_b", "party_b_address", "amount", "effective_date",
+        "expiry_date", "file_path", "tax_rate",
+    }
+
+    # 非 draft 状态不允许改核心业务字段
+    if contract["status"] != "draft":
+        allowed_fields = {"file_path"}
+
+    updates = {}
+    for k, v in kwargs.items():
+        if k in allowed_fields and v is not None:
+            updates[k] = v
+
+    if not updates:
+        conn.close()
+        return {"updated": 0}
+
+    # 金额变化需要更新审批级别（如果在 draft 状态）
+    if "amount" in updates and contract["status"] == "draft":
+        level = get_approval_level(updates["amount"])
+        # 仅记录，审批级别在提交时才实际生效
+
+    set_clause = ", ".join(f"{k} = ?" for k in updates.keys())
+    set_clause += ", updated_at = ?"
+    values = list(updates.values()) + [datetime.now().isoformat()]
+    values.append(contract_id)
+
+    conn.execute(f"UPDATE contracts SET {set_clause} WHERE id = ?", values)
+    conn.execute(
+        """INSERT INTO audit_logs (contract_id, action, operator, detail)
+           VALUES (?, 'update', 'web-user', ?)""",
+        (contract_id, json.dumps({"fields": list(updates.keys())}, ensure_ascii=False)),
+    )
+    conn.commit()
+    conn.close()
+
+    return {"updated": len(updates), "fields": list(updates.keys())}
+
+
+def get_stats():
+    """统计数据"""
+    conn = _get_db()
+
+    # 各状态计数
+    rows = conn.execute(
+        "SELECT status, COUNT(*) as cnt FROM contracts GROUP BY status"
+    ).fetchall()
+    status_counts = {r["status"]: r["cnt"] for r in rows}
+
+    # 待审批总数（所有 review 状态）
+    pending_count = sum(
+        status_counts.get(s, 0) for s in ("review1", "review2", "review3")
+    )
+
+    # 本月新增
+    this_month = datetime.now().strftime("%Y-%m")
+    monthly_new = conn.execute(
+        "SELECT COUNT(*) as cnt FROM contracts WHERE strftime('%Y-%m', created_at) = ?",
+        (this_month,),
+    ).fetchone()["cnt"]
+
+    # 通过率（已通过 / (已通过 + 被驳回次数)）
+    approved_count = status_counts.get("approved", 0) + status_counts.get("signed", 0) + status_counts.get("archived", 0)
+    reject_count = conn.execute(
+        "SELECT COUNT(*) as cnt FROM approvals WHERE action = 'reject'"
+    ).fetchone()["cnt"]
+    if approved_count + reject_count > 0:
+        approval_rate = round(approved_count / (approved_count + reject_count) * 100, 1)
+    else:
+        approval_rate = 0.0
+
+    # 平均审批时长（从 submit 到 approved 的耗时）
+    avg_duration_days = 0.0
+    duration_rows = conn.execute("""
+        SELECT 
+            julianday(a2.created_at) - julianday(a1.created_at) as days
+        FROM audit_logs a1
+        JOIN audit_logs a2 ON a1.contract_id = a2.contract_id
+        WHERE a1.action = 'submit' 
+          AND a2.action = 'approve'
+          AND a2.to_status = 'approved'
+    """).fetchall()
+    if duration_rows:
+        avg_duration_days = round(
+            sum(r["days"] for r in duration_rows) / len(duration_rows), 1
+        )
+
+    # 近 30 天趋势
+    trend_rows = conn.execute("""
+        SELECT date(created_at) as d, COUNT(*) as cnt
+        FROM contracts
+        WHERE created_at >= date('now', '-30 days')
+        GROUP BY date(created_at)
+        ORDER BY d ASC
+    """).fetchall()
+    trend = {r["d"]: r["cnt"] for r in trend_rows}
+
+    # 高风险合同（最近一次 risk_scan 标记为 high 的）
+    high_risk = conn.execute("""
+        SELECT c.id, c.contract_no, c.title, c.amount, c.status, c.party_b
+        FROM contracts c
+        JOIN audit_logs a ON a.contract_id = c.id
+        WHERE a.action = 'risk_scan'
+          AND a.detail LIKE '%"overall_risk": "high"%'
+        GROUP BY c.id
+        ORDER BY a.created_at DESC
+        LIMIT 10
+    """).fetchall()
+
+    conn.close()
+
+    return {
+        "status_counts": status_counts,
+        "pending_count": pending_count,
+        "approved_count": approved_count,
+        "monthly_new": monthly_new,
+        "approval_rate": approval_rate,
+        "avg_duration_days": avg_duration_days,
+        "trend_30d": trend,
+        "high_risk": [dict(r) for r in high_risk],
+        "draft_count": status_counts.get("draft", 0),
+        "rejected_count": status_counts.get("rejected", 0),
+    }
+
+
+def get_history(contract_id):
+    """获取审批历史（audit_logs + approvals 合并）"""
+    result = get_contract(contract_id)
+    if not result:
+        return None
+    return {
+        "approvals": result["approvals"],
+        "audit_logs": result["audit_logs"],
+    }

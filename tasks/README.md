@@ -1,7 +1,7 @@
 # tasks/ — 任务协议目录
 
 > L2 会话隔离与共享组件（ADR-202609-024）的任务协议载体。
-> 设计文档: `docs/architecture/components/session-isolation-sharing/DESIGN.md`
+> 设计文档: `docs/architecture/components/session-isolation/DESIGN.md`
 
 ## 目录结构
 

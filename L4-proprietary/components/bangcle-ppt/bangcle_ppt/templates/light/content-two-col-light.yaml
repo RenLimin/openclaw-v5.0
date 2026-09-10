@@ -1,0 +1,33 @@
+filename: content-two-col-light.yaml
+meta:
+  name: 图文混排页（左文右图）
+  page_type: content-two-col-light
+  theme: light
+  description: 浅色主题图文混排页，顶部4要点 + 下方左文右图
+  version: 1.0.0
+  category: 内容
+layout:
+  image_position: right
+data:
+  title: 产品介绍
+  subtitle: PRODUCT INTRODUCTION
+  highlights:
+  - title: 安全防护
+    description: 全方位移动安全防护能力
+  - title: 实时监测
+    description: 7×24小时安全态势监控
+  - title: 智能分析
+    description: AI驱动的威胁智能分析
+  - title: 快速响应
+    description: 分钟级安全事件响应
+  card_title: 核心优势
+  card_body: '基于梆梆安全多年技术积累，
+
+    提供业界领先的移动安全解决方案。
+
+
+    • 覆盖全生命周期
+
+    • 支持多平台部署
+
+    • 灵活定制能力'

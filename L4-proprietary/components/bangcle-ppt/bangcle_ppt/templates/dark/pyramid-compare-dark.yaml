@@ -1,0 +1,25 @@
+filename: pyramid-compare-dark.yaml
+meta:
+  name: 金字塔对比页
+  page_type: pyramid-compare-dark
+  theme: dark
+  description: 左侧金字塔图 + 右侧对比卡片
+  version: 1.0.0
+  category: 架构
+layout: {}
+data:
+  title: 方案架构
+  subtitle: SOLUTION ARCHITECTURE
+  pyramid_levels:
+  - 战略决策层
+  - 业务应用层
+  - 技术能力层
+  - 数据资源层
+  compare_title: 方案对比
+  compare_items:
+  - 传统方案：被动防御、单点防护
+  - 我们的方案：主动防御、全栈覆盖
+  - • 检测准确率提升 300%
+  - • 误报率降低 80%
+  - • 响应时间缩短 90%
+  - • 总拥有成本降低 50%

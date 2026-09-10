@@ -1,0 +1,34 @@
+filename: table-dark.yaml
+meta:
+  name: 数据表格页（深色）
+  page_type: table-light
+  theme: light
+  description: 数据表格展示页（深色）
+  version: 1.0.0
+  category: 数据
+layout:
+  has_header: true
+data:
+  title: 性能对比
+  subtitle: PERFORMANCE COMPARISON
+  table_data:
+  - - 指标
+    - 传统方案
+    - 梆梆方案
+    - 提升
+  - - 检测率
+    - 70%
+    - 99.9%
+    - +42%
+  - - 误报率
+    - 15%
+    - <1%
+    - -93%
+  - - 响应时间
+    - 24h
+    - 5min
+    - -99%
+  - - 覆盖率
+    - 60%
+    - 100%
+    - +67%
