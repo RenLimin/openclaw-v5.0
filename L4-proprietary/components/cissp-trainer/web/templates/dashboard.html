@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>学习仪表盘</h1>
+        <p>掌握全局，科学备考 CISSP</p>
+    </div>
+    <div class="flex gap-2">
+        <a href="/exam" class="btn btn-primary btn-lg">🚀 开始模考</a>
+    </div>
+</div>
+
+<!-- 核心指标 -->
+<div class="dashboard-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="stat-label">题库总量</div>
+        <div class="stat-value primary" id="statTotalQuestions">--</div>
+        <div class="stat-sub">覆盖 8 大领域</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">累计答题</div>
+        <div class="stat-value" id="statTotalRecords">--</div>
+        <div class="stat-sub">总练习次数</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">整体正确率</div>
+        <div class="stat-value success" id="statAccuracy">--</div>
+        <div class="stat-sub">所有答题记录</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">今日学习</div>
+        <div class="stat-value warning" id="statToday">0</div>
+        <div class="stat-sub" id="statTodayAcc">今日正确率 --</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">待复习</div>
+        <div class="stat-value danger" id="statDue">0</div>
+        <div class="stat-sub">间隔重复到期</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">知识点数量</div>
+        <div class="stat-value" id="statKps">--</div>
+        <div class="stat-sub">知识图谱节点</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- 8 领域掌握度 -->
+    <div class="card">
+        <div class="card-title">
+            <span>📊 8 大领域掌握度</span>
+        </div>
+        <div class="domain-list" id="domainList">
+            <div class="text-muted">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 今日任务 -->
+    <div class="card">
+        <div class="card-title">
+            <span>📅 今日学习计划</span>
+            <a href="/learning-path" class="btn btn-sm">查看路径</a>
+        </div>
+        <div id="dailyPlan">
+            <div class="text-muted">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- 学习进度曲线 -->
+    <div class="card">
+        <div class="card-title">
+            <span>📈 近 30 天学习趋势</span>
+        </div>
+        <div class="trend-chart" id="trendChart" style="height:160px;display:flex;align-items:flex-end;gap:3px;">
+        </div>
+    </div>
+
+    <!-- 薄弱知识点 -->
+    <div class="card">
+        <div class="card-title">
+            <span>⚠️ 最薄弱知识点 Top 10</span>
+            <a href="/knowledge-graph" class="btn btn-sm">知识图谱</a>
+        </div>
+        <div id="weakKpList" class="domain-list">
+            <div class="text-muted">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 最近考试 -->
+<div class="card">
+    <div class="card-title">
+        <span>📝 最近模拟考试</span>
+        <a href="/exam" class="btn btn-sm">全部记录</a>
+    </div>
+    <div id="examHistory">
+        <div class="text-muted">加载中...</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadDashboard() {
+    try {
+        // 并行加载
+        const [stats, domains, weakKps, dailyPlan, exams, curve] = await Promise.all([
+            fetch('/api/stats/overall').then(r => r.json()),
+            fetch('/api/stats/domains').then(r => r.json()),
+            fetch('/api/stats/weak-kps?top_n=10').then(r => r.json()),
+            fetch('/api/paths/daily-plan').then(r => r.json()),
+            fetch('/api/exams/history?limit=5').then(r => r.json()),
+            fetch('/api/stats/progress-curve?days=30').then(r => r.json()),
+        ]);
+
+        // 核心指标
+        document.getElementById('statTotalQuestions').textContent = stats.total_questions.toLocaleString();
+        document.getElementById('statTotalRecords').textContent = stats.total_study_records.toLocaleString();
+        document.getElementById('statAccuracy').textContent = (stats.overall_accuracy * 100).toFixed(1) + '%';
+        document.getElementById('statToday').textContent = stats.today_studied;
+        document.getElementById('statTodayAcc').textContent = '今日正确率 ' + (stats.today_accuracy * 100).toFixed(1) + '%';
+        document.getElementById('statDue').textContent = stats.due_review_count.toLocaleString();
+        document.getElementById('statKps').textContent = stats.total_knowledge_points.toLocaleString();
+
+        // 8 领域
+        const domainList = document.getElementById('domainList');
+        domainList.innerHTML = domains.map(d => {
+            const pct = (d.accuracy * 100).toFixed(1);
+            const barCls = d.accuracy >= 0.7 ? 'success' : (d.accuracy >= 0.5 ? 'warning' : 'danger');
+            const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+            return `
+                <div class="domain-item">
+                    <div class="domain-badge" style="background:${colors[d.domain-1]}">${d.domain}</div>
+                    <div class="domain-name">${d.domain_name} <span class="text-muted" style="font-size:0.78rem">(${d.question_count}题)</span></div>
+                    <div class="domain-bar"><div class="domain-bar-fill" style="width:${pct}%;background:${colors[d.domain-1]}"></div></div>
+                    <div class="domain-pct">${pct}%</div>
+                </div>`;
+        }).join('');
+
+        // 薄弱知识点
+        const weakList = document.getElementById('weakKpList');
+        if (weakKps.length === 0) {
+            weakList.innerHTML = '<div class="text-muted">暂无薄弱知识点数据（至少答题 2 次以上才会统计）</div>';
+        } else {
+            weakList.innerHTML = weakKps.map(kp => {
+                const pct = (kp.mastery_level * 100).toFixed(0);
+                const colors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899'];
+                return `
+                    <div class="domain-item">
+                        <div class="domain-badge" style="background:${colors[kp.domain-1]};font-size:0.65rem">${kp.domain}</div>
+                        <div class="domain-name" style="font-size:0.85rem">${kp.name}</div>
+                        <div class="domain-bar"><div class="domain-bar-fill" style="width:${pct}%;background:${colors[kp.domain-1]}"></div></div>
+                        <div class="domain-pct">${pct}%</div>
+                    </div>`;
+            }).join('');
+        }
+
+        // 今日计划
+        const dp = document.getElementById('dailyPlan');
+        if (!dailyPlan.has_path) {
+            dp.innerHTML = `
+                <div style="padding:var(--s-4) 0">
+                    <p class="text-muted">${dailyPlan.suggestion}</p>
+                    <a href="/learning-path" class="btn btn-primary mt-4">选择学习路径</a>
+                </div>`;
+        } else {
+            dp.innerHTML = `
+                <div style="padding:var(--s-2) 0">
+                    <div style="font-weight:600;margin-bottom:var(--s-2)">${dailyPlan.path_name}</div>
+                    <div class="flex-between mb-4" style="margin-bottom:var(--s-3)">
+                        <span style="font-size:0.85rem">今日目标：<strong>${dailyPlan.daily_question_target}</strong> 题</span>
+                        <span class="badge ${dailyPlan.recommended_mode === 'review' ? 'info' : dailyPlan.recommended_mode === 'weak' ? 'warning' : 'primary'}">${dailyPlan.recommended_mode_desc}</span>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted" style="font-size:0.8rem;margin-bottom:var(--s-1)">当前里程碑</div>
+                        <div style="font-size:0.9rem">${dailyPlan.current_milestone}</div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted" style="font-size:0.8rem;margin-bottom:var(--s-1)">重点知识点</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                            ${dailyPlan.focus_knowledge_points.map(k => `<span class="badge muted">${k}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <div class="text-muted" style="font-size:0.8rem;margin-bottom:var(--s-1)">整体进度</div>
+                        <div class="progress-bar"><div class="progress-fill" style="width:${dailyPlan.completion_percent}%"></div></div>
+                        <div style="font-size:0.78rem;color:var(--c-muted);margin-top:4px">${dailyPlan.completion_percent}% · 预计还需 ${dailyPlan.days_remaining_estimate} 天</div>
+                    </div>
+                    <div style="font-size:0.85rem;color:var(--c-text-2);font-style:italic;padding:var(--s-3);background:var(--c-surface-2);border-radius:var(--r-sm)">
+                        💡 ${dailyPlan.tip}
+                    </div>
+                </div>`;
+        }
+
+        // 学习趋势图
+        const chart = document.getElementById('trendChart');
+        const maxCount = Math.max(...curve.map(d => d.total), 1);
+        chart.innerHTML = curve.map(d => {
+            const h = Math.max(2, (d.total / maxCount) * 100);
+            const color = d.accuracy >= 0.7 ? 'var(--c-success)' : (d.accuracy >= 0.5 ? 'var(--c-warning)' : 'var(--c-danger)');
+            return `<div class="trend-bar" style="height:${h}%;background:${color};flex:1;border-radius:3px 3px 0 0;min-height:2px" title="${d.date}: ${d.total}题 / ${(d.accuracy*100).toFixed(0)}%"></div>`;
+        }).join('');
+
+        // 最近考试
+        const eh = document.getElementById('examHistory');
+        if (!exams || exams.length === 0) {
+            eh.innerHTML = '<div class="text-muted">暂无考试记录</div>';
+        } else {
+            eh.innerHTML = `
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr><th>考试</th><th>分数</th><th>状态</th><th>题数</th><th>时间</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                            ${exams.map(e => `
+                                <tr>
+                                    <td>${e.title}</td>
+                                    <td class="num"><strong style="color:${e.passed ? 'var(--c-success)' : 'var(--c-danger)'}">${e.score}</strong></td>
+                                    <td><span class="badge ${e.passed ? 'success' : 'danger'}">${e.passed ? '通过' : '未通过'}</span></td>
+                                    <td class="num">${e.total_correct}/${e.total_questions}</td>
+                                    <td style="font-size:0.82rem">${e.submitted_at ? e.submitted_at.slice(0,16).replace('T',' ') : '--'}</td>
+                                    <td><a href="/exam/${e.exam_id}/result" class="btn btn-sm">查看</a></td>
+                                </tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+        }
+
+    } catch (e) {
+        console.error('Dashboard load failed:', e);
+        showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+loadDashboard();
+</script>
+{% endblock %}

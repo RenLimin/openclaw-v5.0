@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>📦 模板库</h1>
+        <p class="subtitle">内置 <span id="templateCount">—</span> 个 PPT 模板，基于梆梆安全官方 VI 规范</p>
+    </div>
+    <div class="filter-bar">
+        <select id="themeFilter" onchange="filterTemplates()">
+            <option value="">全部主题</option>
+            <option value="light">浅色</option>
+            <option value="dark">深色</option>
+        </select>
+        <select id="categoryFilter" onchange="filterTemplates()">
+            <option value="">全部分类</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="🔍 搜索模板..." oninput="filterTemplates()">
+    </div>
+</div>
+
+<div class="template-grid" id="templateGrid">
+    <div class="loading">加载中...</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let allTemplates = [];
+
+async function loadTemplates() {
+    try {
+        const res = await fetch('/api/templates');
+        const data = await res.json();
+        allTemplates = data.templates;
+        document.getElementById('templateCount').textContent = data.total;
+        // 填充分类
+        const cats = [...new Set(allTemplates.map(t => t.category).filter(Boolean))];
+        const catSel = document.getElementById('categoryFilter');
+        cats.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            catSel.appendChild(opt);
+        });
+        renderTemplates(allTemplates);
+    } catch (e) {
+        document.getElementById('templateGrid').innerHTML =
+            '<div class="error-card">加载失败: ' + e.message + '</div>';
+    }
+}
+
+function renderTemplates(templates) {
+    const grid = document.getElementById('templateGrid');
+    if (!templates.length) {
+        grid.innerHTML = '<div class="empty">没有匹配的模板</div>';
+        return;
+    }
+    grid.innerHTML = templates.map(t => `
+        <a href="/templates/${t.name}" class="template-card theme-${t.theme}">
+            <div class="card-preview">
+                <div class="preview-icon">${getIcon(t.name)}</div>
+                <div class="preview-badge">${t.theme === 'light' ? '☀️ 浅色' : '🌙 深色'}</div>
+            </div>
+            <div class="card-body">
+                <div class="card-title">${t.title || t.name}</div>
+                <div class="card-desc">${t.description || ''}</div>
+                <div class="card-meta">
+                    <span class="tag">${t.category || 'general'}</span>
+                    <span class="name-label">${t.name}</span>
+                </div>
+            </div>
+        </a>
+    `).join('');
+}
+
+function filterTemplates() {
+    const theme = document.getElementById('themeFilter').value;
+    const cat = document.getElementById('categoryFilter').value;
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const filtered = allTemplates.filter(t => {
+        if (theme && t.theme !== theme) return false;
+        if (cat && t.category !== cat) return false;
+        if (q && !(t.name.toLowerCase().includes(q) ||
+                   (t.title || '').toLowerCase().includes(q) ||
+                   (t.description || '').toLowerCase().includes(q))) return false;
+        return true;
+    });
+    renderTemplates(filtered);
+}
+
+function getIcon(name) {
+    if (name.startsWith('cover')) return '🎨';
+    if (name.startsWith('toc')) return '📑';
+    if (name.startsWith('section')) return '📂';
+    if (name.includes('chart') || name.includes('data')) return '📊';
+    if (name.includes('timeline')) return '📅';
+    if (name.includes('card')) return '🃏';
+    if (name.includes('list')) return '📋';
+    if (name.includes('table')) return '📈';
+    if (name.includes('team')) return '👥';
+    if (name.includes('closing') || name.includes('end')) return '🎯';
+    if (name.includes('radial')) return '🔘';
+    if (name.includes('compare')) return '⚖️';
+    if (name.includes('flow')) return '🔀';
+    if (name.includes('text')) return '📝';
+    if (name.includes('blank')) return '⬜';
+    if (name.includes('phase')) return '🔄';
+    if (name.includes('honey')) return '🍯';
+    if (name.includes('pyramid')) return '🔺';
+    if (name.includes('node') || name.includes('graph')) return '🕸️';
+    return '📄';
+}
+
+loadTemplates();
+</script>
+{% endblock %}
