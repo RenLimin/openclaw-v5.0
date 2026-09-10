@@ -386,20 +386,92 @@ def risk_scan(contract_id):
     return report
 
 
-def generate_contract_doc(contract_id):
-    """生成合同文档（复用 SCA-001 contract_gen 能力）"""
-    try:
-        from contract_gen import amount_to_chinese
-    except ImportError:
-        # 兼容：如果 import 失败，用本地实现
-        pass
-    try:
-        from docx import Document
-        from docx.shared import Pt
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
-    except ImportError:
-        raise RuntimeError("需要安装 python-docx: pip install python-docx")
+def generate_contract_doc(contract_id, format="docx"):
+    """生成合同文档
 
+    Args:
+        contract_id: 合同 ID
+        format: 输出格式，支持 'docx' / 'md' / 'markdown' / 'txt'
+    """
+    fmt = format.lower()
+    if fmt in ("md", "markdown"):
+        return _generate_markdown_doc(contract_id)
+    if fmt == "txt":
+        return _generate_text_doc(contract_id)
+    # 默认 docx
+    return _generate_docx_doc(contract_id)
+
+
+def _amount_to_chinese(amount):
+    """金额转大写（本地实现）"""
+    digits = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖']
+    units = ['', '拾', '佰', '仟']
+    big_units = ['', '万', '亿', '兆']
+
+    amount = round(amount, 2)
+    int_part = int(amount)
+    dec_part = int(round((amount - int_part) * 100))
+
+    def _convert_group(n):
+        result = ''
+        zero_flag = False
+        for i in range(4):
+            digit = n % 10
+            if digit == 0:
+                zero_flag = True
+            else:
+                if zero_flag and result:
+                    result = '零' + result
+                result = digits[digit] + units[i] + result
+                zero_flag = False
+            n //= 10
+            if n == 0:
+                break
+        return result
+
+    if int_part == 0:
+        result = '零元'
+    else:
+        groups = []
+        n = int_part
+        while n > 0:
+            groups.append(n % 10000)
+            n //= 10000
+        result_parts = []
+        for i in range(len(groups) - 1, -1, -1):
+            g = groups[i]
+            if g == 0:
+                # 全零组只补一个零（且不跟在末尾）
+                if result_parts and not result_parts[-1].endswith('零') and i > 0:
+                    result_parts.append('零')
+                continue
+            group_str = _convert_group(g)
+            # 组内高位为零且前面有内容时补零
+            if g < 1000 and i < len(groups) - 1 and result_parts:
+                group_str = '零' + group_str
+            if i > 0:
+                group_str += big_units[i]
+            result_parts.append(group_str)
+        # 去掉结尾多余的"零"
+        combined = ''.join(result_parts)
+        if combined.endswith('零'):
+            combined = combined[:-1]
+        result = combined + '元'
+
+    if dec_part == 0:
+        result += '整'
+    else:
+        jiao = dec_part // 10
+        fen = dec_part % 10
+        if jiao > 0:
+            result += digits[jiao] + '角'
+        if fen > 0:
+            result += digits[fen] + '分'
+    return result
+
+
+def _get_contract_data(contract_id):
+    """获取合同数据（公共方法）"""
     conn = _get_db()
     contract_row = conn.execute(
         "SELECT * FROM contracts WHERE id = ?", (contract_id,)
@@ -407,54 +479,12 @@ def generate_contract_doc(contract_id):
     conn.close()
     if not contract_row:
         raise ValueError(f"合同 ID {contract_id} 不存在")
-    data = dict(contract_row)
+    return dict(contract_row)
 
-    amount_cn = amount_to_chinese(data["amount"])
 
-    doc = Document()
-    style = doc.styles["Normal"]
-    style.font.name = "宋体"
-    style.font.size = Pt(12)
-
-    # 标题
-    title = doc.add_paragraph()
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title.add_run(data["title"])
-    run.bold = True
-    run.font.size = Pt(22)
-
-    # 合同编号
-    p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    p.add_run(f"合同编号：{data['contract_no']}").font.size = Pt(10)
-
-    doc.add_paragraph()
-
-    # 双方信息
-    p = doc.add_paragraph()
-    p.add_run(f"甲方（委托方）：{data['party_a']}").bold = True
-    p = doc.add_paragraph()
-    p.add_run(f"地址：{data.get('party_a_address') or '___________'}")
-
-    doc.add_paragraph()
-
-    p = doc.add_paragraph()
-    p.add_run(f"乙方（受托方）：{data['party_b']}").bold = True
-    p = doc.add_paragraph()
-    p.add_run(f"地址：{data.get('party_b_address') or '___________'}")
-
-    doc.add_paragraph()
-
-    # 前言
-    p = doc.add_paragraph()
-    p.add_run(
-        f"甲方委托乙方就 {data['title']} 项目进行专项技术服务，"
-        f"并支付相应的技术服务报酬。双方经过平等协商，"
-        f"根据《中华人民共和国民法典》的规定，达成如下协议。"
-    )
-
-    # 条款
-    sections = [
+def _contract_sections(data, amount_cn):
+    """合同条款（公共数据）"""
+    return [
         ("第一条 技术服务内容", [
             f"1. 服务目标：{data['title']}",
             "2. 服务内容：详见双方约定的服务清单。",
@@ -500,6 +530,152 @@ def generate_contract_doc(contract_id):
         ]),
     ]
 
+
+def _generate_markdown_doc(contract_id):
+    """生成 Markdown 格式合同文档"""
+    data = _get_contract_data(contract_id)
+    amount_cn = _amount_to_chinese(data["amount"])
+    sections = _contract_sections(data, amount_cn)
+
+    lines = []
+    lines.append(f"# {data['title']}")
+    lines.append("")
+    lines.append(f"**合同编号：** {data['contract_no']}")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"**甲方（委托方）：** {data['party_a']}")
+    lines.append(f"**地址：** {data.get('party_a_address') or '___________'}")
+    lines.append("")
+    lines.append(f"**乙方（受托方）：** {data['party_b']}")
+    lines.append(f"**地址：** {data.get('party_b_address') or '___________'}")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(
+        f"甲方委托乙方就 {data['title']} 项目进行专项技术服务，"
+        f"并支付相应的技术服务报酬。双方经过平等协商，"
+        f"根据《中华人民共和国民法典》的规定，达成如下协议。"
+    )
+    lines.append("")
+
+    for heading, items in sections:
+        lines.append(f"## {heading}")
+        lines.append("")
+        for item in items:
+            lines.append(f"{item}")
+            lines.append("")
+
+    lines.append("---")
+    lines.append("")
+    lines.append("**签署页**")
+    lines.append("")
+    lines.append("")
+    lines.append(f"甲方（盖章）：{data['party_a']}  ")
+    lines.append("法定代表人（签字）：__________________  ")
+    lines.append("签字日期：______年____月____日  ")
+    lines.append("")
+    lines.append(f"乙方（盖章）：{data['party_b']}  ")
+    lines.append("法定代表人（签字）：__________________  ")
+    lines.append("签字日期：______年____月____日  ")
+    lines.append("")
+
+    content = "\n".join(lines)
+    output_path = os.path.join(config.OUTPUT_DIR, f"{data['contract_no']}.md")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    return {
+        "output_path": output_path,
+        "contract_no": data["contract_no"],
+        "format": "markdown",
+        "word_count": len(content),
+    }
+
+
+def _generate_text_doc(contract_id):
+    """生成纯文本合同（从 Markdown 转换）"""
+    import re
+    result = _generate_markdown_doc(contract_id)
+    md_path = result["output_path"]
+
+    with open(md_path, "r", encoding="utf-8") as f:
+        md_content = f.read()
+
+    text = md_content
+    text = re.sub(r'^#{1,6}\s*', '', text, flags=re.MULTILINE)
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'^---$', '=' * 40, text, flags=re.MULTILINE)
+    text = re.sub(r'  $', '', text, flags=re.MULTILINE)
+
+    txt_path = md_path.replace(".md", ".txt")
+    with open(txt_path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+    return {
+        "output_path": txt_path,
+        "contract_no": result["contract_no"],
+        "format": "text",
+    }
+
+
+def _generate_docx_doc(contract_id):
+    """生成 DOCX 格式合同文档"""
+    try:
+        from docx import Document
+        from docx.shared import Pt
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+    except ImportError:
+        raise RuntimeError("需要安装 python-docx: pip install python-docx")
+
+    data = _get_contract_data(contract_id)
+    amount_cn = _amount_to_chinese(data["amount"])
+    sections = _contract_sections(data, amount_cn)
+
+    doc = Document()
+    style = doc.styles["Normal"]
+    style.font.name = "宋体"
+    style.font.size = Pt(12)
+
+    # 标题
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = title.add_run(data["title"])
+    run.bold = True
+    run.font.size = Pt(22)
+
+    # 合同编号
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    p.add_run(f"合同编号：{data['contract_no']}").font.size = Pt(10)
+
+    doc.add_paragraph()
+
+    # 双方信息
+    p = doc.add_paragraph()
+    p.add_run(f"甲方（委托方）：{data['party_a']}").bold = True
+    p = doc.add_paragraph()
+    p.add_run(f"地址：{data.get('party_a_address') or '___________'}")
+
+    doc.add_paragraph()
+
+    p = doc.add_paragraph()
+    p.add_run(f"乙方（受托方）：{data['party_b']}").bold = True
+    p = doc.add_paragraph()
+    p.add_run(f"地址：{data.get('party_b_address') or '___________'}")
+
+    doc.add_paragraph()
+
+    # 前言
+    p = doc.add_paragraph()
+    p.add_run(
+        f"甲方委托乙方就 {data['title']} 项目进行专项技术服务，"
+        f"并支付相应的技术服务报酬。双方经过平等协商，"
+        f"根据《中华人民共和国民法典》的规定，达成如下协议。"
+    )
+
+    # 条款
     for heading, items in sections:
         doc.add_heading(heading, level=2)
         for item in items:
@@ -517,10 +693,14 @@ def generate_contract_doc(contract_id):
     doc.add_paragraph("签字日期：______年____月____日")
 
     output_path = os.path.join(config.OUTPUT_DIR, f"{data['contract_no']}.docx")
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     doc.save(output_path)
 
-    return {"output_path": output_path, "contract_no": data["contract_no"]}
-
+    return {
+        "output_path": output_path,
+        "contract_no": data["contract_no"],
+        "format": "docx",
+    }
 
 def get_contract(contract_id):
     """获取合同详情"""
