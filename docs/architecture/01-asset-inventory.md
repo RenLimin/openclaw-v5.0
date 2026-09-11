@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-09 15:06 UTC+08:00
+最后生成：2026-09-11 14:30 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,13 +23,14 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 64 个（启用 33） · bundled 59 · global 5
+**总计** 65 个（启用 34） · bundled 59 · global 6
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
 | ID | 来源 | 提供的工具 | 提供的能力 |
 |---|---|---|---|
 | `llama-cpp` | global | — | model-provider: llama-cpp |
+| `longcat` | global | — | model-provider: longcat |
 | `memory-core` | bundled | `intent`, `memory_get`, `memory_search` | — |
 | `ollama` | bundled | `node_inference` | web-search: ollama; model-provider: ollama, ollama-cloud |
 | `openclaw-weixin` | global | — | channel: openclaw-weixin |
@@ -41,7 +42,7 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 101 个（可用 90）
+**总计** 102 个（可用 91）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
@@ -49,12 +50,19 @@
 | `openclaw-custodian` | 4 | — |
 | `openclaw-extra` | 22 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
+| `openclaw-workspace` | 1 | **本 workspace 自建**（受版本控制） |
+
+### 自建技能（workspace）
+
+| 名称 | 描述 |
+|---|---|
+| `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 |
 
 ## L2 — Agent 资产
 
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
-| `main` | 🦞 main | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | — |
+| `main` | 🦞 main | `longcat/LongCat-2.0` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-coding` | 🦞 ms-coding | `coding-plan/doubao-seed-code-preview-251028` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-research` | 🦞 ms-research | `coding-plan/doubao-seed-2-1-turbo` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-reasoning` | 🦞 ms-reasoning | `coding-plan/deepseek-v4-flash` | `/Users/bangcle/.openclaw/workspace` | — |
@@ -103,14 +111,15 @@
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
+| 模型注册表同步 | ✅ | cron `*/15 * * * *` | `isolated` |
 | provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
+| 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 每日观测摘要投递 | ✅ | cron `50 23 * * *` | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
-| 仓库健康检查 | ✅ | cron `0 9 * * *` | `isolated` |
+| 仓库健康检查 | ✅ | cron `0 9 * * *` | `current` |
 | 内存维护（每周整理） | ✅ | cron `0 10 * * 1` | `isolated` |
 
 ## 文档资产
@@ -187,8 +196,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `70784d17` |
-| Commit 数 | 279 |
+| HEAD | `5d21f2eb` |
+| Commit 数 | 293 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

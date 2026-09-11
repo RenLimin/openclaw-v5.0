@@ -123,5 +123,5 @@ class BaseRepository[T]:
 
     def _current_tenant(self) -> str:
         """获取当前租户，从 BaseModel 上下文获取"""
-        from ..models.base import TenantContext
+        from models.base import TenantContext
         return TenantContext.current()

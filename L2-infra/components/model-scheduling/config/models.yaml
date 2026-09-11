@@ -5,8 +5,8 @@
 # status: active | disabled | exhausted
 # tags: coding | reasoning | cheap | fast | image | embedding
 #
-# 生成时间: 2026-09-09T07:56:52+0800
-# 模型总数: 7
+# 生成时间: 2026-09-11T14:30:16+0800
+# 模型总数: 9
 
 models:
   # Provider: coding-plan
@@ -99,6 +99,33 @@ models:
     max_tokens: 1
     input_types: ["text"]
     reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  # Provider: deepseek
+  - id: "deepseek/deepseek-chat"
+    provider: "deepseek"
+    model_id: "deepseek-chat"
+    name: "DeepSeek V3 (chat)"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "deepseek/deepseek-reasoner"
+    provider: "deepseek"
+    model_id: "deepseek-reasoner"
+    name: "DeepSeek R1 (reasoning)"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: true
     cost_input: 0
     cost_output: 0
     status: "active"
