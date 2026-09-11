@@ -1,3 +1,3 @@
-from .module_registry import ModuleRegistry, ModuleManifest
+from registry.module_registry import ModuleRegistry, ModuleManifest
 
 __all__ = ["ModuleRegistry", "ModuleManifest"]

@@ -291,18 +291,16 @@ class AccountingEngine:
 
         自动验证借方合计 = 贷方合计
         """
-        # 验证借贷平衡
-        debit_total = Decimal("0")
-        credit_total = Decimal("0")
+        # 验证每条 entry 的账户存在且借贷不同
         for debit_id, credit_id, amount in entries:
-            amt = _to_decimal(amount)
-            debit_total += amt
-            credit_total += amt
-
-        if debit_total != credit_total:
-            raise ValueError(
-                f"借贷不平衡: 借方 {debit_total} ≠ 贷方 {credit_total}"
-            )
+            if debit_id not in self._accounts:
+                raise ValueError(f"借方账户不存在: {debit_id}")
+            if credit_id not in self._accounts:
+                raise ValueError(f"贷方账户不存在: {credit_id}")
+            if debit_id == credit_id:
+                raise ValueError("借贷不能为同一账户")
+            if _to_decimal(amount) <= 0:
+                raise ValueError(f"金额必须 > 0，收到: {amount}")
 
         txns = []
         for debit_id, credit_id, amount in entries:

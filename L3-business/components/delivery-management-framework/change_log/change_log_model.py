@@ -6,7 +6,7 @@ ChangeLog Model — 变更日志记录
 
 from dataclasses import dataclass
 from typing import Optional
-from L3-business.components.delivery-management-framework.models.base import BaseModel
+from models.base import BaseModel
 
 @dataclass
 class ChangeLog(BaseModel):
@@ -22,7 +22,7 @@ class ChangeLog(BaseModel):
     def dict(self):
         return super().dict()
 
-from L3-business.components.delivery-management-framework.repo.base_repo import BaseRepository
+from repo.base_repo import BaseRepository
 
 class ChangeLogRepository(BaseRepository[ChangeLog]):
     """变更日志 Repository"""

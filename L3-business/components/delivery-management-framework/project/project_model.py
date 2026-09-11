@@ -7,7 +7,7 @@ Project Model — 项目核心模型
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 import datetime
-from L3-business.components.delivery-management-framework.models.base import BaseModel
+from models.base import BaseModel
 
 @dataclass
 class Project(BaseModel):
@@ -42,7 +42,7 @@ class Project(BaseModel):
             d["proprietary_metadata"] = json.dumps(d["proprietary_metadata"])
         return d
 
-from L3-business.components.delivery-management-framework.repo.base_repo import BaseRepository
+from repo.base_repo import BaseRepository
 
 class ProjectRepository(BaseRepository[Project]):
     """项目 Repository"""

@@ -7,7 +7,7 @@ Project Member Model — 项目成员模型
 from dataclasses import dataclass
 from typing import Optional
 from datetime import datetime
-from L3-business.components.delivery-management-framework.models.base import BaseModel
+from models.base import BaseModel
 
 @dataclass
 class ProjectMember(BaseModel):
@@ -20,7 +20,7 @@ class ProjectMember(BaseModel):
     def dict(self):
         return super().dict()
 
-from L3-business.components.delivery-management-framework.repo.base_repo import BaseRepository
+from repo.base_repo import BaseRepository
 
 class ProjectMemberRepository(BaseRepository[ProjectMember]):
     """项目成员 Repository"""

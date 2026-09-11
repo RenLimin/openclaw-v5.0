@@ -9,7 +9,7 @@ WorkItem Model — 统一工作项模型
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 import datetime
-from L3-business.components.delivery-management-framework.models.base import BaseModel
+from models.base import BaseModel
 
 @dataclass
 class WorkItem(BaseModel):
@@ -44,7 +44,7 @@ class WorkItem(BaseModel):
             d["metadata"] = json.dumps(d["metadata"])
         return d
 
-from L3-business.components.delivery-management-framework.repo.base_repo import BaseRepository
+from repo.base_repo import BaseRepository
 
 class WorkItemRepository(BaseRepository[WorkItem]):
     """工作项 Repository"""

@@ -6,7 +6,7 @@ Stakeholder Model — 干系人模型
 
 from dataclasses import dataclass
 from typing import Optional
-from L3-business.components.delivery-management-framework.models.base import BaseModel
+from models.base import BaseModel
 
 @dataclass
 class Stakeholder(BaseModel):
@@ -22,7 +22,7 @@ class Stakeholder(BaseModel):
     def dict(self):
         return super().dict()
 
-from L3-business.components.delivery-management-framework.repo.base_repo import BaseRepository
+from repo.base_repo import BaseRepository
 
 class StakeholderRepository(BaseRepository[Stakeholder]):
     """干系人 Repository"""

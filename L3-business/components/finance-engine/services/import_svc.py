@@ -9,7 +9,7 @@ from finance_engine.core.db.repositories import (
     ImportRuleRepository, CategoryRepository, AccountRepository,
     TransactionRepository, AuditLogRepository
 )
-from finance_engine.core.services.category_engine import CategoryEngine, CategoryRule
+from finance_engine.services.category_engine import CategoryEngine, CategoryRule
 
 
 class ImportService:

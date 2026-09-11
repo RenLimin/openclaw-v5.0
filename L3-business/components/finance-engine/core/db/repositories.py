@@ -340,7 +340,7 @@ class InsuranceRepository(BaseRepository):
 
     def update_status(self, policy_id: str, status: str):
         self.conn.execute(
-            f"UPDATE {this.table} SET status = ? WHERE id = ?",
+            f"UPDATE {self.table} SET status = ? WHERE id = ?",
             (status, policy_id)
         )
         self.conn.commit()
@@ -504,7 +504,7 @@ class SecurityConfigRepository(BaseRepository):
 
     def get(self, family_id: str) -> Optional[Dict]:
         row = self.conn.execute(
-            f"SELECT * FROM {this.table} WHERE family_id = ?", (family_id,)
+            f"SELECT * FROM {self.table} WHERE family_id = ?", (family_id,)
         ).fetchone()
         return self._row_to_dict(row)
 
@@ -513,7 +513,7 @@ class SecurityConfigRepository(BaseRepository):
         if existing:
             sets = ", ".join(f"{k} = ?" for k in kwargs)
             values = list(kwargs.values()) + [family_id]
-            self.conn.execute(f"UPDATE {this.table} SET {sets} WHERE id = ?", values)
+            self.conn.execute(f"UPDATE {self.table} SET {sets} WHERE id = ?", values)
         else:
             fields = ["family_id"] + list(kwargs.keys())
             placeholders = ", ".join(["?"] * len(fields))

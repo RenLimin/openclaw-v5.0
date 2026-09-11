@@ -6,7 +6,7 @@ Responsibility Assignment Model — RACI 责任分配模型
 
 from dataclasses import dataclass
 from typing import Optional
-from L3-business.components.delivery-management-framework.models.base import BaseModel
+from models.base import BaseModel
 
 @dataclass
 class ResponsibilityAssignment(BaseModel):
@@ -21,7 +21,7 @@ class ResponsibilityAssignment(BaseModel):
     def dict(self):
         return super().dict()
 
-from L3-business.components.delivery-management-framework.repo.base_repo import BaseRepository
+from repo.base_repo import BaseRepository
 
 class ResponsibilityAssignmentRepository(BaseRepository[ResponsibilityAssignment]):
     """责任分配 Repository"""
