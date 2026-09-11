@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 4.3 (2026-09-11 — L2 组件表路径加 L2-infra/ 前缀; fin-l4 组件+技能纳入 L4; session-orchestrator 标记废弃) |
+| 文档版本 | 4.4 (2026-09-12 — L2 组件表补录 logs 组件) |
 | 文档状态 | active |
 | 运行时 cron | 7 个活跃业务 cron（错误扫描/provider健康探测/会话错误处理/备份/会话生命周期/记忆健康/每日观测投递）；3 个任务 disabled（2 个 ms 心跳 + 1 个技能审阅） |
 | 决策状态 | 5 层架构已锁定(ADR-012); 28 份 ADR accepted; L3 FIN 引擎已迁 L3; L4 五个组件已上线(新增 CISSP 学习系统) |
@@ -676,6 +676,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 模型调度 | `L2-infra/components/model-scheduling/` | ✅ | 智能路由 + 多级 fallback + token 压缩 + 用量感知 | ✅ 已上线 |
 | 文档数字化(OCR) | `L2-infra/components/ocr-digitalization/` | ✅ | 多后端引擎 + 预处理管线 + 质量评分 + 后处理纠错 | ✅ 已上线 |
 | Office 文档生成 | `L2-infra/components/office-generation/` | ✅ | Word/Excel/PPT 统一 SDK + 6 库工具链 | ✅ 已上线 |
+| 日志管理 | `L2-infra/components/logs/` | ✅ | 骨架阶段（目录结构预留，observability 子目录） | 📐 骨架阶段 |
 
 > **命名对齐**（2026-09-11）：config-management→config, sandbox-isolation→sandbox，统一为简短命名。
 
@@ -1054,6 +1055,7 @@ L4 专有业务
 | 2026-09-02 | 2.11 | 新增 L2 OCR 文档数字化组件(OCR-001,ADR-023): 扫描件/图片→高精度文本。RapidOCR主引擎+Paddle可选+600DPI+8版本预处理+版面分析+合同场景40+规则纠错。与Office文档生成(ADR-016)形成一读一写对偶。10页扫描件合同实测通过。 |
 | 2026-09-03 | **3.0** | **L3 家庭及个人理财通用框架(FIN)启动: 6 个 FIN 组件设计齐备(ADR-026 accepted), DESIGN.md v1.0, 架构 v3.0 同步** |
 | 2026-09-01 | **2.9** | **L4 交付中心运营引擎(BDMS v1.0)完整发布**: 24 个 Python 文件,3157 行代码。M1 数据采集(5个采集器) + M2 业务引擎(4个) + M3 报告生成(2个) + M4 审批流程 + M5 调度监控。端到端验证通过。** |
+| 2026-09-12 | **4.4** | **L2 logs 组件补录**: 补录 `L2-infra/components/logs/` 到 L2 组件表（骨架阶段，有 README + DESIGN.md 但未在文档声明）。 |
 | 2026-09-11 | **4.3** | **L2 路径补全 + fin-l4 纳入**: ① L2 组件表 19 处路径加 `L2-infra/` 前缀（消除旧格式 `components/xxx/`）；② L4 新增 fin-l4 组件（家庭理财实例引擎，ADR-027）；③ L4 新增 fin-l4 技能（FIN-L4 6 大模块）；④ session-orchestrator 标记为 ❌ 已废弃（已并入 session-isolation 子模块）。 |
 | 2026-09-11 | **4.2** | **路径精确化 + 技能体系文档化**: ① L3 组件表 9 处路径加 `L3-business/components/` 前缀；② L4 组件表 3 处路径加 `L4-proprietary/components/` 前缀 + bangcle-ppt-template→bangcle-ppt 修正；③ L2-infra/skills 机制说明（dag-orchestrator/role-library/ocr-digitalization 三个技能）；④ L4 ones-browser-export 技能纳入；⑤ mcp-server 标记为 📋 预留；⑥ session-lifecycle/error-handling DESIGN.md 引用修正（功能已集成至其他组件）。 |
 | 2026-09-11 | **4.0** | **L3/L4 全量对齐 + L2 路径修复**: ① L3 纳入 6 个未声明组件（DMS 核心框架/CISSP 学习/健康管理/办公业务/家庭理财引擎 + finance_engine symlink 说明）；② L4 纳入 2 个未声明组件（CISSP 训练/Office 合同）+ 已废弃组件声明；③ L1 纳入 error-handler 为第 5 个自建组件；④ L2 修复 6 处过时路径（`scripts/` → `components/<name>/`）；⑤ L2 组件计数修正 17→18（补入 session-isolation-sharing/knowledge-base/model-scheduling/OCR/Office 生成）；⑥ L2 DESIGN.md 全部标记为 ✅。 |
