@@ -1,0 +1,20 @@
+id: task-20260911-finance-tests
+name: finance-engine 组件补充测试
+status: in-progress
+priority: high
+created_at: 2026-09-11T13:20:19+0800
+updated_at: 2026-09-11T13:20:19+0800
+owner: subagent-test-finance-engine
+scope:
+  project: openclaw-v5.0
+  component: finance-engine
+  version: v1
+goals:
+- id: g1
+  description: Initialize task
+  status: in-progress
+dependencies: []
+blockers: []
+context:
+- path: L3-business/components/finance-engine/
+artifacts: []

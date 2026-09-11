@@ -54,7 +54,7 @@ VALID_BUSINESS_CATEGORIES = {"industry-practice", "theoretical-knowledge", "proj
 VALID_XREF_RELATIONS = {"implements", "extends", "referenced_by", "related", "depends_on"}
 
 # --- 三维模型合法值（ADR-002）---
-VALID_LAYERS = {"L1", "L2", "L3", "L4"}
+VALID_LAYERS = {"L0", "L1", "L2", "L3", "L4"}
 VALID_STAGES = {"design", "develop", "manage"}
 VALID_CATEGORIES = {"industry-practice", "theoretical-knowledge", "project-experience"}
 

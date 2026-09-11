@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # git pre-commit hook: 自动重生成系统资产清单 + 提醒配置快照
-# 安装: .git/hooks/pre-commit (本文件由 workspace 管理, 见 L2-infra/components/config-management/install-hooks.sh)
+# 安装: .git/hooks/pre-commit (本文件由 workspace 管理, 见 L2-infra/components/config/install-hooks.sh)
 #
 # 行为:
 #   1. 重生成资产清单, 有变化则自动加入本次提交
@@ -15,20 +15,20 @@ cd "$(git rev-parse --show-toplevel)"
 # --- 1. 资产清单 ---
 echo "🔄 正在重生成系统资产清单..."
 
-if python3 L2-infra/components/config-management/gen_asset_inventory.py --check >/dev/null 2>&1; then
+if python3 L2-infra/components/config/gen_asset_inventory.py --check >/dev/null 2>&1; then
     echo "✅ 资产清单是最新的"
 else
-    python3 L2-infra/components/config-management/gen_asset_inventory.py
+    python3 L2-infra/components/config/gen_asset_inventory.py
     git add docs/architecture/01-asset-inventory.md
     echo "✅ 资产清单已更新并加入本次提交"
 fi
 
 # --- 2. 配置快照 (见 docs/conventions/commit-and-config.md) ---
-if [ -f L2-infra/components/config-management/snapshot_config.py ]; then
-    if ! python3 L2-infra/components/config-management/snapshot_config.py --check >/dev/null 2>&1; then
+if [ -f L2-infra/components/config/snapshot_config.py ]; then
+    if ! python3 L2-infra/components/config/snapshot_config.py --check >/dev/null 2>&1; then
         echo "⚠️  ~/.openclaw/openclaw.json 有未快照的变更"
         echo "    如本次提交涉及配置改动, 请运行:"
-        echo "      python3 L2-infra/components/config-management/snapshot_config.py && git add config-snapshots/"
+        echo "      python3 L2-infra/components/config/snapshot_config.py && git add config-snapshots/"
     else
         echo "✅ 配置快照是最新的"
     fi
