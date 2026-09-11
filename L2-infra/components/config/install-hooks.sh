@@ -2,17 +2,17 @@
 # 安装 git hooks 到 .git/hooks/
 #
 # .git/ 不受版本控制，clone 后 hook 会丢失。
-# canonical 版本存放在 L2-infra/components/config-management/git-hooks/，本脚本负责安装。
+# canonical 版本存放在 L2-infra/components/config/git-hooks/，本脚本负责安装。
 #
 # 用法:
-#   bash L2-infra/components/config-management/install-hooks.sh          # 安装
-#   bash L2-infra/components/config-management/install-hooks.sh --check  # 检查已安装的是否与 canonical 一致
+#   bash L2-infra/components/config/install-hooks.sh          # 安装
+#   bash L2-infra/components/config/install-hooks.sh --check  # 检查已安装的是否与 canonical 一致
 
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-SRC_DIR="L2-infra/components/config-management/git-hooks"
+SRC_DIR="L2-infra/components/config/git-hooks"
 DST_DIR=".git/hooks"
 
 if [ ! -d "$SRC_DIR" ]; then
@@ -49,7 +49,7 @@ done
 if [ "$CHECK_ONLY" -eq 1 ]; then
     if [ "$drift" -eq 1 ]; then
         echo ""
-        echo "运行 bash L2-infra/components/config-management/install-hooks.sh 修复"
+        echo "运行 bash L2-infra/components/config/install-hooks.sh 修复"
         exit 1
     fi
     exit 0

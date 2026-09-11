@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 3.7 (2026-09-08 — 会话任务编排并入 session-isolation 子模块,不新建独立组件;多子会话并行编排设计落库) |
+| 文档版本 | 3.9 (2026-09-11 — L0-gateway 纳入架构文档; L1-runtime 路径对齐 + 自建组件纳入; L2 DESIGN.md 全量补齐 18/18;命名对齐) |
 | 文档状态 | active |
 | 运行时 cron | 7 个活跃业务 cron（错误扫描/provider健康探测/会话错误处理/备份/会话生命周期/记忆健康/每日观测投递）；3 个任务 disabled（2 个 ms 心跳 + 1 个技能审阅） |
 | 决策状态 | 5 层架构已锁定(ADR-012); 28 份 ADR accepted; L3 FIN 引擎已迁 L3; L4 五个组件已上线(新增 CISSP 学习系统) |
@@ -189,6 +189,17 @@ L1 → 任何上层              (禁止 — 反向依赖)
 
 **当前状态**: 🚧 部分就绪（OpenClaw 全流程可跑通，其他运行时 registry 预留）
 
+#### 3.1.1 L0 双子层划分（见 §3.1.2）
+
+L0 包含两个同级子层：
+
+| 子层 | 目录 | 职责 | 状态 |
+|---|---|---|---|
+| **L0 Install**（安装侧） | `L0-install/` | 运行时选型、安装流水线、契约测试、部署清单 | 🚧 部分就绪 |
+| **L0 Gateway**（网关侧） | `L0-gateway/` | 消息接入、认证鉴权、会话管理、消息路由 | 📐 骨架阶段 |
+
+> L0 Install 管"怎么装"，L0 Gateway 管"消息怎么进出"。两者同属 L0 系统外层，但职责正交。
+
 **设计文档**: `L0-install/DESIGN.md`
 
 **运行时注册表**: `L0-install/registry/`（每个运行时一个 YAML 文件）
@@ -199,9 +210,45 @@ L1 → 任何上层              (禁止 — 反向依赖)
 
 **部署清单**: `L0-install/manifest/`（系统资产 + 运行时部署映射）
 
+#### 3.1.2 L0 Gateway — 消息网关与接入层
+
+**目录**: `L0-gateway/`
+
+**职责**: 系统的流量入口与出口，负责所有外部通道的接入、认证、会话生命周期管理与消息路由。
+
+**架构模式**: 管道-过滤器。每条入站消息经过处理链：认证 → 限流 → 协议转换 → 路由 → 会话绑定 → L1 Agent。
+
+| 组件 | 目录 | 职责 | 状态 |
+|---|---|---|---|
+| auth-gateway | `L0-gateway/components/auth-gateway/` | 身份认证（签名/Token/API Key）、接入授权、速率限制、审计日志 | 📐 骨架 |
+| channel-router | `L0-gateway/components/channel-router/` | 入站接收、协议转换、路由分发、出站投递、通道注册 | 📐 骨架 |
+| session-manager | `L0-gateway/components/session-manager/` | 会话创建/查找/恢复/状态流转（active→idle→archived→deleted） | 📐 骨架 |
+
+**入站流程**:
+```
+通道适配器接收原始消息
+  → 转为统一 InternalMessage
+  → AuthProvider 验证身份
+  → RateLimiter 检查速率
+  → SessionManager 获取或创建会话
+  → Router 路由到目标 Agent（通过 L1 RuntimeAdapter 触发执行）
+```
+
+**设计决策**:
+
+| 决策 | 选择 | 理由 |
+|---|---|---|
+| 消息模型 | 统一内部 Message 模型 | 通道协议差异在 adapter 层消化 |
+| 会话存储 | 抽象 SessionStore 接口 | 默认内存实现，可切换到 Redis/L1 Memory |
+| 认证模型 | 可插拔 AuthProvider | 不同通道用不同认证方式 |
+| 限流策略 | 令牌桶 + 漏桶组合 | 突发流量用令牌桶，持续流量用漏桶 |
+
+**依赖**: L1 RuntimeAdapter（session-manager 持久化依赖 L1 Memory）
+
 **演进方式**:
 - 新增运行时 = 新增适配层 + 选型选项
 - 不影响已有 L2-L4
+- 新增通道 = 新增 channel-router 适配器
 
 ### 3.2 L1 — 运行时抽象层 (Runtime Abstraction Layer)
 
@@ -212,7 +259,7 @@ L1 → 任何上层              (禁止 — 反向依赖)
 **设计约束**:
 - **不可直接调用**: L2-L4 只能通过抽象接口调用,不能直接引用具体运行时 API
 - **最小契约**: 只抽象当前实际需要的接口,不为未来假设过度设计
-- **适配层隔离**: 每个运行时一个适配层,放在 `adapters/<runtime>/` 目录下
+- **适配层隔离**: 每个运行时一个适配层,放在 `L1-runtime/adapters/<runtime>/` 目录下
 
 #### 3.2.1 L1 最小能力契约
 
@@ -234,14 +281,24 @@ Agent 运行时必须提供以下能力,无论底层框架是什么:
 #### 3.2.2 适配层规范
 
 ```
-adapters/
-├── openclaw/          ← 当前默认实现
-│   ├── adapter.py     ← L1 抽象接口的 OpenClaw 实现
-│   ├── config.py      ← OpenClaw 特有配置映射
-│   └── health.py      ← OpenClaw 健康检查
-├── claude-code/       ← 未来可选(待实现)
-├── crewai/            ← 未来可选(待实现)
-└── custom/            ← 自研运行时(待实现)
+L1-runtime/
+├── adapters/                          ← 适配层（按运行时隔离）
+│   ├── base/                          ← 抽象基类（Runtime/MEMORY/Channel/Sandbox/Credential 接口）
+│   ├── openclaw/                      ← 当前默认实现
+│   │   └── openclaw/
+│   │       ├── adapter.py             ← L1 抽象接口的 OpenClaw 实现
+│   │       ├── runtime_adapter.py     ← 运行时适配器
+│   │       ├── config.py              ← OpenClaw 特有配置映射
+│   │       └── health.py              ← OpenClaw 健康检查
+│   ├── registry.py                    ← 适配层注册表
+│   ├── claude-code/                   ← 未来可选(待实现)
+│   ├── crewai/                        ← 未来可选(待实现)
+│   └── custom/                        ← 自研运行时(待实现)
+└── components/                        ← L1 自建组件
+    ├── tool-policy/                   ← 工具策略与权限（骨架）
+    ├── context-bus/                   ← 跨层事件总线（骨架）
+    ├── agent-registry/                ← Agent 注册与发现（骨架）
+    └── telemetry/                     ← 遥测与指标收集（骨架）
 ```
 
 适配层职责:
@@ -297,6 +354,19 @@ adapters/
 | 上下文管理 | ✅ 全量使用 | 自动压缩 + 溢出防护状态机 |
 | 健康检查 | ✅ 全量使用 | 全面自检 + 行为探针 |
 
+#### 3.2.5 L1 自建组件（2026-09-11 纳入）
+
+L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1 抽象契约**，为 L2/L3 提供横切能力。
+
+| 组件 | 目录 | 职责 | 状态 |
+|---|---|---|---|
+| **tool-policy** | `L1-runtime/components/tool-policy/` | 工具白/黑名单、策略评估（allow/deny/need-approval）、速率限制 | 📐 骨架 |
+| **context-bus** | `L1-runtime/components/context-bus/` | 跨层事件发布/订阅、请求/响应、上下文传播（trace_id/会话/用户身份） | 📐 骨架 |
+| **agent-registry** | `L1-runtime/components/agent-registry/` | Agent 声明式注册、按能力/角色/标签发现、实例化 | 📐 骨架 |
+| **telemetry** | `L1-runtime/components/telemetry/` | 指标（计数器/直方图/计时器）、分布式追踪、结构化日志收集 | 📐 骨架 |
+
+> **定位**：L1 自建组件是 L1 层的"能力增强"，为上层提供标准化的横切服务。与 L2 的区别在于——L1 组件**仅依赖 L1 抽象契约**，而 L2 组件依赖 L1 + 可能依赖其他 L2。
+
 ### 3.3 L2 — 基础设施层 (Infrastructure Layer)
 
 **来源**: 自定义
@@ -330,6 +400,9 @@ adapters/
 | **文档数字化(OCR)** | 扫描件/图片→高精度文本（多引擎+预处理+版面分析+纠错） | 已上线 | ✅ |
 | **工具/技能封装** | domain-specific skills、工具二次封装 | 复用 + 自建 | 🚧 |
 | **调度/任务编排** | 定时任务、隔离运行、心跳 | 复用 L1 | 📋 |
+| **会话恢复** | 长任务断点续跑 + 失败自动重试 | 已上线 | ✅ |
+| **Web 通用组件** | 模板宏 + 静态资源 + 示例应用 | 已上线 | ✅ |
+| **维护工具** | Colima/Docker 健康检查 + 仓库维护 | 已上线 | ✅ |
 
 > **状态取值口径**: `已上线` 要求 **ADR + DESIGN.md + 实现** 三件齐备。
 
@@ -545,7 +618,29 @@ adapters/
 
 
 **L2 组件建设状态**: **17 个 L2 基础设施组件设计齐备**,其中 17 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测 + 会话隔离与共享),0 个设计态(会话任务编排已并入会话隔离与共享组件,不再单独计数)。
-总计 `docs/architecture/components/` 目录下有 **23 个 DESIGN.md**（含 L3/L4 组件设计）。
+总计 `docs/architecture/components/` 目录下有 **26 个 DESIGN.md**（含 L3/L4 组件设计）。
+
+### 新增 L2 基础设施组件（2026-09-11 纳入）
+
+以下组件此前有实现代码但未在架构文档中声明，现正式纳入：
+
+| 组件 | 目录 | DESIGN.md | 实现 | 当前状态 |
+|---|---|---|---|---|
+| 会话恢复 | `L2-infra/components/session-recovery/` | ❌ 待补 | task_tracker.py + check_and_retry.py + cron_retry.sh | ✅ 已上线 |
+| Web 通用组件 | `L2-infra/components/web-common/` | ❌ 待补 | macros + static(css/js) + examples + tests | ✅ 已上线 |
+| 维护工具 | `L2-infra/components/maintenance/` | ❌ 待补 | colima-docker-check.py + tests | ✅ 已上线 |
+| 上下文管理 | `L2-infra/components/context-management/` | ❌ 待补 | probe_context_window.py + subagent_ctx_guard.py | ✅ 已上线 |
+| 记忆嵌入 | `L2-infra/components/memory-embedding/` | ❌ 待补 | kb_index.py + README + TROUBLESHOOTING | ✅ 已上线 |
+| 可观测性 | `L2-infra/components/observability/` | ❌ 待补 | agent_observer.py + logging + tracing + memory_search_monitor | ✅ 已上线 |
+| 持久化 | `L2-infra/components/persistence/` | ❌ 待补 | connection + repository + migration + schemas | ✅ 已上线 |
+| 会话隔离共享 | `L2-infra/components/session-isolation-sharing/` | ❌ 待补 | cli + orchestrator + 协议层 | ✅ 已上线 |
+| 备份 | `L2-infra/components/backup/` | ❌ 待补 | backup.sh | ✅ 已上线 |
+| 凭据管理 | `L2-infra/components/credentials/` | ❌ 待补 | cred_scan.py + credentials.sh + scan_secrets.sh | ✅ 已上线 |
+| 工具策略 | `L2-infra/components/tool-policy/` | ❌ 待补 | tool_policy_audit.sh | ✅ 已上线 |
+| 沙箱隔离 | `L2-infra/components/sandbox/` | ❌ 待补 | cli + policy + sandbox + service | ✅ 已上线 |
+| 配置管理 | `L2-infra/components/config/` | ❌ 待补 | config.sh + config_safe_write.sh + snapshot_config.py + gen_asset_inventory.py | ✅ 已上线 |
+
+> **命名对齐**（2026-09-11）：config-management→config, sandbox-isolation→sandbox，统一为简短命名。
 
 **配置安全保护** (横切关注点,2026-08-26):
 - **问题**：自定义资产直接写入 openclaw.json 无任何保护,可能导致系统 crash(参考 08-26 SQLite 损坏事故)
@@ -898,7 +993,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
-| 2026-09-07 | **3.4** | **L0 系统安装层 P0 建设完成**：六步流水线 + registry + 契约测试 + 部署清单。OpenClaw 全流程就绪，Claude Code / CrewAI 预留。ADR-028 proposed。 |
+| 2026-09-11 | **3.9** | **L0/L1 文档补齐 + L2 全量对齐**：① L0-gateway（auth-gateway/channel-router/session-manager）纳入架构文档，L0 双子层（Install + Gateway）正式定义；② L1-runtime 路径对齐（`adapters/<runtime>/` → `L1-runtime/adapters/<runtime>/`），纳入 4 个 L1 自建组件（tool-policy/context-bus/agent-registry/telemetry）；③ L2 DESIGN.md 从 3/26 → 18/18（0 缺失）；④ 纳入 13 个未声明 L2 组件；⑤ 命名对齐：config-management→config, sandbox-isolation→sandbox；⑥ 清理空目录 + __pycache__；⑦ 删除 L3-business 空目录。 |
 | 2026-08-21 | 0.1 | 初版骨架(4 层架构 + 契约 + 演进路线) |
 | 2026-08-21 | 0.3 | 新增 L2 上下文管理组件 |
 | 2026-08-22 | 0.4 | 新增 L2 配置管理组件 |

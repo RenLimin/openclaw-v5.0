@@ -8,8 +8,9 @@ L2 基础设施层 — 标准化健康检查流程。
   python3 L2-infra/scripts/system_full_audit.py          # 完整检查
   python3 L2-infra/scripts/system_full_audit.py --json   # JSON 输出
   python3 L2-infra/scripts/system_full_audit.py --quick   # 快速检查（仅关键项）
+  python3 L2-infra/scripts/system_full_audit.py --cleanup # 清理已完成的子会话（需 agent 执行）
 
-修订：2026-09-07 — 对齐 L3/L4 分层重构后的目录结构（ADR-026）。
+修订：2026-09-11 — 新增子会话清理检测（第 8 节）。
 """
 
 import argparse
@@ -305,11 +306,131 @@ def audit_backups() -> list[dict]:
     return results
 
 
+def audit_subagent_sessions() -> list[dict]:
+    """8. 子会话状态检测 — 识别已完成/超时/失败的子会话"""
+    results = []
+
+    rc, out, _ = run(
+        "openclaw sessions list --agent main --json --limit all 2>/dev/null"
+    )
+    if rc != 0 or not out:
+        results.append(check("subagent sessions", "⚠️", "无法获取会话列表"))
+        return results
+
+    try:
+        data = json.loads(out)
+        sessions = data if isinstance(data, list) else data.get("sessions", [])
+    except json.JSONDecodeError:
+        results.append(check("subagent sessions", "⚠️", "会话列表 JSON 解析失败"))
+        return results
+
+    # 分类统计
+    done_sessions = []
+    timeout_sessions = []
+    failed_sessions = []
+    active_count = 0
+    cron_count = 0
+
+    for s in sessions:
+        kind = s.get("kind", "")
+        status = s.get("status", "")
+        label = s.get("label", s.get("displayName", ""))
+        key = s.get("key", "")
+
+        if kind == "main":
+            active_count += 1
+            continue
+        if kind == "cron":
+            cron_count += 1
+            continue
+
+        if status in ("done", "killed"):
+            done_sessions.append({"key": key, "label": label})
+        elif status == "timeout":
+            timeout_sessions.append({"key": key, "label": label})
+        elif status == "failed":
+            failed_sessions.append({"key": key, "label": label})
+        elif status in ("running", "idle"):
+            active_count += 1
+
+    results.append(check(
+        "active sessions", "✅",
+        f"{active_count} 个活跃 (main + running subagent)"
+    ))
+    results.append(check(
+        "cron sessions", "✅",
+        f"{cron_count} 个 cron"
+    ))
+
+    if done_sessions:
+        names = ", ".join(s["label"] for s in done_sessions)
+        results.append(check(
+            f"done/killed subagents", "⚠️",
+            f"{len(done_sessions)} 个已完成待清理: {names}"
+        ))
+    else:
+        results.append(check("done subagents", "✅", "无已完成子会话"))
+
+    if timeout_sessions:
+        names = ", ".join(s["label"] for s in timeout_sessions)
+        results.append(check(
+            f"timeout subagents", "⚠️",
+            f"{len(timeout_sessions)} 个超时待清理: {names}"
+        ))
+    else:
+        results.append(check("timeout subagents", "✅", "无超时子会话"))
+
+    if failed_sessions:
+        names = ", ".join(s["label"] for s in failed_sessions)
+        results.append(check(
+            f"failed subagents", "⚠️",
+            f"{len(failed_sessions)} 个失败待清理: {names}"
+        ))
+    else:
+        results.append(check("failed subagents", "✅", "无失败子会话"))
+
+    return results
+
+
+def get_cleanup_list() -> list[dict]:
+    """返回需要清理的子会话列表（done + timeout + failed + killed，不含 cron 和 main）"""
+    rc, out, _ = run("openclaw sessions list --agent main --json --limit all 2>/dev/null")
+    if rc != 0 or not out:
+        return []
+
+    try:
+        data = json.loads(out)
+        sessions = data if isinstance(data, list) else data.get("sessions", [])
+    except json.JSONDecodeError:
+        return []
+
+    cleanup = []
+    for s in sessions:
+        kind = s.get("kind", "")
+        status = s.get("status", "")
+        if kind in ("main", "cron"):
+            continue
+        if status in ("done", "timeout", "failed", "killed"):
+            cleanup.append({
+                "key": s.get("key", ""),
+                "label": s.get("label", s.get("displayName", "")),
+                "status": status,
+            })
+    return cleanup
+
+
 def main():
     parser = argparse.ArgumentParser(description="BDMS 系统全量健康检查")
     parser.add_argument("--json", action="store_true", help="JSON 输出")
     parser.add_argument("--quick", action="store_true", help="快速检查（仅关键项）")
+    parser.add_argument("--cleanup", action="store_true", help="输出待清理子会话 JSON（供 agent 执行删除）")
     args = parser.parse_args()
+
+    # --cleanup 模式：仅输出待清理列表
+    if args.cleanup:
+        cleanup_list = get_cleanup_list()
+        print(json.dumps(cleanup_list, ensure_ascii=False, indent=2))
+        return
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -326,6 +447,7 @@ def main():
         ("5. 系统架构文档符合性检测", audit_architecture_compliance),
         ("6. 垃圾清理检测", audit_garbage),
         ("7. 备份状态检查", audit_backups),
+        ("8. 子会话状态检测", audit_subagent_sessions),
     ]
 
     if args.quick:
