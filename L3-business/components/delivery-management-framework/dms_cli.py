@@ -6,11 +6,11 @@ DMF CLI — 交付管理框架统一 CLI 入口
 
 import sys
 import argparse
-from L3-business.components.delivery-management-framework.registry import ModuleRegistry
-from L3-business.components.delivery-management-framework.state_machine import StateMachineEngine
-from L3-business.components.delivery-management-framework.raci import RACIEngine
-from L3-business.components.delivery-management-framework.event_bus import EventBus
-from L3-business.components.delivery-management-framework.cli import CLIFramework
+from .registry import ModuleRegistry
+from .state_machine import StateMachineEngine
+from .raci import RACIEngine
+from .event_bus import EventBus
+from .cli import CLIFramework
 
 # 创建单例框架实例
 registry = ModuleRegistry()
