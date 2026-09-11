@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 3.9 (2026-09-11 — L0-gateway 纳入架构文档; L1-runtime 路径对齐 + 自建组件纳入; L2 DESIGN.md 全量补齐 18/18;命名对齐) |
+| 文档版本 | 4.3 (2026-09-11 — L2 组件表路径加 L2-infra/ 前缀; fin-l4 组件+技能纳入 L4; session-orchestrator 标记废弃) |
 | 文档状态 | active |
 | 运行时 cron | 7 个活跃业务 cron（错误扫描/provider健康探测/会话错误处理/备份/会话生命周期/记忆健康/每日观测投递）；3 个任务 disabled（2 个 ms 心跳 + 1 个技能审阅） |
 | 决策状态 | 5 层架构已锁定(ADR-012); 28 份 ADR accepted; L3 FIN 引擎已迁 L3; L4 五个组件已上线(新增 CISSP 学习系统) |
@@ -364,6 +364,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | **context-bus** | `L1-runtime/components/context-bus/` | 跨层事件发布/订阅、请求/响应、上下文传播（trace_id/会话/用户身份） | 📐 骨架 |
 | **agent-registry** | `L1-runtime/components/agent-registry/` | Agent 声明式注册、按能力/角色/标签发现、实例化 | 📐 骨架 |
 | **telemetry** | `L1-runtime/components/telemetry/` | 指标（计数器/直方图/计时器）、分布式追踪、结构化日志收集 | 📐 骨架 |
+| **error-handler** | `L1-runtime/components/error-handler/` | 统一错误处理策略（分级/重试/降级/熔断）、错误分类模型 | 📐 骨架 |
 
 > **定位**：L1 自建组件是 L1 层的"能力增强"，为上层提供标准化的横切服务。与 L2 的区别在于——L1 组件**仅依赖 L1 抽象契约**，而 L2 组件依赖 L1 + 可能依赖其他 L2。
 
@@ -404,21 +405,29 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | **Web 通用组件** | 模板宏 + 静态资源 + 示例应用 | 已上线 | ✅ |
 | **维护工具** | Colima/Docker 健康检查 + 仓库维护 | 已上线 | ✅ |
 
+**L2 层技能体系**（`L2-infra/skills/`）:
+
+| 技能 | 目录 | 职责 | 状态 |
+|---|---|---|---|
+| **dag-orchestrator** | `L2-infra/skills/dag-orchestrator/` | DAG 工作流编排器：将复杂任务分解为有向无环图，按依赖排序执行 | ✅ 已上线 |
+| **role-library** | `L2-infra/skills/role-library/` | 标准化 Agent 角色库：按角色定义执行任务，支持角色切换 | ✅ 已上线 |
+| **ocr-digitalization** | `L2-infra/skills/ocr-digitalization/` | OCR 技能层：封装底层 OCREngine 为可调用技能，含检查清单 | ✅ 已上线 |
+
 > **状态取值口径**: `已上线` 要求 **ADR + DESIGN.md + 实现** 三件齐备。
 
 **已建设组件四件套清单**:
 
 | 组件 | ADR | DESIGN.md | 实现 | 验证方式 |
 |---|---|---|---|---|
-| 可观测性 | 004 | `components/observability/` | `scripts/observability/agent_observer.py` | `--daily --jsonl` 实跑 |
-| 凭据管理 | 005 | `components/credentials/` | `scripts/credentials.sh` | `scan_secrets.sh` |
-| 持久化 | 006 | `components/persistence/` | `persistence/` (connection/repository/migration/schemas) | 迁移幂等测试 |
-| 配置管理 | 007 | `components/config/` | `scripts/config.sh` | `config.sh diff` 漂移检测 |
-| 工具策略 | 008 | `components/tool-policy/` | `scripts/tool_policy_audit.sh` | 六项审计 |
-| 记忆嵌入计算 | 009 | `components/memory-embedding/` | 本地 GGUF 嵌入模型管理 + 向量计算 | memory_search / knowledge-base 依赖 |
-| 知识库能力 | 010 | `components/knowledge-base/` | 通用向量知识库(解析/分块/向量化/索引/检索/管理) + kb_index 工具 | 43 个单元测试 + pre-commit 阻塞 |
-| Office 文档生成 | 011 | `components/office-generation/` | unified SDK: create/read/update/parse/convert (v2.0.0) + 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
-| 文档数字化(OCR) | 023 | `components/ocr-digitalization/` | L2标准组件: OCREngine统一API + 4后端自动发现 + 预处理管线 + 质量评分 + 后处理纠错 + PDF原生提取 | v2.0升级 · 113个测试通过 |
+| 可观测性 | 004 | `L2-infra/components/observability/` | `L2-infra/components/observability/scripts/agent_observer.py` | `--daily --jsonl` 实跑 |
+| 凭据管理 | 005 | `L2-infra/components/credentials/` | `L2-infra/components/credentials/credentials.sh` | `scan_secrets.sh` |
+| 持久化 | 006 | `L2-infra/components/persistence/` | `persistence/` (connection/repository/migration/schemas) | 迁移幂等测试 |
+| 配置管理 | 007 | `L2-infra/components/config/` | `L2-infra/components/config/config.sh` | `config.sh diff` 漂移检测 |
+| 工具策略 | 008 | `L2-infra/components/tool-policy/` | `L2-infra/components/tool-policy/tool_policy_audit.sh` | 六项审计 |
+| 记忆嵌入计算 | 009 | `L2-infra/components/memory-embedding/` | 本地 GGUF 嵌入模型管理 + 向量计算 | memory_search / knowledge-base 依赖 |
+| 知识库能力 | 010 | `L2-infra/components/knowledge-base/` | 通用向量知识库(解析/分块/向量化/索引/检索/管理) + kb_index 工具 | 43 个单元测试 + pre-commit 阻塞 |
+| Office 文档生成 | 011 | `L2-infra/components/office-generation/` | unified SDK: create/read/update/parse/convert (v2.0.0) + 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
+| 文档数字化(OCR) | 023 | `L2-infra/components/ocr-digitalization/` | L2标准组件: OCREngine统一API + 4后端自动发现 + 预处理管线 + 质量评分 + 后处理纠错 + PDF原生提取 | v2.0升级 · 113个测试通过 |
 
 **已建设组件清单**(详细):
 
@@ -442,7 +451,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
    - 文档: `../knowledge-base/by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md`
 
 2. **配置管理** (2026-08-22)
-   - 组件 ID: `scripts/config.sh` + `config-snapshots/`
+   - 组件 ID: `L2-infra/components/config/config.sh` + `config-snapshots/`
    - 定位: **治理封装**,不重新实现运行时的配置读写
    - 解决的四个治理问题:
      - P1 变更不可追溯 → 脱敏快照入 git
@@ -454,14 +463,14 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
    - ADR: ADR-007
 
 3. **工具策略治理** (2026-08-22)
-   - 组件 ID: `scripts/tool_policy_audit.sh`
+   - 组件 ID: `L2-infra/components/tool-policy/tool_policy_audit.sh`
    - 核心认知: **「允许」≠「可用」** —— 三态治理(denied / allowed-but-broken / allowed-and-working)
    - 当前策略: 最小权限原则,基础工具集 + 显式追加
    - 实测发现: 记忆检索静默降级(缺 embedding provider)· 12 技能缺依赖
    - ADR: ADR-008
 
 4. **知识库能力** (2026-08-23)
-   - 组件 ID: `scripts/kb_index.py`
+   - 组件 ID: `L2-infra/components/knowledge-base/kb_index.py`
    - 定位: **工具链层**(非服务层)。Markdown 是永久单一来源,本组件只读
    - 能力: `--validate` / `--stats` / `--query` / `--tags` / `--xref` / `--emit-index` / `--json` / `--render` / `--export`
    - 契约: 不反向写内容文件(唯一例外: INDEX.md 标记区,纯派生视图)
@@ -469,7 +478,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
    - ADR: ADR-010
 
 5. **凭据管理** (2026-08-21)
-   - 组件 ID: `scripts/credentials.sh`
+   - 组件 ID: `L2-infra/components/credentials/credentials.sh`
    - 方案: 文件存储 + SecretRef provider + 标准生命周期(add/rotate/revoke/audit)
    - ADR: ADR-005
 
@@ -480,7 +489,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
    - ADR: ADR-006
 
 7. **记忆语义检索** (2026-08-22)
-   - 组件 ID: `scripts/observability/memory_search_monitor.py`
+   - 组件 ID: `L2-infra/components/observability/scripts/memory_search_monitor.py`
    - 方案: 本地 GGUF embedding(零成本/零外发) + 向量索引
    - 健康监控: 行为探针三态判据(ok / degraded / down) + 注入故障双向验证
    - ADR: ADR-009
@@ -503,7 +512,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
    - 保护: `--active-key agent:main:main` 保护主会话
    - **当前状态**: ✅ 已上线 — cron 任务已重建（ID: 2f7846b7，每日 02:00，状态 ok），分级清理策略生效
    - ADR: ADR-013
-   - 设计: `components/session-lifecycle/DESIGN.md`
+   - 设计: 功能已集成至「上下文管理」组件（§3.3 #1 生命周期治理子模块），无独立 DESIGN.md
 
 10. **错误自动处理** (2026-08-24, 08-26 状态更新)
     - 组件 ID: Error Contract 分级 + cron 扫描 (cron 已重建，每 2h 执行)
@@ -514,7 +523,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
     - 通知: Sev1 立即通知 / Sev2 下次 heartbeat / Sev3-4 日志
     - **当前状态**: ✅ 已上线 — cron 任务已重建（ID: 2f7846b7，每日 02:00，状态 ok），分级清理策略生效
     - ADR: ADR-014
-    - 设计: `components/error-handling/DESIGN.md`
+    - 设计: 功能已集成至「错误自动处理」组件（§3.3 #10），无独立 DESIGN.md
 
 11. **模型调度** (2026-08-24, 09-03 增强)
     - 组件 ID: `model-scheduling/`
@@ -555,7 +564,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
       - sample_ppt.pptx (42KB) — 3页/表格/柱状图/备注
     - 已知限制: docxtpl表格循环bug / xlsxwriter只写不改 / openpyxl number_format需单独赋值
     - ADR: ADR-016
-    - 设计: `components/office-generation/DESIGN.md`
+    - 设计: `L2-infra/components/office-generation/DESIGN.md`
 
 
 13. **会话隔离与共享** (2026-09-02)
@@ -576,18 +585,18 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
       - 实现: P1 阶段扩展(scripts/ + 适配层),见 DESIGN.md §6
     - 当前状态: ✅ 已落地(CLI 可用: task-init/state-write/event-log; 协议层 + 任务卡模板已验证)
     - ADR: ADR-202609-024
-    - 设计: `components/session-isolation/DESIGN.md`
+    - 设计: `L2-infra/components/session-isolation/DESIGN.md`
 
 
 ### 新增 L2 基础设施组件（2026-09-07 补全）
 
 | 组件 | ADR | DESIGN.md | 实现 | 当前状态 |
 |---|---|---|---|---|
-| 系统备份 | ADR-021 | `components/backup/` | `config_snapshot.py` | ✅ 已上线 |
-| MCP Server 适配 | 无 | `components/mcp-server/` | 适配层契约 | ✅ 已上线（但无 ADR） |
-| 可观测性适配 | ADR-004 | `components/observability/` | `agent_observer.py` | ✅ 已上线 |
+| 系统备份 | ADR-021 | `L2-infra/components/backup/` | `config_snapshot.py` | ✅ 已上线 |
+| MCP Server 适配 | 无 | `L2-infra/components/mcp-server/` | 适配层契约 | 📋 预留（目录待建） |
+| 可观测性适配 | ADR-004 | `L2-infra/components/observability/` | `agent_observer.py` | ✅ 已上线 |
 | OCR 文档数字化 | ADR-023 | `L2-infra/components/ocr-digitalization/` | L2标准组件: 多后端引擎 + 预处理管线 + 质量评分 + 后处理纠错 + 批量处理 | ✅ v2.0 已上线 |
-| ~~会话任务编排~~ | — | ~~`components/session-orchestrator/`~~ | ~~独立组件~~ → **并入 session-isolation 子模块** | ❌ 已废弃 |
+| ~~会话任务编排~~ | — | ~~`L2-infra/components/session-orchestrator/`~~ | ~~独立组件~~ → **并入 session-isolation 子模块** | ❌ 已废弃 |
 
 **L2 组件职责边界（避免重复建设，全组件适用）**：
 
@@ -604,20 +613,43 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 
 | 组件 | ADR | DESIGN.md | 说明 | 状态 |
 |---|---|---|---|---|
-| 交付管理框架(DMS) | ADR-025 | `components/delivery-management-framework/` | 通用交付运营框架 | ✅ 已上线 |
-| 个人理财通用框架 | ADR-026/027 | `components/personal-finance/` | 个人理财引擎基类/规范 | ✅ 已上线 |
+| 交付管理框架(DMS) | ADR-025 | `L3-business/components/delivery-management-framework/` | 通用交付运营框架 | ✅ 已上线 |
+| 个人理财通用框架 | ADR-026/027 | `docs/architecture/components/personal-finance/` (仅 DESIGN.md) | 个人理财引擎基类/规范（设计态） | 📐 设计态 |
+| DMS 核心框架 | — | `L3-business/components/dms-framework/` | DMS 底层引擎：工作流/状态机/事件总线/RACI/数据库迁移/WebUI | ✅ 已上线 |
+| CISSP 学习系统 | — | `L3-business/components/cissp-learning/` | CISSP 知识图谱 + 学习计划 + 测验 + 笔记 + 进度跟踪 | ✅ 已上线 |
+| 健康引擎 | — | `L3-business/components/health-engine/` | 6 大健康评分引擎(评分/生命体征/运动/营养/睡眠/压力) | ✅ 已上线 |
+| 健康管理系统 | — | `L3-business/components/health-management/` | 体检/健康计划/用药/指标/风险评估/档案管理 | ✅ 已上线 |
+| 办公业务组件 | ADR-029 | `L3-business/components/office-business/` | 合同/方案/报告/演示模板 + 角色定义 + 变量系统 | ✅ 已上线 |
+| 家庭理财引擎 | ADR-026/027 | `L3-business/components/finance-engine/` | 账户/贷款/保险/投资/利率/建议 6 大引擎 + Web UI | ✅ 已上线 |
 
+> **命名对齐**：`finance_engine` 是 `finance-engine` 的 symlink，两者等价。
 
 ### L4 专有业务组件
 
 | 组件 | ADR | DESIGN.md | 说明 | 状态 |
 |---|---|---|---|---|
-| Bangcle PPT 模板系统 | ADR-017 | `components/bangcle-ppt-template/` | Bangcle 官方 VI 规范 + PPT 生成模板 | ✅ 已上线 |
-| 销售合同审批模块 | ADR-018 | `components/contract-approval/` | 销售合同审批工作流 + OCR 识别 | ✅ 已上线 |
-| BDMS 交付中心 | ADR-022 | `components/l4-delivery-center/` (+v2) | 交付中心运营引擎 | ✅ 已上线 |
+| Bangcle PPT 模板系统 | ADR-017 | `L4-proprietary/components/bangcle-ppt/` | Bangcle 官方 VI 规范 + PPT 生成模板 | ✅ 已上线 |
+| 销售合同审批模块 | ADR-018 | `L3-business/components/contract-approval/` (组件) + `L3-business/skills/contract-approval/` (技能) | 销售合同审批工作流 + OCR 识别 | ✅ 已上线 |
+| BDMS 交付中心 | ADR-022 | `L4-proprietary/components/delivery-center/` (+v2) | 交付中心运营引擎 | ✅ 已上线 |
+| CISSP 训练系统 | — | `L4-proprietary/components/cissp-trainer/` | 智能刷题 + 学习路径 + 模拟考试 + 知识图谱 + Web | ✅ 已上线 |
+| Office 合同审批 | — | `L4-proprietary/components/office-contract/` | 企业 Office 场景销售合同审批全流程（起草→归档） | ✅ 已上线 |
+| 家庭理财实例引擎 | ADR-027 | `L4-proprietary/components/fin-l4/` | FIN-L4 专有实例：Rex 家庭理财系统（CLI + Web UI + 测试数据） | ✅ 已上线 |
+
+**L4 层技能**（`L4-proprietary/skills/`）:
+
+| 技能 | 目录 | 职责 | 状态 |
+|---|---|---|---|
+| **ones-browser-export** | `L4-proprietary/skills/ones-browser-export/` | ONES 浏览器自动化数据导出（osascript 控制 Chrome 导出 CSV） | ✅ 已上线 |
+| **fin-l4** | `L4-proprietary/skills/fin-l4/` | 家庭及个人理财技能层（FIN-L4）：记账/预算/投资/债务/保险/税务 6 大模块 | ✅ 已上线 |
+
+**已废弃组件**:
+
+| 组件 | 目录 | 说明 |
+|---|---|---|
+| CISSP 学习系统(v1) | `L4-proprietary/components/.deprecated/cissp-learning/` | 已被 cissp-trainer(v2) 替代 |
 
 
-**L2 组件建设状态**: **17 个 L2 基础设施组件设计齐备**,其中 17 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测 + 会话隔离与共享),0 个设计态(会话任务编排已并入会话隔离与共享组件,不再单独计数)。
+**L2 组件建设状态**: **18 个 L2 基础设施组件设计齐备**,其中 18 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测 + 会话隔离 + 会话隔离共享),0 个设计态(会话任务编排已并入会话隔离与共享组件,不再单独计数)。
 总计 `docs/architecture/components/` 目录下有 **26 个 DESIGN.md**（含 L3/L4 组件设计）。
 
 ### 新增 L2 基础设施组件（2026-09-11 纳入）
@@ -626,26 +658,31 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 
 | 组件 | 目录 | DESIGN.md | 实现 | 当前状态 |
 |---|---|---|---|---|
-| 会话恢复 | `L2-infra/components/session-recovery/` | ❌ 待补 | task_tracker.py + check_and_retry.py + cron_retry.sh | ✅ 已上线 |
-| Web 通用组件 | `L2-infra/components/web-common/` | ❌ 待补 | macros + static(css/js) + examples + tests | ✅ 已上线 |
-| 维护工具 | `L2-infra/components/maintenance/` | ❌ 待补 | colima-docker-check.py + tests | ✅ 已上线 |
-| 上下文管理 | `L2-infra/components/context-management/` | ❌ 待补 | probe_context_window.py + subagent_ctx_guard.py | ✅ 已上线 |
-| 记忆嵌入 | `L2-infra/components/memory-embedding/` | ❌ 待补 | kb_index.py + README + TROUBLESHOOTING | ✅ 已上线 |
-| 可观测性 | `L2-infra/components/observability/` | ❌ 待补 | agent_observer.py + logging + tracing + memory_search_monitor | ✅ 已上线 |
-| 持久化 | `L2-infra/components/persistence/` | ❌ 待补 | connection + repository + migration + schemas | ✅ 已上线 |
-| 会话隔离共享 | `L2-infra/components/session-isolation-sharing/` | ❌ 待补 | cli + orchestrator + 协议层 | ✅ 已上线 |
-| 备份 | `L2-infra/components/backup/` | ❌ 待补 | backup.sh | ✅ 已上线 |
-| 凭据管理 | `L2-infra/components/credentials/` | ❌ 待补 | cred_scan.py + credentials.sh + scan_secrets.sh | ✅ 已上线 |
-| 工具策略 | `L2-infra/components/tool-policy/` | ❌ 待补 | tool_policy_audit.sh | ✅ 已上线 |
-| 沙箱隔离 | `L2-infra/components/sandbox/` | ❌ 待补 | cli + policy + sandbox + service | ✅ 已上线 |
-| 配置管理 | `L2-infra/components/config/` | ❌ 待补 | config.sh + config_safe_write.sh + snapshot_config.py + gen_asset_inventory.py | ✅ 已上线 |
+| 会话恢复 | `L2-infra/components/session-recovery/` | ✅ | task_tracker.py + check_and_retry.py + cron_retry.sh | ✅ 已上线 |
+| Web 通用组件 | `L2-infra/components/web-common/` | ✅ | macros + static(css/js) + examples + tests | ✅ 已上线 |
+| 维护工具 | `L2-infra/components/maintenance/` | ✅ | colima-docker-check.py + tests | ✅ 已上线 |
+| 上下文管理 | `L2-infra/components/context-management/` | ✅ | probe_context_window.py + subagent_ctx_guard.py | ✅ 已上线 |
+| 记忆嵌入 | `L2-infra/components/memory-embedding/` | ✅ | kb_index.py + README + TROUBLESHOOTING | ✅ 已上线 |
+| 可观测性 | `L2-infra/components/observability/` | ✅ | agent_observer.py + logging + tracing + memory_search_monitor | ✅ 已上线 |
+| 持久化 | `L2-infra/components/persistence/` | ✅ | connection + repository + migration + schemas | ✅ 已上线 |
+| 会话隔离 | `L2-infra/components/session-isolation/` | ✅ | Task/State/Event 三协议 + 调度器 + Spawner | ✅ 已上线 |
+| 会话隔离共享 | `L2-infra/components/session-isolation-sharing/` | ✅ | cli + orchestrator + 协议层 | ✅ 已上线 |
+| 备份 | `L2-infra/components/backup/` | ✅ | backup.sh | ✅ 已上线 |
+| 凭据管理 | `L2-infra/components/credentials/` | ✅ | cred_scan.py + credentials.sh + scan_secrets.sh | ✅ 已上线 |
+| 工具策略 | `L2-infra/components/tool-policy/` | ✅ | tool_policy_audit.sh | ✅ 已上线 |
+| 沙箱隔离 | `L2-infra/components/sandbox/` | ✅ | cli + policy + sandbox + service | ✅ 已上线 |
+| 配置管理 | `L2-infra/components/config/` | ✅ | config.sh + config_safe_write.sh + snapshot_config.py + gen_asset_inventory.py | ✅ 已上线 |
+| 知识库能力 | `L2-infra/components/knowledge-base/` | ✅ | kb_index.py + 解析/分块/向量化/索引/检索/管理 | ✅ 已上线 |
+| 模型调度 | `L2-infra/components/model-scheduling/` | ✅ | 智能路由 + 多级 fallback + token 压缩 + 用量感知 | ✅ 已上线 |
+| 文档数字化(OCR) | `L2-infra/components/ocr-digitalization/` | ✅ | 多后端引擎 + 预处理管线 + 质量评分 + 后处理纠错 | ✅ 已上线 |
+| Office 文档生成 | `L2-infra/components/office-generation/` | ✅ | Word/Excel/PPT 统一 SDK + 6 库工具链 | ✅ 已上线 |
 
 > **命名对齐**（2026-09-11）：config-management→config, sandbox-isolation→sandbox，统一为简短命名。
 
 **配置安全保护** (横切关注点,2026-08-26):
 - **问题**：自定义资产直接写入 openclaw.json 无任何保护,可能导致系统 crash(参考 08-26 SQLite 损坏事故)
 - **统一原则**：所有写 openclaw.json 的操作必须经过保护通道(五步流程: 回退点→dry-run→写入→validate→读回)
-- **安全写入通道**：`scripts/config_safe_write.sh` — 统一入口,禁止绕过
+- **安全写入通道**：`L2-infra/components/config/config_safe_write.sh` — 统一入口,禁止绕过
 - **已加固资产**：`adapter.py`(内部实现同等保护) / `config.sh apply`(深层读回+自动回退) / `setup_agents.sh`(幂等+动态rollback)
 - **回退机制**：写入前自动保存带时间戳的快照到 `~/.openclaw/backups/config-safe-write/`,失败自动恢复
 
@@ -745,7 +782,7 @@ L4 专有业务
 | — | CPT-012 (Bangcle PPT) | Bangcle 官方 VI 设计规范 + 页面类型模板 + pptxgenjs 代码模板 | ADR-017 | `L4-proprietary/components/bangcle-ppt/` | ✅ 已上线 |
 | DMS-001 (DMS 框架) | BDMS-L4 (交付中心) | DMS 框架: 交付管理通用引擎 + 项目/合同核心模块; 交付中心: 基于 DMS 框架的 Bangcle 交付中心实例（数据采集 + 业务引擎 + 报告生成 + 调度监控） | ADR-025 (框架) / ADR-022 (实例) | `docs/architecture/components/delivery-management-framework/` (框架) | ✅ 已上线 |
 | SCA-001 (合同审批框架) | SCA-L4 (销售合同审批) | 通用框架: 分级审批流程 + 风险扫描 + 合同生成; 实例: 对应销售合同审批规则 | ADR-018 (框架) | `L3-business/skills/contract-approval/` (框架) | ✅ 已上线 |
-| FIN-L3 (家庭理财框架) | FIN-L4 (Rex 家庭理财) | 通用框架: 账户/贷款/保险/投资/利率/建议; 实例: Rex 家庭理财系统 (CLI + Web UI + 测试数据) | ADR-026 (框架) / ADR-027 (实例) | `docs/architecture/components/family-finance/` (框架) | ✅ 已上线 |
+| FIN-L3 (家庭理财框架) | FIN-L4 (Rex 家庭理财) | 通用框架: 账户/贷款/保险/投资/利率/建议; 实例: Rex 家庭理财系统 (CLI + Web UI + 测试数据) | ADR-026 (框架) / ADR-027 (实例) | `docs/architecture/components/personal-finance/` (框架) | ✅ 已上线 |
 
 > **BDMS 详情**: 24 个 Python 文件，3157 行代码。5 个采集器 + 4 个业务引擎 + 2 个报告生成器 + 审批流程 + 调度监控。数据库 514+531 行。
 
@@ -810,7 +847,7 @@ L4 专有业务
 | `allowed-but-broken` | ❌ **不能** | **高 —— 静默失败** |
 | `allowed-and-working` | ✅ | — |
 
-**审计**: `bash scripts/tool_policy_audit.sh`(六项检查)
+**审计**: `bash components/tool-policy/tool_policy_audit.sh`(六项检查)
 
 ### 5.5 统一错误契约
 
@@ -1017,6 +1054,9 @@ L4 专有业务
 | 2026-09-02 | 2.11 | 新增 L2 OCR 文档数字化组件(OCR-001,ADR-023): 扫描件/图片→高精度文本。RapidOCR主引擎+Paddle可选+600DPI+8版本预处理+版面分析+合同场景40+规则纠错。与Office文档生成(ADR-016)形成一读一写对偶。10页扫描件合同实测通过。 |
 | 2026-09-03 | **3.0** | **L3 家庭及个人理财通用框架(FIN)启动: 6 个 FIN 组件设计齐备(ADR-026 accepted), DESIGN.md v1.0, 架构 v3.0 同步** |
 | 2026-09-01 | **2.9** | **L4 交付中心运营引擎(BDMS v1.0)完整发布**: 24 个 Python 文件,3157 行代码。M1 数据采集(5个采集器) + M2 业务引擎(4个) + M3 报告生成(2个) + M4 审批流程 + M5 调度监控。端到端验证通过。** |
+| 2026-09-11 | **4.3** | **L2 路径补全 + fin-l4 纳入**: ① L2 组件表 19 处路径加 `L2-infra/` 前缀（消除旧格式 `components/xxx/`）；② L4 新增 fin-l4 组件（家庭理财实例引擎，ADR-027）；③ L4 新增 fin-l4 技能（FIN-L4 6 大模块）；④ session-orchestrator 标记为 ❌ 已废弃（已并入 session-isolation 子模块）。 |
+| 2026-09-11 | **4.2** | **路径精确化 + 技能体系文档化**: ① L3 组件表 9 处路径加 `L3-business/components/` 前缀；② L4 组件表 3 处路径加 `L4-proprietary/components/` 前缀 + bangcle-ppt-template→bangcle-ppt 修正；③ L2-infra/skills 机制说明（dag-orchestrator/role-library/ocr-digitalization 三个技能）；④ L4 ones-browser-export 技能纳入；⑤ mcp-server 标记为 📋 预留；⑥ session-lifecycle/error-handling DESIGN.md 引用修正（功能已集成至其他组件）。 |
+| 2026-09-11 | **4.0** | **L3/L4 全量对齐 + L2 路径修复**: ① L3 纳入 6 个未声明组件（DMS 核心框架/CISSP 学习/健康管理/办公业务/家庭理财引擎 + finance_engine symlink 说明）；② L4 纳入 2 个未声明组件（CISSP 训练/Office 合同）+ 已废弃组件声明；③ L1 纳入 error-handler 为第 5 个自建组件；④ L2 修复 6 处过时路径（`scripts/` → `components/<name>/`）；⑤ L2 组件计数修正 17→18（补入 session-isolation-sharing/knowledge-base/model-scheduling/OCR/Office 生成）；⑥ L2 DESIGN.md 全部标记为 ✅。 |
 | 2026-09-07 | **3.4** | **文档对齐实际状态 + L3 分层落地**: ① 会话生命周期管理 cron + 错误自动处理 cron 已重建上线（之前 08-26 清除的状态过时）；② L4 Bangcle PPT 模板系统已上线；③ L3 家庭理财 FIN 通用引擎从 L4 迁到 L3，对齐 ADR-026 分层决策；④ 上下文管理全覆盖（补全 subagent 保护规范 + subagent_ctx_guard.py 辅助脚本 + compaction fallback 方案）；⑤ 新增 OCR 文档数字化组件（023）；⑥ 资产清单对齐实际状态。 |
 
 ---
