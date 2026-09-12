@@ -7,7 +7,7 @@ from openpyxl.utils import get_column_letter
 from pathlib import Path
 from typing import Optional
 
-from .config import OUTPUT_DIR, SUMMARY_MONTHS, MANUAL_REPORT_PATH
+from .config import OUTPUT_DIR, SUMMARY_MONTHS, MANUAL_REPORT_PATH, MODULE_DIR
 from .engine import RevenueEngine
 from .db import get_connection
 
@@ -327,29 +327,16 @@ class RevenueExporter:
         _apply_header_style(ws.cell(row=4, column=14))
 
         # Row 5: 子表头
-        sub_headers = [
-            "新签合同额", "预计确收合同额", "实际确收合同额", "完成率",
-            "预计确收合同额", "实际确收合同额", "完成率",
-            "预计确收合同额", "实际确收合同额", "完成率",
-        ]
-        for i, h in enumerate(sub_headers):
-            col = 3 + i
-            if col >= 7:
-                col += 1  # skip col 7 area for 递延 group adjustment
-            if col >= 10:
-                col += 0
-        # Simplified: just place headers at correct columns
         # 新签: C(3), D(4), E(5), F(6)
         # 递延: G(7), H(8), I(9)
         # 新签+递延: J(10), K(11), L(12)
-        for i, h in enumerate(sub_headers[:4]):
-            cell = ws.cell(row=5, column=3 + i, value=h)
-            _apply_header_style(cell)
-        for i, h in enumerate(sub_headers[4:7]):
-            cell = ws.cell(row=5, column=7 + i, value=h)
-            _apply_header_style(cell)
-        for i, h in enumerate(sub_headers[7:10]):
-            cell = ws.cell(row=5, column=10 + i, value=h)
+        sub_headers = [
+            (3, "新签合同额"), (4, "预计确收合同额"), (5, "实际确收合同额"), (6, "完成率"),
+            (7, "预计确收合同额"), (8, "实际确收合同额"), (9, "完成率"),
+            (10, "预计确收合同额"), (11, "实际确收合同额"), (12, "完成率"),
+        ]
+        for col, h in sub_headers:
+            cell = ws.cell(row=5, column=col, value=h)
             _apply_header_style(cell)
 
         # 同比分析列标题
@@ -740,7 +727,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_budget_exec_table(self, wb: Workbook, period: str):
-        """构建预算执行表 sheet — 直接从数据库导出全部原始数据"""
+        """构建预算执行表 sheet — 直接从数据库导出全部原始数据 + Row 1 校验值 + Row 2 分组标题"""
         WAN = 10000.0
         ws = wb.create_sheet("预算执行表")
 
@@ -752,12 +739,159 @@ class RevenueExporter:
             "截止20251231已确收金额", "2026年及以后计划确收",
             "年初-未立项&项目异常未计划确收", "截止20251231未确收金额",
             "截止20251231未确收金额（调整）", "计划开始时间", "计划结束时间", "计划完成时间",
-            "m202601", "m202602", "m202603", "m202604", "m202605", "m202606",
-            "m202607", "m202608", "m202609", "m202610", "m202611", "m202612",
-            "2026年预计", "h1_plan", "h1_actual", "h1_ahead", "h1_behind",
-            "a202601", "a202602", "a202603", "a202604", "a202605", "a202606",
-            "disappear_2026", "disappear_future", "disappear_note", "rebuild_perf"
+            "202601", "202602", "202603", "202604", "202605", "202606",
+            "202607", "202608", "202609", "202610", "202611", "202612",
+            "2026年预计", "202601-06预计", "202601-06确收", "202601-06提前完成", "202601-06滞后未完成",
+            "202601", "202602", "202603", "202604", "202605", "202606",
+            "2026消失金额", "2026年及以后消失金额", "消失备注", "重拆履约，提前和滞后同增",
+            # 扩展列（周报/OA信息/预算趋势/异常项目/产品服务维度）
+            "合同数量统计唯一值", "合同数量统计位", "确收-财务是否交接（合同编号校准）",
+            "确收-财务是否交接", "确收-财务反馈", "是否正常摊销", "是否统计确收？",
+            "项目经理", "PM-周报按合同", "项目经理所属团队",
+            "履约项统计状态（周报）", "项目验收状态（周报）",
+            "实际服务/授权开始日期（周报）", "实际服务/授权结束日期（周报）",
+            "偏差-备注说明（手工填写）\n示例：【团队】跟进动作、【备注】原因说明",
+            "偏差-状态/趋势", "偏差-原因类别",
+            "签约金额（元）", "合同分类", "是否完成下单流程", "关联合同（终止/补充）",
+            "预算填报", "备注", "预算填写说明", "预算日期（已提交）",
+            "预算趋势", "预算趋势类别",
+            "预估交付完成日期（周报）", "预算-预估交付完成日期（周报）", "预算提交（校准）",
+            "异常项目合同编号", "合同归档日期", "状态", "异常项目-类别",
+            "异常项目-处置方案", "异常处置方案-影响", "异常报备日期",
+            "预估异常处置完成日期", "异常影响情况", "交付中心反馈", "营销中心反馈",
+            "异常归档日期", "交付说明（异常履约项统计类别）",
+            "交付说明（履约项交付情况、合同交付条款）", "项目异常内容",
+            "所属产线（周报）"
         ]
+
+        # 扩展列的 db key 映射（中文标题 → 数据库列名）
+        ext_col_map = {
+            "合同数量统计唯一值": "contract_count_unique",
+            "合同数量统计位": "contract_count_digit",
+            "确收-财务是否交接（合同编号校准）": "finance_transfer_cal",
+            "确收-财务是否交接": "finance_transfer",
+            "确收-财务反馈": "finance_feedback",
+            "是否正常摊销": "normal_amortization",
+            "是否统计确收？": "is_count_rev",
+            "项目经理": "project_manager",
+            "PM-周报按合同": "pm_weekly_contract",
+            "项目经理所属团队": "pm_team",
+            "履约项统计状态（周报）": "perf_status_weekly",
+            "项目验收状态（周报）": "accept_status_weekly",
+            "实际服务/授权开始日期（周报）": "actual_start_weekly",
+            "实际服务/授权结束日期（周报）": "actual_end_weekly",
+            "偏差-备注说明（手工填写）\n示例：【团队】跟进动作、【备注】原因说明": "variance_note",
+            "偏差-状态/趋势": "variance_status",
+            "偏差-原因类别": "variance_reason_cat",
+            "签约金额（元）": "sign_amount",
+            "合同分类": "contract_class",
+            "是否完成下单流程": "order_completed",
+            "关联合同（终止/补充）": "related_contract",
+            "预算填报": "budget_fill",
+            "备注": "remark",
+            "预算填写说明": "budget_fill_note",
+            "预算日期（已提交）": "budget_submit_date",
+            "预算趋势": "budget_trend",
+            "预算趋势类别": "budget_trend_cat",
+            "预估交付完成日期（周报）": "est_delivery_weekly",
+            "预算-预估交付完成日期（周报）": "budget_est_delivery",
+            "预算提交（校准）": "budget_submit_cal",
+            "异常项目合同编号": "abnormal_contract_no",
+            "合同归档日期": "contract_archive_date",
+            "状态": "status",
+            "异常项目-类别": "abnormal_cat",
+            "异常项目-处置方案": "abnormal_plan",
+            "异常处置方案-影响": "abnormal_impact",
+            "异常报备日期": "abnormal_report_date",
+            "预估异常处置完成日期": "abnormal_est_complete",
+            "异常影响情况": "abnormal_impact_desc",
+            "交付中心反馈": "delivery_feedback",
+            "营销中心反馈": "marketing_feedback",
+            "异常归档日期": "abnormal_archive_date",
+            "交付说明（异常履约项统计类别）": "delivery_note_cat",
+            "交付说明（履约项交付情况、合同交付条款）": "delivery_note_desc",
+            "项目异常内容": "project_abnormal_content",
+            "所属产线（周报）": "prod_line_weekly",
+        }
+
+        # Row 1: 校验数值（从 DB 聚合计算，放在 col 12~45 对应手工报表的校验行）
+        conn = self.engine._conn()
+        # 计算各聚合值
+        row1_vals = conn.execute("""
+            SELECT
+                SUM(COALESCE(perf_amount, 0)) as total_perf_amount,
+                SUM(COALESCE(rev_prior, 0)) as total_rev_prior,
+                SUM(COALESCE(rev_future, 0)) as total_rev_future,
+                SUM(COALESCE(no_plan, 0)) as total_no_plan,
+                SUM(COALESCE(unrev_prior, 0)) as total_unrev_prior,
+                SUM(COALESCE(unrev_adj, 0)) as total_unrev_adj,
+                SUM(COALESCE(m202601,0)+COALESCE(m202602,0)+COALESCE(m202603,0)+COALESCE(m202604,0)+COALESCE(m202605,0)+COALESCE(m202606,0)
+                    +COALESCE(m202607,0)+COALESCE(m202608,0)+COALESCE(m202609,0)+COALESCE(m202610,0)+COALESCE(m202611,0)+COALESCE(m202612,0)) as total_plan_all,
+                SUM(COALESCE(m202601,0)) as total_m01, SUM(COALESCE(m202602,0)) as total_m02,
+                SUM(COALESCE(m202603,0)) as total_m03, SUM(COALESCE(m202604,0)) as total_m04,
+                SUM(COALESCE(m202605,0)) as total_m05, SUM(COALESCE(m202606,0)) as total_m06,
+                SUM(COALESCE(m202607,0)) as total_m07, SUM(COALESCE(m202608,0)) as total_m08,
+                SUM(COALESCE(m202609,0)) as total_m09, SUM(COALESCE(m202610,0)) as total_m10,
+                SUM(COALESCE(m202611,0)) as total_m11, SUM(COALESCE(m202612,0)) as total_m12,
+                SUM(COALESCE(year_est, 0)) as total_year_est,
+                SUM(COALESCE(h1_plan, 0)) as total_h1_plan,
+                SUM(COALESCE(h1_actual, 0)) as total_h1_actual,
+                SUM(COALESCE(h1_ahead, 0)) as total_h1_ahead,
+                SUM(COALESCE(h1_behind, 0)) as total_h1_behind,
+                SUM(COALESCE(a202601,0)) as total_a01, SUM(COALESCE(a202602,0)) as total_a02,
+                SUM(COALESCE(a202603,0)) as total_a03, SUM(COALESCE(a202604,0)) as total_a04,
+                SUM(COALESCE(a202605,0)) as total_a05, SUM(COALESCE(a202606,0)) as total_a06,
+                SUM(COALESCE(disappear_2026, 0)) as total_disappear_2026,
+                SUM(COALESCE(disappear_future, 0)) as total_disappear_future
+            FROM budget_exec
+        """).fetchone()
+
+        # Row 1: 放置校验数值（col 12 = 单项履约义务金额 ... col 45 = disappear_future）
+        r1_mapping = {
+            12: row1_vals["total_perf_amount"],
+            13: row1_vals["total_rev_prior"],
+            14: row1_vals["total_rev_future"],
+            15: row1_vals["total_no_plan"],
+            16: row1_vals["total_unrev_prior"],
+            17: row1_vals["total_unrev_adj"],
+            21: row1_vals["total_m01"], 22: row1_vals["total_m02"],
+            23: row1_vals["total_m03"], 24: row1_vals["total_m04"],
+            25: row1_vals["total_m05"], 26: row1_vals["total_m06"],
+            27: row1_vals["total_m07"], 28: row1_vals["total_m08"],
+            29: row1_vals["total_m09"], 30: row1_vals["total_m10"],
+            31: row1_vals["total_m11"], 32: row1_vals["total_m12"],
+            33: row1_vals["total_year_est"],
+            34: row1_vals["total_h1_plan"],
+            35: row1_vals["total_h1_actual"],
+            36: row1_vals["total_h1_ahead"],
+            37: row1_vals["total_h1_behind"],
+            38: row1_vals["total_a01"], 39: row1_vals["total_a02"],
+            40: row1_vals["total_a03"], 41: row1_vals["total_a04"],
+            42: row1_vals["total_a05"], 43: row1_vals["total_a06"],
+            44: row1_vals["total_disappear_2026"],
+            45: row1_vals["total_disappear_future"],
+        }
+        for col_idx, val in r1_mapping.items():
+            cell = ws.cell(row=1, column=col_idx, value=val)
+            _apply_data_style(cell)
+
+        # Row 2: 分组标题
+        group_headers = {
+            2: "预算情况",
+            12: "计算",
+            35: "预算执行",
+            46: "消失情况",
+            50: "确收预测-202606确收交接",
+            57: "【周报】项目信息",
+            73: "【OA】合同信息",
+            83: "预算（26.06）",
+            86: "预算趋势",
+            89: "异常项目",
+            93: "产品/服务维度",
+        }
+        for col_idx, val in group_headers.items():
+            cell = ws.cell(row=2, column=col_idx, value=val)
+            _apply_header_style(cell)
 
         # Row 3: 列标题
         for i, h in enumerate(col_headers):
@@ -765,7 +899,6 @@ class RevenueExporter:
             _apply_header_style(cell)
 
         # 直接从数据库查询
-        conn = self.engine._conn()
         rows = conn.execute("SELECT * FROM budget_exec ORDER BY id").fetchall()
         conn.close()
 
@@ -773,7 +906,10 @@ class RevenueExporter:
             row = 4 + i
             for col_idx, key in enumerate(col_headers):
                 # Map header to db column name
-                db_key = _header_to_db_key(key)
+                if key in ext_col_map:
+                    db_key = ext_col_map[key]
+                else:
+                    db_key = _header_to_db_key(key)
                 val = row_data.get(db_key)
                 cell = ws.cell(row=row, column=1 + col_idx, value=val)
                 _apply_data_style(cell)
@@ -783,7 +919,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_plan_draft(self, wb: Workbook, period: str):
-        """构建计划确收底稿 sheet — 直接从数据库导出全部原始数据"""
+        """构建计划确收底稿 sheet — 直接从数据库导出全部原始数据 + Row 1/2 校验行"""
         ws = wb.create_sheet("计划确收底稿")
 
         col_headers = [
@@ -801,13 +937,43 @@ class RevenueExporter:
             "截止20251231已确收", "2026年及以后计划确收", "计划-消失金额", "消失原因"
         ]
 
+        # Row 1: 校验文本（全维度检验差异说明）
+        ws.cell(row=1, column=44,
+                value="履约预算执行表全维度检验差异=此表（未预计+未立项+项目异常+待终止+此列不执行金额）;"
+                     " 履约预算跟进表全维度检验差异=此表（未预计+未立项+项目异常+待终止）")
+        _apply_data_style(ws.cell(row=1, column=44))
+
+        # Row 2: 汇总数值（从 DB 聚合计算）
+        conn = self.engine._conn()
+        row2_vals = conn.execute("""
+            SELECT
+                SUM(COALESCE(contract_amount, 0)) as total_contract,
+                SUM(COALESCE(confirm_amount, 0)) as total_confirm,
+                SUM(COALESCE(perf_amount, 0)) as total_perf,
+                SUM(COALESCE(plan_perf_amount, 0)) as total_plan_perf,
+                SUM(COALESCE(rev_before_2025, 0)) as total_rev_before,
+                SUM(COALESCE(rev_2026_future, 0)) as total_rev_future
+            FROM plan_draft
+        """).fetchone()
+
+        r2_mapping = {
+            40: row2_vals["total_contract"],
+            41: row2_vals["total_confirm"],
+            42: row2_vals["total_perf"],
+            43: row2_vals["total_plan_perf"],
+            44: row2_vals["total_rev_before"],
+            45: row2_vals["total_rev_future"],
+        }
+        for col_idx, val in r2_mapping.items():
+            cell = ws.cell(row=2, column=col_idx, value=val)
+            _apply_data_style(cell)
+
         # Row 3: 列标题
         for i, h in enumerate(col_headers):
             cell = ws.cell(row=3, column=1 + i, value=h)
             _apply_header_style(cell)
 
         # 直接从数据库查询
-        conn = self.engine._conn()
         rows = conn.execute("SELECT * FROM plan_draft ORDER BY id").fetchall()
         conn.close()
 
@@ -857,17 +1023,8 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_legend(self, wb: Workbook):
-        """构建图例 sheet — 从系统参考数据 JSON 文件读取"""
-        import json
+        """构建图例 sheet — 从 reference_data 数据库表读取"""
         ws = wb.create_sheet("图例")
-
-        legend_path = MODULE_DIR / "reference" / "legend_reference.json"
-        if not legend_path.exists():
-            ws.cell(row=1, column=1, value="⚠️ 图例参考数据文件不存在，请先运行图例导出")
-            return
-
-        with open(legend_path, "r", encoding="utf-8") as f:
-            legend_data = json.load(f)
 
         # Row 1: 表头（保持与原结构一致）
         headers = [
@@ -882,65 +1039,100 @@ class RevenueExporter:
                 cell = ws.cell(row=1, column=col_idx, value=h)
                 _apply_header_style(cell)
 
-        # 写各 section 数据
-        max_rows = 1
+        conn = self.engine._conn()
 
         # Section 1: 项目经理 (cols A-C, starting row 2)
-        row = 2
-        section = legend_data.get("project_managers", [])
-        for i, item in enumerate(section):
-            r = row + i
-            ws.cell(row=r, column=1, value=item.get("name"))
-            ws.cell(row=r, column=2, value=item.get("department"))
-            ws.cell(row=r, column=3, value=item.get("note"))
+        pm_rows = conn.execute(
+            "SELECT code, label, extra FROM reference_data "
+            "WHERE data_type=\'project_manager\' ORDER BY sort_order, id"
+        ).fetchall()
+        for i, item in enumerate(pm_rows):
+            r = 2 + i
+            # extra 格式: "部门: XXX | 备注: YYY"
+            dept = ""
+            note = ""
+            extra = item["extra"] or ""
+            if extra:
+                for part in extra.split("|"):
+                    part = part.strip()
+                    if part.startswith("部门:"):
+                        dept = part.replace("部门:", "").strip()
+                    elif part.startswith("备注:"):
+                        note = part.replace("备注:", "").strip()
+            ws.cell(row=r, column=1, value=item["code"])
+            ws.cell(row=r, column=2, value=dept)
+            ws.cell(row=r, column=3, value=note if note else None)
             for col in range(1, 4):
                 _apply_data_style(ws.cell(row=r, column=col))
-            max_rows = max(max_rows, r - 1)
 
         # Section 2: 偏差状态 (cols E-G)
-        row = 2
-        section = legend_data.get("variance_status", [])
-        for i, item in enumerate(section):
-            r = row + i
-            ws.cell(row=r, column=5, value=item.get("status"))
-            ws.cell(row=r, column=6, value=item.get("reason_category"))
-            ws.cell(row=r, column=7, value=item.get("description"))
+        vs_rows = conn.execute(
+            "SELECT code, label, extra FROM reference_data "
+            "WHERE data_type=\'variance_status\' ORDER BY sort_order, id"
+        ).fetchall()
+        for i, item in enumerate(vs_rows):
+            r = 2 + i
+            # extra 格式: "原因类别" 或 "原因类别 | 说明"
+            reason_cat = ""
+            desc = ""
+            extra = item["extra"] or ""
+            if extra:
+                parts = extra.split("|")
+                reason_cat = parts[0].strip()
+                if len(parts) > 1:
+                    desc = parts[1].strip()
+            ws.cell(row=r, column=5, value=item["code"])
+            ws.cell(row=r, column=6, value=reason_cat)
+            ws.cell(row=r, column=7, value=desc if desc else None)
             for col in range(5, 8):
                 _apply_data_style(ws.cell(row=r, column=col))
-            max_rows = max(max_rows, r - 1)
 
         # Section 3: 验收原因 (cols I-J)
-        row = 2
-        section = legend_data.get("acceptance_reasons", [])
-        for i, item in enumerate(section):
-            r = row + i
-            ws.cell(row=r, column=9, value=item.get("reason"))
-            ws.cell(row=r, column=10, value=item.get("action"))
+        ar_rows = conn.execute(
+            "SELECT code, label, extra FROM reference_data "
+            "WHERE data_type=\'acceptance_reason\' ORDER BY sort_order, id"
+        ).fetchall()
+        for i, item in enumerate(ar_rows):
+            r = 2 + i
+            ws.cell(row=r, column=9, value=item["code"])
+            ws.cell(row=r, column=10, value=item["extra"] if item["extra"] else None)
             for col in range(9, 11):
                 _apply_data_style(ws.cell(row=r, column=col))
-            max_rows = max(max_rows, r - 1)
 
         # Section 4: 预算进度 (cols L-M)
-        row = 2
-        section = legend_data.get("budget_progress", [])
-        for i, item in enumerate(section):
-            r = row + i
-            ws.cell(row=r, column=12, value=item.get("progress"))
-            ws.cell(row=r, column=13, value=item.get("category"))
+        bp_rows = conn.execute(
+            "SELECT code, label, extra FROM reference_data "
+            "WHERE data_type=\'budget_progress\' ORDER BY sort_order, id"
+        ).fetchall()
+        for i, item in enumerate(bp_rows):
+            r = 2 + i
+            ws.cell(row=r, column=12, value=item["code"])
+            ws.cell(row=r, column=13, value=item["extra"] if item["extra"] else None)
             for col in range(12, 14):
                 _apply_data_style(ws.cell(row=r, column=col))
-            max_rows = max(max_rows, r - 1)
 
         # Section 5: 团队/产线 (cols O-P)
-        row = 2
-        section = legend_data.get("teams_products", [])
-        for i, item in enumerate(section):
-            r = row + i
-            ws.cell(row=r, column=15, value=item.get("team"))
-            ws.cell(row=r, column=16, value=item.get("product_line"))
-            for col in range(15, 17):
-                _apply_data_style(ws.cell(row=r, column=col))
-            max_rows = max(max_rows, r - 1)
+        # 团队来自 data_type=team, 产线来自 data_type=product_line
+        team_rows = conn.execute(
+            "SELECT code, label FROM reference_data "
+            "WHERE data_type=\'team\' ORDER BY sort_order, id"
+        ).fetchall()
+        pl_rows = conn.execute(
+            "SELECT code, label FROM reference_data "
+            "WHERE data_type=\'product_line\' ORDER BY sort_order, id"
+        ).fetchall()
+        # 手工报表中团队和产线是并排的，取 max 行数
+        max_section_rows = max(len(team_rows), len(pl_rows))
+        for i in range(max_section_rows):
+            r = 2 + i
+            if i < len(team_rows):
+                ws.cell(row=r, column=15, value=team_rows[i]["code"])
+                _apply_data_style(ws.cell(row=r, column=15))
+            if i < len(pl_rows):
+                ws.cell(row=r, column=16, value=pl_rows[i]["code"])
+                _apply_data_style(ws.cell(row=r, column=16))
+
+        conn.close()
 
         # 列宽
         for col in range(1, 17):
@@ -957,7 +1149,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_monthly_record(self, wb: Workbook, period: str):
-        """构建月度汇总记录 sheet"""
+        """构建月度汇总记录 sheet — 输出所有有数据的期间 × 12 个月"""
         ws = wb.create_sheet("月度汇总记录")
 
         # Row 1: 大标题
@@ -985,31 +1177,54 @@ class RevenueExporter:
             cell = ws.cell(row=2, column=1 + i, value=h)
             _apply_header_style(cell)
 
-        # Data rows
+        # 引擎只支持 202601-202606（DB 只有 a202601-a202606 实际列）
+        # 从 DB 中获取所有有数据的 2026xx 期间（限于 202601-202606）
+        conn = self.engine._conn()
+        period_rows = conn.execute("""
+            SELECT DISTINCT archive_month
+            FROM budget_exec
+            WHERE archive_month IS NOT NULL
+              AND archive_month >= '202601' AND archive_month <= '202606'
+            ORDER BY archive_month DESC
+        """).fetchall()
+        all_periods = [int(r["archive_month"]) for r in period_rows]
+        # 确保 202601-202606 全覆盖
+        for m in range(6, 0, -1):
+            p = 202600 + m
+            if p not in all_periods:
+                all_periods.append(p)
+        all_periods = sorted(set(all_periods), reverse=True)
+
         WAN = 10000.0
-        monthly_data = self.engine.compute_monthly_detail(period)
-        for i, m in enumerate(monthly_data):
-            row = 3 + i
-            ws.cell(row=row, column=1, value=m["period"])
-            ws.cell(row=row, column=2, value=m["contract_period"])
-            ws.cell(row=row, column=3, value=round(m["new_amount"] / WAN, 6) if m["new_amount"] != 0 else None)
-            ws.cell(row=row, column=4, value=round(m["new_plan_rev"] / WAN, 6) if m["new_plan_rev"] != 0 else None)
-            ws.cell(row=row, column=5, value=round(m["new_actual_rev"] / WAN, 6) if m["new_actual_rev"] != 0 else None)
-            ws.cell(row=row, column=6, value=round(m["def_plan_rev"] / WAN, 6) if m["def_plan_rev"] != 0 else None)
-            ws.cell(row=row, column=7, value=round(m["def_actual_rev"] / WAN, 6) if m["def_actual_rev"] != 0 else None)
-            ws.cell(row=row, column=8, value=round(m["total_plan_rev"] / WAN, 6) if m["total_plan_rev"] != 0 else None)
-            ws.cell(row=row, column=9, value=round(m["total_actual_rev"] / WAN, 6) if m["total_actual_rev"] != 0 else None)
-            ws.cell(row=row, column=10, value=0)
-            ws.cell(row=row, column=11, value=0)
-            for col in range(1, 12):
-                _apply_data_style(ws.cell(row=row, column=col))
+        current_row = 3
+
+        for stat_period in all_periods:
+            period_str = f"{stat_period:06d}"  # e.g. 202606
+            monthly_data = self.engine.compute_monthly_detail(period_str)
+            for m in monthly_data:
+                ws.cell(row=current_row, column=1, value=stat_period)
+                ws.cell(row=current_row, column=2, value=m["contract_period"])
+                ws.cell(row=current_row, column=3, value=round(m["new_amount"] / WAN, 6) if m["new_amount"] != 0 else None)
+                ws.cell(row=current_row, column=4, value=round(m["new_plan_rev"] / WAN, 6) if m["new_plan_rev"] != 0 else None)
+                ws.cell(row=current_row, column=5, value=round(m["new_actual_rev"] / WAN, 6) if m["new_actual_rev"] != 0 else None)
+                ws.cell(row=current_row, column=6, value=round(m["def_plan_rev"] / WAN, 6) if m["def_plan_rev"] != 0 else None)
+                ws.cell(row=current_row, column=7, value=round(m["def_actual_rev"] / WAN, 6) if m["def_actual_rev"] != 0 else None)
+                ws.cell(row=current_row, column=8, value=round(m["total_plan_rev"] / WAN, 6) if m["total_plan_rev"] != 0 else None)
+                ws.cell(row=current_row, column=9, value=round(m["total_actual_rev"] / WAN, 6) if m["total_actual_rev"] != 0 else None)
+                ws.cell(row=current_row, column=10, value=0)
+                ws.cell(row=current_row, column=11, value=0)
+                for col in range(1, 12):
+                    _apply_data_style(ws.cell(row=current_row, column=col))
+                current_row += 1
+
+        conn.close()
 
     # ===================================================================
     # Sheet 10: 履约汇总记录
     # ===================================================================
 
     def _build_performance_record(self, wb: Workbook, period: str):
-        """构建履约汇总记录 sheet"""
+        """构建履约汇总记录 sheet — 输出所有有数据的期间"""
         ws = wb.create_sheet("履约汇总记录")
 
         headers = ["统计期间", "类别", "新签", "递延", "合计", "备注"]
@@ -1017,31 +1232,56 @@ class RevenueExporter:
             cell = ws.cell(row=1, column=1 + i, value=h)
             _apply_header_style(cell)
 
-        perf = self.engine.compute_performance_summary(period)
+        # 引擎只支持 202601-202606（DB 只有 a202601-a202606 实际列）
+        conn = self.engine._conn()
+        period_rows = conn.execute("""
+            SELECT DISTINCT archive_month
+            FROM budget_exec
+            WHERE archive_month IS NOT NULL
+              AND archive_month >= '202601' AND archive_month <= '202606'
+            ORDER BY archive_month DESC
+        """).fetchall()
+        all_periods = [int(r["archive_month"]) for r in period_rows]
+        # 确保 202601-202606 全覆盖
+        for m in range(6, 0, -1):
+            p = 202600 + m
+            if p not in all_periods:
+                all_periods.append(p)
+        all_periods = sorted(set(all_periods), reverse=True)
+
         WAN = 10000.0
+        current_row = 2
 
-        rows_data = [
-            (period, "预算完成", perf["new"]["budget"] / WAN, perf["deferred"]["budget"] / WAN, perf["total"]["budget"] / WAN, None),
-            (period, "实际完成", perf["new"]["actual"] / WAN, perf["deferred"]["actual"] / WAN, perf["total"]["actual"] / WAN, None),
-            (period, "预算-实际", perf["new"]["diff"] / WAN, perf["deferred"]["diff"] / WAN, perf["total"]["diff"] / WAN, None),
-            (period, "其中：提前完成", perf["new"]["ahead"] / WAN, perf["deferred"]["ahead"] / WAN, perf["total"]["ahead"] / WAN,
-             "【调整】不含履约义务分项金额调整（即同时增加提前及滞后）"),
-            (period, "          滞后未完成", perf["new"]["behind"] / WAN, perf["deferred"]["behind"] / WAN, perf["total"]["behind"] / WAN,
-             "【调整】不含履约义务分项金额调整（即同时增加提前及滞后）"),
-            (period, "          消失", perf["new"]["disappear"] / WAN, perf["deferred"]["disappear"] / WAN, perf["total"]["disappear"] / WAN, None),
-        ]
+        for stat_period in all_periods:
+            period_str = f"{stat_period:06d}"
+            perf = self.engine.compute_performance_summary(period_str)
 
-        for i, (p, label, n, d, t, note) in enumerate(rows_data):
-            row = 2 + i
-            ws.cell(row=row, column=1, value=int(p))
-            ws.cell(row=row, column=2, value=label)
-            ws.cell(row=row, column=3, value=round(n, 6))
-            ws.cell(row=row, column=4, value=round(d, 6))
-            ws.cell(row=row, column=5, value=round(t, 6))
-            if note:
-                ws.cell(row=row, column=6, value=note)
-            for col in range(1, 7):
-                _apply_data_style(ws.cell(row=row, column=col))
+            rows_data = [
+                (stat_period, "预算完成", perf["new"]["budget"] / WAN, perf["deferred"]["budget"] / WAN, perf["total"]["budget"] / WAN, None),
+                (stat_period, "实际完成", perf["new"]["actual"] / WAN, perf["deferred"]["actual"] / WAN, perf["total"]["actual"] / WAN, None),
+                (stat_period, "预算-实际", perf["new"]["diff"] / WAN, perf["deferred"]["diff"] / WAN, perf["total"]["diff"] / WAN, None),
+                (stat_period, "其中：提前完成", perf["new"]["ahead"] / WAN, perf["deferred"]["ahead"] / WAN, perf["total"]["ahead"] / WAN,
+                 "【调整】不含履约义务分项金额调整（即同时增加提前及滞后）"),
+                (stat_period, "          滞后未完成", perf["new"]["behind"] / WAN, perf["deferred"]["behind"] / WAN, perf["total"]["behind"] / WAN,
+                 "【调整】不含履约义务分项金额调整（即同时增加提前及滞后）"),
+                (stat_period, "          消失", perf["new"]["disappear"] / WAN, perf["deferred"]["disappear"] / WAN, perf["total"]["disappear"] / WAN, None),
+            ]
+
+            for i, (p, label, n, d, t, note) in enumerate(rows_data):
+                row = current_row + i
+                ws.cell(row=row, column=1, value=int(p))
+                ws.cell(row=row, column=2, value=label)
+                ws.cell(row=row, column=3, value=round(n, 6))
+                ws.cell(row=row, column=4, value=round(d, 6))
+                ws.cell(row=row, column=5, value=round(t, 6))
+                if note:
+                    ws.cell(row=row, column=6, value=note)
+                for col in range(1, 7):
+                    _apply_data_style(ws.cell(row=row, column=col))
+
+            current_row += 6
+
+        conn.close()
 
 
 # ===================================================================
@@ -1071,21 +1311,19 @@ def _header_to_db_key(header: str) -> str:
         "计划开始时间": "plan_start",
         "计划结束时间": "plan_end",
         "计划完成时间": "plan_done",
-        "m202601": "m202601", "m202602": "m202602", "m202603": "m202603",
-        "m202604": "m202604", "m202605": "m202605", "m202606": "m202606",
-        "m202607": "m202607", "m202608": "m202608", "m202609": "m202609",
-        "m202610": "m202610", "m202611": "m202611", "m202612": "m202612",
+        "202601": "m202601", "202602": "m202602", "202603": "m202603",
+        "202604": "m202604", "202605": "m202605", "202606": "m202606",
+        "202607": "m202607", "202608": "m202608", "202609": "m202609",
+        "202610": "m202610", "202611": "m202611", "202612": "m202612",
         "2026年预计": "year_est",
-        "h1_plan": "h1_plan",
-        "h1_actual": "h1_actual",
-        "h1_ahead": "h1_ahead",
-        "h1_behind": "h1_behind",
-        "a202601": "a202601", "a202602": "a202602", "a202603": "a202603",
-        "a202604": "a202604", "a202605": "a202605", "a202606": "a202606",
-        "disappear_2026": "disappear_2026",
-        "disappear_future": "disappear_future",
-        "disappear_note": "disappear_note",
-        "rebuild_perf": "rebuild_perf",
+        "202601-06预计": "h1_plan",
+        "202601-06确收": "h1_actual",
+        "202601-06提前完成": "h1_ahead",
+        "202601-06滞后未完成": "h1_behind",
+        "2026消失金额": "disappear_2026",
+        "2026年及以后消失金额": "disappear_future",
+        "消失备注": "disappear_note",
+        "重拆履约，提前和滞后同增": "rebuild_perf",
     }
     return mapping.get(header, header)
 
