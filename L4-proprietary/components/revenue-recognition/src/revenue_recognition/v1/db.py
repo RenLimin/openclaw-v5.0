@@ -143,6 +143,45 @@ def init_db(db_path: Optional[Path] = None):
         )
     """)
     c.execute("CREATE INDEX IF NOT EXISTS idx_ref_type ON reference_data(data_type)")
+    # 月度汇总记录 — 手工维护的历史数据
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS monthly_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stat_period TEXT NOT NULL,
+            contract_period TEXT NOT NULL,
+            new_amount REAL,
+            new_plan_rev REAL,
+            new_actual_rev REAL,
+            def_plan_rev REAL,
+            def_actual_rev REAL,
+            total_plan_rev REAL,
+            total_actual_rev REAL,
+            adj_plan REAL,
+            adj_actual REAL,
+            created_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(stat_period, contract_period)
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ms_stat ON monthly_summary(stat_period)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ms_contract ON monthly_summary(contract_period)")
+
+    # 履约汇总记录 — 手工维护的历史数据
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS performance_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            stat_period TEXT NOT NULL,
+            category TEXT NOT NULL,
+            new_value REAL,
+            deferred_value REAL,
+            total_value REAL,
+            note TEXT,
+            created_at TEXT DEFAULT (datetime('now')),
+            UNIQUE(stat_period, category)
+        )
+    """)
+    c.execute("CREATE INDEX IF NOT EXISTS idx_ps_stat ON performance_summary(stat_period)")
+
+
 
     conn.commit()
     conn.close()
