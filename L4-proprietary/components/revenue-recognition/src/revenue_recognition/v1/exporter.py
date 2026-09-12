@@ -97,6 +97,7 @@ class RevenueExporter:
         """
         WAN = 10000.0
         ws = wb.create_sheet("汇总")
+        period_month = int(period[4:6])
 
         # Row 2: 大标题
         ws.cell(row=2, column=2, value="期间")
@@ -145,7 +146,7 @@ class RevenueExporter:
             if new_rate is not None:
                 ws.cell(row=row, column=6, value=round(new_rate, 16))
             else:
-                ws.cell(row=row, column=6, value=0 if month_idx < 6 else None)
+                ws.cell(row=row, column=6, value=None)
 
             for col in range(3, 7):
                 _apply_data_style(ws.cell(row=row, column=col))
@@ -160,7 +161,7 @@ class RevenueExporter:
             if def_rate is not None:
                 ws.cell(row=row, column=9, value=round(def_rate, 16))
             else:
-                ws.cell(row=row, column=9, value=0 if month_idx < 6 else None)
+                ws.cell(row=row, column=9, value=None)
             for col in range(7, 10):
                 _apply_data_style(ws.cell(row=row, column=col))
 
@@ -174,20 +175,20 @@ class RevenueExporter:
             if total_rate is not None:
                 ws.cell(row=row, column=12, value=round(total_rate, 16))
             else:
-                ws.cell(row=row, column=12, value=0 if month_idx < 6 else None)
+                ws.cell(row=row, column=12, value=None)
             for col in range(10, 13):
                 _apply_data_style(ws.cell(row=row, column=col))
 
         # Row 16: 1-6月小计
         row = 16
-        ws.cell(row=row, column=2, value="1-6月小计")
+        ws.cell(row=row, column=2, value=f"1-{period_month}月小计")
         _apply_data_style(ws.cell(row=row, column=2))
 
-        total_new_amount = sum((period_map.get(m, {}).get("new_amount", 0) or 0) for m in SUMMARY_MONTHS[:6]) / WAN
-        total_new_plan = sum((period_map.get(m, {}).get("new_plan_rev", 0) or 0) for m in SUMMARY_MONTHS[:6]) / WAN
-        total_new_actual = sum((period_map.get(m, {}).get("new_actual_rev", 0) or 0) for m in SUMMARY_MONTHS[:6]) / WAN
-        total_def_plan = sum((period_map.get(m, {}).get("def_plan_rev", 0) or 0) for m in SUMMARY_MONTHS[:6]) / WAN
-        total_def_actual = sum((period_map.get(m, {}).get("def_actual_rev", 0) or 0) for m in SUMMARY_MONTHS[:6]) / WAN
+        total_new_amount = sum((period_map.get(m, {}).get("new_amount", 0) or 0) for m in SUMMARY_MONTHS[:period_month]) / WAN
+        total_new_plan = sum((period_map.get(m, {}).get("new_plan_rev", 0) or 0) for m in SUMMARY_MONTHS[:period_month]) / WAN
+        total_new_actual = sum((period_map.get(m, {}).get("new_actual_rev", 0) or 0) for m in SUMMARY_MONTHS[:period_month]) / WAN
+        total_def_plan = sum((period_map.get(m, {}).get("def_plan_rev", 0) or 0) for m in SUMMARY_MONTHS[:period_month]) / WAN
+        total_def_actual = sum((period_map.get(m, {}).get("def_actual_rev", 0) or 0) for m in SUMMARY_MONTHS[:period_month]) / WAN
 
         ws.cell(row=row, column=3, value=round(total_new_amount, 6))
         ws.cell(row=row, column=4, value=round(total_new_plan, 6))
@@ -367,7 +368,7 @@ class RevenueExporter:
             if new_rate is not None:
                 ws.cell(row=row, column=6, value=round(new_rate, 16))
             else:
-                ws.cell(row=row, column=6, value=0 if month_idx < 6 else None)
+                ws.cell(row=row, column=6, value=None)
 
             # 递延 (G-I)
             def_plan = (m_data.get("def_plan_rev", 0) or 0) / WAN
@@ -379,7 +380,7 @@ class RevenueExporter:
             if def_rate is not None:
                 ws.cell(row=row, column=9, value=round(def_rate, 16))
             else:
-                ws.cell(row=row, column=9, value=0 if month_idx < 6 else None)
+                ws.cell(row=row, column=9, value=None)
 
             # 新签+递延 (J-L)
             total_plan = (m_data.get("total_plan_rev", 0) or 0) / WAN
@@ -391,7 +392,7 @@ class RevenueExporter:
             if total_rate is not None:
                 ws.cell(row=row, column=12, value=round(total_rate, 16))
             else:
-                ws.cell(row=row, column=12, value=0 if month_idx < 6 else None)
+                ws.cell(row=row, column=12, value=None)
 
             for col in range(3, 13):
                 _apply_data_style(ws.cell(row=row, column=col))
@@ -1187,21 +1188,20 @@ class RevenueExporter:
             ORDER BY stat_period DESC, contract_period ASC
         """).fetchall()
 
-        WAN = 10000.0
         current_row = 3
 
         for r in rows:
             ws.cell(row=current_row, column=1, value=int(r["stat_period"]))
             ws.cell(row=current_row, column=2, value=int(r["contract_period"]))
-            ws.cell(row=current_row, column=3, value=round(r["new_amount"] / WAN, 6) if r["new_amount"] is not None else None)
-            ws.cell(row=current_row, column=4, value=round(r["new_plan_rev"] / WAN, 6) if r["new_plan_rev"] is not None else None)
-            ws.cell(row=current_row, column=5, value=round(r["new_actual_rev"] / WAN, 6) if r["new_actual_rev"] is not None else None)
-            ws.cell(row=current_row, column=6, value=round(r["def_plan_rev"] / WAN, 6) if r["def_plan_rev"] is not None else None)
-            ws.cell(row=current_row, column=7, value=round(r["def_actual_rev"] / WAN, 6) if r["def_actual_rev"] is not None else None)
-            ws.cell(row=current_row, column=8, value=round(r["total_plan_rev"] / WAN, 6) if r["total_plan_rev"] is not None else None)
-            ws.cell(row=current_row, column=9, value=round(r["total_actual_rev"] / WAN, 6) if r["total_actual_rev"] is not None else None)
-            ws.cell(row=current_row, column=10, value=round(r["adj_plan"] / WAN, 6) if r["adj_plan"] is not None else None)
-            ws.cell(row=current_row, column=11, value=round(r["adj_actual"] / WAN, 6) if r["adj_actual"] is not None else None)
+            ws.cell(row=current_row, column=3, value=round(r["new_amount"], 6) if r["new_amount"] is not None else None)
+            ws.cell(row=current_row, column=4, value=round(r["new_plan_rev"], 6) if r["new_plan_rev"] is not None else None)
+            ws.cell(row=current_row, column=5, value=round(r["new_actual_rev"], 6) if r["new_actual_rev"] is not None else None)
+            ws.cell(row=current_row, column=6, value=round(r["def_plan_rev"], 6) if r["def_plan_rev"] is not None else None)
+            ws.cell(row=current_row, column=7, value=round(r["def_actual_rev"], 6) if r["def_actual_rev"] is not None else None)
+            ws.cell(row=current_row, column=8, value=round(r["total_plan_rev"], 6) if r["total_plan_rev"] is not None else None)
+            ws.cell(row=current_row, column=9, value=round(r["total_actual_rev"], 6) if r["total_actual_rev"] is not None else None)
+            ws.cell(row=current_row, column=10, value=round(r["adj_plan"], 6) if r["adj_plan"] is not None else None)
+            ws.cell(row=current_row, column=11, value=round(r["adj_actual"], 6) if r["adj_actual"] is not None else None)
             for col in range(1, 12):
                 _apply_data_style(ws.cell(row=current_row, column=col))
             current_row += 1
@@ -1229,15 +1229,23 @@ class RevenueExporter:
             ORDER BY stat_period DESC, category ASC
         """).fetchall()
 
-        WAN = 10000.0
+        # Fixed category order matching manual report
+        category_order = ["预算完成", "实际完成", "预算-实际", "其中：提前完成", "          滞后未完成", "          消失"]
+
         current_row = 2
 
-        for r in rows:
+        # Sort rows by fixed category order
+        rows_sorted = sorted(rows, key=lambda r: (
+            int(r["stat_period"]),
+            category_order.index(r["category"]) if r["category"] in category_order else 999
+        ))
+
+        for r in rows_sorted:
             ws.cell(row=current_row, column=1, value=int(r["stat_period"]))
             ws.cell(row=current_row, column=2, value=r["category"])
-            ws.cell(row=current_row, column=3, value=round(r["new_value"] / WAN, 6) if r["new_value"] is not None else None)
-            ws.cell(row=current_row, column=4, value=round(r["deferred_value"] / WAN, 6) if r["deferred_value"] is not None else None)
-            ws.cell(row=current_row, column=5, value=round(r["total_value"] / WAN, 6) if r["total_value"] is not None else None)
+            ws.cell(row=current_row, column=3, value=round(r["new_value"], 6) if r["new_value"] is not None else None)
+            ws.cell(row=current_row, column=4, value=round(r["deferred_value"], 6) if r["deferred_value"] is not None else None)
+            ws.cell(row=current_row, column=5, value=round(r["total_value"], 6) if r["total_value"] is not None else None)
             if r["note"] is not None:
                 ws.cell(row=current_row, column=6, value=r["note"])
             for col in range(1, 7):
