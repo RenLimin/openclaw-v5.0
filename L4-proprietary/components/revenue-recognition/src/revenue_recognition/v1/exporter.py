@@ -1149,7 +1149,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_monthly_record(self, wb: Workbook, period: str):
-        """构建月度汇总记录 sheet — 输出所有有数据的期间 × 12 个月"""
+        """构建月度汇总记录 sheet — 从 monthly_summary 表读取所有数据"""
         ws = wb.create_sheet("月度汇总记录")
 
         # Row 1: 大标题
@@ -1177,45 +1177,34 @@ class RevenueExporter:
             cell = ws.cell(row=2, column=1 + i, value=h)
             _apply_header_style(cell)
 
-        # 引擎只支持 202601-202606（DB 只有 a202601-a202606 实际列）
-        # 从 DB 中获取所有有数据的 2026xx 期间（限于 202601-202606）
+        # 从 monthly_summary 表查询所有数据
         conn = self.engine._conn()
-        period_rows = conn.execute("""
-            SELECT DISTINCT archive_month
-            FROM budget_exec
-            WHERE archive_month IS NOT NULL
-              AND archive_month >= '202601' AND archive_month <= '202606'
-            ORDER BY archive_month DESC
+        rows = conn.execute("""
+            SELECT stat_period, contract_period, new_amount, new_plan_rev, new_actual_rev,
+                   def_plan_rev, def_actual_rev, total_plan_rev, total_actual_rev,
+                   adj_plan, adj_actual
+            FROM monthly_summary
+            ORDER BY stat_period DESC, contract_period ASC
         """).fetchall()
-        all_periods = [int(r["archive_month"]) for r in period_rows]
-        # 确保 202601-202606 全覆盖
-        for m in range(6, 0, -1):
-            p = 202600 + m
-            if p not in all_periods:
-                all_periods.append(p)
-        all_periods = sorted(set(all_periods), reverse=True)
 
         WAN = 10000.0
         current_row = 3
 
-        for stat_period in all_periods:
-            period_str = f"{stat_period:06d}"  # e.g. 202606
-            monthly_data = self.engine.compute_monthly_detail(period_str)
-            for m in monthly_data:
-                ws.cell(row=current_row, column=1, value=stat_period)
-                ws.cell(row=current_row, column=2, value=m["contract_period"])
-                ws.cell(row=current_row, column=3, value=round(m["new_amount"] / WAN, 6) if m["new_amount"] != 0 else None)
-                ws.cell(row=current_row, column=4, value=round(m["new_plan_rev"] / WAN, 6) if m["new_plan_rev"] != 0 else None)
-                ws.cell(row=current_row, column=5, value=round(m["new_actual_rev"] / WAN, 6) if m["new_actual_rev"] != 0 else None)
-                ws.cell(row=current_row, column=6, value=round(m["def_plan_rev"] / WAN, 6) if m["def_plan_rev"] != 0 else None)
-                ws.cell(row=current_row, column=7, value=round(m["def_actual_rev"] / WAN, 6) if m["def_actual_rev"] != 0 else None)
-                ws.cell(row=current_row, column=8, value=round(m["total_plan_rev"] / WAN, 6) if m["total_plan_rev"] != 0 else None)
-                ws.cell(row=current_row, column=9, value=round(m["total_actual_rev"] / WAN, 6) if m["total_actual_rev"] != 0 else None)
-                ws.cell(row=current_row, column=10, value=0)
-                ws.cell(row=current_row, column=11, value=0)
-                for col in range(1, 12):
-                    _apply_data_style(ws.cell(row=current_row, column=col))
-                current_row += 1
+        for r in rows:
+            ws.cell(row=current_row, column=1, value=int(r["stat_period"]))
+            ws.cell(row=current_row, column=2, value=int(r["contract_period"]))
+            ws.cell(row=current_row, column=3, value=round(r["new_amount"] / WAN, 6) if r["new_amount"] is not None else None)
+            ws.cell(row=current_row, column=4, value=round(r["new_plan_rev"] / WAN, 6) if r["new_plan_rev"] is not None else None)
+            ws.cell(row=current_row, column=5, value=round(r["new_actual_rev"] / WAN, 6) if r["new_actual_rev"] is not None else None)
+            ws.cell(row=current_row, column=6, value=round(r["def_plan_rev"] / WAN, 6) if r["def_plan_rev"] is not None else None)
+            ws.cell(row=current_row, column=7, value=round(r["def_actual_rev"] / WAN, 6) if r["def_actual_rev"] is not None else None)
+            ws.cell(row=current_row, column=8, value=round(r["total_plan_rev"] / WAN, 6) if r["total_plan_rev"] is not None else None)
+            ws.cell(row=current_row, column=9, value=round(r["total_actual_rev"] / WAN, 6) if r["total_actual_rev"] is not None else None)
+            ws.cell(row=current_row, column=10, value=round(r["adj_plan"] / WAN, 6) if r["adj_plan"] is not None else None)
+            ws.cell(row=current_row, column=11, value=round(r["adj_actual"] / WAN, 6) if r["adj_actual"] is not None else None)
+            for col in range(1, 12):
+                _apply_data_style(ws.cell(row=current_row, column=col))
+            current_row += 1
 
         conn.close()
 
@@ -1224,7 +1213,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_performance_record(self, wb: Workbook, period: str):
-        """构建履约汇总记录 sheet — 输出所有有数据的期间"""
+        """构建履约汇总记录 sheet — 从 performance_summary 表读取所有数据"""
         ws = wb.create_sheet("履约汇总记录")
 
         headers = ["统计期间", "类别", "新签", "递延", "合计", "备注"]
@@ -1232,54 +1221,28 @@ class RevenueExporter:
             cell = ws.cell(row=1, column=1 + i, value=h)
             _apply_header_style(cell)
 
-        # 引擎只支持 202601-202606（DB 只有 a202601-a202606 实际列）
+        # 从 performance_summary 表查询所有数据
         conn = self.engine._conn()
-        period_rows = conn.execute("""
-            SELECT DISTINCT archive_month
-            FROM budget_exec
-            WHERE archive_month IS NOT NULL
-              AND archive_month >= '202601' AND archive_month <= '202606'
-            ORDER BY archive_month DESC
+        rows = conn.execute("""
+            SELECT stat_period, category, new_value, deferred_value, total_value, note
+            FROM performance_summary
+            ORDER BY stat_period DESC, category ASC
         """).fetchall()
-        all_periods = [int(r["archive_month"]) for r in period_rows]
-        # 确保 202601-202606 全覆盖
-        for m in range(6, 0, -1):
-            p = 202600 + m
-            if p not in all_periods:
-                all_periods.append(p)
-        all_periods = sorted(set(all_periods), reverse=True)
 
         WAN = 10000.0
         current_row = 2
 
-        for stat_period in all_periods:
-            period_str = f"{stat_period:06d}"
-            perf = self.engine.compute_performance_summary(period_str)
-
-            rows_data = [
-                (stat_period, "预算完成", perf["new"]["budget"] / WAN, perf["deferred"]["budget"] / WAN, perf["total"]["budget"] / WAN, None),
-                (stat_period, "实际完成", perf["new"]["actual"] / WAN, perf["deferred"]["actual"] / WAN, perf["total"]["actual"] / WAN, None),
-                (stat_period, "预算-实际", perf["new"]["diff"] / WAN, perf["deferred"]["diff"] / WAN, perf["total"]["diff"] / WAN, None),
-                (stat_period, "其中：提前完成", perf["new"]["ahead"] / WAN, perf["deferred"]["ahead"] / WAN, perf["total"]["ahead"] / WAN,
-                 "【调整】不含履约义务分项金额调整（即同时增加提前及滞后）"),
-                (stat_period, "          滞后未完成", perf["new"]["behind"] / WAN, perf["deferred"]["behind"] / WAN, perf["total"]["behind"] / WAN,
-                 "【调整】不含履约义务分项金额调整（即同时增加提前及滞后）"),
-                (stat_period, "          消失", perf["new"]["disappear"] / WAN, perf["deferred"]["disappear"] / WAN, perf["total"]["disappear"] / WAN, None),
-            ]
-
-            for i, (p, label, n, d, t, note) in enumerate(rows_data):
-                row = current_row + i
-                ws.cell(row=row, column=1, value=int(p))
-                ws.cell(row=row, column=2, value=label)
-                ws.cell(row=row, column=3, value=round(n, 6))
-                ws.cell(row=row, column=4, value=round(d, 6))
-                ws.cell(row=row, column=5, value=round(t, 6))
-                if note:
-                    ws.cell(row=row, column=6, value=note)
-                for col in range(1, 7):
-                    _apply_data_style(ws.cell(row=row, column=col))
-
-            current_row += 6
+        for r in rows:
+            ws.cell(row=current_row, column=1, value=int(r["stat_period"]))
+            ws.cell(row=current_row, column=2, value=r["category"])
+            ws.cell(row=current_row, column=3, value=round(r["new_value"] / WAN, 6) if r["new_value"] is not None else None)
+            ws.cell(row=current_row, column=4, value=round(r["deferred_value"] / WAN, 6) if r["deferred_value"] is not None else None)
+            ws.cell(row=current_row, column=5, value=round(r["total_value"] / WAN, 6) if r["total_value"] is not None else None)
+            if r["note"] is not None:
+                ws.cell(row=current_row, column=6, value=r["note"])
+            for col in range(1, 7):
+                _apply_data_style(ws.cell(row=current_row, column=col))
+            current_row += 1
 
         conn.close()
 
