@@ -1,0 +1,291 @@
+{
+  "_meta": {
+    "description": "系统初始参考数据 — 从手工报表图例 Sheet 导出",
+    "source": "2026年计划确收&实际确收对比表202601-06-0724 - 差异分析.xlsx",
+    "extracted_at": "2026-09-12",
+    "note": "手工维护，不通过代码自动更新"
+  },
+  "project_managers": [
+    {
+      "name": "崔延章",
+      "department": "北区客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "王文博",
+      "department": "北区客户服务部",
+      "note": null
+    },
+    {
+      "name": "张铭鑫",
+      "department": "北区客户服务部",
+      "note": null
+    },
+    {
+      "name": "商君玮",
+      "department": "北区客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "刘宏宇",
+      "department": "北区客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "崔硕",
+      "department": "北区客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "余壮",
+      "department": "北区客户服务部",
+      "note": null
+    },
+    {
+      "name": "牛素芹",
+      "department": "北区客户服务部",
+      "note": null
+    },
+    {
+      "name": "张辉",
+      "department": "大客户服务部",
+      "note": null
+    },
+    {
+      "name": "李杨",
+      "department": "大客户服务部",
+      "note": null
+    },
+    {
+      "name": "刘瑞营",
+      "department": "大客户服务部",
+      "note": null
+    },
+    {
+      "name": "温泽辉",
+      "department": "大客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "倪焱川",
+      "department": "大客户服务部",
+      "note": null
+    },
+    {
+      "name": "代杭旅",
+      "department": "大客户服务部",
+      "note": "已转岗"
+    },
+    {
+      "name": "申月移",
+      "department": "大客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "张梨",
+      "department": "大客户服务部",
+      "note": null
+    },
+    {
+      "name": "程涛",
+      "department": "大客户服务部",
+      "note": null
+    },
+    {
+      "name": "闫英健",
+      "department": "大客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "贾淇名",
+      "department": "大客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "张燕兰",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "冯刚",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "李平意",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "孙康",
+      "department": "南区客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "林慧娟",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "梁杨",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "黄伟",
+      "department": "南区客户服务部",
+      "note": "已离职"
+    },
+    {
+      "name": "徐亚东",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "胡李鑫",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "郭仕娜",
+      "department": "南区客户服务部",
+      "note": null
+    },
+    {
+      "name": "孙环环",
+      "department": "其他",
+      "note": "项目管理部"
+    },
+    {
+      "name": "曲婷婷",
+      "department": "其他",
+      "note": "项目管理部"
+    },
+    {
+      "name": "未立项",
+      "department": "其他",
+      "note": "未立项"
+    },
+    {
+      "name": "已结项",
+      "department": "其他",
+      "note": "已结项"
+    },
+    {
+      "name": "*",
+      "department": "全部",
+      "note": "全部"
+    }
+  ],
+  "variance_status": [
+    {
+      "status": "正常确收",
+      "reason_category": "交付原因-延期",
+      "description": null
+    },
+    {
+      "status": "差异确收（当年可消除）",
+      "reason_category": "客户原因-延期",
+      "description": null
+    },
+    {
+      "status": "差异确收（当年不可消除）",
+      "reason_category": "客户原因-终止",
+      "description": null
+    },
+    {
+      "status": "差异确收（当年可消除，整体未滞后）",
+      "reason_category": "客户原因-变更履约项",
+      "description": null
+    },
+    {
+      "status": "差异确收（异常项目）",
+      "reason_category": "产品原因-延期",
+      "description": null
+    },
+    {
+      "status": "预计确收",
+      "reason_category": "综合原因-考核扣款",
+      "description": null
+    },
+    {
+      "status": "提前确收",
+      "reason_category": "综合原因-结算差异",
+      "description": "特指据实结算/工作量结算未按合同上限结算，而引起的差异。"
+    }
+  ],
+  "acceptance_reasons": [
+    {
+      "reason": "验收已完成",
+      "action": "N/A"
+    },
+    {
+      "reason": "正常验收",
+      "action": "正常交付，待合同约定验收时点验收"
+    },
+    {
+      "reason": "项目异常（待签补充协议/终止协议、客户失联）",
+      "action": "客户对接中、发催款函、签署补充协议/终止协议"
+    },
+    {
+      "reason": "应验未验",
+      "action": "项目经理追验收"
+    },
+    {
+      "reason": "验收审核中",
+      "action": "PMO跟进验收审核"
+    }
+  ],
+  "budget_progress": [
+    {
+      "progress": "已归档但未下单",
+      "category": "异常中"
+    },
+    {
+      "progress": "已下单但无法交付",
+      "category": "异常中"
+    },
+    {
+      "progress": "已交付但无法确收",
+      "category": "异常中"
+    },
+    {
+      "progress": "本年度正常可确收",
+      "category": "本年正常交付"
+    },
+    {
+      "progress": "未来可确收",
+      "category": "未来交付"
+    },
+    {
+      "progress": "之前年度已确收",
+      "category": "异常中"
+    },
+    {
+      "progress": "合同消失",
+      "category": "合同消失"
+    }
+  ],
+  "teams_products": [
+    {
+      "team": "*",
+      "product_line": "*"
+    },
+    {
+      "team": "大客户服务部",
+      "product_line": "0：综合产品/服务"
+    },
+    {
+      "team": "南区客户服务部",
+      "product_line": "1：安全保护产品线"
+    },
+    {
+      "team": "北区客户服务部",
+      "product_line": "2：安全服务产品线"
+    },
+    {
+      "team": "其他",
+      "product_line": "3：安全检测产品线"
+    }
+  ]
+}
