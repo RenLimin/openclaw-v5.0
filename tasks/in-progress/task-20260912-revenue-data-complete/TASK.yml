@@ -1,0 +1,43 @@
+artifacts:
+- name: db.py
+  path: L4-proprietary/components/revenue-recognition/src/revenue_recognition/v1/db.py
+  status: modified
+- name: importer.py
+  path: L4-proprietary/components/revenue-recognition/src/revenue_recognition/v1/importer.py
+  status: modified
+- name: exporter.py
+  path: L4-proprietary/components/revenue-recognition/src/revenue_recognition/v1/exporter.py
+  status: modified
+- name: test_importer.py
+  path: L4-proprietary/components/revenue-recognition/src/revenue_recognition/v1/tests/test_importer.py
+  status: modified
+blockers: []
+context:
+- path: L4-proprietary/components/revenue-recognition/src/revenue_recognition/v1/db.py
+- path: L4-proprietary/components/revenue-recognition/src/revenue_recognition/v1/importer.py
+- path: L4-proprietary/components/revenue-recognition/src/revenue_recognition/v1/exporter.py
+created_at: 2026-09-12T23:24:21+0800
+dependencies: []
+goals:
+- description: 新建 monthly_summary 和 performance_summary 表
+  id: g1
+  status: done
+- description: importer.py 新增 import_monthly_summary 和 import_performance_summary
+  id: g2
+  status: done
+- description: exporter.py 修改 _build_monthly_record 和 _build_performance_record
+  id: g3
+  status: done
+- description: 验证全流程跑通、行数正确、测试全绿
+  id: g4
+  status: done
+id: task-20260912-revenue-data-complete
+name: 修复 revenue-recognition 数据完整性
+owner: subagent-revenue-data-complete
+priority: high
+scope:
+  component: revenue-recognition
+  project: openclaw-v5.0
+  version: v1
+status: done
+updated_at: 2026-09-12T23:24:21+0800
