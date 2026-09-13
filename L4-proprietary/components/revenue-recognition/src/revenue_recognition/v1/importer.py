@@ -114,7 +114,7 @@ def import_plan_draft(excel_path: Path = MANUAL_REPORT_PATH, db_path: Optional[P
 def import_budget_exec(excel_path: Path = MANUAL_REPORT_PATH, db_path: Optional[Path] = None) -> int:
     """导入预算执行表"""
     print(f"📖 读取预算执行表: {excel_path}")
-    wb = openpyxl.load_workbook(excel_path, read_only=True)
+    wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
     ws = wb["预算执行表"]
 
     conn = get_connection(db_path)
@@ -190,6 +190,7 @@ def import_budget_exec(excel_path: Path = MANUAL_REPORT_PATH, db_path: Optional[
             "disappear_future": _safe_float(row[44]) if len(row) > 44 else None, # AS
             "disappear_note": _safe_str(row[45]) if len(row) > 45 else None,     # AT
             "rebuild_perf": _safe_str(row[46]) if len(row) > 46 else None,      # AU
+            "forecast_category": _safe_str(row[47]) if len(row) > 47 else None,  # AV
         }
 
         cols = ", ".join(data.keys())

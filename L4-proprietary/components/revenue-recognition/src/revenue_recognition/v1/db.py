@@ -114,6 +114,7 @@ def init_db(db_path: Optional[Path] = None):
             disappear_future REAL,
             disappear_note TEXT,
             rebuild_perf TEXT,
+            forecast_category TEXT,
             comparison_source TEXT,
             imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
