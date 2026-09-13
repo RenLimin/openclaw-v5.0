@@ -1153,26 +1153,45 @@ class RevenueExporter:
         # 获取趋势数据
         trend_data = self.engine.compute_budget_trend(period)
 
-        # Row 4-9: 递延合同
-        def_labels = [
-            "已归档但未下单", "已下单但无法交付", "已交付但无法确收",
-            "本年度正常可确收", "未来可确收", "之前年度已确收"
-        ]
-        for i, label in enumerate(def_labels):
-            row = 4 + i
-            ws.cell(row=row, column=1, value="递延合同" if i == 0 else None)
-            ws.cell(row=row, column=2, value=label)
+        # 辅助函数：写入一行数据（数量+金额，col 3-16）
+        def _write_trend_row(row, col1, col2, count, amount_wan, is_header=False):
+            if col1:
+                ws.cell(row=row, column=1, value=col1)
+                if is_header:
+                    _apply_header_style(ws.cell(row=row, column=1))
+                else:
+                    _apply_data_style(ws.cell(row=row, column=1))
+            ws.cell(row=row, column=2, value=col2)
             _apply_data_style(ws.cell(row=row, column=2))
-            for col_offset in range(3, 16):
-                ws.cell(row=row, column=col_offset, value=0)
-                _apply_data_style(ws.cell(row=row, column=col_offset))
+            # col 3-4: 期初（合同数量, 涉及金额）
+            ws.cell(row=row, column=3, value=count)
+            _apply_data_style(ws.cell(row=row, column=3))
+            ws.cell(row=row, column=4, value=round(amount_wan, 6))
+            _apply_data_style(ws.cell(row=row, column=4))
+            # col 5-14: 1-12月累计（正常/异常/消失/未来/校验/异常说明）— 目前 DB 无此粒度，填 0
+            for col in range(5, 17):
+                ws.cell(row=row, column=col, value=0)
+                _apply_data_style(ws.cell(row=row, column=col))
+
+        # Row 4-9: 递延合同
+        for i, item in enumerate(trend_data["deferred"]):
+            row = 4 + i
+            _write_trend_row(row, "递延合同" if i == 0 else None, item["label"], item["count"], item["amount"])
 
         # Row 10: 合计
+        def_total_count = sum(d["count"] for d in trend_data["deferred"])
+        def_total_amount = sum(d["amount"] for d in trend_data["deferred"])
         ws.cell(row=10, column=1, value="合计：")
         _apply_data_style(ws.cell(row=10, column=1))
-        for col in range(3, 16):
-            ws.cell(row=10, column=col, value=0)
-            _apply_data_style(ws.cell(row=10, column=col))
+        ws.cell(row=10, column=2, value=None)
+        _apply_data_style(ws.cell(row=10, column=2))
+        ws.cell(row=10, column=3, value=def_total_count)
+        _apply_data_style(ws.cell(row=10, column=3))
+        ws.cell(row=10, column=4, value=round(def_total_amount, 6))
+        _apply_data_style(ws.cell(row=10, column=4))
+        for col in range(5, 17):
+            ws.cell(row=row, column=col, value=0)
+            _apply_data_style(ws.cell(row=row, column=col))
 
         # Row 11: 新签标题
         ws.cell(row=11, column=1, value="期间")
@@ -1187,32 +1206,37 @@ class RevenueExporter:
         ws.merge_cells(start_row=11, start_column=5, end_row=11, end_column=15)
 
         # Row 12-16: 新签合同
-        new_labels = [
-            "已归档但未下单", "已下单但无法交付", "已交付但无法确收",
-            "本年度正常可确收", "未来可确收"
-        ]
-        for i, label in enumerate(new_labels):
+        for i, item in enumerate(trend_data["new"]):
             row = 12 + i
-            ws.cell(row=row, column=1, value="新签合同" if i == 0 else None)
-            ws.cell(row=row, column=2, value=label)
-            _apply_data_style(ws.cell(row=row, column=2))
-            for col_offset in range(3, 16):
-                ws.cell(row=row, column=col_offset, value=0)
-                _apply_data_style(ws.cell(row=row, column=col_offset))
+            _write_trend_row(row, "新签合同" if i == 0 else None, item["label"], item["count"], item["amount"])
 
         # Row 17: 新签合计
+        new_total_count = sum(d["count"] for d in trend_data["new"])
+        new_total_amount = sum(d["amount"] for d in trend_data["new"])
         ws.cell(row=17, column=1, value="合计：")
         _apply_data_style(ws.cell(row=17, column=1))
-        for col in range(3, 16):
-            ws.cell(row=17, column=col, value=0)
-            _apply_data_style(ws.cell(row=17, column=col))
+        ws.cell(row=17, column=2, value=None)
+        _apply_data_style(ws.cell(row=17, column=2))
+        ws.cell(row=17, column=3, value=new_total_count)
+        _apply_data_style(ws.cell(row=17, column=3))
+        ws.cell(row=17, column=4, value=round(new_total_amount, 6))
+        _apply_data_style(ws.cell(row=17, column=4))
+        for col in range(5, 17):
+            ws.cell(row=row, column=col, value=0)
+            _apply_data_style(ws.cell(row=row, column=col))
 
         # Row 18: (递延+新签)共计
         ws.cell(row=18, column=1, value="（递延+新签）共计：")
         _apply_data_style(ws.cell(row=18, column=1))
-        for col in range(3, 16):
-            ws.cell(row=18, column=col, value=0)
-            _apply_data_style(ws.cell(row=18, column=col))
+        ws.cell(row=18, column=2, value=None)
+        _apply_data_style(ws.cell(row=18, column=2))
+        ws.cell(row=18, column=3, value=def_total_count + new_total_count)
+        _apply_data_style(ws.cell(row=18, column=3))
+        ws.cell(row=18, column=4, value=round(def_total_amount + new_total_amount, 6))
+        _apply_data_style(ws.cell(row=18, column=4))
+        for col in range(5, 17):
+            ws.cell(row=row, column=col, value=0)
+            _apply_data_style(ws.cell(row=row, column=col))
 
         # Row 19: 新签预计确收率
         ws.cell(row=19, column=5, value="新签预计确收率")
@@ -1231,8 +1255,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_variance_analysis(self, wb: Workbook, period: str):
-        """构建确收差异分析 sheet"""
-        WAN = 10000.0
+        """构建确收差异分析 sheet — 单位为元（与手工报表一致）"""
         ws = wb.create_sheet("确收差异分析")
 
         # Row 1-4: 筛选条件
@@ -1259,14 +1282,14 @@ class RevenueExporter:
             cell = ws.cell(row=7, column=1 + i, value=h)
             _apply_header_style(cell)
 
-        # Row 8+: 按差异原因分组的数据
+        # Row 8+: 按差异原因分组的数据（单位为元）
         variance_data = self.engine.compute_variance_analysis(period)
         for i, row_data in enumerate(variance_data):
             row = 8 + i
             ws.cell(row=row, column=1, value=row_data.get("reason"))
-            ws.cell(row=row, column=2, value=round(row_data.get("deferred", 0) / WAN, 6) if row_data.get("deferred") else None)
-            ws.cell(row=row, column=3, value=round(row_data.get("new", 0) / WAN, 6) if row_data.get("new") else None)
-            ws.cell(row=row, column=4, value=round(row_data.get("total", 0) / WAN, 6) if row_data.get("total") else None)
+            ws.cell(row=row, column=2, value=round(row_data.get("deferred", 0), 6) if row_data.get("deferred") else None)
+            ws.cell(row=row, column=3, value=round(row_data.get("new", 0), 6) if row_data.get("new") else None)
+            ws.cell(row=row, column=4, value=round(row_data.get("total", 0), 6) if row_data.get("total") else None)
             for col in range(1, 5):
                 _apply_data_style(ws.cell(row=row, column=col))
 
@@ -1276,9 +1299,9 @@ class RevenueExporter:
         total_def = sum((r.get("deferred", 0) or 0) for r in variance_data)
         total_new = sum((r.get("new", 0) or 0) for r in variance_data)
         total_all = sum((r.get("total", 0) or 0) for r in variance_data)
-        ws.cell(row=total_row, column=2, value=round(total_def / WAN, 6) if total_def else None)
-        ws.cell(row=total_row, column=3, value=round(total_new / WAN, 6) if total_new else None)
-        ws.cell(row=total_row, column=4, value=round(total_all / WAN, 6) if total_all else None)
+        ws.cell(row=total_row, column=2, value=round(total_def, 6) if total_def else None)
+        ws.cell(row=total_row, column=3, value=round(total_new, 6) if total_new else None)
+        ws.cell(row=total_row, column=4, value=round(total_all, 6) if total_all else None)
         for col in range(1, 5):
             _apply_data_style(ws.cell(row=total_row, column=col))
 
@@ -1550,7 +1573,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_rebuild_perf(self, wb: Workbook):
-        """构建重拆履约 sheet"""
+        """构建重拆履约 sheet — 从数据库读取，单位为元（与手工报表一致）"""
         ws = wb.create_sheet("重拆履约")
 
         headers = ["合同编号", "求和项:202601-06提前完成", "求和项:202601-06滞后未完成"]
@@ -1558,23 +1581,36 @@ class RevenueExporter:
             cell = ws.cell(row=2, column=1 + i, value=h)
             _apply_header_style(cell)
 
-        WAN = 10000.0
-        rebuild_data = self.engine.compute_rebuild_perf()
-        for i, row_data in enumerate(rebuild_data):
+        # 直接查询：过滤有数据的合同，按合同汇总（单位为元）
+        conn = get_connection()
+        rows = conn.execute("""
+            SELECT contract_no_cal as contract_no,
+                   SUM(COALESCE(h1_ahead, 0)) as ahead,
+                   SUM(COALESCE(h1_behind, 0)) as behind
+            FROM budget_exec
+            WHERE COALESCE(h1_ahead, 0) != 0 OR COALESCE(h1_behind, 0) != 0
+            GROUP BY contract_no_cal
+            HAVING SUM(COALESCE(h1_ahead, 0)) != 0 OR SUM(COALESCE(h1_behind, 0)) != 0
+            ORDER BY contract_no_cal
+        """).fetchall()
+        conn.close()
+
+        for i, r in enumerate(rows):
             row = 3 + i
-            ws.cell(row=row, column=1, value=row_data.get("contract_no"))
-            ws.cell(row=row, column=2, value=round(row_data.get("ahead", 0) / WAN, 6) if row_data.get("ahead") else None)
-            ws.cell(row=row, column=3, value=round(row_data.get("behind", 0) / WAN, 6) if row_data.get("behind") else None)
+            d = dict(r)
+            ws.cell(row=row, column=1, value=d["contract_no"])
+            ws.cell(row=row, column=2, value=round(d["ahead"], 6) if d["ahead"] else None)
+            ws.cell(row=row, column=3, value=round(d["behind"], 6) if d["behind"] else None)
             for col in range(1, 4):
                 _apply_data_style(ws.cell(row=row, column=col))
 
         # 总计行
-        total_row = 3 + len(rebuild_data)
+        total_row = 3 + len(rows)
         ws.cell(row=total_row, column=1, value="总计")
-        total_ahead = sum((r.get("ahead", 0) or 0) for r in rebuild_data)
-        total_behind = sum((r.get("behind", 0) or 0) for r in rebuild_data)
-        ws.cell(row=total_row, column=2, value=round(total_ahead / WAN, 6))
-        ws.cell(row=total_row, column=3, value=round(total_behind / WAN, 6))
+        total_ahead = sum((dict(r)["ahead"] or 0) for r in rows)
+        total_behind = sum((dict(r)["behind"] or 0) for r in rows)
+        ws.cell(row=total_row, column=2, value=round(total_ahead, 6))
+        ws.cell(row=total_row, column=3, value=round(total_behind, 6))
         for col in range(1, 4):
             _apply_data_style(ws.cell(row=total_row, column=col))
 
