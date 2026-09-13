@@ -405,21 +405,18 @@ class RevenueExporter:
             _apply_data_style(ws.cell(row=row, column=4))
 
         # ── Row 4: 合并表头（先合并再设值，防止值被覆盖）──
-        # 先合并所有单元格
+        # 合并单元格（只合并左侧大标题，右侧子表头独立不合并）
         ws.merge_cells(start_row=4, start_column=3, end_row=4, end_column=6)    # 新签
         ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)    # 递延
         ws.merge_cells(start_row=4, start_column=10, end_row=4, end_column=12)  # 新签+递延
-        ws.merge_cells(start_row=4, start_column=15, end_row=4, end_column=15)  # 同比分析(左)
         ws.merge_cells(start_row=4, start_column=16, end_row=4, end_column=21)  # Y26 1~6
         ws.merge_cells(start_row=4, start_column=22, end_row=4, end_column=27)  # Y25 1~6
-        ws.merge_cells(start_row=4, start_column=28, end_row=4, end_column=29)  # 增长率
-        ws.merge_cells(start_row=4, start_column=30, end_row=4, end_column=30)  # 确收度增长
-        ws.merge_cells(start_row=4, start_column=33, end_row=4, end_column=33)  # 同比分析(右)
+        ws.merge_cells(start_row=4, start_column=28, end_row=4, end_column=29)  # 增长率(左)
         ws.merge_cells(start_row=4, start_column=34, end_row=4, end_column=36)  # 新签 Y26
         ws.merge_cells(start_row=4, start_column=37, end_row=4, end_column=39)  # 新签 Y25
-        ws.merge_cells(start_row=4, start_column=40, end_row=4, end_column=42)  # 增长率
+        ws.merge_cells(start_row=4, start_column=40, end_row=4, end_column=42)  # 增长率(右)
 
-        # 再设值（合并后只在左上角单元格设值）
+        # 设值（每个子表头独立单元格）
         ws.cell(row=4, column=2, value="期间")
         _apply_header_style(ws.cell(row=4, column=2))
         ws.cell(row=4, column=3, value="新签")
