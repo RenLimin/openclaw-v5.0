@@ -343,14 +343,6 @@ class RevenueExporter:
             for col in range(3, 7):
                 _apply_summary_data_style(ws.cell(row=row, column=col))
 
-        # Row 28: 浮点精度校验行（与手工报表一致）
-        ws.cell(row=28, column=4, value=0)
-        _apply_summary_data_style(ws.cell(row=28, column=4))
-        ws.cell(row=28, column=5, value=6.252776074688882e-13)
-        _apply_summary_data_style(ws.cell(row=28, column=5))
-        ws.cell(row=28, column=6, value=2.8421709430404007e-13)
-        _apply_summary_data_style(ws.cell(row=28, column=6))
-
         # ── 列宽（对齐手工报表）──
         ws.column_dimensions['A'].width = 1.66
         ws.column_dimensions['B'].width = 10.5
@@ -939,7 +931,7 @@ class RevenueExporter:
         _apply_data_style(ws.cell(row=21, column=2))
         ws.cell(row=21, column=3, value=23000)
         _apply_summary_amount_style(ws.cell(row=21, column=3))
-        ws.cell(row=21, column=6, value=0.56)
+        ws.cell(row=21, column=6, value=1)
         _apply_summary_rate_style(ws.cell(row=21, column=6))
         ws.cell(row=21, column=9, value=1)
         _apply_summary_rate_style(ws.cell(row=21, column=9))
@@ -975,107 +967,7 @@ class RevenueExporter:
             for col in range(3, 7):
                 _apply_data_style(ws.cell(row=row, column=col))
 
-        # ── Row 32: 浮点精度校验行（与手工报表一致）──
-        ws.cell(row=32, column=4, value=1.0231815394945443e-12)
-        _apply_summary_data_style(ws.cell(row=32, column=4))
-        ws.cell(row=32, column=5, value=-2.984279490192421e-13)
-        _apply_summary_data_style(ws.cell(row=32, column=5))
-        ws.cell(row=32, column=6, value=7.389644451905042e-13)
-        _apply_summary_data_style(ws.cell(row=32, column=6))
-
-        # ── Row 43-61: 第二块数据（按产线拆分）──
-        # 注意：数据库中无"所属产线（周报）"列，无法按产线拆分
-        # 此处放置表头结构和说明，数据列留空
-        # Row 43: 表头行
-        ws.cell(row=43, column=2, value="期间")
-        _apply_header_style(ws.cell(row=43, column=2))
-        ws.cell(row=43, column=3, value="新签")
-        _apply_header_style(ws.cell(row=43, column=3))
-        ws.cell(row=43, column=7, value="新签")
-        _apply_header_style(ws.cell(row=43, column=7))
-        ws.cell(row=43, column=11, value="新签")
-        _apply_header_style(ws.cell(row=43, column=11))
-        ws.cell(row=43, column=15, value="新签")
-        _apply_header_style(ws.cell(row=43, column=15))
-        ws.cell(row=43, column=19, value="新签")
-        _apply_header_style(ws.cell(row=43, column=19))
-        ws.cell(row=43, column=23, value="新签")
-        _apply_header_style(ws.cell(row=43, column=23))
-        ws.cell(row=43, column=27, value="新签")
-        _apply_header_style(ws.cell(row=43, column=27))
-        ws.cell(row=43, column=31, value="新签")
-        _apply_header_style(ws.cell(row=43, column=31))
-        ws.cell(row=43, column=35, value="新签")
-        _apply_header_style(ws.cell(row=43, column=35))
-        ws.cell(row=43, column=39, value="新签")
-        _apply_header_style(ws.cell(row=43, column=39))
-
-        # Row 44: 产线名称
-        product_lines = ["合计", "0：综合产品/服务", "1：安全保护产品线", "2：安全服务产品线",
-                         "3：安全检测产品线", "4：安全监测产品线", "5：API安全产品线",
-                         "6：物联网服务产品线", "7：内容安全产品线", "8：第三方产品/服务"]
-        for i, pl in enumerate(product_lines):
-            col = 3 + i * 4
-            ws.cell(row=44, column=col, value=pl)
-            _apply_header_style(ws.cell(row=44, column=col))
-
-        # Row 45: 子表头
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j, h in enumerate(["新签合同额", "预计确收合同额", "实际确收合同额", "完成率"]):
-                ws.cell(row=45, column=col + j, value=h)
-                _apply_header_style(ws.cell(row=45, column=col + j))
-
-        # Row 46-61: 月度数据行（产线数据不可用，留空）
-        for month_idx, month_str in enumerate(SUMMARY_MONTHS):
-            row = 46 + month_idx
-            ws.cell(row=row, column=2, value=month_str)
-            _apply_data_style(ws.cell(row=row, column=2))
-            # 数据列留空（数据库无产线维度数据）
-            for i in range(len(product_lines)):
-                col = 3 + i * 4
-                for j in range(4):
-                    _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 58: 1-6月合计
-        row = 58
-        ws.cell(row=row, column=2, value="1-6月合计")
-        _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 59: 合计
-        row = 59
-        ws.cell(row=row, column=2, value="合计")
-        _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 60: 确收度
-        row = 60
-        ws.cell(row=row, column=2, value="确收度")
-        _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 61: 年度目标
-        row = 61
-        ws.cell(row=row, column=2, value="年度目标")
-        _apply_data_style(ws.cell(row=row, column=2))
-        ws.cell(row=row, column=3, value=23000)
-        _apply_summary_amount_style(ws.cell(row=row, column=3))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # 同比分析说明文字 (放在 col 15, rows 11-16 对应手工报表位置)
+        # 同比分析说明文字 (放在 col 14 右侧，不覆盖同比数据)
         yoy_notes = [
             "1. 确收度 = 确收合同额（含税）/ 销售合同额 * 100%",
             "2. 确收合同额比重 = 新签（或递延）确收合同额 / 总确收合同额 * 100%",
@@ -1085,13 +977,8 @@ class RevenueExporter:
             "统计维度：合同类别（新签、递延）；统计月度（期间）",
         ]
         for i, note in enumerate(yoy_notes):
-            ws.cell(row=11 + i, column=15, value=note)
-            _apply_data_style(ws.cell(row=11 + i, column=15))
-
-        # Row 62-64: 空行（与手工报表一致）
-        for r in range(62, 65):
-            for c in range(1, 43):
-                _apply_data_style(ws.cell(row=r, column=c))
+            ws.cell(row=43 + i, column=2, value=note)
+            _apply_data_style(ws.cell(row=43 + i, column=2))
 
         # ── 列宽 ──
         ws.column_dimensions['A'].width = 2
@@ -1717,13 +1604,13 @@ class RevenueExporter:
         ws.cell(row=1, column=3, value="新签合同")
         _apply_header_style(ws.cell(row=1, column=3))
 
-        ws.merge_cells(start_row=1, start_column=6, end_row=1, end_column=7)
+        ws.merge_cells(start_row=1, start_column=6, end_row=1, end_column=8)
         ws.cell(row=1, column=6, value="递延合同")
         _apply_header_style(ws.cell(row=1, column=6))
 
-        ws.merge_cells(start_row=1, start_column=8, end_row=1, end_column=11)
-        ws.cell(row=1, column=8, value="新签+递延")
-        _apply_header_style(ws.cell(row=1, column=8))
+        ws.merge_cells(start_row=1, start_column=9, end_row=1, end_column=11)
+        ws.cell(row=1, column=9, value="新签+递延")
+        _apply_header_style(ws.cell(row=1, column=9))
 
         # Row 2: 子标题
         headers = [
@@ -1759,8 +1646,8 @@ class RevenueExporter:
             ws.cell(row=current_row, column=7, value=round(r["def_actual_rev"], 6) if r["def_actual_rev"] is not None else None)
             ws.cell(row=current_row, column=8, value=round(r["total_plan_rev"], 6) if r["total_plan_rev"] is not None else None)
             ws.cell(row=current_row, column=9, value=round(r["total_actual_rev"], 6) if r["total_actual_rev"] is not None else None)
-            ws.cell(row=current_row, column=10, value=round(r["adj_plan"], 6) if r["adj_plan"] is not None else 0)
-            ws.cell(row=current_row, column=11, value=round(r["adj_actual"], 6) if r["adj_actual"] is not None else 0)
+            ws.cell(row=current_row, column=10, value=round(r["adj_plan"], 6) if r["adj_plan"] is not None else None)
+            ws.cell(row=current_row, column=11, value=round(r["adj_actual"], 6) if r["adj_actual"] is not None else None)
             for col in range(1, 12):
                 _apply_data_style(ws.cell(row=current_row, column=col))
             current_row += 1
@@ -1772,9 +1659,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_performance_record(self, wb: Workbook, period: str):
-        """构建履约汇总记录 sheet — 从 performance_summary 表读取所有数据
-        对齐手工报表：按统计期间降序排列，类别名称带前导空格
-        """
+        """构建履约汇总记录 sheet — 从 performance_summary 表读取所有数据"""
         ws = wb.create_sheet("履约汇总记录")
 
         headers = ["统计期间", "类别", "新签", "递延", "合计", "备注"]
@@ -1790,43 +1675,20 @@ class RevenueExporter:
             ORDER BY stat_period DESC, category ASC
         """).fetchall()
 
-        # Fixed category order matching manual report (with leading spaces for alignment)
-        # 手工报表中类别名称带前导空格以对齐缩进
+        # Fixed category order matching manual report
         category_order = ["预算完成", "实际完成", "预算-实际", "其中：提前完成", "          滞后未完成", "          消失"]
-        # 建立原始名称到带空格名称的映射
-        category_display = {
-            "预算完成": "预算完成",
-            "实际完成": "实际完成",
-            "预算-实际": "预算-实际",
-            "其中：提前完成": "其中：提前完成",
-            "滞后未完成": "          滞后未完成",
-            "消失": "          消失",
-        }
-        # DB category name → display name (with leading spaces for visual hierarchy)
-        db_to_display = {
-            "预算完成": "预算完成",
-            "实际完成": "实际完成",
-            "预算-实际": "预算-实际",
-            "其中：提前完成": "其中：提前完成",
-            "滞后未完成": "          滞后未完成",
-            "消失": "          消失",
-        }
 
         current_row = 2
 
-        # Sort rows: by stat_period DESC, then by fixed category order
-        # Map display names back to DB names for sorting
-        db_category_order = ["预算完成", "实际完成", "预算-实际", "其中：提前完成", "滞后未完成", "消失"]
+        # Sort rows by fixed category order
         rows_sorted = sorted(rows, key=lambda r: (
-            -int(r["stat_period"]),
-            db_category_order.index(r["category"]) if r["category"] in db_category_order else 999
+            int(r["stat_period"]),
+            category_order.index(r["category"]) if r["category"] in category_order else 999
         ))
 
         for r in rows_sorted:
             ws.cell(row=current_row, column=1, value=int(r["stat_period"]))
-            # 使用带前导空格的类别名称
-            display_cat = db_to_display.get(r["category"], r["category"])
-            ws.cell(row=current_row, column=2, value=display_cat)
+            ws.cell(row=current_row, column=2, value=r["category"])
             ws.cell(row=current_row, column=3, value=round(r["new_value"], 6) if r["new_value"] is not None else None)
             ws.cell(row=current_row, column=4, value=round(r["deferred_value"], 6) if r["deferred_value"] is not None else None)
             ws.cell(row=current_row, column=5, value=round(r["total_value"], 6) if r["total_value"] is not None else None)

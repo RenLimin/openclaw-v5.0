@@ -343,14 +343,6 @@ class RevenueExporter:
             for col in range(3, 7):
                 _apply_summary_data_style(ws.cell(row=row, column=col))
 
-        # Row 28: 浮点精度校验行（与手工报表一致）
-        ws.cell(row=28, column=4, value=0)
-        _apply_summary_data_style(ws.cell(row=28, column=4))
-        ws.cell(row=28, column=5, value=6.252776074688882e-13)
-        _apply_summary_data_style(ws.cell(row=28, column=5))
-        ws.cell(row=28, column=6, value=2.8421709430404007e-13)
-        _apply_summary_data_style(ws.cell(row=28, column=6))
-
         # ── 列宽（对齐手工报表）──
         ws.column_dimensions['A'].width = 1.66
         ws.column_dimensions['B'].width = 10.5
@@ -375,16 +367,16 @@ class RevenueExporter:
 
     def _build_summary_analysis(self, wb: Workbook, period: str):
         """
-        构建"汇总分析"sheet — Pivot 分析 + 同比分析。
-        对齐手工报表 50 列结构：
+        构建"汇总分析"sheet — Pivot 分析。
+        结构：
         Row 1-3: 筛选条件（团队/产线/项目经理）
-        Row 4: 合并表头（期间|新签|递延|新签+递延|同比分析）
-        Row 5: 子表头（新签合同额...|同比分析子列...）
+        Row 4-5: 表头
         Row 6-17: 月度数据 202601-202612
         Row 18: 1-6月合计
         Row 19: 合计
         Row 20-21: 确收度/年度目标
         Row 24-32: 履约维度
+        Row 43+: 产线维度分析
         """
         WAN = 10000.0
         ws = wb.create_sheet("汇总分析")
@@ -404,126 +396,43 @@ class RevenueExporter:
             ws.cell(row=row, column=4, value=note)
             _apply_data_style(ws.cell(row=row, column=4))
 
-        # ── Row 4: 合并表头（先设值再合并）──
-        # 期间 B2
+        # Row 4: 大表头
         ws.cell(row=4, column=2, value="期间")
         _apply_header_style(ws.cell(row=4, column=2))
-        # 新签 C-F (col 3-6)
         ws.cell(row=4, column=3, value="新签")
         _apply_header_style(ws.cell(row=4, column=3))
-        # 递延 G-I (col 7-9)
+        ws.merge_cells(start_row=4, start_column=3, end_row=4, end_column=6)
         ws.cell(row=4, column=7, value="递延")
         _apply_header_style(ws.cell(row=4, column=7))
-        # 新签+递延 J-L (col 10-12)
+        ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)
         ws.cell(row=4, column=10, value="新签+递延")
         _apply_header_style(ws.cell(row=4, column=10))
-        # 同比分析 (col 15-42)
-        ws.cell(row=4, column=15, value="同比分析")
-        _apply_header_style(ws.cell(row=4, column=15))
-        # Y26 1~6 (col 16-21)
-        ws.cell(row=4, column=16, value="Y26 1~6")
-        _apply_header_style(ws.cell(row=4, column=16))
-        # Y25 1~6 (col 22-27)
-        ws.cell(row=4, column=22, value="Y25 1~6")
-        _apply_header_style(ws.cell(row=4, column=22))
-        # 增长率 (col 28-29)
-        ws.cell(row=4, column=28, value="增长率")
-        _apply_header_style(ws.cell(row=4, column=28))
-        # 确收度增长 (col 30)
-        ws.cell(row=4, column=30, value="确收度增长")
-        _apply_header_style(ws.cell(row=4, column=30))
-        # 同比分析 (col 33-42)
-        ws.cell(row=4, column=33, value="同比分析")
-        _apply_header_style(ws.cell(row=4, column=33))
-        # Sub-headers for right side
-        ws.cell(row=4, column=34, value="新签 Y26")
-        _apply_header_style(ws.cell(row=4, column=34))
-        ws.cell(row=4, column=37, value="新签 Y25")
-        _apply_header_style(ws.cell(row=4, column=37))
-        ws.cell(row=4, column=40, value="增长率")
-        _apply_header_style(ws.cell(row=4, column=40))
+        ws.merge_cells(start_row=4, start_column=10, end_row=4, end_column=12)
+        ws.cell(row=4, column=14, value="同比分析")
+        _apply_header_style(ws.cell(row=4, column=14))
 
-        # 合并单元格（在值设置完成后）
-        ws.merge_cells(start_row=4, start_column=3, end_row=4, end_column=6)    # 新签
-        ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)    # 递延
-        ws.merge_cells(start_row=4, start_column=10, end_row=4, end_column=12)  # 新签+递延
-        ws.merge_cells(start_row=4, start_column=15, end_row=4, end_column=42)  # 同比分析
-        ws.merge_cells(start_row=4, start_column=16, end_row=4, end_column=21)  # Y26 1~6
-        ws.merge_cells(start_row=4, start_column=22, end_row=4, end_column=27)  # Y25 1~6
-        ws.merge_cells(start_row=4, start_column=28, end_row=4, end_column=29)  # 增长率
-        ws.merge_cells(start_row=4, start_column=33, end_row=4, end_column=42)  # 同比分析
-        ws.merge_cells(start_row=4, start_column=34, end_row=4, end_column=36)  # 新签 Y26
-        ws.merge_cells(start_row=4, start_column=37, end_row=4, end_column=39)  # 新签 Y25
-        ws.merge_cells(start_row=4, start_column=40, end_row=4, end_column=42)  # 增长率
-
-        # ── Row 5: 子表头 ──
-        # 新签 (C-F = col 3-6)
-        sub_headers_r5_left = [
+        # Row 5: 子表头
+        # 新签: C(3), D(4), E(5), F(6)
+        # 递延: G(7), H(8), I(9)
+        # 新签+递延: J(10), K(11), L(12)
+        sub_headers = [
             (3, "新签合同额"), (4, "预计确收合同额"), (5, "实际确收合同额"), (6, "完成率"),
             (7, "预计确收合同额"), (8, "实际确收合同额"), (9, "完成率"),
             (10, "预计确收合同额"), (11, "实际确收合同额"), (12, "完成率"),
         ]
-        for col, h in sub_headers_r5_left:
+        for col, h in sub_headers:
             cell = ws.cell(row=5, column=col, value=h)
             _apply_header_style(cell)
 
-        # 同比分析子表头 (col 15-42)
-        yoy_headers_r5 = [
-            (15, "合同类别"),
-            # Y26 1~6
-            (16, "销售合同额"), (17, "确收合同额"), (18, "确收度"),
-            (19, "比重"), (20, "预计确收合同额"), (21, "预计确收度"),
-            # Y25 1~6
-            (22, "销售合同额"), (23, "确收合同额"), (24, "确收度"),
-            (25, "比重"), (26, "预计确收合同额"), (27, "预计确收度"),
-            # 增长率
-            (28, "销售合同额"), (29, "确收合同额"),
-            # 确收度增长
-            (30, "确收度增长"),
-            # 同比分析
-            (33, "期间"),
-            (34, "新签合同额"), (35, "预计确收合同额"), (36, "实际确收合同额"),
-            (37, "新签合同额"), (38, "预计确收合同额"), (39, "实际确收合同额"),
-            (40, "销售合同额"), (41, "预计确收合同额"), (42, "实际确收合同额"),
-        ]
-        for col, h in yoy_headers_r5:
-            cell = ws.cell(row=5, column=col, value=h)
-            _apply_header_style(cell)
+        # 同比分析列标题
+        ws.cell(row=5, column=14, value="合同类别")
+        _apply_header_style(ws.cell(row=5, column=14))
 
-        # ── 获取数据 ──
+        # 获取数据
         monthly_data = self.engine.compute_monthly_detail(period)
         period_map = {m["contract_period"]: m for m in monthly_data}
 
-        # 计算累计值（用于同比分析列）
-        period_month = int(period[4:6])
-        h1_months = SUMMARY_MONTHS[:period_month]  # e.g. ['202601'...'202606']
-
-        # Y26 新签 H1 累计
-        y26_new_amount_h1 = sum((period_map.get(m, {}).get("new_amount", 0) or 0) for m in h1_months) / WAN
-        y26_new_plan_h1 = sum((period_map.get(m, {}).get("new_plan_rev", 0) or 0) for m in h1_months) / WAN
-        y26_new_actual_h1 = sum((period_map.get(m, {}).get("new_actual_rev", 0) or 0) for m in h1_months) / WAN
-        # Y26 递延 H1 累计
-        y26_def_plan_h1 = sum((period_map.get(m, {}).get("def_plan_rev", 0) or 0) for m in h1_months) / WAN
-        y26_def_actual_h1 = sum((period_map.get(m, {}).get("def_actual_rev", 0) or 0) for m in h1_months) / WAN
-        # Y26 合计
-        y26_total_plan_h1 = y26_new_plan_h1 + y26_def_plan_h1
-        y26_total_actual_h1 = y26_new_actual_h1 + y26_def_actual_h1
-
-        # 确收度
-        y26_new_rev_ratio = y26_new_actual_h1 / y26_new_amount_h1 if y26_new_amount_h1 != 0 else None
-        y26_def_rev_ratio = y26_def_actual_h1 / y26_new_amount_h1 if y26_new_amount_h1 != 0 else None  # Note: 分母是各自合同额
-        # 实际确收度 = 实际确收 / 销售合同额 (按各自分类)
-        # 递延没有"新签合同额"，用递延的计划确收/实际确收
-        # 从手工报表看：递延的确收度 = 实际确收 / 预计确收 (完成率概念)
-        # 但手工 col 18 = 确收度 = 确收合同额 / 销售合同额
-        # 递延的"销售合同额"在手工中未出现，说明递延只有确收合同额/确收度
-
-        # 全年累计
-        y26_new_plan_full = sum((period_map.get(m, {}).get("new_plan_rev", 0) or 0) for m in SUMMARY_MONTHS) / WAN
-        y26_new_actual_full = sum((period_map.get(m, {}).get("new_actual_rev", 0) or 0) for m in SUMMARY_MONTHS) / WAN
-        y26_new_amount_full = sum((period_map.get(m, {}).get("new_amount", 0) or 0) for m in SUMMARY_MONTHS) / WAN
-
-        # ── Row 6-17: 月度数据 202601-202612 ──
+        # Row 6-17: 月度数据 202601-202612
         for month_idx, month_str in enumerate(SUMMARY_MONTHS):
             row = 6 + month_idx
             ws.cell(row=row, column=2, value=month_str)
@@ -537,15 +446,13 @@ class RevenueExporter:
             new_actual = (m_data.get("new_actual_rev", 0) or 0) / WAN
             new_rate = new_actual / new_plan if new_plan != 0 else None
 
-            # 新签 (C-F)
             ws.cell(row=row, column=3, value=round(new_amount, 6) if new_amount != 0 else None)
-            _apply_summary_amount_style(ws.cell(row=row, column=3))
             ws.cell(row=row, column=4, value=round(new_plan, 6) if new_plan != 0 else None)
-            _apply_summary_amount_style(ws.cell(row=row, column=4))
             ws.cell(row=row, column=5, value=round(new_actual, 6) if new_actual != 0 else None)
-            _apply_summary_amount_style(ws.cell(row=row, column=5))
-            ws.cell(row=row, column=6, value=round(new_rate, 16) if new_rate is not None else None)
-            _apply_summary_rate_style(ws.cell(row=row, column=6))
+            if new_rate is not None:
+                ws.cell(row=row, column=6, value=round(new_rate, 16))
+            else:
+                ws.cell(row=row, column=6, value=None)
 
             # 递延 (G-I)
             def_plan = (m_data.get("def_plan_rev", 0) or 0) / WAN
@@ -553,11 +460,11 @@ class RevenueExporter:
             def_rate = def_actual / def_plan if def_plan != 0 else None
 
             ws.cell(row=row, column=7, value=round(def_plan, 6) if def_plan != 0 else None)
-            _apply_summary_amount_style(ws.cell(row=row, column=7))
             ws.cell(row=row, column=8, value=round(def_actual, 6) if def_actual != 0 else None)
-            _apply_summary_amount_style(ws.cell(row=row, column=8))
-            ws.cell(row=row, column=9, value=round(def_rate, 16) if def_rate is not None else None)
-            _apply_summary_rate_style(ws.cell(row=row, column=9))
+            if def_rate is not None:
+                ws.cell(row=row, column=9, value=round(def_rate, 16))
+            else:
+                ws.cell(row=row, column=9, value=None)
 
             # 新签+递延 (J-L)
             total_plan = (m_data.get("total_plan_rev", 0) or 0) / WAN
@@ -565,295 +472,16 @@ class RevenueExporter:
             total_rate = total_actual / total_plan if total_plan != 0 else None
 
             ws.cell(row=row, column=10, value=round(total_plan, 6) if total_plan != 0 else None)
-            _apply_summary_amount_style(ws.cell(row=row, column=10))
             ws.cell(row=row, column=11, value=round(total_actual, 6) if total_actual != 0 else None)
-            _apply_summary_amount_style(ws.cell(row=row, column=11))
-            ws.cell(row=row, column=12, value=round(total_rate, 16) if total_rate is not None else None)
-            _apply_summary_rate_style(ws.cell(row=row, column=12))
+            if total_rate is not None:
+                ws.cell(row=row, column=12, value=round(total_rate, 16))
+            else:
+                ws.cell(row=row, column=12, value=None)
 
-            # ── 同比分析列 (col 15-42) ──
-            # 只在有累计数据的行（第一行=202601）填同比数据
-            if month_idx == 0:
-                # 新签合同 (col 15-30)
-                ws.cell(row=row, column=15, value="新签合同")
-                _apply_data_style(ws.cell(row=row, column=15))
-                # Y26 销售合同额 (col 16)
-                ws.cell(row=row, column=16, value=round(y26_new_amount_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row, column=16))
-                # Y26 确收合同额 (col 17)
-                ws.cell(row=row, column=17, value=round(y26_new_actual_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row, column=17))
-                # Y26 确收度 (col 18)
-                if y26_new_rev_ratio is not None:
-                    ws.cell(row=row, column=18, value=round(y26_new_rev_ratio, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=18))
-                # 比重 (col 19) = 新签确收 / 总确收
-                ratio_new = y26_new_actual_h1 / y26_total_actual_h1 if y26_total_actual_h1 != 0 else None
-                if ratio_new is not None:
-                    ws.cell(row=row, column=19, value=round(ratio_new, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=19))
-                # 预计确收合同额 (col 20)
-                ws.cell(row=row, column=20, value=round(y26_new_plan_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row, column=20))
-                # 预计确收度 (col 21)
-                est_ratio_new = y26_new_plan_h1 / y26_new_amount_h1 if y26_new_amount_h1 != 0 else None
-                if est_ratio_new is not None:
-                    ws.cell(row=row, column=21, value=round(est_ratio_new, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=21))
+            for col in range(3, 13):
+                _apply_data_style(ws.cell(row=row, column=col))
 
-                # Y25 数据 (col 22-27) — 从手工报表读取（缓存避免重复读取）
-                if not hasattr(self, '_yoy_cache') or self._yoy_cache is None:
-                    self._yoy_cache = self.engine.compute_yoy_comparison(period)
-                yoy = self._yoy_cache
-                y25_new = yoy["new"]
-                y25_def = yoy["deferred"]
-                y25_total = yoy["total"]
-
-                # Y25 新签 (col 22-27)
-                ws.cell(row=row, column=22, value=round(y25_new["sales_amount"], 6) if y25_new["sales_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row, column=22))
-                ws.cell(row=row, column=23, value=round(y25_new["rev_amount"], 6) if y25_new["rev_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row, column=23))
-                if y25_new["rev_ratio"] is not None:
-                    ws.cell(row=row, column=24, value=round(y25_new["rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=24))
-                if y25_new["weight"] is not None:
-                    ws.cell(row=row, column=25, value=round(y25_new["weight"], 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=25))
-                ws.cell(row=row, column=26, value=round(y25_new["est_rev_amount"], 6) if y25_new["est_rev_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row, column=26))
-                if y25_new["est_rev_ratio"] is not None:
-                    ws.cell(row=row, column=27, value=round(y25_new["est_rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=27))
-
-                # 增长率 (col 28-29)
-                if y25_new["sales_amount"] and y25_new["sales_amount"] != 0:
-                    ws.cell(row=row, column=28, value=round(y26_new_amount_h1 / y25_new["sales_amount"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=28))
-                if y25_new["rev_amount"] and y25_new["rev_amount"] != 0:
-                    ws.cell(row=row, column=29, value=round(y26_new_actual_h1 / y25_new["rev_amount"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=29))
-                # 确收度增长 (col 30)
-                if y25_new["rev_ratio"] is not None and y26_new_rev_ratio is not None:
-                    ws.cell(row=row, column=30, value=round(y26_new_rev_ratio - y25_new["rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=30))
-
-                # 同比分析右半部分 (col 33-42): 新签月度对比
-                ws.cell(row=row, column=33, value=1)
-                _apply_data_style(ws.cell(row=row, column=33))
-                ws.cell(row=row, column=34, value=round(new_amount, 6) if new_amount != 0 else None)
-                _apply_summary_amount_style(ws.cell(row=row, column=34))
-                ws.cell(row=row, column=35, value=round(new_plan, 6) if new_plan != 0 else None)
-                _apply_summary_amount_style(ws.cell(row=row, column=35))
-                ws.cell(row=row, column=36, value=round(new_actual, 6) if new_actual != 0 else None)
-                _apply_summary_amount_style(ws.cell(row=row, column=36))
-                # 新签 Y25 (col 37-39)
-                y25_new_m0 = y25_new["monthly"][0] if len(y25_new["monthly"]) > 0 else None
-                if y25_new_m0:
-                    ws.cell(row=row, column=37, value=round(y25_new_m0["new_amount"], 6) if y25_new_m0["new_amount"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=37))
-                    ws.cell(row=row, column=38, value=round(y25_new_m0["new_plan"], 6) if y25_new_m0["new_plan"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=38))
-                    ws.cell(row=row, column=39, value=round(y25_new_m0["new_actual"], 6) if y25_new_m0["new_actual"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=39))
-                else:
-                    for col in range(37, 40):
-                        _apply_data_style(ws.cell(row=row, column=col))
-                # 增长率 (col 40-42)
-                if y25_new_m0 and y25_new_m0["new_amount"] and y25_new_m0["new_amount"] != 0:
-                    ws.cell(row=row, column=40, value=round(new_amount / y25_new_m0["new_amount"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=40))
-                if y25_new_m0 and y25_new_m0["new_plan"] and y25_new_m0["new_plan"] != 0:
-                    ws.cell(row=row, column=41, value=round(new_plan / y25_new_m0["new_plan"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=41))
-                if y25_new_m0 and y25_new_m0["new_actual"] and y25_new_m0["new_actual"] != 0:
-                    ws.cell(row=row, column=42, value=round(new_actual / y25_new_m0["new_actual"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=42))
-
-                # 递延合同 (col 15-30) — Row 7
-                row7 = row + 1
-                ws.cell(row=row7, column=15, value="递延合同")
-                _apply_data_style(ws.cell(row=row7, column=15))
-                ws.cell(row=row7, column=17, value=round(y26_def_actual_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row7, column=17))
-                def_rev_ratio = y26_def_actual_h1 / y26_def_plan_h1 if y26_def_plan_h1 != 0 else None
-                if def_rev_ratio is not None:
-                    ws.cell(row=row7, column=18, value=round(def_rev_ratio, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=18))
-                ratio_def = y26_def_actual_h1 / y26_total_actual_h1 if y26_total_actual_h1 != 0 else None
-                if ratio_def is not None:
-                    ws.cell(row=row7, column=19, value=round(ratio_def, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=19))
-                ws.cell(row=row7, column=20, value=round(y26_def_plan_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row7, column=20))
-                ws.cell(row=row7, column=21, value=1.0)
-                _apply_summary_rate_style(ws.cell(row=row7, column=21))
-
-                # Y25 递延数据 (col 22-27)
-                ws.cell(row=row7, column=23, value=round(y25_def["rev_amount"], 6) if y25_def["rev_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row7, column=23))
-                if y25_def["rev_ratio"] is not None:
-                    ws.cell(row=row7, column=24, value=round(y25_def["rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=24))
-                if y25_def["weight"] is not None:
-                    ws.cell(row=row7, column=25, value=round(y25_def["weight"], 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=25))
-                ws.cell(row=row7, column=26, value=round(y25_def["est_rev_amount"], 6) if y25_def["est_rev_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row7, column=26))
-                if y25_def["est_rev_ratio"] is not None:
-                    ws.cell(row=row7, column=27, value=round(y25_def["est_rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=27))
-
-                # 增长率 (col 28-29) — 递延
-                ws.cell(row=row7, column=28, value=None)
-                _apply_summary_rate_style(ws.cell(row=row7, column=28))
-                if y25_def["rev_amount"] and y25_def["rev_amount"] != 0:
-                    ws.cell(row=row7, column=29, value=round(y26_def_actual_h1 / y25_def["rev_amount"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=29))
-                if y25_def["rev_ratio"] is not None and def_rev_ratio is not None:
-                    ws.cell(row=row7, column=30, value=round(def_rev_ratio - y25_def["rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=30))
-
-                # 同比分析右半部分 for 递延 (col 33-42)
-                ws.cell(row=row7, column=33, value=2)
-                _apply_data_style(ws.cell(row=row7, column=33))
-                ws.cell(row=row7, column=34, value=round(def_plan, 6) if def_plan != 0 else None)
-                _apply_summary_amount_style(ws.cell(row=row7, column=34))
-                ws.cell(row=row7, column=35, value=round(def_plan, 6) if def_plan != 0 else None)
-                _apply_summary_amount_style(ws.cell(row=row7, column=35))
-                ws.cell(row=row7, column=36, value=round(def_actual, 6) if def_actual != 0 else None)
-                _apply_summary_amount_style(ws.cell(row=row7, column=36))
-                y25_def_m0 = y25_def["monthly"][0] if len(y25_def["monthly"]) > 0 else None
-                if y25_def_m0:
-                    ws.cell(row=row7, column=37, value=round(y25_def_m0["def_plan"], 6) if y25_def_m0["def_plan"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row7, column=37))
-                    ws.cell(row=row7, column=38, value=round(y25_def_m0["def_plan"], 6) if y25_def_m0["def_plan"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row7, column=38))
-                    ws.cell(row=row7, column=39, value=round(y25_def_m0["def_actual"], 6) if y25_def_m0["def_actual"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row7, column=39))
-                else:
-                    for col in range(37, 40):
-                        _apply_data_style(ws.cell(row=row7, column=col))
-                if y25_def_m0 and y25_def_m0["def_plan"] and y25_def_m0["def_plan"] != 0:
-                    ws.cell(row=row7, column=40, value=round(def_plan / y25_def_m0["def_plan"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=40))
-                if y25_def_m0 and y25_def_m0["def_plan"] and y25_def_m0["def_plan"] != 0:
-                    ws.cell(row=row7, column=41, value=round(def_plan / y25_def_m0["def_plan"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=41))
-                if y25_def_m0 and y25_def_m0["def_actual"] and y25_def_m0["def_actual"] != 0:
-                    ws.cell(row=row7, column=42, value=round(def_actual / y25_def_m0["def_actual"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=42))
-
-                # 合计 (col 15-30) — Row 8
-                row8 = row + 2
-                ws.cell(row=row8, column=15, value="合计")
-                _apply_data_style(ws.cell(row=row8, column=15))
-                ws.cell(row=row8, column=16, value=round(y26_new_amount_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row8, column=16))
-                ws.cell(row=row8, column=17, value=round(y26_total_actual_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row8, column=17))
-                y26_total_rev_ratio_val = y26_total_actual_h1 / (y26_new_amount_h1 + y26_def_plan_h1) if (y26_new_amount_h1 + y26_def_plan_h1) != 0 else None
-                if y26_total_rev_ratio_val is not None:
-                    ws.cell(row=row8, column=18, value=round(y26_total_rev_ratio_val, 16))
-                _apply_summary_rate_style(ws.cell(row=row8, column=18))
-                ws.cell(row=row8, column=19, value=1.0)
-                _apply_summary_rate_style(ws.cell(row=row8, column=19))
-                ws.cell(row=row8, column=20, value=round(y26_new_plan_h1 + y26_def_plan_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row8, column=20))
-                y26_total_est_ratio = (y26_new_plan_h1 + y26_def_plan_h1) / (y26_new_amount_h1 + y26_def_plan_h1) if (y26_new_amount_h1 + y26_def_plan_h1) != 0 else None
-                if y26_total_est_ratio is not None:
-                    ws.cell(row=row8, column=21, value=round(y26_total_est_ratio, 16))
-                _apply_summary_rate_style(ws.cell(row=row8, column=21))
-                ws.cell(row=row8, column=22, value=round(y25_total["sales_amount"], 6) if y25_total["sales_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row8, column=22))
-                ws.cell(row=row8, column=23, value=round(y25_total["rev_amount"], 6) if y25_total["rev_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row8, column=23))
-                if y25_total["rev_ratio"] is not None:
-                    ws.cell(row=row8, column=24, value=round(y25_total["rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row8, column=24))
-                ws.cell(row=row8, column=25, value=round(y25_total["weight"], 16) if y25_total["weight"] is not None else 1.0)
-                _apply_summary_rate_style(ws.cell(row=row8, column=25))
-                ws.cell(row=row8, column=26, value=round(y25_total["est_rev_amount"], 6) if y25_total["est_rev_amount"] else None)
-                _apply_summary_amount_style(ws.cell(row=row8, column=26))
-                if y25_total["est_rev_ratio"] is not None:
-                    ws.cell(row=row8, column=27, value=round(y25_total["est_rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row8, column=27))
-                if y25_total["sales_amount"] and y25_total["sales_amount"] != 0:
-                    ws.cell(row=row8, column=28, value=round(y26_new_amount_h1 / y25_total["sales_amount"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row8, column=28))
-                if y25_total["rev_amount"] and y25_total["rev_amount"] != 0:
-                    ws.cell(row=row8, column=29, value=round(y26_total_actual_h1 / y25_total["rev_amount"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row8, column=29))
-                if y25_total["rev_ratio"] is not None and y26_total_rev_ratio_val is not None:
-                    ws.cell(row=row8, column=30, value=round(y26_total_rev_ratio_val - y25_total["rev_ratio"], 16))
-                _apply_summary_rate_style(ws.cell(row=row8, column=30))
-
-            # ── 同比分析右半部分: 各月数据 (col 33-42) ──
-            # month_idx 0=新签(已处理), 1=递延(已处理), 2=合计, 3+=各月
-            if month_idx >= 2:
-                period_num = month_idx + 1
-                ws.cell(row=row, column=33, value=period_num)
-                _apply_data_style(ws.cell(row=row, column=33))
-                yoy = self._yoy_cache
-                if month_idx == 2:
-                    # 合计行
-                    ws.cell(row=row, column=34, value=round(y26_new_amount_h1, 6))
-                    _apply_summary_amount_style(ws.cell(row=row, column=34))
-                    ws.cell(row=row, column=35, value=round(y26_new_plan_h1 + y26_def_plan_h1, 6))
-                    _apply_summary_amount_style(ws.cell(row=row, column=35))
-                    ws.cell(row=row, column=36, value=round(y26_total_actual_h1, 6))
-                    _apply_summary_amount_style(ws.cell(row=row, column=36))
-                    ws.cell(row=row, column=37, value=round(y25_total["sales_amount"], 6) if y25_total["sales_amount"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=37))
-                    ws.cell(row=row, column=38, value=round(y25_total["est_rev_amount"], 6) if y25_total["est_rev_amount"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=38))
-                    ws.cell(row=row, column=39, value=round(y25_total["rev_amount"], 6) if y25_total["rev_amount"] else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=39))
-                    if y25_total["sales_amount"] and y25_total["sales_amount"] != 0:
-                        ws.cell(row=row, column=40, value=round(y26_new_amount_h1 / y25_total["sales_amount"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=40))
-                    if y25_total["est_rev_amount"] and y25_total["est_rev_amount"] != 0:
-                        ws.cell(row=row, column=41, value=round((y26_new_plan_h1 + y26_def_plan_h1) / y25_total["est_rev_amount"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=41))
-                    if y25_total["rev_amount"] and y25_total["rev_amount"] != 0:
-                        ws.cell(row=row, column=42, value=round(y26_total_actual_h1 / y25_total["rev_amount"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=42))
-                else:
-                    # 各月
-                    ws.cell(row=row, column=34, value=round(new_amount, 6) if new_amount != 0 else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=34))
-                    ws.cell(row=row, column=35, value=round(new_plan, 6) if new_plan != 0 else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=35))
-                    ws.cell(row=row, column=36, value=round(new_actual, 6) if new_actual != 0 else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=36))
-                    month_str = SUMMARY_MONTHS[month_idx]
-                    prev_month_str = f"{int(period[:4]) - 1}{month_str[4:]}"
-                    y25_m = None
-                    for m in yoy["new"]["monthly"]:
-                        if m["month"] == prev_month_str:
-                            y25_m = m
-                            break
-                    if y25_m:
-                        ws.cell(row=row, column=37, value=round(y25_m["new_amount"], 6) if y25_m["new_amount"] else None)
-                        _apply_summary_amount_style(ws.cell(row=row, column=37))
-                        ws.cell(row=row, column=38, value=round(y25_m["new_plan"], 6) if y25_m["new_plan"] else None)
-                        _apply_summary_amount_style(ws.cell(row=row, column=38))
-                        ws.cell(row=row, column=39, value=round(y25_m["new_actual"], 6) if y25_m["new_actual"] else None)
-                        _apply_summary_amount_style(ws.cell(row=row, column=39))
-                    else:
-                        for col in range(37, 40):
-                            _apply_data_style(ws.cell(row=row, column=col))
-                    if y25_m and y25_m["new_amount"] and y25_m["new_amount"] != 0 and new_amount != 0:
-                        ws.cell(row=row, column=40, value=round(new_amount / y25_m["new_amount"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=40))
-                    if y25_m and y25_m["new_plan"] and y25_m["new_plan"] != 0 and new_plan != 0:
-                        ws.cell(row=row, column=41, value=round(new_plan / y25_m["new_plan"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=41))
-                    if y25_m and y25_m["new_actual"] and y25_m["new_actual"] != 0 and new_actual != 0:
-                        ws.cell(row=row, column=42, value=round(new_actual / y25_m["new_actual"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=42))
-
-        # ── Row 18: 1-6月合计 ──
+        # Row 18: 1-6月合计
         row = 18
         ws.cell(row=row, column=2, value="1-6月合计")
         _apply_data_style(ws.cell(row=row, column=2))
@@ -865,32 +493,24 @@ class RevenueExporter:
         sum_def_actual = sum((period_map.get(m, {}).get("def_actual_rev", 0) or 0) for m in SUMMARY_MONTHS[:6]) / WAN
 
         ws.cell(row=row, column=3, value=round(sum_new_amount, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=3), bold=True)
         ws.cell(row=row, column=4, value=round(sum_new_plan, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=4), bold=True)
         ws.cell(row=row, column=5, value=round(sum_new_actual, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=5), bold=True)
         nr = sum_new_actual / sum_new_plan if sum_new_plan != 0 else 0
         ws.cell(row=row, column=6, value=round(nr, 16))
-        _apply_summary_rate_style(ws.cell(row=row, column=6), bold=True)
         ws.cell(row=row, column=7, value=round(sum_def_plan, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=7), bold=True)
         ws.cell(row=row, column=8, value=round(sum_def_actual, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=8), bold=True)
         dr = sum_def_actual / sum_def_plan if sum_def_plan != 0 else 0
         ws.cell(row=row, column=9, value=round(dr, 16))
-        _apply_summary_rate_style(ws.cell(row=row, column=9), bold=True)
         tp = sum_new_plan + sum_def_plan
         ta = sum_new_actual + sum_def_actual
         ws.cell(row=row, column=10, value=round(tp, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=10), bold=True)
         ws.cell(row=row, column=11, value=round(ta, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=11), bold=True)
         tr = ta / tp if tp != 0 else 0
         ws.cell(row=row, column=12, value=round(tr, 16))
-        _apply_summary_rate_style(ws.cell(row=row, column=12), bold=True)
+        for col in range(3, 13):
+            _apply_data_style(ws.cell(row=row, column=col))
 
-        # ── Row 19: 合计 ──
+        # Row 19: 合计
         row = 19
         ws.cell(row=row, column=2, value="合计")
         _apply_data_style(ws.cell(row=row, column=2))
@@ -901,50 +521,36 @@ class RevenueExporter:
         full_def_actual = sum((period_map.get(m, {}).get("def_actual_rev", 0) or 0) for m in SUMMARY_MONTHS) / WAN
 
         ws.cell(row=row, column=3, value=round(sum_new_amount, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=3), bold=True)
         ws.cell(row=row, column=4, value=round(full_new_plan, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=4), bold=True)
         ws.cell(row=row, column=5, value=round(full_new_actual, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=5), bold=True)
         nr = full_new_actual / full_new_plan if full_new_plan != 0 else 0
         ws.cell(row=row, column=6, value=round(nr, 16))
-        _apply_summary_rate_style(ws.cell(row=row, column=6), bold=True)
         ws.cell(row=row, column=7, value=round(full_def_plan, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=7), bold=True)
         ws.cell(row=row, column=8, value=round(full_def_actual, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=8), bold=True)
         dr = full_def_actual / full_def_plan if full_def_plan != 0 else 0
         ws.cell(row=row, column=9, value=round(dr, 16))
-        _apply_summary_rate_style(ws.cell(row=row, column=9), bold=True)
         tp = full_new_plan + full_def_plan
         ta = full_new_actual + full_def_actual
         ws.cell(row=row, column=10, value=round(tp, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=10), bold=True)
         ws.cell(row=row, column=11, value=round(ta, 6))
-        _apply_summary_amount_style(ws.cell(row=row, column=11), bold=True)
         tr = ta / tp if tp != 0 else 0
         ws.cell(row=row, column=12, value=round(tr, 16))
-        _apply_summary_rate_style(ws.cell(row=row, column=12), bold=True)
+        for col in range(3, 13):
+            _apply_data_style(ws.cell(row=row, column=col))
 
         # Row 20: 确收度
         ws.cell(row=20, column=2, value="确收度")
         _apply_data_style(ws.cell(row=20, column=2))
         ws.cell(row=20, column=4, value=round(full_new_plan / sum_new_amount, 6) if sum_new_amount != 0 else None)
-        _apply_summary_amount_style(ws.cell(row=20, column=4))
         ws.cell(row=20, column=6, value=round(full_new_actual / sum_new_amount, 6) if sum_new_amount != 0 else None)
-        _apply_summary_rate_style(ws.cell(row=20, column=6))
 
         # Row 21: 年度目标
         ws.cell(row=21, column=2, value="年度目标")
         _apply_data_style(ws.cell(row=21, column=2))
         ws.cell(row=21, column=3, value=23000)
-        _apply_summary_amount_style(ws.cell(row=21, column=3))
-        ws.cell(row=21, column=6, value=0.56)
-        _apply_summary_rate_style(ws.cell(row=21, column=6))
+        ws.cell(row=21, column=6, value=1)
         ws.cell(row=21, column=9, value=1)
-        _apply_summary_rate_style(ws.cell(row=21, column=9))
         ws.cell(row=21, column=12, value=1)
-        _apply_summary_rate_style(ws.cell(row=21, column=12))
 
         # Row 24-32: 履约维度
         ws.cell(row=24, column=3, value="202606履约维度：")
@@ -975,107 +581,7 @@ class RevenueExporter:
             for col in range(3, 7):
                 _apply_data_style(ws.cell(row=row, column=col))
 
-        # ── Row 32: 浮点精度校验行（与手工报表一致）──
-        ws.cell(row=32, column=4, value=1.0231815394945443e-12)
-        _apply_summary_data_style(ws.cell(row=32, column=4))
-        ws.cell(row=32, column=5, value=-2.984279490192421e-13)
-        _apply_summary_data_style(ws.cell(row=32, column=5))
-        ws.cell(row=32, column=6, value=7.389644451905042e-13)
-        _apply_summary_data_style(ws.cell(row=32, column=6))
-
-        # ── Row 43-61: 第二块数据（按产线拆分）──
-        # 注意：数据库中无"所属产线（周报）"列，无法按产线拆分
-        # 此处放置表头结构和说明，数据列留空
-        # Row 43: 表头行
-        ws.cell(row=43, column=2, value="期间")
-        _apply_header_style(ws.cell(row=43, column=2))
-        ws.cell(row=43, column=3, value="新签")
-        _apply_header_style(ws.cell(row=43, column=3))
-        ws.cell(row=43, column=7, value="新签")
-        _apply_header_style(ws.cell(row=43, column=7))
-        ws.cell(row=43, column=11, value="新签")
-        _apply_header_style(ws.cell(row=43, column=11))
-        ws.cell(row=43, column=15, value="新签")
-        _apply_header_style(ws.cell(row=43, column=15))
-        ws.cell(row=43, column=19, value="新签")
-        _apply_header_style(ws.cell(row=43, column=19))
-        ws.cell(row=43, column=23, value="新签")
-        _apply_header_style(ws.cell(row=43, column=23))
-        ws.cell(row=43, column=27, value="新签")
-        _apply_header_style(ws.cell(row=43, column=27))
-        ws.cell(row=43, column=31, value="新签")
-        _apply_header_style(ws.cell(row=43, column=31))
-        ws.cell(row=43, column=35, value="新签")
-        _apply_header_style(ws.cell(row=43, column=35))
-        ws.cell(row=43, column=39, value="新签")
-        _apply_header_style(ws.cell(row=43, column=39))
-
-        # Row 44: 产线名称
-        product_lines = ["合计", "0：综合产品/服务", "1：安全保护产品线", "2：安全服务产品线",
-                         "3：安全检测产品线", "4：安全监测产品线", "5：API安全产品线",
-                         "6：物联网服务产品线", "7：内容安全产品线", "8：第三方产品/服务"]
-        for i, pl in enumerate(product_lines):
-            col = 3 + i * 4
-            ws.cell(row=44, column=col, value=pl)
-            _apply_header_style(ws.cell(row=44, column=col))
-
-        # Row 45: 子表头
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j, h in enumerate(["新签合同额", "预计确收合同额", "实际确收合同额", "完成率"]):
-                ws.cell(row=45, column=col + j, value=h)
-                _apply_header_style(ws.cell(row=45, column=col + j))
-
-        # Row 46-61: 月度数据行（产线数据不可用，留空）
-        for month_idx, month_str in enumerate(SUMMARY_MONTHS):
-            row = 46 + month_idx
-            ws.cell(row=row, column=2, value=month_str)
-            _apply_data_style(ws.cell(row=row, column=2))
-            # 数据列留空（数据库无产线维度数据）
-            for i in range(len(product_lines)):
-                col = 3 + i * 4
-                for j in range(4):
-                    _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 58: 1-6月合计
-        row = 58
-        ws.cell(row=row, column=2, value="1-6月合计")
-        _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 59: 合计
-        row = 59
-        ws.cell(row=row, column=2, value="合计")
-        _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 60: 确收度
-        row = 60
-        ws.cell(row=row, column=2, value="确收度")
-        _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # Row 61: 年度目标
-        row = 61
-        ws.cell(row=row, column=2, value="年度目标")
-        _apply_data_style(ws.cell(row=row, column=2))
-        ws.cell(row=row, column=3, value=23000)
-        _apply_summary_amount_style(ws.cell(row=row, column=3))
-        for i in range(len(product_lines)):
-            col = 3 + i * 4
-            for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
-
-        # 同比分析说明文字 (放在 col 15, rows 11-16 对应手工报表位置)
+        # 同比分析列 (Row 6+)
         yoy_notes = [
             "1. 确收度 = 确收合同额（含税）/ 销售合同额 * 100%",
             "2. 确收合同额比重 = 新签（或递延）确收合同额 / 总确收合同额 * 100%",
@@ -1085,18 +591,37 @@ class RevenueExporter:
             "统计维度：合同类别（新签、递延）；统计月度（期间）",
         ]
         for i, note in enumerate(yoy_notes):
-            ws.cell(row=11 + i, column=15, value=note)
-            _apply_data_style(ws.cell(row=11 + i, column=15))
+            ws.cell(row=6 + i, column=14, value=note)
+            _apply_data_style(ws.cell(row=6 + i, column=14))
 
-        # Row 62-64: 空行（与手工报表一致）
-        for r in range(62, 65):
-            for c in range(1, 43):
-                _apply_data_style(ws.cell(row=r, column=c))
+        # 同比分析数据（从 comparison_source 字段读取）
+        yoy_data = self.engine.compute_yoy_comparison(period)
+        yoy_start_row = 12
+        if yoy_data:
+            # 表头
+            yoy_headers = ["数据来源", "分类", "合同数", "合同金额(万)", "H1计划(万)", "H1实际(万)"]
+            for i, h in enumerate(yoy_headers):
+                cell = ws.cell(row=yoy_start_row, column=14 + i, value=h)
+                _apply_header_style(cell)
+            # 数据行
+            for i, row_data in enumerate(yoy_data):
+                row = yoy_start_row + 1 + i
+                ws.cell(row=row, column=14, value=row_data.get("comparison_source"))
+                ws.cell(row=row, column=15, value=row_data.get("category"))
+                ws.cell(row=row, column=16, value=row_data.get("cnt"))
+                ws.cell(row=row, column=17, value=round((row_data.get("total_amount", 0) or 0) / WAN, 6))
+                ws.cell(row=row, column=18, value=round((row_data.get("h1_plan", 0) or 0) / WAN, 6))
+                ws.cell(row=row, column=19, value=round((row_data.get("h1_actual", 0) or 0) / WAN, 6))
+                for col in range(14, 20):
+                    _apply_data_style(ws.cell(row=row, column=col))
+        else:
+            ws.cell(row=yoy_start_row, column=14, value="（暂无同比数据 — 需填充 comparison_source 字段）")
+            _apply_data_style(ws.cell(row=yoy_start_row, column=14))
 
-        # ── 列宽 ──
+        # 列宽
         ws.column_dimensions['A'].width = 2
         ws.column_dimensions['B'].width = 12
-        for col in range(3, 43):
+        for col in range(3, 20):
             ws.column_dimensions[get_column_letter(col)].width = 18
 
     # ===================================================================
@@ -1144,7 +669,7 @@ class RevenueExporter:
                       "合同数量（个）", "涉及金额（万）",
                       "合同数量（个）", "涉及金额（万）",
                       "合同数量（个）", "涉及金额（万）",
-                      "数量", "金额", "未立项", "已立项"]
+                      "数量", "金额", "未立项"]
         for i, h in enumerate(headers_r3):
             if h is not None:
                 cell = ws.cell(row=3, column=1 + i, value=h)
@@ -1163,14 +688,14 @@ class RevenueExporter:
             ws.cell(row=row, column=1, value="递延合同" if i == 0 else None)
             ws.cell(row=row, column=2, value=label)
             _apply_data_style(ws.cell(row=row, column=2))
-            for col_offset in range(3, 16):
+            for col_offset in range(3, 15):
                 ws.cell(row=row, column=col_offset, value=0)
                 _apply_data_style(ws.cell(row=row, column=col_offset))
 
         # Row 10: 合计
         ws.cell(row=10, column=1, value="合计：")
         _apply_data_style(ws.cell(row=10, column=1))
-        for col in range(3, 16):
+        for col in range(3, 15):
             ws.cell(row=10, column=col, value=0)
             _apply_data_style(ws.cell(row=10, column=col))
 
@@ -1196,21 +721,21 @@ class RevenueExporter:
             ws.cell(row=row, column=1, value="新签合同" if i == 0 else None)
             ws.cell(row=row, column=2, value=label)
             _apply_data_style(ws.cell(row=row, column=2))
-            for col_offset in range(3, 16):
+            for col_offset in range(3, 15):
                 ws.cell(row=row, column=col_offset, value=0)
                 _apply_data_style(ws.cell(row=row, column=col_offset))
 
         # Row 17: 新签合计
         ws.cell(row=17, column=1, value="合计：")
         _apply_data_style(ws.cell(row=17, column=1))
-        for col in range(3, 16):
+        for col in range(3, 15):
             ws.cell(row=17, column=col, value=0)
             _apply_data_style(ws.cell(row=17, column=col))
 
         # Row 18: (递延+新签)共计
         ws.cell(row=18, column=1, value="（递延+新签）共计：")
         _apply_data_style(ws.cell(row=18, column=1))
-        for col in range(3, 16):
+        for col in range(3, 15):
             ws.cell(row=18, column=col, value=0)
             _apply_data_style(ws.cell(row=18, column=col))
 
@@ -1223,7 +748,7 @@ class RevenueExporter:
         # 列宽
         ws.column_dimensions['A'].width = 14
         ws.column_dimensions['B'].width = 20
-        for col in range(3, 17):
+        for col in range(3, 16):
             ws.column_dimensions[get_column_letter(col)].width = 16
 
     # ===================================================================
@@ -1304,6 +829,7 @@ class RevenueExporter:
             "2026年预计", "202601-06预计", "202601-06确收", "202601-06提前完成", "202601-06滞后未完成",
             "202601", "202602", "202603", "202604", "202605", "202606",
             "2026消失金额", "2026年及以后消失金额", "消失备注", "重拆履约，提前和滞后同增",
+            "预测分类", "统计标记",
             # 扩展列（周报/OA信息/预算趋势/异常项目/产品服务维度）
             "合同数量统计唯一值", "合同数量统计位", "确收-财务是否交接（合同编号校准）",
             "确收-财务是否交接", "确收-财务反馈", "是否正常摊销", "是否统计确收？",
@@ -1462,9 +988,21 @@ class RevenueExporter:
         rows = conn.execute("SELECT * FROM budget_exec ORDER BY id").fetchall()
         conn.close()
 
+        seen_av_values = set()  # Track AV values for deduplication (AW column)
+
         for i, row_data in enumerate(rows):
             row = 4 + i
             for col_idx, key in enumerate(col_headers):
+                # AW column: write dedup marker ("统计" for first occurrence, "" for duplicates)
+                if key == "统计标记":
+                    av_val = row_data.get("forecast_category")
+                    if av_val and av_val not in seen_av_values:
+                        seen_av_values.add(av_val)
+                        cell = ws.cell(row=row, column=1 + col_idx, value="统计")
+                    else:
+                        cell = ws.cell(row=row, column=1 + col_idx, value="")
+                    _apply_data_style(cell)
+                    continue
                 # Map header to db column name
                 if key in ext_col_map:
                     db_key = ext_col_map[key]
@@ -1717,13 +1255,13 @@ class RevenueExporter:
         ws.cell(row=1, column=3, value="新签合同")
         _apply_header_style(ws.cell(row=1, column=3))
 
-        ws.merge_cells(start_row=1, start_column=6, end_row=1, end_column=7)
+        ws.merge_cells(start_row=1, start_column=6, end_row=1, end_column=8)
         ws.cell(row=1, column=6, value="递延合同")
         _apply_header_style(ws.cell(row=1, column=6))
 
-        ws.merge_cells(start_row=1, start_column=8, end_row=1, end_column=11)
-        ws.cell(row=1, column=8, value="新签+递延")
-        _apply_header_style(ws.cell(row=1, column=8))
+        ws.merge_cells(start_row=1, start_column=9, end_row=1, end_column=11)
+        ws.cell(row=1, column=9, value="新签+递延")
+        _apply_header_style(ws.cell(row=1, column=9))
 
         # Row 2: 子标题
         headers = [
@@ -1759,8 +1297,8 @@ class RevenueExporter:
             ws.cell(row=current_row, column=7, value=round(r["def_actual_rev"], 6) if r["def_actual_rev"] is not None else None)
             ws.cell(row=current_row, column=8, value=round(r["total_plan_rev"], 6) if r["total_plan_rev"] is not None else None)
             ws.cell(row=current_row, column=9, value=round(r["total_actual_rev"], 6) if r["total_actual_rev"] is not None else None)
-            ws.cell(row=current_row, column=10, value=round(r["adj_plan"], 6) if r["adj_plan"] is not None else 0)
-            ws.cell(row=current_row, column=11, value=round(r["adj_actual"], 6) if r["adj_actual"] is not None else 0)
+            ws.cell(row=current_row, column=10, value=round(r["adj_plan"], 6) if r["adj_plan"] is not None else None)
+            ws.cell(row=current_row, column=11, value=round(r["adj_actual"], 6) if r["adj_actual"] is not None else None)
             for col in range(1, 12):
                 _apply_data_style(ws.cell(row=current_row, column=col))
             current_row += 1
@@ -1772,9 +1310,7 @@ class RevenueExporter:
     # ===================================================================
 
     def _build_performance_record(self, wb: Workbook, period: str):
-        """构建履约汇总记录 sheet — 从 performance_summary 表读取所有数据
-        对齐手工报表：按统计期间降序排列，类别名称带前导空格
-        """
+        """构建履约汇总记录 sheet — 从 performance_summary 表读取所有数据"""
         ws = wb.create_sheet("履约汇总记录")
 
         headers = ["统计期间", "类别", "新签", "递延", "合计", "备注"]
@@ -1790,43 +1326,20 @@ class RevenueExporter:
             ORDER BY stat_period DESC, category ASC
         """).fetchall()
 
-        # Fixed category order matching manual report (with leading spaces for alignment)
-        # 手工报表中类别名称带前导空格以对齐缩进
+        # Fixed category order matching manual report
         category_order = ["预算完成", "实际完成", "预算-实际", "其中：提前完成", "          滞后未完成", "          消失"]
-        # 建立原始名称到带空格名称的映射
-        category_display = {
-            "预算完成": "预算完成",
-            "实际完成": "实际完成",
-            "预算-实际": "预算-实际",
-            "其中：提前完成": "其中：提前完成",
-            "滞后未完成": "          滞后未完成",
-            "消失": "          消失",
-        }
-        # DB category name → display name (with leading spaces for visual hierarchy)
-        db_to_display = {
-            "预算完成": "预算完成",
-            "实际完成": "实际完成",
-            "预算-实际": "预算-实际",
-            "其中：提前完成": "其中：提前完成",
-            "滞后未完成": "          滞后未完成",
-            "消失": "          消失",
-        }
 
         current_row = 2
 
-        # Sort rows: by stat_period DESC, then by fixed category order
-        # Map display names back to DB names for sorting
-        db_category_order = ["预算完成", "实际完成", "预算-实际", "其中：提前完成", "滞后未完成", "消失"]
+        # Sort rows by fixed category order
         rows_sorted = sorted(rows, key=lambda r: (
-            -int(r["stat_period"]),
-            db_category_order.index(r["category"]) if r["category"] in db_category_order else 999
+            int(r["stat_period"]),
+            category_order.index(r["category"]) if r["category"] in category_order else 999
         ))
 
         for r in rows_sorted:
             ws.cell(row=current_row, column=1, value=int(r["stat_period"]))
-            # 使用带前导空格的类别名称
-            display_cat = db_to_display.get(r["category"], r["category"])
-            ws.cell(row=current_row, column=2, value=display_cat)
+            ws.cell(row=current_row, column=2, value=r["category"])
             ws.cell(row=current_row, column=3, value=round(r["new_value"], 6) if r["new_value"] is not None else None)
             ws.cell(row=current_row, column=4, value=round(r["deferred_value"], 6) if r["deferred_value"] is not None else None)
             ws.cell(row=current_row, column=5, value=round(r["total_value"], 6) if r["total_value"] is not None else None)
