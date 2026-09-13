@@ -404,57 +404,48 @@ class RevenueExporter:
             ws.cell(row=row, column=4, value=note)
             _apply_data_style(ws.cell(row=row, column=4))
 
-        # ── Row 4: 合并表头（先设值再合并）──
-        # 期间 B2
+        # ── Row 4: 合并表头（先合并再设值，防止值被覆盖）──
+        # 先合并所有单元格
+        ws.merge_cells(start_row=4, start_column=3, end_row=4, end_column=6)    # 新签
+        ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)    # 递延
+        ws.merge_cells(start_row=4, start_column=10, end_row=4, end_column=12)  # 新签+递延
+        ws.merge_cells(start_row=4, start_column=15, end_row=4, end_column=15)  # 同比分析(左)
+        ws.merge_cells(start_row=4, start_column=16, end_row=4, end_column=21)  # Y26 1~6
+        ws.merge_cells(start_row=4, start_column=22, end_row=4, end_column=27)  # Y25 1~6
+        ws.merge_cells(start_row=4, start_column=28, end_row=4, end_column=29)  # 增长率
+        ws.merge_cells(start_row=4, start_column=30, end_row=4, end_column=30)  # 确收度增长
+        ws.merge_cells(start_row=4, start_column=33, end_row=4, end_column=33)  # 同比分析(右)
+        ws.merge_cells(start_row=4, start_column=34, end_row=4, end_column=36)  # 新签 Y26
+        ws.merge_cells(start_row=4, start_column=37, end_row=4, end_column=39)  # 新签 Y25
+        ws.merge_cells(start_row=4, start_column=40, end_row=4, end_column=42)  # 增长率
+
+        # 再设值（合并后只在左上角单元格设值）
         ws.cell(row=4, column=2, value="期间")
         _apply_header_style(ws.cell(row=4, column=2))
-        # 新签 C-F (col 3-6)
         ws.cell(row=4, column=3, value="新签")
         _apply_header_style(ws.cell(row=4, column=3))
-        # 递延 G-I (col 7-9)
         ws.cell(row=4, column=7, value="递延")
         _apply_header_style(ws.cell(row=4, column=7))
-        # 新签+递延 J-L (col 10-12)
         ws.cell(row=4, column=10, value="新签+递延")
         _apply_header_style(ws.cell(row=4, column=10))
-        # 同比分析 (col 15-42)
         ws.cell(row=4, column=15, value="同比分析")
         _apply_header_style(ws.cell(row=4, column=15))
-        # Y26 1~6 (col 16-21)
         ws.cell(row=4, column=16, value="Y26 1~6")
         _apply_header_style(ws.cell(row=4, column=16))
-        # Y25 1~6 (col 22-27)
         ws.cell(row=4, column=22, value="Y25 1~6")
         _apply_header_style(ws.cell(row=4, column=22))
-        # 增长率 (col 28-29)
         ws.cell(row=4, column=28, value="增长率")
         _apply_header_style(ws.cell(row=4, column=28))
-        # 确收度增长 (col 30)
         ws.cell(row=4, column=30, value="确收度增长")
         _apply_header_style(ws.cell(row=4, column=30))
-        # 同比分析 (col 33-42)
         ws.cell(row=4, column=33, value="同比分析")
         _apply_header_style(ws.cell(row=4, column=33))
-        # Sub-headers for right side
         ws.cell(row=4, column=34, value="新签 Y26")
         _apply_header_style(ws.cell(row=4, column=34))
         ws.cell(row=4, column=37, value="新签 Y25")
         _apply_header_style(ws.cell(row=4, column=37))
         ws.cell(row=4, column=40, value="增长率")
         _apply_header_style(ws.cell(row=4, column=40))
-
-        # 合并单元格（在值设置完成后）
-        ws.merge_cells(start_row=4, start_column=3, end_row=4, end_column=6)    # 新签
-        ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)    # 递延
-        ws.merge_cells(start_row=4, start_column=10, end_row=4, end_column=12)  # 新签+递延
-        ws.merge_cells(start_row=4, start_column=15, end_row=4, end_column=42)  # 同比分析
-        ws.merge_cells(start_row=4, start_column=16, end_row=4, end_column=21)  # Y26 1~6
-        ws.merge_cells(start_row=4, start_column=22, end_row=4, end_column=27)  # Y25 1~6
-        ws.merge_cells(start_row=4, start_column=28, end_row=4, end_column=29)  # 增长率
-        ws.merge_cells(start_row=4, start_column=33, end_row=4, end_column=42)  # 同比分析
-        ws.merge_cells(start_row=4, start_column=34, end_row=4, end_column=36)  # 新签 Y26
-        ws.merge_cells(start_row=4, start_column=37, end_row=4, end_column=39)  # 新签 Y25
-        ws.merge_cells(start_row=4, start_column=40, end_row=4, end_column=42)  # 增长率
 
         # ── Row 5: 子表头 ──
         # 新签 (C-F = col 3-6)
@@ -478,8 +469,7 @@ class RevenueExporter:
             (25, "比重"), (26, "预计确收合同额"), (27, "预计确收度"),
             # 增长率
             (28, "销售合同额"), (29, "确收合同额"),
-            # 确收度增长
-            (30, "确收度增长"),
+            # 确收度增长 (Row 4 已合并，Row 5 不填)
             # 同比分析
             (33, "期间"),
             (34, "新签合同额"), (35, "预计确收合同额"), (36, "实际确收合同额"),
