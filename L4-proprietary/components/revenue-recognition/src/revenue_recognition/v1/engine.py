@@ -376,27 +376,134 @@ class RevenueEngine:
         return [dict(r) for r in rows]
 
 
-    def compute_yoy_comparison(self, period: str = "202606") -> list:
+    def compute_yoy_comparison(self, period: str = "202606") -> dict:
         """
-        同比分析：按 comparison_source 字段分组，对比当期 vs 同期数据。
-        comparison_source 标记每条记录的数据来源（如 '2025_actual', '2026_plan'），
-        不做双路径，所有对比数据保留在同一张表。
+        同比分析：从手工参考报表的"月度汇总记录"Sheet 读取 2025 年数据。
+        返回结构：
+        {
+            "new": {"sales_amount": ..., "rev_amount": ..., "rev_ratio": ...,
+                    "weight": ..., "est_rev_amount": ..., "est_rev_ratio": ...,
+                    "monthly": [...]},
+            "deferred": {...},
+            "total": {...},
+        }
+        所有金额单位为万元。
         """
-        conn = self._conn()
-        rows = conn.execute("""
-            SELECT comparison_source,
-                   category,
-                   COUNT(*) as cnt,
-                   SUM(COALESCE(perf_amount, 0)) as total_amount,
-                   SUM(COALESCE(h1_plan, 0)) as h1_plan,
-                   SUM(COALESCE(h1_actual, 0)) as h1_actual
-            FROM budget_exec
-            WHERE comparison_source IS NOT NULL AND comparison_source != ''
-            GROUP BY comparison_source, category
-            ORDER BY comparison_source, category
-        """).fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+        from openpyxl import load_workbook
+        from .config import MANUAL_REPORT_PATH
+
+        year = int(period[:4])
+        prev_year = year - 1
+        prev_period_int = int(f"{prev_year}12")  # stat_period for 2025 data (e.g. 202512)
+
+        # Initialize with zeros
+        result = {
+            "new": {"sales_amount": 0, "rev_amount": 0, "rev_ratio": None,
+                    "weight": None, "est_rev_amount": 0, "est_rev_ratio": None,
+                    "monthly": []},
+            "deferred": {"sales_amount": 0, "rev_amount": 0, "rev_ratio": None,
+                         "weight": None, "est_rev_amount": 0, "est_rev_ratio": None,
+                         "monthly": []},
+            "total": {"sales_amount": 0, "rev_amount": 0, "rev_ratio": None,
+                      "weight": None, "est_rev_amount": 0, "est_rev_ratio": None,
+                      "monthly": []},
+        }
+
+        try:
+            wb = load_workbook(str(MANUAL_REPORT_PATH), read_only=True, data_only=True)
+            ws = wb["月度汇总记录"]
+
+            # Row 1: 大标题（合并单元格）
+            # Row 2: 列标题（统计期间, 合同期间, 新签合同额, ...）
+            # Row 3+: 数据
+            # Columns (0-indexed): 统计期间(0), 合同期间(1), 新签合同额(2), 新签-预计确收(3), 新签-实际确收(4),
+            #                      递延-预计确收(5), 递延-实际确收(6), 合计-预计确收(7), 合计-实际确收(8)
+
+            for row in ws.iter_rows(min_row=3, values_only=True):
+                stat_period = row[0]
+                contract_period = row[1]
+
+                # Match previous year's stat_period (integer comparison)
+                if stat_period is None or int(stat_period) != prev_period_int:
+                    continue
+                if contract_period is None:
+                    continue
+
+                # Only H1 months (01-06)
+                cp_int = int(contract_period)
+                month_num = cp_int % 100
+                if month_num < 1 or month_num > 6:
+                    continue
+
+                new_amount = row[2] or 0  # 新签合同额（万）
+                new_plan = row[3] or 0   # 新签-预计确收（万）
+                new_actual = row[4] or 0 # 新签-实际确收（万）
+                def_plan = row[5] or 0   # 递延-预计确收（万）
+                def_actual = row[6] or 0 # 递延-实际确收（万）
+
+                month_str = f"{cp_int}"
+                result["new"]["sales_amount"] += new_amount
+                result["new"]["rev_amount"] += new_actual
+                result["new"]["est_rev_amount"] += new_plan
+                result["new"]["monthly"].append({
+                    "month": month_str,
+                    "new_amount": new_amount,
+                    "new_plan": new_plan,
+                    "new_actual": new_actual,
+                    "def_plan": def_plan,
+                    "def_actual": def_actual,
+                })
+
+                result["deferred"]["rev_amount"] += def_actual
+                result["deferred"]["est_rev_amount"] += def_plan
+                result["deferred"]["monthly"].append({
+                    "month": month_str,
+                    "def_plan": def_plan,
+                    "def_actual": def_actual,
+                })
+
+                result["total"]["sales_amount"] += new_amount
+                result["total"]["rev_amount"] += new_actual + def_actual
+                result["total"]["est_rev_amount"] += new_plan + def_plan
+
+            wb.close()
+
+        except Exception as e:
+            # If manual report not available, return zeros
+            print(f"⚠️ 读取手工报表失败: {e}")
+
+        # Calculate derived metrics
+        for key in ["new", "deferred", "total"]:
+            r = result[key]
+            # 确收度 = 实际确收 / 销售合同额
+            if key == "new" and r["sales_amount"] != 0:
+                r["rev_ratio"] = round(r["rev_amount"] / r["sales_amount"], 6)
+                r["est_rev_ratio"] = round(r["est_rev_amount"] / r["sales_amount"], 6)
+            elif key == "deferred":
+                # 递延没有"销售合同额"，确收度 = 实际确收 / 预计确收
+                if r["est_rev_amount"] != 0:
+                    r["rev_ratio"] = round(r["rev_amount"] / r["est_rev_amount"], 6)
+                r["est_rev_ratio"] = 1.0  # 预计确收度 = 100%
+            elif key == "total":
+                if r["sales_amount"] != 0:
+                    r["rev_ratio"] = round(r["rev_amount"] / r["sales_amount"], 6)
+                    r["est_rev_ratio"] = round(r["est_rev_amount"] / r["sales_amount"], 6)
+
+        # 比重 = 各类实际确收 / 总实际确收
+        total_rev = result["total"]["rev_amount"]
+        if total_rev != 0:
+            result["new"]["weight"] = round(result["new"]["rev_amount"] / total_rev, 6)
+            result["deferred"]["weight"] = round(result["deferred"]["rev_amount"] / total_rev, 6)
+            result["total"]["weight"] = 1.0
+
+        # Round all amounts
+        for key in ["new", "deferred", "total"]:
+            r = result[key]
+            r["sales_amount"] = round(r["sales_amount"], 6)
+            r["rev_amount"] = round(r["rev_amount"], 6)
+            r["est_rev_amount"] = round(r["est_rev_amount"], 6)
+
+        return result
 
     # ------------------------------------------------------------------
     # 系统参考数据（手工维护）
