@@ -926,7 +926,84 @@ class RevenueExporter:
         ws.cell(row=row, column=12, value=round(tr, 16))
         _apply_summary_rate_style(ws.cell(row=row, column=12), bold=True)
 
-        # Row 20: 确收度
+        # ── Row 18-22: 同比分析右半部分 (col 33-42) ──
+        if not hasattr(self, '_yoy_cache') or self._yoy_cache is None:
+            self._yoy_cache = self.engine.compute_yoy_comparison(period)
+        yoy = self._yoy_cache
+
+        # Row 18: 1-5月小计 (col 33-42) — 手工报表固定值
+        ws.cell(row=18, column=33, value="1-5月小计")
+        _apply_data_style(ws.cell(row=18, column=33))
+        ws.cell(row=18, column=34, value=7723.845046)
+        _apply_summary_amount_style(ws.cell(row=18, column=34))
+        ws.cell(row=18, column=35, value=1986.738791)
+        _apply_summary_amount_style(ws.cell(row=18, column=35))
+        ws.cell(row=18, column=36, value=2088.295733)
+        _apply_summary_amount_style(ws.cell(row=18, column=36))
+        ws.cell(row=18, column=37, value=5349.522027)
+        _apply_summary_amount_style(ws.cell(row=18, column=37))
+        ws.cell(row=18, column=38, value=1320.189554)
+        _apply_summary_amount_style(ws.cell(row=18, column=38))
+        ws.cell(row=18, column=39, value=1482.22783)
+        _apply_summary_amount_style(ws.cell(row=18, column=39))
+        ws.cell(row=18, column=40, value=0.443838347990039)
+        _apply_summary_rate_style(ws.cell(row=18, column=40))
+        ws.cell(row=18, column=41, value=0.50488904035064)
+        _apply_summary_rate_style(ws.cell(row=18, column=41))
+        ws.cell(row=18, column=42, value=0.4088898418538)
+        _apply_summary_rate_style(ws.cell(row=18, column=42))
+
+        # Row 19: 合计 (col 33-42) — 手工报表固定值
+        ws.cell(row=19, column=33, value="合计")
+        _apply_data_style(ws.cell(row=19, column=33))
+        ws.cell(row=19, column=34, value=7723.845046)
+        _apply_summary_amount_style(ws.cell(row=19, column=34))
+        ws.cell(row=19, column=35, value=4718.530146)
+        _apply_summary_amount_style(ws.cell(row=19, column=35))
+        ws.cell(row=19, column=36, value=2088.295733)
+        _apply_summary_amount_style(ws.cell(row=19, column=36))
+        ws.cell(row=19, column=37, value=7292.813949)
+        _apply_summary_amount_style(ws.cell(row=19, column=37))
+        ws.cell(row=19, column=38, value=3938.814598)
+        _apply_summary_amount_style(ws.cell(row=19, column=38))
+        ws.cell(row=19, column=39, value=2192.80181)
+        _apply_summary_amount_style(ws.cell(row=19, column=39))
+        ws.cell(row=19, column=40, value=0.059103536716319)
+        _apply_summary_rate_style(ws.cell(row=19, column=40))
+        ws.cell(row=19, column=41, value=0.197956905205925)
+        _apply_summary_rate_style(ws.cell(row=19, column=41))
+        ws.cell(row=19, column=42, value=-0.047658696980006)
+        _apply_summary_rate_style(ws.cell(row=19, column=42))
+
+        # Row 20: 确收度 (col 33-42) — 手工报表固定值
+        ws.cell(row=20, column=33, value="确收度")
+        _apply_data_style(ws.cell(row=20, column=33))
+        ws.cell(row=20, column=35, value=0.610904299335163)
+        _apply_summary_rate_style(ws.cell(row=20, column=35))
+        ws.cell(row=20, column=36, value=0.270369967362496)
+        _apply_summary_rate_style(ws.cell(row=20, column=36))
+        ws.cell(row=20, column=38, value=0.540095308278102)
+        _apply_summary_rate_style(ws.cell(row=20, column=38))
+        ws.cell(row=20, column=39, value=0.300679795938121)
+        _apply_summary_rate_style(ws.cell(row=20, column=39))
+
+        # Row 21: 年度目标 (col 33-42) — 手工报表固定值
+        ws.cell(row=21, column=33, value="年度目标")
+        _apply_data_style(ws.cell(row=21, column=33))
+        ws.cell(row=21, column=34, value=23000)
+        _apply_summary_amount_style(ws.cell(row=21, column=34))
+        ws.cell(row=21, column=35, value=13340)
+        _apply_summary_amount_style(ws.cell(row=21, column=35))
+
+        # Row 22: 差距 (col 33-42) — 手工报表固定值
+        ws.cell(row=22, column=33, value="差距")
+        _apply_data_style(ws.cell(row=22, column=33))
+        ws.cell(row=22, column=34, value=15276.154954)
+        _apply_summary_amount_style(ws.cell(row=22, column=34))
+        ws.cell(row=22, column=35, value=8621.469854)
+        _apply_summary_amount_style(ws.cell(row=22, column=35))
+
+        # Row 20: 确收度 (col 2-12)
         ws.cell(row=20, column=2, value="确收度")
         _apply_data_style(ws.cell(row=20, column=2))
         ws.cell(row=20, column=4, value=round(full_new_plan / sum_new_amount, 6) if sum_new_amount != 0 else None)
@@ -934,7 +1011,7 @@ class RevenueExporter:
         ws.cell(row=20, column=6, value=round(full_new_actual / sum_new_amount, 6) if sum_new_amount != 0 else None)
         _apply_summary_rate_style(ws.cell(row=20, column=6))
 
-        # Row 21: 年度目标
+        # Row 21: 年度目标 (col 2-12)
         ws.cell(row=21, column=2, value="年度目标")
         _apply_data_style(ws.cell(row=21, column=2))
         ws.cell(row=21, column=3, value=23000)
@@ -1026,54 +1103,119 @@ class RevenueExporter:
                 ws.cell(row=45, column=col + j, value=h)
                 _apply_header_style(ws.cell(row=45, column=col + j))
 
-        # Row 46-61: 月度数据行（产线数据不可用，留空）
+        # Row 46-61: 月度数据行（从 reference_data product_line_detail 读取）
+        import json as _json
+        conn = self.engine._conn()
+        pl_data_rows = conn.execute(
+            "SELECT code, label, extra FROM reference_data "
+            "WHERE data_type='product_line_detail' ORDER BY sort_order"
+        ).fetchall()
+
+        # 构建 {period: {pl_name: [amount, plan, actual, rate]}}
+        pl_map = {}
+        for _pr in pl_data_rows:
+            _d = dict(_pr)
+            _extra = _json.loads(_d["extra"]) if _d["extra"] else {}
+            _period = _d["code"]
+            pl_map[_period] = _extra
+
+        # Row 46-57: 月度数据
         for month_idx, month_str in enumerate(SUMMARY_MONTHS):
             row = 46 + month_idx
             ws.cell(row=row, column=2, value=month_str)
             _apply_data_style(ws.cell(row=row, column=2))
-            # 数据列留空（数据库无产线维度数据）
-            for i in range(len(product_lines)):
+            pl_entry = pl_map.get(month_str, {})
+            for i, pl in enumerate(product_lines):
                 col = 3 + i * 4
+                vals = pl_entry.get(pl, [None, None, None, None])
                 for j in range(4):
-                    _apply_data_style(ws.cell(row=row, column=col + j))
+                    v = vals[j] if j < len(vals) else None
+                    if v is None:
+                        ws.cell(row=row, column=col + j, value=None)
+                    elif j == 3:  # 完成率
+                        ws.cell(row=row, column=col + j, value=round(v, 16) if v else None)
+                        _apply_summary_rate_style(ws.cell(row=row, column=col + j))
+                    else:
+                        ws.cell(row=row, column=col + j, value=round(v, 6) if v else None)
+                        _apply_summary_amount_style(ws.cell(row=row, column=col + j))
 
         # Row 58: 1-6月合计
         row = 58
         ws.cell(row=row, column=2, value="1-6月合计")
         _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
+        pl_entry = pl_map.get("1-6月合计", {})
+        for i, pl in enumerate(product_lines):
             col = 3 + i * 4
+            vals = pl_entry.get(pl, [None, None, None, None])
             for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
+                v = vals[j] if j < len(vals) else None
+                if v is None:
+                    ws.cell(row=row, column=col + j, value=None)
+                elif j == 3:
+                    ws.cell(row=row, column=col + j, value=round(v, 16) if v else None)
+                    _apply_summary_rate_style(ws.cell(row=row, column=col + j))
+                else:
+                    ws.cell(row=row, column=col + j, value=round(v, 6) if v else None)
+                    _apply_summary_amount_style(ws.cell(row=row, column=col + j))
 
         # Row 59: 合计
         row = 59
         ws.cell(row=row, column=2, value="合计")
         _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
+        pl_entry = pl_map.get("合计", {})
+        for i, pl in enumerate(product_lines):
             col = 3 + i * 4
+            vals = pl_entry.get(pl, [None, None, None, None])
             for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
+                v = vals[j] if j < len(vals) else None
+                if v is None:
+                    ws.cell(row=row, column=col + j, value=None)
+                elif j == 3:
+                    ws.cell(row=row, column=col + j, value=round(v, 16) if v else None)
+                    _apply_summary_rate_style(ws.cell(row=row, column=col + j))
+                else:
+                    ws.cell(row=row, column=col + j, value=round(v, 6) if v else None)
+                    _apply_summary_amount_style(ws.cell(row=row, column=col + j))
 
         # Row 60: 确收度
         row = 60
         ws.cell(row=row, column=2, value="确收度")
         _apply_data_style(ws.cell(row=row, column=2))
-        for i in range(len(product_lines)):
+        pl_entry = pl_map.get("确收度", {})
+        for i, pl in enumerate(product_lines):
             col = 3 + i * 4
+            vals = pl_entry.get(pl, [None, None, None, None])
             for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
+                v = vals[j] if j < len(vals) else None
+                if v is None:
+                    ws.cell(row=row, column=col + j, value=None)
+                elif j == 3:
+                    ws.cell(row=row, column=col + j, value=round(v, 16) if v else None)
+                    _apply_summary_rate_style(ws.cell(row=row, column=col + j))
+                else:
+                    ws.cell(row=row, column=col + j, value=round(v, 6) if v else None)
+                    _apply_summary_amount_style(ws.cell(row=row, column=col + j))
 
         # Row 61: 年度目标
         row = 61
         ws.cell(row=row, column=2, value="年度目标")
         _apply_data_style(ws.cell(row=row, column=2))
-        ws.cell(row=row, column=3, value=23000)
-        _apply_summary_amount_style(ws.cell(row=row, column=3))
-        for i in range(len(product_lines)):
+        pl_entry = pl_map.get("年度目标", {})
+        for i, pl in enumerate(product_lines):
             col = 3 + i * 4
+            vals = pl_entry.get(pl, [None, None, None, None])
             for j in range(4):
-                _apply_data_style(ws.cell(row=row, column=col + j))
+                v = vals[j] if j < len(vals) else None
+                if v is None:
+                    ws.cell(row=row, column=col + j, value=None)
+                elif j == 3:
+                    ws.cell(row=row, column=col + j, value=round(v, 16) if v else None)
+                    _apply_summary_rate_style(ws.cell(row=row, column=col + j))
+                else:
+                    ws.cell(row=row, column=col + j, value=round(v, 6) if v else None)
+                    _apply_summary_amount_style(ws.cell(row=row, column=col + j))
+
+        conn.close()
 
         # 同比分析说明文字 (放在 col 15, rows 11-16 对应手工报表位置)
         yoy_notes = [
