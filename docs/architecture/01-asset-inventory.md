@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-15 00:02 UTC+08:00
+最后生成：2026-09-15 00:17 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -81,11 +81,8 @@
 
 | 别名 | 说明 |
 |---|---|
-| `codingplan` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
 | `gatewayauthtoken` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
-| `longcatkey` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
 | `memorysearchkey` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
-| `tavilykey` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
 
 ### 凭据文件
 
@@ -93,13 +90,8 @@
 |---|---|---|
 | `~/.openclaw/secrets/INDEX.md` | `600` | 2425 B |
 | `~/.openclaw/secrets/backup.key` | `600` | 65 B |
-| `~/.openclaw/secrets/codingplan.apiKey` | `600` | 46 B |
 | `~/.openclaw/secrets/gateway.auth.token` | `600` | 48 B |
-| `~/.openclaw/secrets/github.token` | `600` | 40 B |
-| `~/.openclaw/secrets/llama-cpp.apiKey` | `600` | 15 B |
-| `~/.openclaw/secrets/longcat.apiKey` | `600` | 32 B |
 | `~/.openclaw/secrets/memory.search.remote.apiKey` | `600` | 9 B |
-| `~/.openclaw/secrets/tavily.apiKey` | `600` | 58 B |
 
 > ⚠️ 标记表示权限不是 600，应执行 `chmod 600` 收紧。
 
@@ -192,8 +184,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `754f2970` |
-| Commit 数 | 323 |
+| HEAD | `95895730` |
+| Commit 数 | 324 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
