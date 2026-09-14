@@ -15,18 +15,21 @@
       },
       "workspace": "/Users/bangcle/.openclaw/workspace",
       "compaction": {
-        "memoryFlush": {
-          "model": "coding-plan/doubao-seed-2-1-turbo"
-        },
-        "notifyUser": true,
-        "enabled": true,
+        "mode": "safeguard",
         "keepRecentTokens": 30000,
-        "maxActiveTranscriptBytes": "400kb",
+        "maxActiveTranscriptBytes": "250kb",
         "midTurnPrecheck": {
           "enabled": true
         },
-        "mode": "safeguard",
-        "model": "coding-plan/deepseek-v4-flash"
+        "model": "longcat/LongCat-2.0",
+        "memoryFlush": {
+          "model": "coding-plan/doubao-seed-2-1-turbo",
+          "softThresholdTokens": "<REDACTED>",
+          "forceFlushTranscriptBytes": "200kb"
+        },
+        "qualityGuard": {
+          "maxRetries": 3
+        }
       },
       "contextPruning": {
         "mode": "cache-ttl",
@@ -73,7 +76,7 @@
           ]
         },
         "heartbeat": {
-          "every": "30m"
+          "every": "0m"
         },
         "identity": {
           "name": "main",
@@ -111,6 +114,33 @@
         },
         "identity": {
           "name": "ms-research"
+        }
+      },
+      "ms-reasoning": {
+        "name": "ms-reasoning",
+        "workspace": "/Users/bangcle/.openclaw/workspace",
+        "model": {
+          "primary": "coding-plan/deepseek-v4-flash",
+          "fallbacks": [
+            "coding-plan/glm-5.3",
+            "coding-plan/ark-code-latest"
+          ]
+        },
+        "identity": {
+          "name": "ms-reasoning"
+        }
+      },
+      "ms-chat": {
+        "name": "ms-chat",
+        "workspace": "/Users/bangcle/.openclaw/workspace",
+        "model": {
+          "primary": "coding-plan/doubao-seed-2.0-lite",
+          "fallbacks": [
+            "coding-plan/ark-code-latest"
+          ]
+        },
+        "identity": {
+          "name": "ms-chat"
         }
       }
     }
@@ -151,9 +181,9 @@
       "coding-plan": {
         "api": "openai-completions",
         "apiKey": {
-          "source": "file",
-          "provider": "codingplan",
-          "id": "value"
+          "source": "store",
+          "provider": "default",
+          "id": "CODING_PLAN_API_KEY"
         },
         "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
         "models": [
@@ -217,9 +247,9 @@
       "longCat": {
         "baseUrl": "https://api.longcat.chat/openai/v1",
         "apiKey": {
-          "source": "file",
-          "provider": "longcatkey",
-          "id": "value"
+          "source": "store",
+          "provider": "default",
+          "id": "LONGCAT_API_KEY"
         },
         "api": "openai-completions",
         "authHeader": true,
@@ -339,6 +369,50 @@
             }
           }
         ]
+      },
+      "deepseek": {
+        "api": "openai-completions",
+        "baseUrl": "https://api.deepseek.com/v1",
+        "apiKey": {
+          "source": "store",
+          "provider": "default",
+          "id": "DEEPSEEK_API_KEY"
+        },
+        "authHeader": true,
+        "models": [
+          {
+            "id": "deepseek-chat",
+            "name": "DeepSeek V3 (chat)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131072,
+            "maxTokens": 8192,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          },
+          {
+            "id": "deepseek-reasoner",
+            "name": "DeepSeek R1 (reasoning)",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131072,
+            "maxTokens": 8192,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          }
+        ]
       }
     }
   },
@@ -433,21 +507,22 @@
     "lastRunAt": "2026-09-01T13:26:26.724Z",
     "lastRunCommand": "doctor",
     "lastRunMode": "local",
-    "lastRunVersion": "2026.8.1"
+    "lastRunVersion": "2026.8.1",
+    "securityAcknowledgedAt": "2026-09-10T04:07:50.149Z"
   },
   "plugins": {
     "entries": {
       "longcat": {
-        "enabled": false
+        "enabled": true
       },
       "tavily": {
         "enabled": true,
         "config": {
           "webSearch": {
             "apiKey": {
-              "source": "file",
-              "provider": "tavilykey",
-              "id": "value"
+              "source": "store",
+              "provider": "default",
+              "id": "TAVILY_API_KEY"
             }
           }
         }
@@ -477,21 +552,6 @@
   },
   "secrets": {
     "providers": {
-      "tavilykey": {
-        "source": "file",
-        "path": "/Users/bangcle/.openclaw/secrets/tavily.apiKey",
-        "mode": "singleValue"
-      },
-      "codingplan": {
-        "source": "file",
-        "path": "/Users/bangcle/.openclaw/secrets/codingplan.apiKey",
-        "mode": "singleValue"
-      },
-      "longcatkey": {
-        "source": "file",
-        "path": "/Users/bangcle/.openclaw/secrets/longcat.apiKey",
-        "mode": "singleValue"
-      },
       "gatewayauthtoken": {
         "source": "file",
         "path": "/Users/bangcle/.openclaw/secrets/gateway.auth.token",
@@ -551,5 +611,19 @@
   ],
   "talk": {
     "agentId": "<REDACTED>"
+  },
+  "ui": {
+    "prefs": {
+      "sidebarEntries": [
+        "session:agent:main:dashboard:4e7162d1-e85a-4f5a-8e35-895ba432c6ac",
+        "session:agent:main:dashboard:2bea653c-3421-4250-9eb1-1f78a558c8f0",
+        "session:agent:main:dashboard:84c8cbb2-4bfc-43f8-bc10-64a5b24a1e2b",
+        "session:agent:main:dashboard:262a91a7-53a5-4bd9-baad-65a19ba42373"
+      ]
+    }
+  },
+  "telemetry": {
+    "enabled": true,
+    "consentedAt": "2026-09-10T04:08:00.788Z"
   }
 }
