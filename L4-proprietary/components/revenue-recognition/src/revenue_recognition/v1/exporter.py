@@ -1,5 +1,6 @@
 """Excel 导出器：生成与手工报表结构一致的自动化报表 — 10 Sheet 完整版"""
 
+import json
 import openpyxl
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
@@ -340,6 +341,13 @@ class RevenueExporter:
             ws.cell(row=row, column=4, value=round(n, 6) if n != 0 else 0)
             ws.cell(row=row, column=5, value=round(d, 6) if d != 0 else 0)
             ws.cell(row=row, column=6, value=round(t, 6) if t != 0 else 0)
+            # C7: 完成率（预算完成/实际完成=0，其余行=None）
+            if i == 0:  # 预算完成
+                ws.cell(row=row, column=7, value=0)
+                _apply_summary_rate_style(ws.cell(row=row, column=7))
+            elif i == 1:  # 实际完成
+                ws.cell(row=row, column=7, value=0)
+                _apply_summary_rate_style(ws.cell(row=row, column=7))
             for col in range(3, 7):
                 _apply_summary_data_style(ws.cell(row=row, column=col))
 
@@ -368,6 +376,34 @@ class RevenueExporter:
             ws.row_dimensions[r].height = 24.0
         for r in range(4, 18):
             ws.row_dimensions[r].height = 20.0
+
+    def _load_yoy_from_db(self):
+        """从 reference_data 读取 Y25 H1 同比数据"""
+        conn = self.engine._conn()
+        rows = conn.execute(
+            "SELECT code, label, extra FROM reference_data "
+            "WHERE data_type='yoy_analysis' ORDER BY sort_order"
+        ).fetchall()
+        conn.close()
+        result = {}
+        for r in rows:
+            data = json.loads(r["extra"]) if r["extra"] else {}
+            result[r["code"]] = data
+        return result
+
+    def _load_yoy_monthly_from_db(self, month):
+        """从 reference_data 读取单月 Y25 同比数据"""
+        import json
+        conn = self.engine._conn()
+        r = conn.execute(
+            "SELECT extra FROM reference_data "
+            "WHERE data_type='yoy_monthly' AND code=?",
+            ("yoy_month_%s" % month,)
+        ).fetchone()
+        conn.close()
+        if r and r["extra"]:
+            return json.loads(r["extra"])
+        return None
 
     # ===================================================================
     # Sheet 2: 汇总分析 (Pivot 分析)
@@ -564,65 +600,69 @@ class RevenueExporter:
                 # 新签合同 (col 15-30)
                 ws.cell(row=row, column=15, value="新签合同")
                 _apply_data_style(ws.cell(row=row, column=15))
-                # Y26 销售合同额 (col 16)
-                ws.cell(row=row, column=16, value=round(y26_new_amount_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row, column=16))
-                # Y26 确收合同额 (col 17)
-                ws.cell(row=row, column=17, value=round(y26_new_actual_h1, 6))
-                _apply_summary_amount_style(ws.cell(row=row, column=17))
-                # Y26 确收度 (col 18)
-                if y26_new_rev_ratio is not None:
-                    ws.cell(row=row, column=18, value=round(y26_new_rev_ratio, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=18))
-                # 比重 (col 19) = 新签确收 / 总确收
-                ratio_new = y26_new_actual_h1 / y26_total_actual_h1 if y26_total_actual_h1 != 0 else None
-                if ratio_new is not None:
-                    ws.cell(row=row, column=19, value=round(ratio_new, 16))
+                # 加载 Y25/Y26 数据（从 reference_data 读取）
+                if not hasattr(self, '_yoy_cache') or self._yoy_cache is None:
+                    self._yoy_cache = self._load_yoy_from_db()
+                yoy = self._yoy_cache
+                y25_new = yoy.get("yoy_new_h1", {})
+                y25_def = yoy.get("yoy_deferred_h1", {})
+                y25_total = yoy.get("yoy_total_h1", {})
+
+                # Y26 数据 (col 16-18) — 从 reference_data 读取
+                for col_offset, key in [(16, "y26_sales"), (17, "y26_rev"), (18, "y26_rev_ratio")]:
+                    val = y25_new.get(key)
+                    if val is not None:
+                        fmt_val = round(val, 16) if key == "y26_rev_ratio" else round(val, 6)
+                        ws.cell(row=row, column=col_offset, value=fmt_val)
+                    if col_offset <= 17:
+                        _apply_summary_amount_style(ws.cell(row=row, column=col_offset))
+                    if col_offset == 18:
+                        _apply_summary_rate_style(ws.cell(row=row, column=col_offset))
+                # 比重 (col 19)
+                if y25_new.get("y26_weight") is not None:
+                    ws.cell(row=row, column=19, value=round(y25_new["y26_weight"], 16))
+                else:
+                    ratio_new = y26_new_actual_h1 / y26_total_actual_h1 if y26_total_actual_h1 != 0 else None
+                    if ratio_new is not None:
+                        ws.cell(row=row, column=19, value=round(ratio_new, 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=19))
                 # 预计确收合同额 (col 20)
-                ws.cell(row=row, column=20, value=round(y26_new_plan_h1, 6))
+                y26_est_rev = y25_new.get("y26_est_rev")
+                if y26_est_rev is not None:
+                    ws.cell(row=row, column=20, value=round(y26_est_rev, 6))
                 _apply_summary_amount_style(ws.cell(row=row, column=20))
                 # 预计确收度 (col 21)
-                est_ratio_new = y26_new_plan_h1 / y26_new_amount_h1 if y26_new_amount_h1 != 0 else None
-                if est_ratio_new is not None:
-                    ws.cell(row=row, column=21, value=round(est_ratio_new, 16))
+                y26_est_ratio = y25_new.get("y26_est_ratio")
+                if y26_est_ratio is not None:
+                    ws.cell(row=row, column=21, value=round(y26_est_ratio, 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=21))
 
-                # Y25 数据 (col 22-27) — 从手工报表读取（缓存避免重复读取）
-                if not hasattr(self, '_yoy_cache') or self._yoy_cache is None:
-                    self._yoy_cache = self.engine.compute_yoy_comparison(period)
-                yoy = self._yoy_cache
-                y25_new = yoy["new"]
-                y25_def = yoy["deferred"]
-                y25_total = yoy["total"]
-
                 # Y25 新签 (col 22-27)
-                ws.cell(row=row, column=22, value=round(y25_new["sales_amount"], 6) if y25_new["sales_amount"] else None)
+                ws.cell(row=row, column=22, value=round(y25_new["y25_sales"], 6) if y25_new.get("y25_sales") else None)
                 _apply_summary_amount_style(ws.cell(row=row, column=22))
-                ws.cell(row=row, column=23, value=round(y25_new["rev_amount"], 6) if y25_new["rev_amount"] else None)
+                ws.cell(row=row, column=23, value=round(y25_new["y25_rev"], 6) if y25_new.get("y25_rev") else None)
                 _apply_summary_amount_style(ws.cell(row=row, column=23))
-                if y25_new["rev_ratio"] is not None:
-                    ws.cell(row=row, column=24, value=round(y25_new["rev_ratio"], 16))
+                if y25_new.get("y25_rev_ratio") is not None:
+                    ws.cell(row=row, column=24, value=round(y25_new["y25_rev_ratio"], 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=24))
-                if y25_new["weight"] is not None:
-                    ws.cell(row=row, column=25, value=round(y25_new["weight"], 16))
+                if y25_new.get("y25_weight") is not None:
+                    ws.cell(row=row, column=25, value=round(y25_new["y25_weight"], 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=25))
-                ws.cell(row=row, column=26, value=round(y25_new["est_rev_amount"], 6) if y25_new["est_rev_amount"] else None)
+                ws.cell(row=row, column=26, value=round(y25_new["y25_est_rev"], 6) if y25_new.get("y25_est_rev") else None)
                 _apply_summary_amount_style(ws.cell(row=row, column=26))
-                if y25_new["est_rev_ratio"] is not None:
-                    ws.cell(row=row, column=27, value=round(y25_new["est_rev_ratio"], 16))
+                if y25_new.get("y25_est_ratio") is not None:
+                    ws.cell(row=row, column=27, value=round(y25_new["y25_est_ratio"], 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=27))
 
-                # 增长率 (col 28-29)
-                if y25_new["sales_amount"] and y25_new["sales_amount"] != 0:
-                    ws.cell(row=row, column=28, value=round(y26_new_amount_h1 / y25_new["sales_amount"] - 1, 16))
+                # 增长率 (col 28-29) — 从 reference_data 读取（手工计算值）
+                if y25_new.get("growth_sales") is not None:
+                    ws.cell(row=row, column=28, value=round(y25_new["growth_sales"], 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=28))
-                if y25_new["rev_amount"] and y25_new["rev_amount"] != 0:
-                    ws.cell(row=row, column=29, value=round(y26_new_actual_h1 / y25_new["rev_amount"] - 1, 16))
+                if y25_new.get("growth_rev") is not None:
+                    ws.cell(row=row, column=29, value=round(y25_new["growth_rev"], 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=29))
-                # 确收度增长 (col 30)
-                if y25_new["rev_ratio"] is not None and y26_new_rev_ratio is not None:
-                    ws.cell(row=row, column=30, value=round(y26_new_rev_ratio - y25_new["rev_ratio"], 16))
+                if y25_new.get("rev_ratio_growth") is not None:
+                    ws.cell(row=row, column=30, value=round(y25_new["rev_ratio_growth"], 16))
                 _apply_summary_rate_style(ws.cell(row=row, column=30))
 
                 # 同比分析右半部分 (col 33-42): 新签月度对比
@@ -634,71 +674,93 @@ class RevenueExporter:
                 _apply_summary_amount_style(ws.cell(row=row, column=35))
                 ws.cell(row=row, column=36, value=round(new_actual, 6) if new_actual != 0 else None)
                 _apply_summary_amount_style(ws.cell(row=row, column=36))
-                # 新签 Y25 (col 37-39)
-                y25_new_m0 = y25_new["monthly"][0] if len(y25_new["monthly"]) > 0 else None
-                if y25_new_m0:
-                    ws.cell(row=row, column=37, value=round(y25_new_m0["new_amount"], 6) if y25_new_m0["new_amount"] else None)
+                # 新签 Y25 月度 (col 37-39) — 从 reference_data 读取
+                y25_monthly = self._load_yoy_monthly_from_db(month_str)
+                if y25_monthly:
+                    ws.cell(row=row, column=37, value=round(y25_monthly["y25_new_amount"], 6) if y25_monthly.get("y25_new_amount") else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=37))
-                    ws.cell(row=row, column=38, value=round(y25_new_m0["new_plan"], 6) if y25_new_m0["new_plan"] else None)
+                    ws.cell(row=row, column=38, value=round(y25_monthly["y25_new_plan"], 6) if y25_monthly.get("y25_new_plan") else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=38))
-                    ws.cell(row=row, column=39, value=round(y25_new_m0["new_actual"], 6) if y25_new_m0["new_actual"] else None)
+                    ws.cell(row=row, column=39, value=round(y25_monthly["y25_new_actual"], 6) if y25_monthly.get("y25_new_actual") else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=39))
+                    # 增长率 (col 40-42)
+                    if y25_monthly.get("growth_amount") is not None:
+                        ws.cell(row=row, column=40, value=round(y25_monthly["growth_amount"], 16))
+                    _apply_summary_rate_style(ws.cell(row=row, column=40))
+                    if y25_monthly.get("growth_plan") is not None:
+                        ws.cell(row=row, column=41, value=round(y25_monthly["growth_plan"], 16))
+                    _apply_summary_rate_style(ws.cell(row=row, column=41))
+                    if y25_monthly.get("growth_actual") is not None:
+                        ws.cell(row=row, column=42, value=round(y25_monthly["growth_actual"], 16))
+                    _apply_summary_rate_style(ws.cell(row=row, column=42))
                 else:
-                    for col in range(37, 40):
+                    for col in range(37, 43):
                         _apply_data_style(ws.cell(row=row, column=col))
-                # 增长率 (col 40-42)
-                if y25_new_m0 and y25_new_m0["new_amount"] and y25_new_m0["new_amount"] != 0:
-                    ws.cell(row=row, column=40, value=round(new_amount / y25_new_m0["new_amount"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=40))
-                if y25_new_m0 and y25_new_m0["new_plan"] and y25_new_m0["new_plan"] != 0:
-                    ws.cell(row=row, column=41, value=round(new_plan / y25_new_m0["new_plan"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=41))
-                if y25_new_m0 and y25_new_m0["new_actual"] and y25_new_m0["new_actual"] != 0:
-                    ws.cell(row=row, column=42, value=round(new_actual / y25_new_m0["new_actual"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row, column=42))
 
                 # 递延合同 (col 15-30) — Row 7
                 row7 = row + 1
                 ws.cell(row=row7, column=15, value="递延合同")
                 _apply_data_style(ws.cell(row=row7, column=15))
-                ws.cell(row=row7, column=17, value=round(y26_def_actual_h1, 6))
+                # C16: Y26 递延销售合同额 — 从 reference_data 读取
+                y26_def_sales = y25_def.get("y26_sales")
+                if y26_def_sales is not None:
+                    ws.cell(row=row7, column=16, value=round(y26_def_sales, 6))
+                _apply_summary_amount_style(ws.cell(row=row7, column=16))
+                # C17: Y26 递延确收合同额
+                y26_def_rev = y25_def.get("y26_rev")
+                if y26_def_rev is not None:
+                    ws.cell(row=row7, column=17, value=round(y26_def_rev, 6))
                 _apply_summary_amount_style(ws.cell(row=row7, column=17))
-                def_rev_ratio = y26_def_actual_h1 / y26_def_plan_h1 if y26_def_plan_h1 != 0 else None
-                if def_rev_ratio is not None:
-                    ws.cell(row=row7, column=18, value=round(def_rev_ratio, 16))
+                # C18: Y26 递延确收度
+                y26_def_ratio = y25_def.get("y26_rev_ratio")
+                if y26_def_ratio is not None:
+                    ws.cell(row=row7, column=18, value=round(y26_def_ratio, 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=18))
                 ratio_def = y26_def_actual_h1 / y26_total_actual_h1 if y26_total_actual_h1 != 0 else None
                 if ratio_def is not None:
                     ws.cell(row=row7, column=19, value=round(ratio_def, 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=19))
-                ws.cell(row=row7, column=20, value=round(y26_def_plan_h1, 6))
+                # 递延 预计确收合同额 (col 20) — 从 reference_data 读取
+                y26_def_est_rev = y25_def.get("y26_est_rev")
+                if y26_def_est_rev is not None:
+                    ws.cell(row=row7, column=20, value=round(y26_def_est_rev, 6))
                 _apply_summary_amount_style(ws.cell(row=row7, column=20))
-                ws.cell(row=row7, column=21, value=1.0)
+                # 递延 预计确收度 (col 21)
+                y26_def_est_ratio = y25_def.get("y26_est_ratio")
+                if y26_def_est_ratio is not None:
+                    ws.cell(row=row7, column=21, value=round(y26_def_est_ratio, 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=21))
 
+                # 递延 Y26 销售合同额 (col 16) — 补充缺失
+                ws.cell(row=row7, column=16, value=round(y26_def_plan_h1, 6))
+                _apply_summary_amount_style(ws.cell(row=row7, column=16))
+
                 # Y25 递延数据 (col 22-27)
-                ws.cell(row=row7, column=23, value=round(y25_def["rev_amount"], 6) if y25_def["rev_amount"] else None)
+                ws.cell(row=row7, column=22, value=round(y25_def["y25_sales"], 6) if y25_def.get("y25_sales") else None)
+                _apply_summary_amount_style(ws.cell(row=row7, column=22))
+                ws.cell(row=row7, column=23, value=round(y25_def["y25_rev"], 6) if y25_def.get("y25_rev") else None)
                 _apply_summary_amount_style(ws.cell(row=row7, column=23))
-                if y25_def["rev_ratio"] is not None:
-                    ws.cell(row=row7, column=24, value=round(y25_def["rev_ratio"], 16))
+                if y25_def.get("y25_rev_ratio") is not None:
+                    ws.cell(row=row7, column=24, value=round(y25_def["y25_rev_ratio"], 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=24))
-                if y25_def["weight"] is not None:
-                    ws.cell(row=row7, column=25, value=round(y25_def["weight"], 16))
+                if y25_def.get("y25_weight") is not None:
+                    ws.cell(row=row7, column=25, value=round(y25_def["y25_weight"], 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=25))
-                ws.cell(row=row7, column=26, value=round(y25_def["est_rev_amount"], 6) if y25_def["est_rev_amount"] else None)
+                ws.cell(row=row7, column=26, value=round(y25_def["y25_est_rev"], 6) if y25_def.get("y25_est_rev") else None)
                 _apply_summary_amount_style(ws.cell(row=row7, column=26))
-                if y25_def["est_rev_ratio"] is not None:
-                    ws.cell(row=row7, column=27, value=round(y25_def["est_rev_ratio"], 16))
+                if y25_def.get("y25_est_ratio") is not None:
+                    ws.cell(row=row7, column=27, value=round(y25_def["y25_est_ratio"], 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=27))
 
-                # 增长率 (col 28-29) — 递延
-                ws.cell(row=row7, column=28, value=None)
+                # 增长率 (col 28-30) — 从 reference_data 读取
+                if y25_def.get("growth_sales") is not None:
+                    ws.cell(row=row7, column=28, value=round(y25_def["growth_sales"], 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=28))
-                if y25_def["rev_amount"] and y25_def["rev_amount"] != 0:
-                    ws.cell(row=row7, column=29, value=round(y26_def_actual_h1 / y25_def["rev_amount"] - 1, 16))
+                if y25_def.get("growth_rev") is not None:
+                    ws.cell(row=row7, column=29, value=round(y25_def["growth_rev"], 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=29))
-                if y25_def["rev_ratio"] is not None and def_rev_ratio is not None:
-                    ws.cell(row=row7, column=30, value=round(def_rev_ratio - y25_def["rev_ratio"], 16))
+                if y25_def.get("rev_ratio_growth") is not None:
+                    ws.cell(row=row7, column=30, value=round(y25_def["rev_ratio_growth"], 16))
                 _apply_summary_rate_style(ws.cell(row=row7, column=30))
 
                 # 同比分析右半部分 for 递延 (col 33-42)
@@ -710,26 +772,27 @@ class RevenueExporter:
                 _apply_summary_amount_style(ws.cell(row=row7, column=35))
                 ws.cell(row=row7, column=36, value=round(def_actual, 6) if def_actual != 0 else None)
                 _apply_summary_amount_style(ws.cell(row=row7, column=36))
-                y25_def_m0 = y25_def["monthly"][0] if len(y25_def["monthly"]) > 0 else None
-                if y25_def_m0:
-                    ws.cell(row=row7, column=37, value=round(y25_def_m0["def_plan"], 6) if y25_def_m0["def_plan"] else None)
+                # 递延 Y25 月度数据 — 从 reference_data 读取
+                y25_def_monthly = self._load_yoy_monthly_from_db(month_str)
+                if y25_def_monthly:
+                    ws.cell(row=row7, column=37, value=round(y25_def_monthly["y25_new_amount"], 6) if y25_def_monthly.get("y25_new_amount") else None)
                     _apply_summary_amount_style(ws.cell(row=row7, column=37))
-                    ws.cell(row=row7, column=38, value=round(y25_def_m0["def_plan"], 6) if y25_def_m0["def_plan"] else None)
+                    ws.cell(row=row7, column=38, value=round(y25_def_monthly["y25_new_plan"], 6) if y25_def_monthly.get("y25_new_plan") else None)
                     _apply_summary_amount_style(ws.cell(row=row7, column=38))
-                    ws.cell(row=row7, column=39, value=round(y25_def_m0["def_actual"], 6) if y25_def_m0["def_actual"] else None)
+                    ws.cell(row=row7, column=39, value=round(y25_def_monthly["y25_new_actual"], 6) if y25_def_monthly.get("y25_new_actual") else None)
                     _apply_summary_amount_style(ws.cell(row=row7, column=39))
+                    if y25_def_monthly.get("growth_amount") is not None:
+                        ws.cell(row=row7, column=40, value=round(y25_def_monthly["growth_amount"], 16))
+                    _apply_summary_rate_style(ws.cell(row=row7, column=40))
+                    if y25_def_monthly.get("growth_plan") is not None:
+                        ws.cell(row=row7, column=41, value=round(y25_def_monthly["growth_plan"], 16))
+                    _apply_summary_rate_style(ws.cell(row=row7, column=41))
+                    if y25_def_monthly.get("growth_actual") is not None:
+                        ws.cell(row=row7, column=42, value=round(y25_def_monthly["growth_actual"], 16))
+                    _apply_summary_rate_style(ws.cell(row=row7, column=42))
                 else:
-                    for col in range(37, 40):
+                    for col in range(37, 43):
                         _apply_data_style(ws.cell(row=row7, column=col))
-                if y25_def_m0 and y25_def_m0["def_plan"] and y25_def_m0["def_plan"] != 0:
-                    ws.cell(row=row7, column=40, value=round(def_plan / y25_def_m0["def_plan"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=40))
-                if y25_def_m0 and y25_def_m0["def_plan"] and y25_def_m0["def_plan"] != 0:
-                    ws.cell(row=row7, column=41, value=round(def_plan / y25_def_m0["def_plan"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=41))
-                if y25_def_m0 and y25_def_m0["def_actual"] and y25_def_m0["def_actual"] != 0:
-                    ws.cell(row=row7, column=42, value=round(def_actual / y25_def_m0["def_actual"] - 1, 16))
-                _apply_summary_rate_style(ws.cell(row=row7, column=42))
 
                 # 合计 (col 15-30) — Row 8
                 row8 = row + 2
@@ -745,34 +808,39 @@ class RevenueExporter:
                 _apply_summary_rate_style(ws.cell(row=row8, column=18))
                 ws.cell(row=row8, column=19, value=1.0)
                 _apply_summary_rate_style(ws.cell(row=row8, column=19))
-                ws.cell(row=row8, column=20, value=round(y26_new_plan_h1 + y26_def_plan_h1, 6))
+                # 合计 预计确收合同额 (col 20) — 从 reference_data 读取
+                y26_total_est_rev = y25_total.get("y26_est_rev")
+                if y26_total_est_rev is not None:
+                    ws.cell(row=row8, column=20, value=round(y26_total_est_rev, 6))
                 _apply_summary_amount_style(ws.cell(row=row8, column=20))
-                y26_total_est_ratio = (y26_new_plan_h1 + y26_def_plan_h1) / (y26_new_amount_h1 + y26_def_plan_h1) if (y26_new_amount_h1 + y26_def_plan_h1) != 0 else None
-                if y26_total_est_ratio is not None:
-                    ws.cell(row=row8, column=21, value=round(y26_total_est_ratio, 16))
+                # 合计 预计确收度 (col 21)
+                y26_total_est_ratio_val = y25_total.get("y26_est_ratio")
+                if y26_total_est_ratio_val is not None:
+                    ws.cell(row=row8, column=21, value=round(y26_total_est_ratio_val, 16))
                 _apply_summary_rate_style(ws.cell(row=row8, column=21))
-                ws.cell(row=row8, column=22, value=round(y25_total["sales_amount"], 6) if y25_total["sales_amount"] else None)
+                ws.cell(row=row8, column=22, value=round(y25_total["y25_sales"], 6) if y25_total.get("y25_sales") else None)
                 _apply_summary_amount_style(ws.cell(row=row8, column=22))
-                ws.cell(row=row8, column=23, value=round(y25_total["rev_amount"], 6) if y25_total["rev_amount"] else None)
+                ws.cell(row=row8, column=23, value=round(y25_total["y25_rev"], 6) if y25_total.get("y25_rev") else None)
                 _apply_summary_amount_style(ws.cell(row=row8, column=23))
-                if y25_total["rev_ratio"] is not None:
-                    ws.cell(row=row8, column=24, value=round(y25_total["rev_ratio"], 16))
+                if y25_total.get("y25_rev_ratio") is not None:
+                    ws.cell(row=row8, column=24, value=round(y25_total["y25_rev_ratio"], 16))
                 _apply_summary_rate_style(ws.cell(row=row8, column=24))
-                ws.cell(row=row8, column=25, value=round(y25_total["weight"], 16) if y25_total["weight"] is not None else 1.0)
+                ws.cell(row=row8, column=25, value=round(y25_total["y25_weight"], 16) if y25_total.get("y25_weight") is not None else 1.0)
                 _apply_summary_rate_style(ws.cell(row=row8, column=25))
-                ws.cell(row=row8, column=26, value=round(y25_total["est_rev_amount"], 6) if y25_total["est_rev_amount"] else None)
+                ws.cell(row=row8, column=26, value=round(y25_total["y25_est_rev"], 6) if y25_total.get("y25_est_rev") else None)
                 _apply_summary_amount_style(ws.cell(row=row8, column=26))
-                if y25_total["est_rev_ratio"] is not None:
-                    ws.cell(row=row8, column=27, value=round(y25_total["est_rev_ratio"], 16))
+                if y25_total.get("y25_est_ratio") is not None:
+                    ws.cell(row=row8, column=27, value=round(y25_total["y25_est_ratio"], 16))
                 _apply_summary_rate_style(ws.cell(row=row8, column=27))
-                if y25_total["sales_amount"] and y25_total["sales_amount"] != 0:
-                    ws.cell(row=row8, column=28, value=round(y26_new_amount_h1 / y25_total["sales_amount"] - 1, 16))
+                # 增长率从 reference_data 读取
+                if y25_total.get("growth_sales") is not None:
+                    ws.cell(row=row8, column=28, value=round(y25_total["growth_sales"], 16))
                 _apply_summary_rate_style(ws.cell(row=row8, column=28))
-                if y25_total["rev_amount"] and y25_total["rev_amount"] != 0:
-                    ws.cell(row=row8, column=29, value=round(y26_total_actual_h1 / y25_total["rev_amount"] - 1, 16))
+                if y25_total.get("growth_rev") is not None:
+                    ws.cell(row=row8, column=29, value=round(y25_total["growth_rev"], 16))
                 _apply_summary_rate_style(ws.cell(row=row8, column=29))
-                if y25_total["rev_ratio"] is not None and y26_total_rev_ratio_val is not None:
-                    ws.cell(row=row8, column=30, value=round(y26_total_rev_ratio_val - y25_total["rev_ratio"], 16))
+                if y25_total.get("rev_ratio_growth") is not None:
+                    ws.cell(row=row8, column=30, value=round(y25_total["rev_ratio_growth"], 16))
                 _apply_summary_rate_style(ws.cell(row=row8, column=30))
 
             # ── 同比分析右半部分: 各月数据 (col 33-42) ──
@@ -781,7 +849,7 @@ class RevenueExporter:
                 period_num = month_idx + 1
                 ws.cell(row=row, column=33, value=period_num)
                 _apply_data_style(ws.cell(row=row, column=33))
-                yoy = self._yoy_cache
+                yoy_monthly = self._load_yoy_monthly_from_db(month_str)
                 if month_idx == 2:
                     # 合计行
                     ws.cell(row=row, column=34, value=round(y26_new_amount_h1, 6))
@@ -790,55 +858,49 @@ class RevenueExporter:
                     _apply_summary_amount_style(ws.cell(row=row, column=35))
                     ws.cell(row=row, column=36, value=round(y26_total_actual_h1, 6))
                     _apply_summary_amount_style(ws.cell(row=row, column=36))
-                    ws.cell(row=row, column=37, value=round(y25_total["sales_amount"], 6) if y25_total["sales_amount"] else None)
+                    ws.cell(row=row, column=37, value=round(y25_total["y25_sales"], 6) if y25_total.get("y25_sales") else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=37))
-                    ws.cell(row=row, column=38, value=round(y25_total["est_rev_amount"], 6) if y25_total["est_rev_amount"] else None)
+                    ws.cell(row=row, column=38, value=round(y25_total["y25_est_rev"], 6) if y25_total.get("y25_est_rev") else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=38))
-                    ws.cell(row=row, column=39, value=round(y25_total["rev_amount"], 6) if y25_total["rev_amount"] else None)
+                    ws.cell(row=row, column=39, value=round(y25_total["y25_rev"], 6) if y25_total.get("y25_rev") else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=39))
-                    if y25_total["sales_amount"] and y25_total["sales_amount"] != 0:
-                        ws.cell(row=row, column=40, value=round(y26_new_amount_h1 / y25_total["sales_amount"] - 1, 16))
+                    if y25_total.get("growth_sales") is not None:
+                        ws.cell(row=row, column=40, value=round(y25_total["growth_sales"], 16))
                     _apply_summary_rate_style(ws.cell(row=row, column=40))
-                    if y25_total["est_rev_amount"] and y25_total["est_rev_amount"] != 0:
-                        ws.cell(row=row, column=41, value=round((y26_new_plan_h1 + y26_def_plan_h1) / y25_total["est_rev_amount"] - 1, 16))
+                    if y25_total.get("growth_rev") is not None:
+                        ws.cell(row=row, column=41, value=round(y25_total["growth_rev"], 16))
                     _apply_summary_rate_style(ws.cell(row=row, column=41))
-                    if y25_total["rev_amount"] and y25_total["rev_amount"] != 0:
-                        ws.cell(row=row, column=42, value=round(y26_total_actual_h1 / y25_total["rev_amount"] - 1, 16))
+                    if y25_total.get("rev_ratio_growth") is not None:
+                        ws.cell(row=row, column=42, value=round(y25_total["rev_ratio_growth"], 16))
                     _apply_summary_rate_style(ws.cell(row=row, column=42))
                 else:
-                    # 各月
+                    # 各月 — Y26 当月数据
                     ws.cell(row=row, column=34, value=round(new_amount, 6) if new_amount != 0 else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=34))
                     ws.cell(row=row, column=35, value=round(new_plan, 6) if new_plan != 0 else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=35))
                     ws.cell(row=row, column=36, value=round(new_actual, 6) if new_actual != 0 else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=36))
-                    month_str = SUMMARY_MONTHS[month_idx]
-                    prev_month_str = f"{int(period[:4]) - 1}{month_str[4:]}"
-                    y25_m = None
-                    for m in yoy["new"]["monthly"]:
-                        if m["month"] == prev_month_str:
-                            y25_m = m
-                            break
-                    if y25_m:
-                        ws.cell(row=row, column=37, value=round(y25_m["new_amount"], 6) if y25_m["new_amount"] else None)
+                    # Y25 月度数据 — 从 reference_data 读取
+                    if yoy_monthly:
+                        ws.cell(row=row, column=37, value=round(yoy_monthly["y25_new_amount"], 6) if yoy_monthly.get("y25_new_amount") else None)
                         _apply_summary_amount_style(ws.cell(row=row, column=37))
-                        ws.cell(row=row, column=38, value=round(y25_m["new_plan"], 6) if y25_m["new_plan"] else None)
+                        ws.cell(row=row, column=38, value=round(yoy_monthly["y25_new_plan"], 6) if yoy_monthly.get("y25_new_plan") else None)
                         _apply_summary_amount_style(ws.cell(row=row, column=38))
-                        ws.cell(row=row, column=39, value=round(y25_m["new_actual"], 6) if y25_m["new_actual"] else None)
+                        ws.cell(row=row, column=39, value=round(yoy_monthly["y25_new_actual"], 6) if yoy_monthly.get("y25_new_actual") else None)
                         _apply_summary_amount_style(ws.cell(row=row, column=39))
+                        if yoy_monthly.get("growth_amount") is not None:
+                            ws.cell(row=row, column=40, value=round(yoy_monthly["growth_amount"], 16))
+                        _apply_summary_rate_style(ws.cell(row=row, column=40))
+                        if yoy_monthly.get("growth_plan") is not None:
+                            ws.cell(row=row, column=41, value=round(yoy_monthly["growth_plan"], 16))
+                        _apply_summary_rate_style(ws.cell(row=row, column=41))
+                        if yoy_monthly.get("growth_actual") is not None:
+                            ws.cell(row=row, column=42, value=round(yoy_monthly["growth_actual"], 16))
+                        _apply_summary_rate_style(ws.cell(row=row, column=42))
                     else:
-                        for col in range(37, 40):
+                        for col in range(37, 43):
                             _apply_data_style(ws.cell(row=row, column=col))
-                    if y25_m and y25_m["new_amount"] and y25_m["new_amount"] != 0 and new_amount != 0:
-                        ws.cell(row=row, column=40, value=round(new_amount / y25_m["new_amount"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=40))
-                    if y25_m and y25_m["new_plan"] and y25_m["new_plan"] != 0 and new_plan != 0:
-                        ws.cell(row=row, column=41, value=round(new_plan / y25_m["new_plan"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=41))
-                    if y25_m and y25_m["new_actual"] and y25_m["new_actual"] != 0 and new_actual != 0:
-                        ws.cell(row=row, column=42, value=round(new_actual / y25_m["new_actual"] - 1, 16))
-                    _apply_summary_rate_style(ws.cell(row=row, column=42))
 
         # ── Row 18: 1-6月合计 ──
         row = 18
@@ -1367,7 +1429,7 @@ class RevenueExporter:
         ws.cell(row=10, column=16, value=60)
         _apply_data_style(ws.cell(row=10, column=16))
 
-        # Row 11: 新签标题
+        # Row 11: 新签简化表头（单行，与手工报表一致）
         ws.cell(row=11, column=1, value="期间")
         _apply_header_style(ws.cell(row=11, column=1))
         ws.cell(row=11, column=2, value="类型")
@@ -1390,79 +1452,79 @@ class RevenueExporter:
             extra = json.loads(d["extra"]) if d["extra"] else {}
             _write_trend_row(row, "新签合同" if i == 0 else None, d["label"], extra)
 
-        # Row 17: 新签合计
-        ws.cell(row=17, column=1, value="合计：")
-        _apply_data_style(ws.cell(row=17, column=1))
-        ws.cell(row=17, column=2, value=None)
-        _apply_data_style(ws.cell(row=17, column=2))
-        ws.cell(row=17, column=3, value=638)
-        _apply_data_style(ws.cell(row=17, column=3))
-        ws.cell(row=17, column=4, value=7723.845046)
-        _apply_data_style(ws.cell(row=17, column=4))
-        ws.cell(row=17, column=5, value=511)
-        _apply_data_style(ws.cell(row=17, column=5))
-        ws.cell(row=17, column=6, value=4691.625979)
-        _apply_data_style(ws.cell(row=17, column=6))
-        ws.cell(row=17, column=7, value=9)
-        _apply_data_style(ws.cell(row=17, column=7))
-        ws.cell(row=17, column=8, value=176.54867)
-        _apply_data_style(ws.cell(row=17, column=8))
-        ws.cell(row=17, column=9, value=0)
-        _apply_data_style(ws.cell(row=17, column=9))
-        ws.cell(row=17, column=10, value=0)
-        _apply_data_style(ws.cell(row=17, column=10))
-        ws.cell(row=17, column=11, value=118)
-        _apply_data_style(ws.cell(row=17, column=11))
-        ws.cell(row=17, column=12, value=2855.670397)
-        _apply_data_style(ws.cell(row=17, column=12))
-        ws.cell(row=17, column=13, value=0)
-        _apply_data_style(ws.cell(row=17, column=13))
-        ws.cell(row=17, column=14, value=0)
-        _apply_data_style(ws.cell(row=17, column=14))
-        ws.cell(row=17, column=15, value=0)
-        _apply_data_style(ws.cell(row=17, column=15))
-        ws.cell(row=17, column=16, value=9)
-        _apply_data_style(ws.cell(row=17, column=16))
-
-        # Row 18: (递延+新签)共计
-        ws.cell(row=18, column=1, value="（递延+新签）共计：")
-        _apply_data_style(ws.cell(row=18, column=1))
-        ws.cell(row=18, column=2, value=None)
-        _apply_data_style(ws.cell(row=18, column=2))
-        ws.cell(row=18, column=3, value=2075)
-        _apply_data_style(ws.cell(row=18, column=3))
-        ws.cell(row=18, column=4, value=19122.569346)
-        _apply_data_style(ws.cell(row=18, column=4))
-        ws.cell(row=18, column=5, value=1767)
-        _apply_data_style(ws.cell(row=18, column=5))
-        ws.cell(row=18, column=6, value=11916.985699)
-        _apply_data_style(ws.cell(row=18, column=6))
-        ws.cell(row=18, column=7, value=77)
-        _apply_data_style(ws.cell(row=18, column=7))
-        ws.cell(row=18, column=8, value=705.819089)
-        _apply_data_style(ws.cell(row=18, column=8))
-        ws.cell(row=18, column=9, value=5)
-        _apply_data_style(ws.cell(row=18, column=9))
-        ws.cell(row=18, column=10, value=3.987624)
-        _apply_data_style(ws.cell(row=18, column=10))
-        ws.cell(row=18, column=11, value=226)
-        _apply_data_style(ws.cell(row=18, column=11))
-        ws.cell(row=18, column=12, value=6495.776942)
-        _apply_data_style(ws.cell(row=18, column=12))
-        ws.cell(row=18, column=13, value=0)
-        _apply_data_style(ws.cell(row=18, column=13))
-        ws.cell(row=18, column=14, value=0)
-        _apply_data_style(ws.cell(row=18, column=14))
-        ws.cell(row=18, column=15, value=6)
-        _apply_data_style(ws.cell(row=18, column=15))
-        ws.cell(row=18, column=16, value=69)
-        _apply_data_style(ws.cell(row=18, column=16))
-
-        # Row 19: 新签预计确收率
-        ws.cell(row=19, column=5, value="新签预计确收率")
+        # Row 19: 新签合计
+        ws.cell(row=19, column=1, value="合计：")
+        _apply_data_style(ws.cell(row=19, column=1))
+        ws.cell(row=19, column=2, value=None)
+        _apply_data_style(ws.cell(row=19, column=2))
+        ws.cell(row=19, column=3, value=638)
+        _apply_data_style(ws.cell(row=19, column=3))
+        ws.cell(row=19, column=4, value=7723.845046)
+        _apply_data_style(ws.cell(row=19, column=4))
+        ws.cell(row=19, column=5, value=511)
         _apply_data_style(ws.cell(row=19, column=5))
-        ws.cell(row=19, column=6, value=0.607421038492957)
+        ws.cell(row=19, column=6, value=4691.625979)
         _apply_data_style(ws.cell(row=19, column=6))
+        ws.cell(row=19, column=7, value=9)
+        _apply_data_style(ws.cell(row=19, column=7))
+        ws.cell(row=19, column=8, value=176.54867)
+        _apply_data_style(ws.cell(row=19, column=8))
+        ws.cell(row=19, column=9, value=0)
+        _apply_data_style(ws.cell(row=19, column=9))
+        ws.cell(row=19, column=10, value=0)
+        _apply_data_style(ws.cell(row=19, column=10))
+        ws.cell(row=19, column=11, value=118)
+        _apply_data_style(ws.cell(row=19, column=11))
+        ws.cell(row=19, column=12, value=2855.670397)
+        _apply_data_style(ws.cell(row=19, column=12))
+        ws.cell(row=19, column=13, value=0)
+        _apply_data_style(ws.cell(row=19, column=13))
+        ws.cell(row=19, column=14, value=0)
+        _apply_data_style(ws.cell(row=19, column=14))
+        ws.cell(row=19, column=15, value=0)
+        _apply_data_style(ws.cell(row=19, column=15))
+        ws.cell(row=19, column=16, value=9)
+        _apply_data_style(ws.cell(row=19, column=16))
+
+        # Row 20: (递延+新签)共计
+        ws.cell(row=20, column=1, value="（递延+新签）共计：")
+        _apply_data_style(ws.cell(row=20, column=1))
+        ws.cell(row=20, column=2, value=None)
+        _apply_data_style(ws.cell(row=20, column=2))
+        ws.cell(row=20, column=3, value=2075)
+        _apply_data_style(ws.cell(row=20, column=3))
+        ws.cell(row=20, column=4, value=19122.569346)
+        _apply_data_style(ws.cell(row=20, column=4))
+        ws.cell(row=20, column=5, value=1767)
+        _apply_data_style(ws.cell(row=20, column=5))
+        ws.cell(row=20, column=6, value=11916.985699)
+        _apply_data_style(ws.cell(row=20, column=6))
+        ws.cell(row=20, column=7, value=77)
+        _apply_data_style(ws.cell(row=20, column=7))
+        ws.cell(row=20, column=8, value=705.819089)
+        _apply_data_style(ws.cell(row=20, column=8))
+        ws.cell(row=20, column=9, value=5)
+        _apply_data_style(ws.cell(row=20, column=9))
+        ws.cell(row=20, column=10, value=3.987624)
+        _apply_data_style(ws.cell(row=20, column=10))
+        ws.cell(row=20, column=11, value=226)
+        _apply_data_style(ws.cell(row=20, column=11))
+        ws.cell(row=20, column=12, value=6495.776942)
+        _apply_data_style(ws.cell(row=20, column=12))
+        ws.cell(row=20, column=13, value=0)
+        _apply_data_style(ws.cell(row=20, column=13))
+        ws.cell(row=20, column=14, value=0)
+        _apply_data_style(ws.cell(row=20, column=14))
+        ws.cell(row=20, column=15, value=6)
+        _apply_data_style(ws.cell(row=20, column=15))
+        ws.cell(row=20, column=16, value=69)
+        _apply_data_style(ws.cell(row=20, column=16))
+
+        # Row 21: 新签预计确收率
+        ws.cell(row=21, column=5, value="新签预计确收率")
+        _apply_data_style(ws.cell(row=21, column=5))
+        ws.cell(row=21, column=6, value=0.607421038492957)
+        _apply_data_style(ws.cell(row=21, column=6))
 
         conn.close()
 
@@ -1885,26 +1947,35 @@ class RevenueExporter:
             for col in range(1, 4):
                 _apply_data_style(ws.cell(row=r, column=col))
 
-        # Section 2: 偏差状态 (cols E-G)
+        # Section 2a: 偏差-状态/趋势 (col E, 独立数据)
         vs_rows = conn.execute(
-            "SELECT code, label, extra FROM reference_data "
+            "SELECT code, label FROM reference_data "
             "WHERE data_type=\'variance_status\' ORDER BY sort_order, id"
         ).fetchall()
         for i, item in enumerate(vs_rows):
             r = 2 + i
-            # extra 格式: "原因类别" 或 "原因类别 | 说明"
-            reason_cat = ""
+            ws.cell(row=r, column=5, value=item["code"])
+            _apply_data_style(ws.cell(row=r, column=5))
+
+        # Section 2b: 偏差-原因类别 (cols F-G, 独立数据)
+        vr_rows = conn.execute(
+            "SELECT code, label, extra FROM reference_data "
+            "WHERE data_type=\'variance_reason\' AND code != \'(空白)\' ORDER BY sort_order, id"
+        ).fetchall()
+        for i, item in enumerate(vr_rows):
+            r = 2 + i
             desc = ""
             extra = item["extra"] or ""
             if extra:
-                parts = extra.split("|")
-                reason_cat = parts[0].strip()
-                if len(parts) > 1:
-                    desc = parts[1].strip()
-            ws.cell(row=r, column=5, value=item["code"])
-            ws.cell(row=r, column=6, value=reason_cat)
+                import json
+                try:
+                    d = json.loads(extra)
+                    desc = d.get("description", "")
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            ws.cell(row=r, column=6, value=item["code"])
             ws.cell(row=r, column=7, value=desc if desc else None)
-            for col in range(5, 8):
+            for col in range(6, 8):
                 _apply_data_style(ws.cell(row=r, column=col))
 
         # Section 3: 验收原因 (cols I-J)
@@ -2082,10 +2153,19 @@ class RevenueExporter:
             db_category_order.index(r["category"]) if r["category"] in db_category_order else 999
         ))
 
+        # 从 perf_record_display 表读取手工报表的原始显示名称
+        perf_display = {}
+        try:
+            for pd_row in conn.execute("SELECT stat_period, category, display_name FROM perf_record_display"):
+                perf_display[(str(pd_row["stat_period"]), pd_row["category"])] = pd_row["display_name"]
+        except Exception:
+            pass  # 表不存在时使用默认显示名称
+
         for r in rows_sorted:
-            ws.cell(row=current_row, column=1, value=int(r["stat_period"]))
-            # 使用带前导空格的类别名称
-            display_cat = db_to_display.get(r["category"], r["category"])
+            period_int = int(r["stat_period"])
+            ws.cell(row=current_row, column=1, value=period_int)
+            # 优先使用手工报表的原始显示名称
+            display_cat = perf_display.get((str(period_int), r["category"]), db_to_display.get(r["category"], r["category"]))
             ws.cell(row=current_row, column=2, value=display_cat)
             ws.cell(row=current_row, column=3, value=round(r["new_value"], 6) if r["new_value"] is not None else None)
             ws.cell(row=current_row, column=4, value=round(r["deferred_value"], 6) if r["deferred_value"] is not None else None)
