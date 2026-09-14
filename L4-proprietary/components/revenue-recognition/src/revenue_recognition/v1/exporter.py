@@ -1852,23 +1852,29 @@ class RevenueExporter:
             cell = ws.cell(row=1, column=col_idx, value=val)
             _apply_data_style(cell)
 
-        # Row 2: 分组标题
-        group_headers = {
-            2: "预算情况",
-            12: "计算",
-            35: "预算执行",
-            46: "消失情况",
-            50: "确收预测-202606确收交接",
-            57: "【周报】项目信息",
-            73: "【OA】合同信息",
-            83: "预算（26.06）",
-            86: "预算趋势",
-            89: "异常项目",
-            93: "产品/服务维度",
-        }
-        for col_idx, val in group_headers.items():
-            cell = ws.cell(row=2, column=col_idx, value=val)
+        # Row 2: 分组标题（跨列居中 — merge_cells + center alignment）
+        group_headers = [
+            # (起始列, 结束列, 标题)
+            (2, 11, "预算情况"),          # B2:K2
+            (12, 34, "计算"),             # L2:AH2
+            (35, 45, "预算执行"),          # AI2:AT2
+            (46, 49, "消失情况"),          # AU2:AX2
+            (50, 56, "确收预测-202606确收交接"),  # AY2:BC2
+            (57, 72, "【周报】项目信息"),   # BD2:CE2
+            (73, 82, "【OA】合同信息"),    # CF2:CQ2
+            (83, 85, "预算（26.06）"),     # CR2:CT2
+            (86, 88, "预算趋势"),          # CU2:CW2
+            (89, 92, "异常项目"),          # CX2:DA2
+            (93, 93, "产品/服务维度"),     # DB2（单列不合并）
+        ]
+        for start_col, end_col, val in group_headers:
+            if start_col != end_col:
+                ws.merge_cells(start_row=2, start_column=start_col, end_row=2, end_column=end_col)
+            cell = ws.cell(row=2, column=start_col, value=val)
             _apply_header_style(cell)
+            # 确保跨列居中
+            from openpyxl.styles import Alignment
+            cell.alignment = Alignment(horizontal='center', vertical='center')
 
         # Row 3: 列标题
         for i, h in enumerate(col_headers):
