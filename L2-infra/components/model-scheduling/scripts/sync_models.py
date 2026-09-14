@@ -124,13 +124,20 @@ def main():
     print("[2/4] 生成 YAML ...")
     yaml_content = generate_yaml(models)
 
-    # 3. 检查现有文件(如有)
+    # 3. 检查现有文件(如有)——忽略生成时间行,只比较模型数据
+    def _strip_timestamp(content: str) -> str:
+        """移除生成时间行,用于判断模型数据是否真的变化了。"""
+        return "\n".join(
+            line for line in content.splitlines()
+            if not line.startswith("# 生成时间:")
+        ).strip()
+
     if MODELS_FILE.exists():
         existing = MODELS_FILE.read_text(encoding="utf-8")
-        if existing.strip() == yaml_content.strip():
-            print("[3/4] ✅ 文件内容一致,无需更新")
+        if _strip_timestamp(existing) == _strip_timestamp(yaml_content):
+            print("[3/4] ✅ 模型数据未变化,跳过写入")
             return
-        print("[3/4] 文件已存在且内容不同,将更新")
+        print("[3/4] 模型数据有变化,将更新")
     else:
         print("[3/4] 文件不存在,将创建")
 
