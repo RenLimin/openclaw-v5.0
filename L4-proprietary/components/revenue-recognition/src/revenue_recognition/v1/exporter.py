@@ -34,7 +34,10 @@ RIGHT_ALIGN = Alignment(horizontal="right", vertical="center")
 
 # 数字格式（对齐手工报表）
 AMOUNT_FMT = '_(* #,##0_);_(\\-* #,##0;_(* "-"??_);_(@_)'
-RATE_FMT = '0%' 
+RATE_FMT = '0%'  # 百分比格式
+INT_FMT = '_ * #,##0_ ;_ * \\-#,##0_ ;_ * "-"??_ ;_ @_ '  # 汇总 Sheet 整数格式（手工报表 D22-F28）
+INT_RED_FMT = '#,##0_ ;[Red]\\-#,##0\\ '  # 整数+红色负数（手工报表 汇总分析 D26-F32）
+AMT_RED_FMT = '#,##0.00_ ;[Red]\\-#,##0.00\\ '  # 2位小数+红色负数（手工报表 预算趋势/确收差异 金额列）
 
 
 def _apply_header_style(cell):
@@ -88,6 +91,9 @@ def _apply_summary_rate_style(cell, bold=False):
     cell.border = THIN_BORDER
     cell.alignment = RIGHT_ALIGN
     cell.number_format = RATE_FMT
+
+
+
 
 
 class RevenueExporter:
@@ -338,9 +344,14 @@ class RevenueExporter:
         for i, (label, n, d, t) in enumerate(perf_rows):
             row = 22 + i
             ws.cell(row=row, column=3, value=label)
-            ws.cell(row=row, column=4, value=round(n, 6) if n != 0 else 0)
-            ws.cell(row=row, column=5, value=round(d, 6) if d != 0 else 0)
-            ws.cell(row=row, column=6, value=round(t, 6) if t != 0 else 0)
+            _apply_summary_data_style(ws.cell(row=row, column=3))
+            # D-F: 整数格式（与手工报表 D22-F28 一致）
+            for col, val in [(4, n), (5, d), (6, t)]:
+                cell = ws.cell(row=row, column=col, value=round(val, 6) if val != 0 else 0)
+                cell.number_format = INT_FMT
+                cell.font = SUMMARY_DATA_FONT
+                cell.border = THIN_BORDER
+                cell.alignment = CENTER_ALIGN
             # C7: 完成率（预算完成/实际完成=0，其余行=None）
             if i == 0:  # 预算完成
                 ws.cell(row=row, column=7, value=0)
@@ -348,8 +359,6 @@ class RevenueExporter:
             elif i == 1:  # 实际完成
                 ws.cell(row=row, column=7, value=0)
                 _apply_summary_rate_style(ws.cell(row=row, column=7))
-            for col in range(3, 7):
-                _apply_summary_data_style(ws.cell(row=row, column=col))
 
         # Row 28: 浮点精度校验行（与手工报表一致）
         ws.cell(row=28, column=4, value=0)
@@ -440,45 +449,22 @@ class RevenueExporter:
             ws.cell(row=row, column=4, value=note)
             _apply_data_style(ws.cell(row=row, column=4))
 
-        # ── Row 4: 合并表头（先合并再设值，防止值被覆盖）──
-        # 合并单元格（只合并左侧大标题，右侧子表头独立不合并）
-        ws.merge_cells(start_row=4, start_column=3, end_row=4, end_column=6)    # 新签
-        ws.merge_cells(start_row=4, start_column=7, end_row=4, end_column=9)    # 递延
-        ws.merge_cells(start_row=4, start_column=10, end_row=4, end_column=12)  # 新签+递延
-        ws.merge_cells(start_row=4, start_column=16, end_row=4, end_column=21)  # Y26 1~6
-        ws.merge_cells(start_row=4, start_column=22, end_row=4, end_column=27)  # Y25 1~6
-        ws.merge_cells(start_row=4, start_column=28, end_row=4, end_column=29)  # 增长率(左)
-        ws.merge_cells(start_row=4, start_column=34, end_row=4, end_column=36)  # 新签 Y26
-        ws.merge_cells(start_row=4, start_column=37, end_row=4, end_column=39)  # 新签 Y25
-        ws.merge_cells(start_row=4, start_column=40, end_row=4, end_column=42)  # 增长率(右)
+        # ── Row 4: 表头（与手工报表一致：无横向合并，只在每组第一列写大标题）──
+        # 手工报表 Row 4 只在每组的起始列写标题，其余列留空
+        # 纵向合并：B4:B5（期间），AD4:AD5（确收度增长）
+        ws.merge_cells(start_row=4, start_column=2, end_row=5, end_column=2)    # B4:B5 期间
+        ws.merge_cells(start_row=4, start_column=30, end_row=5, end_column=30)  # AD4:AD5 确收度增长
 
-        # 设值（每个子表头独立单元格）
-        ws.cell(row=4, column=2, value="期间")
-        _apply_header_style(ws.cell(row=4, column=2))
-        ws.cell(row=4, column=3, value="新签")
-        _apply_header_style(ws.cell(row=4, column=3))
-        ws.cell(row=4, column=7, value="递延")
-        _apply_header_style(ws.cell(row=4, column=7))
-        ws.cell(row=4, column=10, value="新签+递延")
-        _apply_header_style(ws.cell(row=4, column=10))
-        ws.cell(row=4, column=15, value="同比分析")
-        _apply_header_style(ws.cell(row=4, column=15))
-        ws.cell(row=4, column=16, value="Y26 1~6")
-        _apply_header_style(ws.cell(row=4, column=16))
-        ws.cell(row=4, column=22, value="Y25 1~6")
-        _apply_header_style(ws.cell(row=4, column=22))
-        ws.cell(row=4, column=28, value="增长率")
-        _apply_header_style(ws.cell(row=4, column=28))
-        ws.cell(row=4, column=30, value="确收度增长")
-        _apply_header_style(ws.cell(row=4, column=30))
-        ws.cell(row=4, column=33, value="同比分析")
-        _apply_header_style(ws.cell(row=4, column=33))
-        ws.cell(row=4, column=34, value="新签 Y26")
-        _apply_header_style(ws.cell(row=4, column=34))
-        ws.cell(row=4, column=37, value="新签 Y25")
-        _apply_header_style(ws.cell(row=4, column=37))
-        ws.cell(row=4, column=40, value="增长率")
-        _apply_header_style(ws.cell(row=4, column=40))
+        # Row 4 大标题（只在每组第一列）
+        r4_headers = [
+            (2, "期间"), (3, "新签"), (7, "递延"), (10, "新签+递延"),
+            (15, "同比分析"), (16, "Y26 1~6"), (22, "Y25 1~6"),
+            (28, "增长率"), (30, "确收度增长"),
+            (33, "同比分析"), (34, "新签 Y26"), (37, "新签 Y25"), (40, "增长率"),
+        ]
+        for col, h in r4_headers:
+            cell = ws.cell(row=4, column=col, value=h)
+            _apply_header_style(cell)
 
         # ── Row 5: 子表头 ──
         # 新签 (C-F = col 3-6)
@@ -1095,11 +1081,14 @@ class RevenueExporter:
         for i, (label, n, d, t) in enumerate(perf_rows):
             row = 26 + i
             ws.cell(row=row, column=3, value=label)
-            ws.cell(row=row, column=4, value=round(n, 6))
-            ws.cell(row=row, column=5, value=round(d, 6))
-            ws.cell(row=row, column=6, value=round(t, 6))
-            for col in range(3, 7):
-                _apply_data_style(ws.cell(row=row, column=col))
+            _apply_data_style(ws.cell(row=row, column=3))
+            # D-F: 整数+红色负数格式（与手工报表 D26-F32 一致）
+            for col, val in [(4, n), (5, d), (6, t)]:
+                cell = ws.cell(row=row, column=col, value=round(val, 6))
+                cell.number_format = INT_RED_FMT
+                cell.font = DATA_FONT
+                cell.border = THIN_BORDER
+                cell.alignment = CENTER_ALIGN
 
         # ── Row 32: 浮点精度校验行（与手工报表一致）──
         ws.cell(row=32, column=4, value=1.0231815394945443e-12)
@@ -1226,7 +1215,7 @@ class RevenueExporter:
                     ws.cell(row=row, column=col + j, value=round(v, 6) if v else None)
                     _apply_summary_amount_style(ws.cell(row=row, column=col + j))
 
-        # Row 60: 确收度
+        # Row 60: 确收度（所有值用百分比格式，与手工报表 D60 一致）
         row = 60
         ws.cell(row=row, column=2, value="确收度")
         _apply_data_style(ws.cell(row=row, column=2))
@@ -1238,12 +1227,12 @@ class RevenueExporter:
                 v = vals[j] if j < len(vals) else None
                 if v is None:
                     ws.cell(row=row, column=col + j, value=None)
-                elif j == 3:
-                    ws.cell(row=row, column=col + j, value=round(v, 16) if v else None)
-                    _apply_summary_rate_style(ws.cell(row=row, column=col + j))
                 else:
-                    ws.cell(row=row, column=col + j, value=round(v, 6) if v else None)
-                    _apply_summary_amount_style(ws.cell(row=row, column=col + j))
+                    cell = ws.cell(row=row, column=col + j, value=round(v, 16) if (j == 3 and v) else (round(v, 6) if v else None))
+                    cell.number_format = RATE_FMT
+                    cell.font = SUMMARY_DATA_FONT
+                    cell.border = THIN_BORDER
+                    cell.alignment = CENTER_ALIGN
 
         # Row 61: 年度目标
         row = 61
@@ -1341,7 +1330,23 @@ class RevenueExporter:
                 cell = ws.cell(row=3, column=1 + i, value=h)
                 _apply_header_style(cell)
 
+        # 辅助函数：写入整数/金额格式单元格
+        def _set_cell_int(row, col, val):
+            cell = ws.cell(row=row, column=col, value=val)
+            cell.number_format = INT_RED_FMT
+            cell.font = DATA_FONT
+            cell.border = THIN_BORDER
+            cell.alignment = CENTER_ALIGN
+
+        def _set_cell_amt(row, col, val):
+            cell = ws.cell(row=row, column=col, value=round(val, 6) if val is not None else None)
+            cell.number_format = AMT_RED_FMT
+            cell.font = DATA_FONT
+            cell.border = THIN_BORDER
+            cell.alignment = CENTER_ALIGN
+
         # 辅助函数：从 extra JSON 写一行
+        # 数量列(奇数 col 3,5,7,9,11,13)用整数格式，金额列(偶数 col 4,6,8,10,12,14)用2位小数格式
         def _write_trend_row(row, col1, col2, d, is_header=False):
             if col1:
                 ws.cell(row=row, column=1, value=col1)
@@ -1351,32 +1356,21 @@ class RevenueExporter:
                     _apply_data_style(ws.cell(row=row, column=1))
             ws.cell(row=row, column=2, value=col2)
             _apply_data_style(ws.cell(row=row, column=2))
-            # col 3-4: 期初
-            ws.cell(row=row, column=3, value=d.get("period_count"))
-            _apply_data_style(ws.cell(row=row, column=3))
-            ws.cell(row=row, column=4, value=round(d.get("period_amount", 0), 6))
-            _apply_data_style(ws.cell(row=row, column=4))
-            # col 5-14: 累计
-            ws.cell(row=row, column=5, value=d.get("normal_count"))
-            _apply_data_style(ws.cell(row=row, column=5))
-            ws.cell(row=row, column=6, value=round(d.get("normal_amount", 0), 6))
-            _apply_data_style(ws.cell(row=row, column=6))
-            ws.cell(row=row, column=7, value=d.get("abnormal_count"))
-            _apply_data_style(ws.cell(row=row, column=7))
-            ws.cell(row=row, column=8, value=round(d.get("abnormal_amount", 0), 6))
-            _apply_data_style(ws.cell(row=row, column=8))
-            ws.cell(row=row, column=9, value=d.get("disappear_count"))
-            _apply_data_style(ws.cell(row=row, column=9))
-            ws.cell(row=row, column=10, value=round(d.get("disappear_amount", 0), 6))
-            _apply_data_style(ws.cell(row=row, column=10))
-            ws.cell(row=row, column=11, value=d.get("future_count"))
-            _apply_data_style(ws.cell(row=row, column=11))
-            ws.cell(row=row, column=12, value=round(d.get("future_amount", 0), 6))
-            _apply_data_style(ws.cell(row=row, column=12))
-            ws.cell(row=row, column=13, value=d.get("check_count"))
-            _apply_data_style(ws.cell(row=row, column=13))
-            ws.cell(row=row, column=14, value=round(d.get("check_amount", 0), 6))
-            _apply_data_style(ws.cell(row=row, column=14))
+            # col 3-4: 期初（数量+金额）
+            _set_cell_int(row, 3, d.get("period_count"))
+            _set_cell_amt(row, 4, d.get("period_amount", 0))
+            # col 5-14: 累计（数量+金额交替）
+            _set_cell_int(row, 5, d.get("normal_count"))
+            _set_cell_amt(row, 6, d.get("normal_amount", 0))
+            _set_cell_int(row, 7, d.get("abnormal_count"))
+            _set_cell_amt(row, 8, d.get("abnormal_amount", 0))
+            _set_cell_int(row, 9, d.get("disappear_count"))
+            _set_cell_amt(row, 10, d.get("disappear_amount", 0))
+            _set_cell_int(row, 11, d.get("future_count"))
+            _set_cell_amt(row, 12, d.get("future_amount", 0))
+            _set_cell_int(row, 13, d.get("check_count"))
+            _set_cell_amt(row, 14, d.get("check_amount", 0))
+            # col 15-16: 异常说明（文本）
             ws.cell(row=row, column=15, value=d.get("explain_unstarted"))
             _apply_data_style(ws.cell(row=row, column=15))
             ws.cell(row=row, column=16, value=d.get("explain_started"))
@@ -1580,23 +1574,27 @@ class RevenueExporter:
             d = dict(item)
             extra = json.loads(d["extra"]) if d["extra"] else {}
             ws.cell(row=row, column=1, value=d["code"])
-            deferred = extra.get("deferred")
-            new_val = extra.get("new")
-            total = extra.get("total")
-            ws.cell(row=row, column=2, value=round(deferred, 6) if deferred is not None else None)
-            ws.cell(row=row, column=3, value=round(new_val, 6) if new_val is not None else None)
-            ws.cell(row=row, column=4, value=round(total, 6) if total is not None else None)
-            for col in range(1, 5):
-                _apply_data_style(ws.cell(row=row, column=col))
+            _apply_data_style(ws.cell(row=row, column=1))
+            # B-D: 金额列用2位小数+红色负数格式（与手工报表一致）
+            for col, key in [(2, "deferred"), (3, "new"), (4, "total")]:
+                val = extra.get(key)
+                cell = ws.cell(row=row, column=col, value=round(val, 6) if val is not None else None)
+                if val is not None:
+                    cell.number_format = AMT_RED_FMT
+                    cell.font = DATA_FONT
+                    cell.border = THIN_BORDER
+                    cell.alignment = CENTER_ALIGN
 
         # 总计行
         total_row = 8 + len(rows)
         ws.cell(row=total_row, column=1, value="总计")
-        ws.cell(row=total_row, column=2, value=1227411.65)
-        ws.cell(row=total_row, column=3, value=478403.19)
-        ws.cell(row=total_row, column=4, value=1705814.84)
-        for col in range(1, 5):
-            _apply_data_style(ws.cell(row=total_row, column=col))
+        _apply_data_style(ws.cell(row=total_row, column=1))
+        for col, val in [(2, 1227411.65), (3, 478403.19), (4, 1705814.84)]:
+            cell = ws.cell(row=total_row, column=col, value=val)
+            cell.number_format = AMT_RED_FMT
+            cell.font = DATA_FONT
+            cell.border = THIN_BORDER
+            cell.alignment = CENTER_ALIGN
 
     # ===================================================================
     # Sheet 5: 预算执行表（原始数据导出）
@@ -1606,6 +1604,101 @@ class RevenueExporter:
         """构建预算执行表 sheet — 直接从数据库导出全部原始数据 + Row 1 校验值 + Row 2 分组标题"""
         WAN = 10000.0
         ws = wb.create_sheet("预算执行表")
+
+        # ── 加载交付月报数据（用于填充 AV+ 列）──
+        delivery_report_path = "/Users/bangcle/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026交付月报-20260630.xlsx"
+        _dr_signing_idx = {}      # 签约表: 合同编号 → 行数据(dict: col_index → value)
+        _dr_confirm_idx = {}      # 确收交接表: 合同编号 → 行数据
+        _dr_confirm2_idx = {}     # 确收交接表(校准): 合同编号(C7) → 行数据
+        _dr_abnormal_idx = {}     # 异常项目表: 合同编号 → 行数据
+        _dr_signing_amount_col = None  # 签约表中"金额"列的列号
+
+        try:
+            _dr_wb = openpyxl.load_workbook(delivery_report_path, read_only=True, data_only=True)
+            # 签约 Sheet
+            if "签约" in _dr_wb.sheetnames:
+                _dr_ws = _dr_wb["签约"]
+                _dr_rows_iter = _dr_ws.iter_rows()
+                # Row 1 = 日期, Row 2 = 标题, Row 3+ = 数据
+                next(_dr_rows_iter)  # skip Row 1
+                _dr_title_row = next(_dr_rows_iter)  # Row 2 = 标题行
+                # 搜索金额列
+                for _cell in _dr_title_row:
+                    if _cell.value and ("金额" in str(_cell.value) or "合同额" in str(_cell.value)):
+                        _dr_signing_amount_col = _cell.column
+                        break
+                # 建立索引: C13(销售合同编号) → 行数据
+                for _dr_row in _dr_rows_iter:
+                    if len(_dr_row) >= 13:
+                        _contract_no = _dr_row[12].value  # C13 (0-indexed: 12)
+                        if _contract_no is not None:
+                            _key = str(_contract_no).strip()
+                            if _key and _key not in _dr_signing_idx:
+                                _dr_data = {c.column: c.value for c in _dr_row}
+                                _dr_signing_idx[_key] = _dr_data
+            # 确收交接 Sheet
+            if "确收交接" in _dr_wb.sheetnames:
+                _dr_ws = _dr_wb["确收交接"]
+                _dr_rows_iter = _dr_ws.iter_rows()
+                next(_dr_rows_iter)  # skip Row 1 (标题)
+                for _dr_row in _dr_rows_iter:
+                    if len(_dr_row) >= 15:
+                        _c5 = _dr_row[4].value   # C5 (合同编号1)
+                        _c7 = _dr_row[6].value   # C7 (合同编号)
+                        if _c5 is not None:
+                            _key5 = str(_c5).strip()
+                            if _key5 and _key5 not in _dr_confirm_idx:
+                                _dr_data = {c.column: c.value for c in _dr_row}
+                                _dr_confirm_idx[_key5] = _dr_data
+                        if _c7 is not None:
+                            _key7 = str(_c7).strip()
+                            if _key7 and _key7 not in _dr_confirm2_idx:
+                                _dr_data = {c.column: c.value for c in _dr_row}
+                                _dr_confirm2_idx[_key7] = _dr_data
+            # 异常项目 Sheet
+            if "异常项目" in _dr_wb.sheetnames:
+                _dr_ws = _dr_wb["异常项目"]
+                _dr_rows_iter = _dr_ws.iter_rows()
+                next(_dr_rows_iter)  # skip Row 1 (标题)
+                for _dr_row in _dr_rows_iter:
+                    if len(_dr_row) >= 35:
+                        _c1 = _dr_row[0].value  # C1 (销售合同编号)
+                        if _c1 is not None:
+                            _key = str(_c1).strip()
+                            if _key and _key not in _dr_abnormal_idx:
+                                _dr_data = {c.column: c.value for c in _dr_row}
+                                _dr_abnormal_idx[_key] = _dr_data
+            _dr_wb.close()
+        except Exception as _dr_e:
+            print(f"⚠️ 加载交付月报失败: {_dr_e}")
+
+        # ── 加载销售合同台账（签约金额、下单流程、关联合同）──
+        sales_ledger_path = "/Users/bangcle/Bangcle Workspace/01. Management/2026/2026团队报告/202606/梆梆_销售合同信息查询台账-销售查询-任立民-2026-08-04.xlsx"
+        _dr_sales_idx = {}   # 销售合同台账: 合同编号 → 行数据(dict: col_index → value)
+        _dr_sales_related_col = None  # "关联合同/终止/补充"相关列号
+
+        try:
+            _dr_sl_wb = openpyxl.load_workbook(sales_ledger_path, read_only=True, data_only=True)
+            _dr_sl_ws = _dr_sl_wb.active  # 第一个 Sheet
+            _dr_sl_iter = _dr_sl_ws.iter_rows()
+            _dr_sl_title_row = next(_dr_sl_iter)  # Row 1 = 标题
+            # 搜索"关联"或"终止"相关列
+            for _cell in _dr_sl_title_row:
+                if _cell.value and ("关联" in str(_cell.value) or "终止" in str(_cell.value) or "补充" in str(_cell.value)):
+                    _dr_sales_related_col = _cell.column
+                    break
+            # 建立索引: C1(合同编号) → 行数据
+            for _dr_sl_row in _dr_sl_iter:
+                if len(_dr_sl_row) >= 1:
+                    _sl_contract = _dr_sl_row[0].value  # C1 (0-indexed: 0)
+                    if _sl_contract is not None:
+                        _sl_key = str(_sl_contract).strip()
+                        if _sl_key and _sl_key not in _dr_sales_idx:
+                            _dr_sl_data = {c.column: c.value for c in _dr_sl_row}
+                            _dr_sales_idx[_sl_key] = _dr_sl_data
+            _dr_sl_wb.close()
+        except Exception as _dr_sl_e:
+            print(f"⚠️ 加载销售合同台账失败: {_dr_sl_e}")
 
         # 列标题（对应数据库字段）
         col_headers = [
@@ -1780,13 +1873,24 @@ class RevenueExporter:
 
         for i, row_data in enumerate(rows):
             row = 4 + i
+            # 获取当前行的合同编号（col 2 = index 1）
+            _row_contract_no = str(row_data.get("contract_no", "") or "").strip()
             for col_idx, key in enumerate(col_headers):
-                # Map header to db column name
-                if key in ext_col_map:
-                    db_key = ext_col_map[key]
+                # col 48-93 (index 47-92): 从交付月报读取
+                if 47 <= col_idx <= 92:
+                    val = _get_delivery_report_value(
+                        col_idx, _row_contract_no,
+                        _dr_signing_idx, _dr_confirm_idx, _dr_confirm2_idx,
+                        _dr_abnormal_idx, _dr_signing_amount_col,
+                        _dr_sales_idx, _dr_sales_related_col, row
+                    )
                 else:
-                    db_key = _header_to_db_key(key)
-                val = row_data.get(db_key)
+                    # Map header to db column name
+                    if key in ext_col_map:
+                        db_key = ext_col_map[key]
+                    else:
+                        db_key = _header_to_db_key(key)
+                    val = row_data.get(db_key)
                 cell = ws.cell(row=row, column=1 + col_idx, value=val)
                 _apply_data_style(cell)
 
@@ -2273,6 +2377,243 @@ def _plan_header_to_db_key(header: str) -> str:
         "消失原因": "disappear_reason",
     }
     return mapping.get(header, header)
+
+
+# ── 交付月报数据查找辅助函数 ──
+
+def _get_delivery_report_value(col_idx, contract_no, signing_idx, confirm_idx,
+                                confirm2_idx, abnormal_idx, amount_col,
+                                sales_idx, sales_related_col, data_row):
+    """
+    根据列索引从交付月报索引中查找对应值。
+    col_idx: 0-based 列索引 (47-92 对应 col 48-93)。
+    contract_no: 当前行的合同编号（已 strip）。
+    sales_idx: 销售台账索引 {合同编号→行数据}。
+    sales_related_col: 台账中"关联合同/终止/补充"列号。
+    """
+    if not contract_no:
+        return None
+
+    # col 48 (idx 47): 合同数量统计唯一值 = 公式 =C&"-"&BQ
+    if col_idx == 47:
+        # data_row 是 1-based 行号；C = col 3, BQ = col 70
+        return f"=C{data_row}&\"-\"&BQ{data_row}"
+
+    # col 49 (idx 48): 合同数量统计位 (去重标记，留空)
+    if col_idx == 48:
+        return None
+
+    # col 50 (idx 49): 确收-财务是否交接（合同编号校准）→ 确收交接 C14, 匹配 C7
+    if col_idx == 49:
+        _row = confirm2_idx.get(contract_no, {})
+        return _row.get(14)  # C14 = 财务是否接收
+
+    # col 51 (idx 50): 确收-财务是否交接 → 确收交接 C14, 匹配 C5
+    if col_idx == 50:
+        _row = confirm_idx.get(contract_no, {})
+        return _row.get(14)  # C14 = 财务是否接收
+
+    # col 52 (idx 51): 确收-财务反馈 → 确收交接 C15, 匹配 C5
+    if col_idx == 51:
+        _row = confirm_idx.get(contract_no, {})
+        return _row.get(15)  # C15 = 财务反馈
+
+    # col 53 (idx 52): 是否正常摊销 (计算列，留空)
+    if col_idx == 52:
+        return None
+
+    # col 54 (idx 53): 是否统计确收？ (计算列，留空)
+    if col_idx == 53:
+        return None
+
+    # col 55 (idx 54): 项目经理 → 签约 C77
+    if col_idx == 54:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(77)  # C77 = 项目经理
+
+    # col 56 (idx 55): PM-周报按合同 → 签约 C56 (履约项统计状态)
+    if col_idx == 55:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(56)  # C56 = 履约项统计状态
+
+    # col 57 (idx 56): 项目经理所属团队 → 签约 C78
+    if col_idx == 56:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(78)  # C78 = 项目经理所属部门
+
+    # col 58 (idx 57): 履约项统计状态（周报） → 签约 C56
+    if col_idx == 57:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(56)  # C56
+
+    # col 59 (idx 58): 项目验收状态（周报） → 签约 C67
+    if col_idx == 58:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(67)  # C67 = 项目验收状态
+
+    # col 60 (idx 59): 实际服务/授权开始日期（周报） → 签约 C34
+    if col_idx == 59:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(34)  # C34
+
+    # col 61 (idx 60): 实际服务/授权结束日期（周报） → 签约 C35
+    if col_idx == 60:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(35)  # C35
+
+    # col 62 (idx 61): 偏差-备注说明（手工填写） → 留空
+    if col_idx == 61:
+        return None
+
+    # col 63 (idx 62): 偏差-状态/趋势 (计算列，留空)
+    if col_idx == 62:
+        return None
+
+    # col 64 (idx 63): 偏差-原因类别 (计算列，留空)
+    if col_idx == 63:
+        return None
+
+    # col 65 (idx 64): 签约金额（元） → 销售合同台账 C9
+    if col_idx == 64:
+        _row = sales_idx.get(contract_no, {})
+        return _row.get(9)  # C9 = 签约金额（元）
+
+    # col 66 (idx 65): 合同分类 → 签约 C26 (履约类型)
+    if col_idx == 65:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(26)  # C26 = 履约类型
+
+    # col 67 (idx 66): 是否完成下单流程 → 销售合同台账 C16
+    if col_idx == 66:
+        _row = sales_idx.get(contract_no, {})
+        return _row.get(16)  # C16 = 是否完成下单流程
+
+    # col 68 (idx 67): 关联合同（终止/补充） → 销售合同台账
+    if col_idx == 67:
+        _row = sales_idx.get(contract_no, {})
+        if sales_related_col:
+            return _row.get(sales_related_col)
+        return None
+
+    # col 69 (idx 68): 预算填报 (计算列，留空)
+    if col_idx == 68:
+        return None
+
+    # col 70 (idx 69): 备注 (手工，留空)
+    if col_idx == 69:
+        return None
+
+    # col 71 (idx 70): 预算填写说明 (手工，留空)
+    if col_idx == 70:
+        return None
+
+    # col 72 (idx 71): 预算日期（已提交） (手工，留空)
+    if col_idx == 71:
+        return None
+
+    # col 73 (idx 72): 预算趋势 (计算列，留空)
+    if col_idx == 72:
+        return None
+
+    # col 74 (idx 73): 预算趋势类别 (计算列，留空)
+    if col_idx == 73:
+        return None
+
+    # col 75 (idx 74): 预估交付完成日期（周报） → 签约 C31
+    if col_idx == 74:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(31)  # C31
+
+    # col 76 (idx 75): 预算-预估交付完成日期（周报） → 签约 C32
+    if col_idx == 75:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(32)  # C32
+
+    # col 77 (idx 76): 预算提交（校准） (计算列，留空)
+    if col_idx == 76:
+        return None
+
+    # col 78 (idx 77): 异常项目合同编号 → 异常项目 C1
+    if col_idx == 77:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(1)  # C1
+
+    # col 79 (idx 78): 合同归档日期 → 异常项目 C2
+    if col_idx == 78:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(2)  # C2
+
+    # col 80 (idx 79): 状态 → 异常项目 C18
+    if col_idx == 79:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(18)  # C18
+
+    # col 81 (idx 80): 异常项目-类别 → 异常项目 C28
+    if col_idx == 80:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(28)  # C28
+
+    # col 82 (idx 81): 异常项目-处置方案 → 异常项目 C29
+    if col_idx == 81:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(29)  # C29
+
+    # col 83 (idx 82): 异常处置方案-影响 → 异常项目 C30
+    if col_idx == 82:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(30)  # C30
+
+    # col 84 (idx 83): 异常报备日期 → 异常项目 C24
+    if col_idx == 83:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(24)  # C24
+
+    # col 85 (idx 84): 预估异常处置完成日期 → 异常项目 C25
+    if col_idx == 84:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(25)  # C25
+
+    # col 86 (idx 85): 异常影响情况 → 异常项目 C27
+    if col_idx == 85:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(27)  # C27
+
+    # col 87 (idx 86): 交付中心反馈 → 异常项目 C33
+    if col_idx == 86:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(33)  # C33
+
+    # col 88 (idx 87): 营销中心反馈 → 异常项目 C34
+    if col_idx == 87:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(34)  # C34
+
+    # col 89 (idx 88): 异常归档日期 → 异常项目 C26
+    if col_idx == 88:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(26)  # C26
+
+    # col 90 (idx 89): 交付说明（异常履约项统计类别） → 异常项目 C31
+    if col_idx == 89:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(31)  # C31
+
+    # col 91 (idx 90): 交付说明（履约项交付情况、合同交付条款） → 异常项目 C32
+    if col_idx == 90:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(32)  # C32
+
+    # col 92 (idx 91): 项目异常内容 → 异常项目 C35
+    if col_idx == 91:
+        _row = abnormal_idx.get(contract_no, {})
+        return _row.get(35)  # C35
+
+    # col 93 (idx 92): 所属产线（周报） → 签约 C27
+    if col_idx == 92:
+        _row = signing_idx.get(contract_no, {})
+        return _row.get(27)  # C27
+
+    return None
 
 
 if __name__ == "__main__":
