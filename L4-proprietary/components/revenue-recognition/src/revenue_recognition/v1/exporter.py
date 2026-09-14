@@ -1624,7 +1624,9 @@ class RevenueExporter:
                 _dr_title_row = next(_dr_rows_iter)  # Row 2 = 标题行
                 # 搜索金额列
                 for _cell in _dr_title_row:
-                    if _cell.value and ("金额" in str(_cell.value) or "合同额" in str(_cell.value)):
+                    if _cell.value is None:
+                        continue
+                    if "金额" in str(_cell.value) or "合同额" in str(_cell.value):
                         _dr_signing_amount_col = _cell.column
                         break
                 # 建立索引: C13(销售合同编号) → 行数据
@@ -1684,7 +1686,9 @@ class RevenueExporter:
             _dr_sl_title_row = next(_dr_sl_iter)  # Row 1 = 标题
             # 搜索"关联"或"终止"相关列
             for _cell in _dr_sl_title_row:
-                if _cell.value and ("关联" in str(_cell.value) or "终止" in str(_cell.value) or "补充" in str(_cell.value)):
+                if _cell.value is None:
+                    continue
+                if "关联" in str(_cell.value) or "终止" in str(_cell.value) or "补充" in str(_cell.value):
                     _dr_sales_related_col = _cell.column
                     break
             # 建立索引: C1(合同编号) → 行数据
