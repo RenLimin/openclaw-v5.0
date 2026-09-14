@@ -25,8 +25,8 @@ skills/
 # 业务日志
 business/*/logs/
 logs/observability/
-model-scheduling/logs/
-model-scheduling/config/usage.json
+L2-infra/components/model-scheduling/logs/
+L2-infra/components/model-scheduling/config/usage.json
 *.err
 *.out
 
