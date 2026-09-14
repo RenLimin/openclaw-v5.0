@@ -35,12 +35,20 @@ superseded_by: null
 
 ## 3. 核心决策
 
-### 决策 1: 存储标准化
+### 决策 1: 存储标准化（2026-09-15 更新）
 
-所有凭据文件统一存放在 `~/.openclaw/secrets/`，遵循：
+**主存储：SQLite Secret Store**（team-scoped，`openclaw secrets store` 管理）
+- 所有 OpenClaw 原生支持的凭据（provider apiKey、插件 apiKey）优先存 store
+- 通过 SecretRef 引用：`{source: "store", provider: "default", id: "<NAME>"}`
+- 写操作通过 `openclaw secrets store set` CLI 完成，读取受运行时保护
+
+**辅助存储：文件式**（`~/.openclaw/secrets/`）
+- 仅用于 store 无法覆盖的场景：
+  - `gateway.auth.token` — 鸡生蛋问题（Gateway 启动时需要鉴权，但 store 本身需要 Gateway）
+  - 第三方 channel 的特殊字段（如 wecom secret 因 core `.trim()` bug 无法用 SecretRef）
+  - 非 OpenClaw 工具直接读文件的场景（预留）
 - 命名规范：`<service>.token` / `<service>.apiKey`
 - 权限：`chmod 600`，目录 `chmod 700`
-- 无尾换行：`printf '%s'` 写入
 
 **理由**：
 - 已有案例验证（Tavily + GitHub）
@@ -49,10 +57,11 @@ superseded_by: null
 
 ### 决策 2: 引用标准化（两种标准方式）
 
-| 方式 | 适用场景 | 优先级 |
-|---|---|---|
-| **A. SecretRef provider** | OpenClaw plugin/config 引用 | 优先 |
-| **B. Credential helper** | 非 OpenClaw 场景（git, curl） | 特殊 |
+| 方式 | 存储 | 适用场景 | 优先级 |
+|---|---|---|---|
+| **A1. SecretRef + Store** | SQLite store | OpenClaw provider / 插件 / 运行时配置 | **最高** |
+| **A2. SecretRef + File Provider** | 文件系统 | 历史遗留 / Store 无法覆盖的场景 | 兼容保留 |
+| **B. Credential helper** | 系统钥匙串 / 外部管理器 | 非 OpenClaw 场景（git, curl） | 特殊 |
 
 **理由**：
 - SecretRef 是 OpenClaw 原生标准路径
@@ -110,16 +119,16 @@ superseded_by: null
 - [x] 创建标准操作脚本（add / rotate / revoke）—— `scripts/credentials.sh`（8025B）
 - [x] 更新资产清单生成器 —— `scripts/gen_asset_inventory.py` 已含凭据段
 
-### 实际完成的 SecretRef 迁移（实测@2026-08-23）
+### 实际完成的迁移（截至 2026-09-15）
 
-| 字段 | 状态 |
-|---|---|
-| `models.providers.coding-plan.apiKey` | ✅ SecretRef（provider `codingplankey`）|
-| `models.providers.longCat.apiKey` | ✅ SecretRef（provider `longcatkey`）|
-| `plugins.entries.tavily.config.webSearch.apiKey` | ✅ SecretRef（provider `tavilykey`）|
-| `agents/main/agent/models.json` | ✅ 自动写入非密标记 `secretref-managed` |
-| `gateway.auth.token` | ❌ **仍明文** —— fail-closed 风险，需维护窗口（见 §6 监控点）|
-| `channels.wecom.secret` | ❌ **仍明文** —— core 代码对该字段调 `.trim()`，不兼容 SecretRef 对象（实测已回退）|
+| 字段 | 存储方式 | 状态 |
+|---|---|---|
+| `models.providers.coding-plan.apiKey` | SQLite Store | ✅ `CODING_PLAN_API_KEY` |
+| `models.providers.longCat.apiKey` | SQLite Store | ✅ `LONGCAT_API_KEY` |
+| `models.providers.deepseek.apiKey` | SQLite Store | ✅ `DEEPSEEK_API_KEY` |
+| `plugins.entries.tavily.config.webSearch.apiKey` | SQLite Store | ✅ `TAVILY_API_KEY` |
+| `gateway.auth.token` | 文件式（`gateway.auth.token`）| ⏭️ 保留（鸡生蛋问题，不迁）|
+| `channels.wecom.secret` | 明文 | ❌ 仍明文 — core `.trim()` bug，不兼容 SecretRef 对象（2026-08-23 实测回退）|
 
 > ⚠️ **`channels.wecom.secret` 不得使用 SecretRef**（2026-08-23 实测教训）：
 > `dist/channel-B2DGqAWl.js:1799` 无条件对 `account.secret` 调 `.trim()`，收到
@@ -160,3 +169,4 @@ superseded_by: null
 ## 9. 变更历史
 
 - 2026-08-21: proposed
+- 2026-09-15: v1.1 更新 — 主存储从文件式迁移到 SQLite Secret Store；删除 3 个冗余 file provider（codingplan / longcatkey / tavilykey）；新增 4 个 store 凭据（CODING_PLAN_API_KEY / LONGCAT_API_KEY / DEEPSEEK_API_KEY / TAVILY_API_KEY）；gateway.auth.token 确认不迁（鸡生蛋问题）
