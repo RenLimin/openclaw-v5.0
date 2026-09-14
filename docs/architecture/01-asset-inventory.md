@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-15 00:17 UTC+08:00
+最后生成：2026-09-15 00:30 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -48,11 +48,19 @@
 | `openclaw-managed` | 25 | 已安装的托管技能 |
 | `openclaw-workspace` | 1 | **本 workspace 自建**（受版本控制） |
 
-### 自建技能（workspace）
+### 自建技能（按层分布）
 
-| 名称 | 描述 |
-|---|---|
-| `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 |
+| 层级 | 名称 | 描述 | 路径 |
+|---|---|---|---|
+| L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
+| L4 专有业务 | `ones-browser-export` | ONES 浏览器自动化数据导出：通过 osascript 控制 Chrome 从 ONES 筛选器导出 CSV 数据，用于月报/签约统... | `L4-proprietary/skills/ones-browser-export` |
+| L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
+| L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
+| L2 基础设施 | `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 | `L2-infra/skills/ocr-digitalization` |
+| L2 基础设施 | `role-library` | 标准化 Agent 角色库。支持按角色执行任务，覆盖数据分析、报告生成、系统运维、文档管理等场景。 | `L2-infra/skills/role-library` |
+| Workspace 根目录 | `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `skills/bangcle-ppt` |
+
+_自建技能总计: 7 个（L2: 3, L3: 1, L4: 2, 根目录: 1）_
 
 ## L2 — Agent 资产
 
@@ -77,18 +85,27 @@
 
 > 凭据清单 (含轮换周期等元信息): `~/.openclaw/secrets/INDEX.md`
 
-### SecretRef Providers
+### SQLite Secret Store（主存储）
 
-| 别名 | 说明 |
-|---|---|
-| `gatewayauthtoken` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
-| `memorysearchkey` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |
+| 名称 | 类型 | 作用域 |
+|---|---|---|
+| `CODING_PLAN_API_KEY` | secret | team |
+| `DEEPSEEK_API_KEY` | secret | team |
+| `LONGCAT_API_KEY` | secret | team |
+| `TAVILY_API_KEY` | secret | team |
+
+### 文件式 SecretRef Providers（辅助）
+
+| 别名 | source | path |
+|---|---|---|
+| `gatewayauthtoken` | `__OPENCLAW_REDACTED__` | `__OPENCLAW_REDACTED__` |
+| `memorysearchkey` | `__OPENCLAW_REDACTED__` | `__OPENCLAW_REDACTED__` |
 
 ### 凭据文件
 
 | 文件 | 权限 | 大小 |
 |---|---|---|
-| `~/.openclaw/secrets/INDEX.md` | `600` | 2425 B |
+| `~/.openclaw/secrets/INDEX.md` | `600` | 2784 B |
 | `~/.openclaw/secrets/backup.key` | `600` | 65 B |
 | `~/.openclaw/secrets/gateway.auth.token` | `600` | 48 B |
 | `~/.openclaw/secrets/memory.search.remote.apiKey` | `600` | 9 B |
@@ -184,8 +201,8 @@
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `95895730` |
-| Commit 数 | 324 |
+| HEAD | `d7c369ee` |
+| Commit 数 | 325 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

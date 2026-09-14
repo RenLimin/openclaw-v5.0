@@ -79,6 +79,7 @@ def collect() -> dict:
         "cron": run_json(["openclaw", "cron", "list", "--json"]),
         "tools": run_json(["openclaw", "config", "get", "tools"]),
         "secret_providers": run_json(["openclaw", "config", "get", "secrets.providers"]),
+        "secret_store": run_json(["openclaw", "secrets", "store", "list", "--json"]),
         "node": (run(["node", "--version"]) or "").strip() or None,
         "git_remote": (run(["git", "remote", "get-url", "origin"]) or "").strip() or None,
         "git_commit": (run(["git", "rev-parse", "--short", "HEAD"]) or "").strip() or None,
@@ -188,20 +189,54 @@ def render_skills(data: dict) -> list[str]:
         lines.append(f"| `{source}` | {count} | {source_desc.get(source, '—')} |")
     lines.append("")
 
-    workspace_skills = sorted(
-        (s for s in skills if s.get("source") == "openclaw-workspace"),
-        key=lambda x: x.get("name", ""),
-    )
-    if workspace_skills:
-        lines.append("### 自建技能（workspace）")
+    # --- 自建技能（按目录扫描，最准确） ---
+    skill_dirs = [
+        ("L4 专有业务", REPO_ROOT / "L4-proprietary" / "skills"),
+        ("L3 通用业务", REPO_ROOT / "L3-business" / "skills"),
+        ("L2 基础设施", REPO_ROOT / "L2-infra" / "skills"),
+        ("Workspace 根目录", REPO_ROOT / "skills"),
+    ]
+    all_custom = []
+    for layer, sdir in skill_dirs:
+        if not sdir.is_dir():
+            continue
+        for skill_dir in sorted(sdir.iterdir()):
+            if not skill_dir.is_dir():
+                continue
+            skill_md = skill_dir / "SKILL.md"
+            if not skill_md.is_file():
+                continue
+            # 从 frontmatter 读 name 和 description
+            name = skill_dir.name
+            desc = ""
+            try:
+                content = skill_md.read_text()
+                for line in content.splitlines()[:15]:
+                    if line.startswith("name:"):
+                        name = line.split(":", 1)[1].strip().strip('"')
+                    elif line.startswith("description:"):
+                        desc = line.split(":", 1)[1].strip().strip('"')
+                        break
+            except Exception:
+                pass
+            rel_path = skill_dir.relative_to(REPO_ROOT)
+            all_custom.append((layer, name, desc, str(rel_path)))
+
+    if all_custom:
+        lines.append("### 自建技能（按层分布）")
         lines.append("")
-        lines.append("| 名称 | 描述 |")
-        lines.append("|---|---|")
-        for s in workspace_skills:
-            desc = (s.get("description") or "").replace("|", "\\|")
-            if len(desc) > 90:
-                desc = desc[:87] + "..."
-            lines.append(f"| `{s.get('name')}` | {desc} |")
+        lines.append("| 层级 | 名称 | 描述 | 路径 |")
+        lines.append("|---|---|---|---|")
+        for layer, name, desc, path in all_custom:
+            desc_clean = desc.replace("|", "\\|")
+            if len(desc_clean) > 70:
+                desc_clean = desc_clean[:67] + "..."
+            lines.append(f"| {layer} | `{name}` | {desc_clean} | `{path}` |")
+        lines.append("")
+        lines.append(f"_自建技能总计: {len(all_custom)} 个（L2: {sum(1 for x in all_custom if x[0]=='L2 基础设施')}, "
+                     f"L3: {sum(1 for x in all_custom if x[0]=='L3 通用业务')}, "
+                     f"L4: {sum(1 for x in all_custom if x[0]=='L4 专有业务')}, "
+                     f"根目录: {sum(1 for x in all_custom if x[0]=='Workspace 根目录')}）_")
         lines.append("")
     return lines
 
@@ -257,16 +292,35 @@ def render_credentials(data: dict) -> list[str]:
     lines.append("> 凭据清单 (含轮换周期等元信息): `~/.openclaw/secrets/INDEX.md`")
     lines.append("")
 
+    # --- SQLite Secret Store 凭据 ---
+    store = data["secret_store"]
+    lines.append("### SQLite Secret Store（主存储）")
+    lines.append("")
+    if store:
+        lines.append("| 名称 | 类型 | 作用域 |")
+        lines.append("|---|---|---|")
+        for item in sorted(store, key=lambda x: x.get("name", "")):
+            lines.append(f"| `{item.get('name', '?')}` | {item.get('kind', '?')} | {item.get('scopeKind', '?')} |")
+    else:
+        lines.append("_(未配置 Store 凭据)_")
+    lines.append("")
+
+    # --- 文件式 SecretRef Provider ---
     providers = data["secret_providers"]
-    lines.append("### SecretRef Providers")
+    lines.append("### 文件式 SecretRef Providers（辅助）")
     lines.append("")
     if providers:
-        lines.append("| 别名 | 说明 |")
-        lines.append("|---|---|")
+        lines.append("| 别名 | source | path |")
+        lines.append("|---|---|---|")
         for alias in sorted(providers):
-            lines.append(f"| `{alias}` | 配置值由 OpenClaw redact，详见 `openclaw config get secrets.providers` |")
+            p = providers[alias] or {}
+            src = p.get("source", "?")
+            path = p.get("path", "-")
+            # 只显示文件名，不显示完整路径（减少敏感信息）
+            path_short = Path(path).name if path else "-"
+            lines.append(f"| `{alias}` | `{src}` | `{path_short}` |")
     else:
-        lines.append("_(未配置 SecretRef provider)_")
+        lines.append("_(未配置文件式 provider)_")
     lines.append("")
 
     lines.append("### 凭据文件")
