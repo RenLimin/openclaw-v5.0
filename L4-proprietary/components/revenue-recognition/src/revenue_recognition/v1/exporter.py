@@ -96,6 +96,15 @@ def _apply_summary_rate_style(cell, bold=False):
 
 
 
+def _row_to_dict(row):
+    """将 openpyxl read_only 模式的行转为 {col_index: value} dict，跳过 EmptyCell。
+
+    read_only 模式下空单元格返回 EmptyCell 对象（无 .column 属性），
+    直接访问 .column 会抛 AttributeError。
+    """
+    return {c.column: c.value for c in row if hasattr(c, 'column') and c.value is not None}
+
+
 class RevenueExporter:
     """确收报表导出器 — 10 Sheet 完整版"""
 
@@ -1636,8 +1645,7 @@ class RevenueExporter:
                         if _contract_no is not None:
                             _key = str(_contract_no).strip()
                             if _key and _key not in _dr_signing_idx:
-                                _dr_data = {c.column: c.value for c in _dr_row}
-                                _dr_signing_idx[_key] = _dr_data
+                                _dr_signing_idx[_key] = _row_to_dict(_dr_row)
             # 确收交接 Sheet
             if "确收交接" in _dr_wb.sheetnames:
                 _dr_ws = _dr_wb["确收交接"]
@@ -1650,13 +1658,11 @@ class RevenueExporter:
                         if _c5 is not None:
                             _key5 = str(_c5).strip()
                             if _key5 and _key5 not in _dr_confirm_idx:
-                                _dr_data = {c.column: c.value for c in _dr_row}
-                                _dr_confirm_idx[_key5] = _dr_data
+                                _dr_confirm_idx[_key5] = _row_to_dict(_dr_row)
                         if _c7 is not None:
                             _key7 = str(_c7).strip()
                             if _key7 and _key7 not in _dr_confirm2_idx:
-                                _dr_data = {c.column: c.value for c in _dr_row}
-                                _dr_confirm2_idx[_key7] = _dr_data
+                                _dr_confirm2_idx[_key7] = _row_to_dict(_dr_row)
             # 异常项目 Sheet
             if "异常项目" in _dr_wb.sheetnames:
                 _dr_ws = _dr_wb["异常项目"]
@@ -1668,8 +1674,7 @@ class RevenueExporter:
                         if _c1 is not None:
                             _key = str(_c1).strip()
                             if _key and _key not in _dr_abnormal_idx:
-                                _dr_data = {c.column: c.value for c in _dr_row}
-                                _dr_abnormal_idx[_key] = _dr_data
+                                _dr_abnormal_idx[_key] = _row_to_dict(_dr_row)
             _dr_wb.close()
         except Exception as _dr_e:
             print(f"⚠️ 加载交付月报失败: {_dr_e}")
@@ -1698,8 +1703,7 @@ class RevenueExporter:
                     if _sl_contract is not None:
                         _sl_key = str(_sl_contract).strip()
                         if _sl_key and _sl_key not in _dr_sales_idx:
-                            _dr_sl_data = {c.column: c.value for c in _dr_sl_row}
-                            _dr_sales_idx[_sl_key] = _dr_sl_data
+                            _dr_sales_idx[_sl_key] = _row_to_dict(_dr_sl_row)
             _dr_sl_wb.close()
         except Exception as _dr_sl_e:
             print(f"⚠️ 加载销售合同台账失败: {_dr_sl_e}")
