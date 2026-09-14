@@ -1107,12 +1107,18 @@ class RevenueExporter:
         ws.cell(row=32, column=6, value=7.389644451905042e-13)
         _apply_summary_data_style(ws.cell(row=32, column=6))
 
+        # ── 补充：A列纵向合并（与手工报表一致）──
+        # A6:A17 月度数据区 A 列空单元格纵向合并
+        ws.merge_cells(start_row=6, start_column=1, end_row=17, end_column=1)
+
         # ── Row 43-61: 第二块数据（按产线拆分）──
         # 注意：数据库中无"所属产线（周报）"列，无法按产线拆分
         # 此处放置表头结构和说明，数据列留空
         # Row 43: 表头行
         ws.cell(row=43, column=2, value="期间")
         _apply_header_style(ws.cell(row=43, column=2))
+        # B43:B45 "期间"列纵向合并 3 行（对应上半部分 B4:B5）
+        ws.merge_cells(start_row=43, start_column=2, end_row=45, end_column=2)
         ws.cell(row=43, column=3, value="新签")
         _apply_header_style(ws.cell(row=43, column=3))
         ws.cell(row=43, column=7, value="新签")
@@ -1149,6 +1155,9 @@ class RevenueExporter:
             for j, h in enumerate(["新签合同额", "预计确收合同额", "实际确收合同额", "完成率"]):
                 ws.cell(row=45, column=col + j, value=h)
                 _apply_header_style(ws.cell(row=45, column=col + j))
+
+        # AQ43:AS44 右侧空列合并（与手工报表一致）
+        ws.merge_cells(start_row=43, start_column=43, end_row=44, end_column=45)
 
         # Row 46-61: 月度数据行（从 reference_data product_line_detail 读取）
         import json as _json
@@ -1308,23 +1317,30 @@ class RevenueExporter:
         # Row 1: 大标题
         ws.cell(row=1, column=1, value="期间")
         _apply_header_style(ws.cell(row=1, column=1))
+        ws.merge_cells(start_row=1, start_column=1, end_row=3, end_column=1)  # A1:A3 期间（纵向3行）
         ws.cell(row=1, column=2, value="类型")
         _apply_header_style(ws.cell(row=1, column=2))
+        ws.merge_cells(start_row=1, start_column=2, end_row=3, end_column=2)  # B1:B3 类型（纵向3行）
         ws.cell(row=1, column=3, value="期初数据（2026.6.1）")
         _apply_header_style(ws.cell(row=1, column=3))
-        ws.merge_cells(start_row=1, start_column=3, end_row=1, end_column=4)
+        ws.merge_cells(start_row=1, start_column=3, end_row=2, end_column=4)  # C1:D2 期初数据（纵2行+横2列）
         ws.cell(row=1, column=5, value="1-12月累计数据")
         _apply_header_style(ws.cell(row=1, column=5))
-        ws.merge_cells(start_row=1, start_column=5, end_row=1, end_column=15)
+        ws.merge_cells(start_row=1, start_column=5, end_row=1, end_column=16)  # E1:P1 1-12月累计数据
 
         # Row 2: 子标题
         headers_r2 = [None, None, None, None,
                       "本年正常交付", None, "异常中", None, "合同消失", None,
-                      "未来交付", None, "校验", None, "异常说明"]
+                      "未来交付", None, "校验", None, "异常说明", None]
         for i, h in enumerate(headers_r2):
             if h is not None:
                 cell = ws.cell(row=2, column=1 + i, value=h)
                 _apply_header_style(cell)
+
+        # Row 2 子标题横向合并（每组 2 列）
+        r2_merges = [(5, 6), (7, 8), (9, 10), (11, 12), (13, 14), (15, 16)]
+        for sc, ec in r2_merges:
+            ws.merge_cells(start_row=2, start_column=sc, end_row=2, end_column=ec)
 
         # Row 3: 列标题
         headers_r3 = [None, None,
