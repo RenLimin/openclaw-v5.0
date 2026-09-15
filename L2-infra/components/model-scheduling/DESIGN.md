@@ -1,6 +1,6 @@
 # L2 模型调度组件(model-scheduling) — 设计
 
-> **状态**: 已上线(2026-08-24 创建, 2026-08-25 完善)
+> **状态**: 已上线(2026-08-24 创建, 2026-08-25 完善, 2026-09-15 新增跨 vendor fallback)
 > **ADR**: ADR-011(Error Contract,分级依据)
 > **层级**: L2 基础设施层
 > **创建**: 2026-08-24
@@ -122,6 +122,47 @@ setup.sh → sync_models.py → 读取 openclaw.json → 生成 models.yaml
 | 错误率 | > 10% | > 30% |
 | 冷却时间 | — | 60s |
 
+
+### 5.4 跨 Vendor Fallback 机制 (2026-09-15 新增)
+
+**问题**: 原实现只有"初始模型选择"用了 fallback_chain,请求失败后直接报错,不会自动重试下一个模型。
+当主 provider 整体故障时,所有请求都会失败。
+
+**解决方案**: 请求级别的链式重试 — 失败后自动按 fallback_chain 顺序尝试下一个模型,
+天然支持跨 vendor(chain 本身就包含不同 provider 的模型)。
+
+#### 触发条件(可重试错误)
+- HTTP 5xx (500/502/503/504 等服务端错误,501 除外)
+- HTTP 429 (限流)
+- 网络错误 (ClientError / ConnectionError)
+- 超时 (TimeoutError)
+
+#### 不触发 fallback(直接返回)
+- HTTP 4xx (客户端错误,如 401/403/400 — 换模型也没用)
+
+#### Provider 级冷却
+- 同一 provider 连续失败 ≥ 3 次 → 进入 60 秒冷却期
+- 冷却期内新请求优先跳过该 provider 的所有模型
+- 成功后立即重置失败计数
+- 冷却到期自动恢复
+
+#### 可观测性
+- 响应头 `X-Model-Scheduling`: 最终选中的模型
+- 响应头 `X-Model-Scheduling-Provider`: 最终 provider
+- 响应头 `X-Model-Scheduling-Fallback`: 降级路径(如 `model-a|model-b`)
+- 响应 body `model_scheduling` 字段: `{selected_model, provider, fallback_path}`
+- `/health` 端点: `fallbacks` (总 fallback 次数) + `provider_failures` (各 provider 失败计数)
+- `/debug/fallback` 端点: 查看各任务类型当前 fallback chain
+
+#### Streaming 模式限制
+Streaming 模式下,一旦开始向客户端写入 SSE 流(header 已发出),就无法再 fallback。
+因此 streaming 的 fallback **只在连接建立阶段**生效(响应头返回前)。
+如果上游在流传输过程中断开,客户端会收到不完整的流,不会自动切换。
+
+#### 配置
+无需额外配置 — 直接使用 `routing.yaml` 中已有的 `fallback_chain`。
+chain 中跨 vendor 的模型天然就是跨 vendor fallback。
+
 ## 6. 热更新机制
 
 ```python
@@ -164,6 +205,8 @@ setup.sh → sync_models.py → 读取 openclaw.json → 生成 models.yaml
 - [x] LaunchAgent 自动启动
 - [x] 端到端测试通过(闲聊→doubao-lite, 编码→ark-code, 推理→deepseek)
 - [x] 热更新机制工作正常
+- [x] 跨 vendor fallback (7/7 测试通过)
+- [x] Provider 级冷却机制
 
 ## 10. 回退方案
 

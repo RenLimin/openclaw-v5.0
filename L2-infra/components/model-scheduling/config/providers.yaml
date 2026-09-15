@@ -29,3 +29,17 @@ providers:
       requests_per_minute: 30
       tokens_per_minute: 50000
     notes: "Longcat,大 ctx (1M) 兜底 provider"
+
+  deepseek:
+    base_url: "https://api.deepseek.com/v1"
+    api_type: "openai-completions"
+    auth_type: "bearer"
+    api_key_ref: "deepseek"
+    enabled: true
+    health_check:
+      endpoint: "/models"
+      timeout_ms: 5000
+    rate_limit:
+      requests_per_minute: 30
+      tokens_per_minute: 50000
+    notes: "DeepSeek 官方 API,外部推理兜底"
