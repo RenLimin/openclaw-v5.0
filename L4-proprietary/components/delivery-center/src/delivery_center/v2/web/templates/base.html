@@ -1,6 +1,6 @@
-{% from "layout.html" import base_layout with context %}
+{% from "macros/layout.html" import base_layout with context %}
 {% call base_layout(
-    title=page_title or '',
+    page_title=page_title or '',
     brand_name=brand_name,
     brand_icon=brand_icon,
     active_page=active_page or '',
@@ -8,9 +8,8 @@
     sidebar_items=sidebar_items,
     extra_head=extra_head if extra_head is defined else '',
 ) %}
-    <link rel="stylesheet" href="/static/app/css/style.css?v=2.0">
+    <link rel="stylesheet" href="/static/web-common/css/style.css">
     {% block content %}{% endblock %}
-
     <script>
     // 状态显示名
     window.statusLabels = {
