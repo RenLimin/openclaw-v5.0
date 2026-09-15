@@ -22,7 +22,7 @@
             {% for acc in accounts %}
                 <tr>
                     <td>{{ acc.name }}</td>
-                    <td>{{ acc.type }}</td>
+                    <td><span class="badge badge-info">{{ acc.type }}</span></td>
                     <td class="num mono">¥{{ acc.balance }}</td>
                 </tr>
             {% endfor %}
@@ -30,7 +30,11 @@
         </table>
     </div>
     {% else %}
-    <p class="text-muted">暂无账户</p>
+    <div class="empty-state">
+        <div class="empty-state-icon">🏦</div>
+        <div class="empty-state-title">还没有账户</div>
+        <div class="empty-state-desc">先添加你的第一个账户，开始记录资产和负债。支持现金、银行卡、信用卡、投资账户等多种类型。</div>
+    </div>
     {% endif %}
 {% endcall %}
 {% endblock %}

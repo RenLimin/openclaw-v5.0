@@ -8,7 +8,6 @@
 """
 
 import argparse
-import re
 import json
 import subprocess
 import sys
@@ -36,9 +35,8 @@ def get_openclaw_config(path: str) -> dict:
         return {}
 
 
-def fetch_all_models() -> list[dict]:
+def fetch_all_models(providers_config: dict) -> list[dict]:
     """从 openclaw.json 提取所有 provider 和 model 信息。"""
-    providers_config = get_openclaw_config("models")
     providers = providers_config.get("providers", {})
 
     models = []
@@ -103,105 +101,81 @@ def generate_yaml(models: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def parse_yaml_ids(yaml_text: str) -> set[str]:
-    """Naive YAML parser to extract all 'id: "..."' values (model IDs)."""
-    ids = set()
-    for line in yaml_text.splitlines():
-        line = line.strip()
-        if line.startswith("- id:"):
-            # Extract quoted value
-            m = re.match(r'- id:\s+"([^"]+)"', line)
-            if m:
-                ids.add(m.group(1))
-    return ids
-
-
-def extract_routing_model_ids(yaml_text: str) -> set[str]:
-    """Extract all model IDs from fallback_chain entries in routing.yaml."""
-    ids = set()
-    in_fallback = False
-    for line in yaml_text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("fallback_chain:"):
-            in_fallback = True
-            continue
-        if in_fallback:
-            # fallback_chain entries start with "- " followed by quoted model ID
-            if stripped.startswith("- \""):
-                m = re.match(r'- "([^"]+)"', stripped)
-                if m:
-                    ids.add(m.group(1))
-            elif stripped and not stripped.startswith("-") and not stripped.startswith("#"):
-                # We've left the fallback_chain block
-                in_fallback = False
-            elif stripped == "":
-                continue  # blank lines within block are OK
-    return ids
-
-
-def check_reference_integrity(models_file: Path, routing_file: Path, providers: dict) -> int:
-    """Check that all models referenced in routing.yaml exist in models.yaml.
-
-    Returns:
-        0 if all references are valid
-        1 if there are missing references (WARNING or ERROR)
+# ─── 引用完整性校验 ───
+def check_referential_integrity(models_yaml: str) -> tuple[list[str], list[str]]:
+    """校验 routing.yaml 的 fallback_chain 引用的模型在 models.yaml 中是否存在。
+    
+    返回: (warnings, errors)
+      - warnings: routing.yaml 引用但 models.yaml 缺失(可能运行时动态解析)
+      - errors: routing.yaml 引用但 models.yaml 和 openclaw.json providers 都缺失
     """
-    print("[校验] 引用完整性检查 ...")
-
-    if not routing_file.exists():
-        print(f"  ⚠️  routing.yaml 不存在: {routing_file}")
-        return 0  # nothing to check
-
-    routing_text = routing_file.read_text(encoding="utf-8")
-    routing_ids = extract_routing_model_ids(routing_text)
-
-    if not models_file.exists():
-        print(f"  ❌ models.yaml 不存在: {models_file}")
-        return 1
-
-    models_text = models_file.read_text(encoding="utf-8")
-    model_ids = parse_yaml_ids(models_text)
-
-    # Also include provider/model_id format from models.yaml
-    # model_ids already has "provider/model_id" format from id field
-
-    missing = routing_ids - model_ids
-
-    if not missing:
-        print(f"  ✅ 引用完整性检查通过 ({len(routing_ids)} 个引用全部有效)")
-        return 0
-
-    # Build set of known providers from openclaw.json
-    known_providers = set(providers.keys())
-
-    has_error = False
     warnings = []
     errors = []
 
-    for mid in sorted(missing):
-        provider = mid.split("/")[0] if "/" in mid else ""
-        if provider in known_providers:
-            # Provider exists in openclaw.json but model not in models.yaml
-            # This means sync didn't pick it up — likely a real issue
-            errors.append(mid)
-            has_error = True
-        else:
-            # Provider not in openclaw.json at all — dead reference
-            errors.append(mid)
-            has_error = True
+    # 1. 从生成的 YAML 提取模型 ID 集合
+    model_ids_in_yaml = set()
+    for line in models_yaml.splitlines():
+        line = line.strip()
+        if line.startswith("- id:"):
+            # 格式: - id: "provider/model_id"
+            model_id = line.split(":", 1)[1].strip().strip('"').strip("'")
+            model_ids_in_yaml.add(model_id)
 
-    for w in warnings:
-        print(f"  ⚠️  WARNING: routing.yaml 引用但 models.yaml 中缺失: {w}")
+    # 2. 读取 routing.yaml
+    routing_file = CONFIG_DIR / "routing.yaml"
+    if not routing_file.exists():
+        warnings.append(f"routing.yaml 不存在 ({routing_file}),跳过引用完整性校验")
+        return warnings, errors
 
-    for e in errors:
-        print(f"  ❌ ERROR: 死引用 — routing.yaml 引用但 models.yaml 和 openclaw.json 中均不存在: {e}")
+    routing_content = routing_file.read_text(encoding="utf-8")
+    # 手写解析:提取 fallback_chain 列表中的模型 ID
+    referenced_ids = set()
+    in_fallback_chain = False
+    for line in routing_content.splitlines():
+        stripped = line.strip()
+        if "fallback_chain:" in stripped:
+            in_fallback_chain = True
+            continue
+        if in_fallback_chain:
+            if stripped.startswith("- "):
+                # 提取引号中的模型 ID
+                ref = stripped[2:].split("#")[0].strip().strip('"').strip("'")
+                if ref:
+                    referenced_ids.add(ref)
+            elif stripped and not stripped.startswith("#"):
+                # 遇到非列表项,退出 fallback_chain 模式
+                in_fallback_chain = False
 
-    print()
-    print(f"  汇总: {len(routing_ids)} 个引用, {len(model_ids)} 个已注册, {len(missing)} 个缺失")
-    print(f"  结果: {'ERROR' if has_error else 'WARNING'}")
+    # 3. 对比
+    missing_in_yaml = referenced_ids - model_ids_in_yaml
+    for model_id in sorted(missing_in_yaml):
+        warnings.append(
+            f"routing.yaml 引用 '{model_id}' 但 models.yaml 中不存在"
+        )
+        # 4. 检查 openclaw.json providers 是否也没有
+        providers_config_str = subprocess.run(
+            ["openclaw", "config", "get", "models.providers"],
+            capture_output=True, text=True
+        ).stdout
+        try:
+            providers_config = json.loads(providers_config_str)
+            found_in_provider = False
+            for _pid, pconf in providers_config.items():
+                for m in pconf.get("models", []):
+                    full_id = f"{_pid}/{m['id']}"
+                    if full_id == model_id:
+                        found_in_provider = True
+                        break
+                if found_in_provider:
+                    break
+            if not found_in_provider:
+                errors.append(
+                    f"'{model_id}' 在 models.yaml 和 openclaw.json providers 中都不存在"
+                )
+        except json.JSONDecodeError:
+            warnings.append(f"无法解析 openclaw.json providers,跳过 {model_id} 的深度检查")
 
-    return 1 if has_error else 0  # always return non-zero for any missing
-
+    return warnings, errors
 
 
 def main():
@@ -215,8 +189,8 @@ def main():
 
     # 1. 读取 openclaw.json(只读)
     print("[1/4] 读取 openclaw.json models.providers ...")
-    providers_config = get_openclaw_config("models").get("providers", {})
-    models = fetch_all_models()
+    providers_config = get_openclaw_config("models")
+    models = fetch_all_models(providers_config)
     print(f"  发现 {len(models)} 个模型")
 
     if not models:
@@ -235,46 +209,51 @@ def main():
             if not line.startswith("# 生成时间:")
         ).strip()
 
-    skip_write = False
     if MODELS_FILE.exists():
         existing = MODELS_FILE.read_text(encoding="utf-8")
         if _strip_timestamp(existing) == _strip_timestamp(yaml_content):
             print("[3/4] ✅ 模型数据未变化,跳过写入")
-            skip_write = True
-        else:
-            print("[3/4] 模型数据有变化,将更新")
+            return
+        print("[3/4] 模型数据有变化,将更新")
     else:
         print("[3/4] 文件不存在,将创建")
 
-    # 4. 写入或预览
+    # 4. 引用完整性校验(写入前)
+    print("[4/4] 引用完整性校验 ...")
+    ref_warnings, ref_errors = check_referential_integrity(yaml_content)
+    for w in ref_warnings:
+        print(f"  ⚠️  WARNING: {w}")
+    for e in ref_errors:
+        print(f"  ❌ ERROR: {e}")
+    if ref_errors:
+        print()
+        print("  ❌ 引用完整性校验失败,存在无法解析的模型引用")
+        print("  请修复 routing.yaml 或 openclaw.json 后再同步")
+        sys.exit(2)
+    if ref_warnings:
+        print("  ⚠️  存在警告级别的引用缺失(可能运行时动态解析,不阻断)")
+    if not ref_warnings and not ref_errors:
+        print("  ✅ 引用完整性校验通过")
+
+    # 5. 写入或预览
     if args.dry_run:
-        print("[4/4] --dry-run 模式,预览内容(前 30 行):")
+        print("[5/5] --dry-run 模式,预览内容(前 30 行):")
         print("---")
         for line in yaml_content.splitlines()[:30]:
             print(f"  {line}")
         print("---")
         print(f"  完整内容: {len(yaml_content)} 字节")
-        # 继续执行引用完整性校验(只读)
+        return
 
-    elif not skip_write:
-        if not args.force:
-            print("[4/4] 确认写入? (y/N): ", end="")
-            if input().strip().lower() != "y":
-                print("  已取消")
-                return
+    if not args.force:
+        print("[5/5] 确认写入? (y/N): ", end="")
+        if input().strip().lower() != "y":
+            print("  已取消")
+            return
 
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        MODELS_FILE.write_text(yaml_content, encoding="utf-8")
-        print(f"[4/4] ✅ 已写入 {MODELS_FILE}")
-
-    # 引用完整性校验(始终执行)
-    ROUTING_FILE = CONFIG_DIR / "routing.yaml"
-    integrity_rc = check_reference_integrity(MODELS_FILE, ROUTING_FILE, providers_config)
-    if integrity_rc != 0:
-        print()
-        print("=== 同步完成 (引用完整性问题) ===")
-        sys.exit(integrity_rc)
-
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    MODELS_FILE.write_text(yaml_content, encoding="utf-8")
+    print(f"[5/5] ✅ 已写入 {MODELS_FILE}")
     print()
     print("=== 同步完成 ===")
 

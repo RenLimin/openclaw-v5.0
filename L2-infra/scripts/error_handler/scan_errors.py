@@ -239,7 +239,10 @@ def scan_provider_config_full_chain():
                 })
         
         # 检测 2: baseUrl 可达性 + 正确端点验证
-        if base_url:
+        # 注意：当 apiKey 是 SecretRef（source=store）时，脚本拿不到明文 key，
+        # 无法直接测认证。改用 `openclaw models status` 检查 provider 是否有有效 profile。
+        is_secret_ref = isinstance(api_key, dict) and api_key.get("source") == "store"
+        if base_url and not is_secret_ref:
             # 简单可达性检查（HEAD 请求）
             import urllib.request
             import urllib.error
@@ -412,8 +415,8 @@ def scan_asset_consistency():
         ("docs/architecture/configuration/api-key-configuration.md", "API Key 配置规范文档"),
         ("L2-infra/scripts/error_handler/scan_errors.py", "全量错误扫描脚本"),
         ("L2-infra/scripts/error_handler/handle_timeout.sh", "LLM 超时自动处置脚本"),
-        ("~/.openclaw/secrets/codingplan.apiKey", "codingplan API Key 文件"),
-        ("~/.openclaw/secrets/longcat.apiKey", "longcat API Key 文件"),
+        # 注意：codingplan/longcat API Key 已迁移到 SecretRef（SQLite store），
+        # 不再有明文文件。移除旧的文件存在性检查。
     ]
     
     for asset_path, description in key_assets:

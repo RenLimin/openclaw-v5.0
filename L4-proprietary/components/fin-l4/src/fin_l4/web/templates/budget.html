@@ -12,15 +12,15 @@
     <div class="summary-row">
         <div class="summary-item">
             <span class="label">总预算</span>
-            <span class="value">¥{{ overview.total_budget }}</span>
+            <span class="value mono">¥{{ overview.total_budget }}</span>
         </div>
         <div class="summary-item">
             <span class="label">已支出</span>
-            <span class="value">¥{{ overview.total_spent }}</span>
+            <span class="value mono">¥{{ overview.total_spent }}</span>
         </div>
         <div class="summary-item">
             <span class="label">剩余</span>
-            <span class="value">¥{{ overview.total_remaining }}</span>
+            <span class="value mono {% if overview.total_remaining|float < 0 %}negative{% endif %}">¥{{ overview.total_remaining }}</span>
         </div>
         <div class="summary-item">
             <span class="label">超支</span>
@@ -49,7 +49,7 @@
                     <td>{{ s.category }}</td>
                     <td class="num mono">¥{{ s.budget }}</td>
                     <td class="num mono">¥{{ s.spent }}</td>
-                    <td class="num mono">¥{{ s.remaining }}</td>
+                    <td class="num mono {% if s.remaining|float < 0 %}negative{% endif %}">¥{{ s.remaining }}</td>
                     <td>
                         {% set pb_variant = 'danger' if s.status == 'exceeded' else 'warning' if s.status == 'warning' else 'success' %}
                         {{ progress_bar(s.usage_pct, pb_variant, s.usage_pct ~ '%') }}
@@ -69,7 +69,14 @@
 {% endcall %}
 {% else %}
 {% call card() %}
-    <p>本月尚未设置预算。<a href="/settings">前往设置</a></p>
+    <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-title">本月尚未设置预算</div>
+        <div class="empty-state-desc">为每个消费分类设置月度预算，掌控支出节奏，避免超支。</div>
+        <div class="empty-state-action">
+            <a href="/settings" class="btn btn-primary">去设置预算</a>
+        </div>
+    </div>
 {% endcall %}
 {% endif %}
 {% endblock %}

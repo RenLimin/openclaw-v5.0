@@ -34,7 +34,15 @@
         </table>
     </div>
     {% else %}
-    <p class="text-muted">暂无交易记录</p>
+    <div class="empty-state">
+        <div class="empty-state-icon">📝</div>
+        <div class="empty-state-title">还没有交易记录</div>
+        <div class="empty-state-desc">去仪表盘「快捷记账」记第一笔，或者通过 CSV 批量导入银行流水。</div>
+        <div class="empty-state-action">
+            <a href="/" class="btn btn-primary">去记账</a>
+            <a href="/import" class="btn">导入流水</a>
+        </div>
+    </div>
     {% endif %}
 {% endcall %}
 {% endblock %}

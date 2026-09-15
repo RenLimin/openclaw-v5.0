@@ -6,15 +6,27 @@ import os
 import tempfile
 from datetime import date, timedelta
 
-# 必须在 import fin_l4 之前设置数据库目录
+# 注意：模块级环境变量设置仅在本文件最先被加载时有效
+# 如果其他测试文件先 import 了 db 模块，DB_DIR 已固化
+# 真正的隔离在 client fixture 中通过 monkeypatch 实现
 _test_db_dir = tempfile.mkdtemp(prefix='fin-dash-test-')
-os.environ['FIN4_DB_DIR'] = _test_db_dir
+os.environ.setdefault('FIN4_DB_DIR', _test_db_dir)
 
 
 
 @pytest.fixture(scope='module')
 def client():
     """创建带测试数据的 FastAPI TestClient（module 级别，所有测试共享）"""
+    import fin_l4.db as db_module
+    from pathlib import Path
+
+    # 强制替换 DB_DIR，确保 get_db() 默认路径指向测试库
+    # 这是为了防止其他测试文件先加载 db 模块导致 DB_DIR 固化
+    _orig_db_dir = db_module.DB_DIR
+    test_db_path = Path(_test_db_dir)
+    test_db_path.mkdir(parents=True, exist_ok=True)
+    db_module.DB_DIR = test_db_path
+
     from fin_l4.db import init_db
     from fin_l4.db.repositories import (
         FamilyRepository, AccountRepository, TransactionRepository,
@@ -30,6 +42,7 @@ def client():
     import sqlite3
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
+    db_module._global_conn = conn
 
     family_id = 'default'
 

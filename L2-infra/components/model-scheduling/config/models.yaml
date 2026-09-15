@@ -5,8 +5,8 @@
 # status: active | disabled | exhausted
 # tags: coding | reasoning | cheap | fast | image | embedding
 #
-# 生成时间: 2026-09-14T18:00:20+0800
-# 模型总数: 9
+# 生成时间: 2026-09-15T11:04:07+0800
+# 模型总数: 16
 
 models:
   # Provider: coding-plan
@@ -42,6 +42,97 @@ models:
     name: "doubao-seed-code"
     context_window: 262144
     max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-2-0-pro-260215"
+    provider: "coding-plan"
+    model_id: "doubao-seed-2-0-pro-260215"
+    name: "doubao-seed-2-0-pro"
+    context_window: 262144
+    max_tokens: 131072
+    input_types: ["text", "image", "video"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-2-1-pro-260628"
+    provider: "coding-plan"
+    model_id: "doubao-seed-2-1-pro-260628"
+    name: "doubao-seed-2-1-pro"
+    context_window: 262144
+    max_tokens: 262144
+    input_types: ["text", "image", "video"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/deepseek-v4-1-flash-260910"
+    provider: "coding-plan"
+    model_id: "deepseek-v4-1-flash-260910"
+    name: "deepseek-v4-1-flash"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/deepseek-v4-flash-ga-260731"
+    provider: "coding-plan"
+    model_id: "deepseek-v4-flash-ga-260731"
+    name: "deepseek-v4-flash-ga"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/glm-5-3-flash-260828"
+    provider: "coding-plan"
+    model_id: "glm-5-3-flash-260828"
+    name: "glm-5-3-flash"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/qwen3-8b-20250429"
+    provider: "coding-plan"
+    model_id: "qwen3-8b-20250429"
+    name: "qwen3-8b"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/qwen3-32b-20250429"
+    provider: "coding-plan"
+    model_id: "qwen3-32b-20250429"
+    name: "qwen3-32b"
+    context_window: 131072
+    max_tokens: 8192
     input_types: ["text"]
     reasoning: false
     cost_input: 0
