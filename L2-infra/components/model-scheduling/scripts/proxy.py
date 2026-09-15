@@ -88,24 +88,53 @@ def classify_task(messages: list[dict]) -> str:
                 return task_type
     return "chat"
 
-# ─── 模型选择 ───
-def select_model(task_type: str) -> dict | None:
+# ─── Provider 健康状态 ───
+def _get_provider_health(provider_id: str) -> str:
+    """从 usage.json 获取 provider 健康状态。"""
+    usage_data = watcher.get("usage.json") if hasattr(watcher, "get") else {}
+    return usage_data.get("providers", {}).get(provider_id, {}).get("health", {}).get("status", "")
+
+# ─── 模型选择(返回 chain 列表) ───
+def build_fallback_chain(task_type: str) -> list[dict]:
+    """根据任务类型构建 fallback 模型链,过滤不可用项。"""
     routing = watcher.get("routing.yaml")
     models_config = watcher.get("models.yaml")
+    providers_config = watcher.get("providers.yaml")
     task_routing = routing.get("task_routing", {})
     config = task_routing.get(task_type, task_routing.get("chat", {}))
-    fallback_chain = config.get("fallback_chain", [])
+    fallback_chain_refs = config.get("fallback_chain", [])
     models = {m["id"]: m for m in models_config.get("models", [])}
+    provider_confs = providers_config.get("providers", {})
     required_input_types = config.get("requires_input_types", [])
-    for model_ref in fallback_chain:
+
+    chain = []
+    for model_ref in fallback_chain_refs:
         model = models.get(model_ref)
         if not model or model.get("status") != "active":
             continue
-        # 能力匹配检查: 模型必须支持任务需要的输入类型
+        # provider 必须启用
+        provider_id = model.get("provider", "")
+        pconf = provider_confs.get(provider_id, {})
+        if not pconf.get("enabled", False):
+            continue
+        # provider 健康状态不可达 → 跳过
+        if _get_provider_health(provider_id) == "unreachable":
+            continue
+        # 能力匹配检查
         model_input_types = set(model.get("input_types", ["text"]))
         if any(t not in model_input_types for t in required_input_types):
             continue
-        return model
+        chain.append(model)
+    return chain
+
+def select_model(task_type: str) -> dict | None:
+    """兼容旧接口: 返回 chain 第一个模型。"""
+    chain = build_fallback_chain(task_type)
+    if chain:
+        return chain[0]
+    # 兜底: 所有 active 模型按 priority
+    models_config = watcher.get("models.yaml")
+    models = {m["id"]: m for m in models_config.get("models", [])}
     for model in sorted(models.values(), key=lambda m: m.get("priority", 99)):
         if model.get("status") == "active":
             return model
@@ -129,6 +158,7 @@ def get_api_key(provider_id: str) -> str:
     env_keys = {
         "coding-plan": ["ARK_API_KEY", "VOLCENGINE_API_KEY", "CODING_PLAN_API_KEY"],
         "longcat": ["LONGCAT_API_KEY", "LONGCAT_KEY"],
+        "deepseek": ["DEEPSEEK_API_KEY"],
     }
     for env_key in env_keys.get(provider_id, []):
         val = os.environ.get(env_key, "")
@@ -330,21 +360,60 @@ class ProxyHandler:
         messages = request.get("messages", [])
         stream = request.get("stream", False)
         task_type = classify_task(messages)
-        model = select_model(task_type)
-
-        if not model:
+        
+        # 构建 fallback chain
+        chain = build_fallback_chain(task_type)
+        if not chain:
             await self._send_error(503, "No available model", writer)
             return
 
-        logger.info(f"任务: {task_type} → 模型: {model['id']}")
+        providers_config = watcher.get("providers.yaml")
+        fallback_path = []
+        last_error = None
+        last_status = 500
 
-        providers = watcher.get("providers.yaml")
-        provider_conf = providers.get("providers", {}).get(model["provider"], {})
-        if not provider_conf or not provider_conf.get("enabled", False):
-            await self._send_error(503, f"Provider {model['provider']} unavailable", writer)
-            return
+        for idx, model in enumerate(chain):
+            provider_id = model.get("provider", "")
+            provider_conf = providers_config.get("providers", {}).get(provider_id, {})
+            
+            if idx == 0:
+                logger.info(f"任务: {task_type} → 模型: {model['id']} (provider: {provider_id})")
+            else:
+                logger.warning(f"Fallback #{idx}: 切换到 {model['id']} (provider: {provider_id}) [前一个失败: {last_status}]")
+                fallback_path.append(model["id"])
+            
+            success, status_code, result = await self._forward_once(request, model, provider_conf, stream, writer)
+            
+            if success:
+                if fallback_path:
+                    logger.info(f"Fallback 成功: 最终模型 {model['id']}, 路径: {' → '.join(fallback_path)}")
+                return
+            
+            last_status = status_code
+            last_error = result
+            # 4xx 不可重试,直接返回
+            if 400 <= status_code < 500:
+                break
+        
+        # 所有模型都失败
+        self.error_count += 1
+        await self._send_error(last_status, str(last_error)[:500], writer)
 
-        await self._forward(request, model, provider_conf, writer, stream)
+    async def _forward_once(self, request, model, provider_conf, stream, writer):
+        """单次转发请求。
+        Returns: (success, status_code, error_message)
+        """
+        base_url = provider_conf.get("base_url", "").rstrip("/")
+        api_key = get_api_key(model["provider"])
+        if not api_key:
+            return False, 500, f"Cannot get API key for {model['provider']}"
+
+        url = f"{base_url}/chat/completions"
+        payload = {**request, "model": model["model_id"]}
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
 
     async def _forward(self, request, model, provider_conf, writer, stream):
         base_url = provider_conf.get("base_url", "").rstrip("/")
@@ -368,22 +437,25 @@ class ProxyHandler:
                 async with self.session.post(url, headers=headers, json=payload, timeout=timeout) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"Provider API 错误: {response.status} {error_text[:200]}")
-                        await self._send_error(response.status, error_text[:500], writer)
-                        return
+                        logger.error(f"Provider API 错误 (stream): {model['id']} {response.status} {error_text[:200]}")
+                        return False, response.status, error_text
                     await self._stream_response(response, writer, model)
+                    return True, 200, ""
             else:
                 async with self.session.post(url, headers=headers, json=payload, timeout=timeout) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"Provider API 错误: {response.status} {error_text[:200]}")
-                        await self._send_error(response.status, error_text[:500], writer)
-                        return
+                        logger.error(f"Provider API 错误: {model['id']} {response.status} {error_text[:200]}")
+                        return False, response.status, error_text
                     resp_body = await response.read()
                     await self._send_response(200, resp_body, writer, model)
+                    return True, 200, resp_body
         except aiohttp.ClientError as e:
-            logger.error(f"转发失败: {e}")
-            await self._send_error(500, str(e)[:200], writer)
+            logger.error(f"转发失败 (network): {model['id']} {type(e).__name__}: {e}")
+            return False, 502, f"Network error: {type(e).__name__}: {str(e)[:150]}"
+        except asyncio.TimeoutError:
+            logger.error(f"转发超时: {model['id']}")
+            return False, 504, "Timeout"
 
     async def _stream_response(self, response: aiohttp.ClientResponse, writer, model):
         header = (
