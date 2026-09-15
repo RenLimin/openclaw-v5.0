@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, badge, progress_bar with context %}
+
+{% set page_title = '交付月报 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='交付月报',
+    subtitle='生成 / 导出月度交付报表（5 个 Sheet）'
+) }}
+
+{% call card(title="生成月报") %}
+<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+  <div>
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
+    <input id="gen-month" class="input" placeholder="YYYYMM" value="202608" style="width:140px;">
+  </div>
+  <div>
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">模式</label>
+    <select id="gen-mode" class="input" style="width:180px;">
+      <option value="auto">auto（有则读，无则生成）</option>
+      <option value="read">read（只读已有）</option>
+      <option value="regenerate">regenerate（强制重算）</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" onclick="doGenerate()">生成</button>
+  <button class="btn" onclick="doExport()">导出 Excel</button>
+</div>
+<div id="gen-status" style="margin-top:1rem;color:var(--c-muted);"></div>
+{% endcall %}
+
+{% call card(title="已生成月份") %}
+<div id="months-list">加载中...</div>
+{% endcall %}
+
+{% call card(title="Sheet 明细") %}
+<div id="sheet-detail" style="color:var(--c-muted);">生成后显示</div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadMonths() {
+  const r = await fetch('/api/report/months');
+  const d = await r.json();
+  const months = d.months || [];
+  document.getElementById('months-list').innerHTML = months.length
+    ? '<div class="table-wrapper"><table class="table"><thead><tr><th>月份</th><th>操作</th></tr></thead><tbody>'
+      + months.map(m => {
+          const mm = m.month || m;
+          return `<tr><td><strong>${mm.slice(0,4)}年${mm.slice(4)}月</strong></td>
+            <td><a class="btn btn-sm btn-success" href="/api/report/export/${mm}">下载 Excel</a></td></tr>`;
+        }).join('') + '</tbody></table></div>'
+    : '<p style="color:var(--c-muted);">尚无已生成月份</p>';
+}
+
+async function doGenerate() {
+  const month = document.getElementById('gen-month').value.trim();
+  const mode = document.getElementById('gen-mode').value;
+  const st = document.getElementById('gen-status');
+  st.textContent = `生成中（${mode}）...`;
+  try {
+    const r = await fetch('/api/report/generate', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({month, mode})
+    });
+    const d = await r.json();
+    if (!r.ok) { st.textContent = `⚠️ ${d.error}`; return; }
+    st.innerHTML = `✅ <strong>${d.action}</strong> 完成，合计 <strong>${d.total_rows}</strong> 行`;
+    let h = '<div class="table-wrapper"><table class="table"><thead><tr><th>Sheet</th><th>行数</th></tr></thead><tbody>';
+    for (const [k, v] of Object.entries(d.sheets || {})) h += `<tr><td>${k}</td><td>${v}</td></tr>`;
+    h += '</tbody></table></div>';
+    document.getElementById('sheet-detail').innerHTML = h;
+    loadMonths();
+  } catch (e) { st.textContent = `失败: ${e}`; }
+}
+
+function doExport() {
+  const month = document.getElementById('gen-month').value.trim();
+  window.location.href = `/api/report/export/${month}`;
+}
+
+document.addEventListener('DOMContentLoaded', loadMonths);
+</script>
+{% endblock %}

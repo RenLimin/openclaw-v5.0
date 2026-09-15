@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '出错了 — BDMS' %}
+
+{% block content %}
+{{ page_header(title='出错了', subtitle='请求处理失败') }}
+{% call card() %}
+<div style="padding:1rem;color:var(--c-danger,#ef4444);">
+  <p style="font-size:1rem;">{{ error }}</p>
+</div>
+<a href="/" class="btn btn-primary">返回首页</a>
+{% endcall %}
+{% endblock %}

@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, chart_container with context %}
+
+{% set page_title = '交付统计看板 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='交付统计看板',
+    subtitle='核心指标 · 月度趋势 · 交付状态 · 异常分布 · 部门统计',
+    actions=[{"label": "刷新数据", "variant": "primary", "onclick": "reloadDashboard(true)"}]
+) }}
+
+{% call card(title="数据范围") %}
+<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+    <label style="font-weight:600;">数据月份：</label>
+    <select id="month-select" class="input" style="max-width:200px;" onchange="reloadDashboard(false)">
+        <option value="">加载中...</option>
+    </select>
+    <span id="load-status" style="color:var(--c-muted);font-size:0.85rem;"></span>
+</div>
+{% endcall %}
+
+{% call card(title="核心指标") %}
+<div id="kpi-grid" class="dashboard-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;"></div>
+<div id="kpi-empty" style="display:none;color:var(--c-muted);padding:1rem;">
+    暂无数据。请先导入交付月报数据。
+</div>
+{% call card(title="分类明细") %}
+<div id="kpi-category"></div>
+{% endcall %}
+{% endcall %}
+
+{% call card(title="月度趋势（计划 vs 实际）") %}
+{{ chart_container(id="chart-trend", title="", height=320) }}
+<div id="trend-table" style="margin-top:1rem;"></div>
+{% endcall %}
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+{% call card(title="交付状态分布（签约）") %}
+{{ chart_container(id="chart-status", title="", height=280) }}
+{% endcall %}
+{% call card(title="异常项目分布") %}
+{{ chart_container(id="chart-exception", title="", height=280) }}
+{% endcall %}
+</div>
+
+{% call card(title="部门维度统计") %}
+{{ chart_container(id="chart-dept", title="", height=300) }}
+{% endcall %}
+
+<div id="drill-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--c-surface,#fff);border-radius:8px;max-width:90vw;max-height:85vh;overflow:auto;padding:1.5rem;min-width:640px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+      <h3 id="drill-title" style="margin:0;">明细</h3>
+      <button class="btn btn-sm" onclick="closeDrill()">关闭</button>
+    </div>
+    <div id="drill-body">加载中...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/app/js/chart.umd.min.js"></script>
+<script>
+const charts = {};
+document.addEventListener('DOMContentLoaded', () => init());
+
+async function init() { await loadMonths(); await reloadDashboard(false); }
+
+async function loadMonths() {
+  try {
+    const r = await fetch('/api/report/months');
+    const d = await r.json();
+    const sel = document.getElementById('month-select');
+    const months = (d.months || []).map(m => m.month || m).sort().reverse();
+    sel.innerHTML = months.length
+      ? months.map(m => `<option value="${m}">${m.slice(0,4)}年${m.slice(4)}月</option>`).join('')
+      : '<option value="">无可用月份</option>';
+    if (months.length) sel.value = months[0];
+  } catch (e) { console.error(e); }
+}
+
+const currentMonth = () => document.getElementById('month-select').value;
+
+async function reloadDashboard(refresh) {
+  const month = currentMonth();
+  if (!month) return;
+  const st = document.getElementById('load-status');
+  st.textContent = '加载中...';
+  try {
+    const r = await fetch(`/api/dashboard/${month}?refresh=${refresh}`);
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      st.textContent = `⚠️ ${e.error || r.statusText}`;
+      document.getElementById('kpi-empty').style.display = 'block';
+      return;
+    }
+    const d = await r.json();
+    st.textContent = `已加载 ${month}` + (d._cached ? '（缓存）' : '（实时）');
+    renderAll(d);
+  } catch (e) { st.textContent = `加载失败: ${e}`; }
+}
+
+const fmtWan = v => (v == null) ? '-' :
+  (v / 10000).toLocaleString('zh-CN', {maximumFractionDigits: 2}) + ' 万';
+const pct = v => (v == null) ? '-' : (v * 100).toFixed(2) + '%';
+
+function renderAll(d) {
+  renderKpis(d.kpis || {});
+  renderTrend(d.monthly_trend || {});
+  renderStatus(d.delivery_status_dist || {});
+  renderException(d.exception_dist || {});
+  renderDept(d.dept_stats || {});
+}
+
+function renderKpis(k) {
+  const host = document.getElementById('kpi-grid');
+  if (!k || k.contract_amount == null) { document.getElementById('kpi-empty').style.display='block'; return; }
+  const cards = [
+    ['合同总额', fmtWan(k.contract_amount), '📄', ''],
+    ['计划确收', fmtWan(k.plan_revenue), '🎯', ''],
+    ['实际确收', fmtWan(k.actual_revenue), '✅', 'success'],
+    ['完成率', pct(k.completion_rate), '📈', k.completion_rate >= 1 ? 'success' : 'danger'],
+    ['交付项目数', k.delivery_project_count ?? '-', '📦', ''],
+    ['履约项数', k.delivery_obligation_count ?? '-', '📑', ''],
+    ['异常项目数', k.exception_project_count ?? '-', '⚠️', 'danger'],
+    ['异常履约项', k.abnormal_obligation_count ?? '-', '🚨', 'danger'],
+  ];
+  host.innerHTML = cards.map(([label, val, icon, variant]) => `
+    <div class="stat-card ${variant}">
+      <div style="font-size:1.4rem;">${icon}</div>
+      <div style="font-size:0.8rem;color:var(--c-muted);">${label}</div>
+      <div style="font-size:1.35rem;font-weight:700;">${val}</div>
+    </div>`).join('');
+
+  const bc = k.by_category || {};
+  const rows = Object.entries(bc).map(([cat, v]) => [
+    cat, fmtWan(v.contract_amount), fmtWan(v.plan), fmtWan(v.actual), pct(v.completion_rate)
+  ]);
+  document.getElementById('kpi-category').innerHTML =
+    table(['分类', '合同额', '计划确收', '实际确收', '完成率'], rows);
+}
+
+function drawChart(id, config) {
+  const cv = document.getElementById(id);
+  if (!cv || typeof Chart === 'undefined') return;
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(cv.getContext('2d'), config);
+}
+
+function renderTrend(t) {
+  const months = t.months || [];
+  if (!months.length) return;
+  const s = t.series || {};
+  const datasets = [];
+  const colors = {'新签': '#3b82f6', '递延': '#8b5cf6', '合计': '#6b7280'};
+  for (const [cat, v] of Object.entries(s)) {
+    datasets.push({label: `${cat}-计划(万)`, data: (v.plan||[]).map(x => x/10000),
+      borderColor: colors[cat]||'#999', borderDash: [5,4], tension: 0.3, fill: false});
+    datasets.push({label: `${cat}-实际(万)`, data: (v.actual||[]).map(x => x/10000),
+      borderColor: colors[cat]||'#999', backgroundColor: (colors[cat]||'#999')+'26', tension: 0.3});
+  }
+  drawChart('chart-trend', {
+    type: 'line',
+    data: {labels: months, datasets},
+    options: {responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {position: 'top'}, tooltip: {mode: 'index', intersect: false}}}
+  });
+
+  const rows = months.map((m, i) => {
+    const ns = s['新签'] || {}, df = s['递延'] || {}, tt = s['合计'] || {};
+    return [m, fmtWan((df.plan||[])[i]), fmtWan((df.actual||[])[i]),
+            fmtWan((ns.actual||[])[i]), fmtWan((tt.actual||[])[i])];
+  });
+  document.getElementById('trend-table').innerHTML =
+    table(['期间', '递延-计划', '递延-实际', '新签-实际', '合计-实际'], rows);
+}
+
+function normalizeDist(d) {
+  // 返回 [{name, count}]
+  if (Array.isArray(d)) return d.map(x => ({name: x.name ?? x.label ?? String(x), count: x.count ?? x.value ?? 0}));
+  if (d && Array.isArray(d.groups)) return normalizeDist(d.groups);
+  if (d && typeof d === 'object') {
+    const arr = d.distribution || d.items || d.data;
+    if (Array.isArray(arr)) return normalizeDist(arr);
+  }
+  return [];
+}
+
+function renderStatus(d) {
+  const rows = normalizeDist(d).slice(0, 12);
+  if (!rows.length) return;
+  drawChart('chart-status', {
+    type: 'doughnut',
+    data: {labels: rows.map(r => r.name),
+      datasets: [{data: rows.map(r => r.count),
+        backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316']}]},
+    options: {responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {position: 'right'}},
+      onClick: (e, els) => { if (els.length) drill('delivery_status', rows[els[0].index].name); }}
+  });
+}
+
+function renderException(d) {
+  const rows = normalizeDist(d).slice(0, 12);
+  if (!rows.length) return;
+  drawChart('chart-exception', {
+    type: 'bar',
+    data: {labels: rows.map(r => r.name),
+      datasets: [{label: '项目数', data: rows.map(r => r.count), backgroundColor: '#ef4444'}]},
+    options: {indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {display: false}},
+      onClick: (e, els) => { if (els.length) drill('exception_type', rows[els[0].index].name); }}
+  });
+}
+
+function renderDept(d) {
+  const rows = normalizeDist(d).slice(0, 12);
+  if (!rows.length) return;
+  drawChart('chart-dept', {
+    type: 'bar',
+    data: {labels: rows.map(r => r.name),
+      datasets: [{label: '项目数', data: rows.map(r => r.count), backgroundColor: '#8b5cf6'}]},
+    options: {responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {display: false}},
+      onClick: (e, els) => { if (els.length) drill('dept', rows[els[0].index].name); }}
+  });
+}
+
+function table(headers, rows) {
+  let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
+          headers.map(x => `<th>${x}</th>`).join('') + '</tr></thead><tbody>';
+  if (!rows.length) h += `<tr><td colspan="${headers.length}" style="color:var(--c-muted);">暂无数据</td></tr>`;
+  rows.forEach(r => { h += '<tr>' + r.map(c => `<td>${c ?? '-'}</td>`).join('') + '</tr>'; });
+  return h + '</tbody></table></div>';
+}
+
+async function drill(dimension, value) {
+  const month = currentMonth();
+  document.getElementById('drill-modal').style.display = 'flex';
+  document.getElementById('drill-title').textContent = `${dimension}: ${value}`;
+  document.getElementById('drill-body').textContent = '加载中...';
+  try {
+    const r = await fetch('/api/dashboard/drill-down', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({month, dimension, value, sheet: '签约'})
+    });
+    const d = await r.json();
+    if (!r.ok) { document.getElementById('drill-body').textContent = `⚠️ ${d.error}`; return; }
+    const rows = d.rows || d.items || [];
+    if (!rows.length) { document.getElementById('drill-body').innerHTML =
+      '<p style="color:var(--c-muted);">无匹配明细</p>'; return; }
+    const cols = d.columns || Object.keys(rows[0]);
+    document.getElementById('drill-body').innerHTML =
+      table(cols, rows.slice(0, 200).map(x => cols.map(c => x[c])));
+  } catch (e) { document.getElementById('drill-body').textContent = `加载失败: ${e}`; }
+}
+
+function closeDrill() { document.getElementById('drill-modal').style.display = 'none'; }
+</script>
+{% endblock %}

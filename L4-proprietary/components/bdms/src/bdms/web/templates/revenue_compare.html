@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, badge with context %}
+
+{% set page_title = '对比分析 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='对比分析',
+    subtitle='本方计算 vs 手工报表（黄金基准）'
+) }}
+
+{% call card(title="对比设置") %}
+<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+  <div>
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
+    <input id="cmp-month" class="input" placeholder="YYYYMM" value="202606" style="width:140px;">
+  </div>
+  <div style="flex:1;min-width:280px;">
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">手工报表路径（留空自动查找）</label>
+    <input id="cmp-manual" class="input" placeholder="/path/to/差异分析.xlsx">
+  </div>
+  <button class="btn btn-primary" onclick="runCompare()">开始对比</button>
+</div>
+<div id="cmp-status" style="margin-top:0.8rem;color:var(--c-muted);"></div>
+{% endcall %}
+
+{% call card(title="对比结论") %}
+<div id="cmp-verdict" style="color:var(--c-muted);">尚未执行</div>
+{% endcall %}
+
+{% call card(title="逐项明细") %}
+<div id="cmp-detail" style="color:var(--c-muted);">尚未执行</div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const fmtWan = v => (v == null) ? '-' : (v/10000).toLocaleString('zh-CN',{maximumFractionDigits:2});
+
+async function runCompare() {
+  const month = document.getElementById('cmp-month').value.trim();
+  const manual = document.getElementById('cmp-manual').value.trim();
+  const st = document.getElementById('cmp-status');
+  st.textContent = '对比中...';
+  try {
+    const q = manual ? `?manual=${encodeURIComponent(manual)}` : '';
+    const r = await fetch(`/api/revenue/compare/${month}${q}`);
+    const d = await r.json();
+    if (!r.ok) { st.textContent = `⚠️ ${d.error}`; return; }
+    if (!d.compare) {
+      st.textContent = `仅返回本方计算（${d.note || '未找到手工报表'}）`;
+      document.getElementById('cmp-verdict').innerHTML = '<p>未找到手工基准，无法对比</p>';
+      return;
+    }
+    st.textContent = `对比完成 ${month}`;
+    const all = d.all_match;
+    document.getElementById('cmp-verdict').innerHTML =
+      `<div style="font-size:1.1rem;">
+        <strong style="color:${all ? 'var(--c-success,#10b981)' : 'var(--c-danger,#ef4444)'};">
+          ${all ? ('✅ 全部匹配 ' + d.matched + '/' + d.comparable) : ('⚠️ ' + d.matched + ' 匹配 / ' + d.comparable + ' 可比项')}
+        </strong>
+      </div>`;
+
+    let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
+            '<th>期间</th><th>维度</th><th>本方计划</th><th>手工计划</th><th>计划Δ</th>' +
+            '<th>本方实际</th><th>手工实际</th><th>实际Δ</th><th>结论</th></tr></thead><tbody>';
+    for (const e of d.compare) {
+      for (const [cat, v] of Object.entries(e.categories)) {
+        if (!v.manual) {
+          h += `<tr><td>${e.period}</td><td>${cat}</td><td>${fmtWan(v.ours.plan)}</td>
+                <td colspan="5" style="color:var(--c-muted);">无手工基准</td><td>-</td></tr>`;
+          continue;
+        }
+        const dp = v.ours.plan - v.manual.plan, da = v.ours.actual - v.manual.actual;
+        const ok = v.match;
+        h += `<tr>
+          <td>${e.period}</td><td>${cat}</td>
+          <td>${fmtWan(v.ours.plan)}</td><td>${fmtWan(v.manual.plan)}</td>
+          <td style="color:${Math.abs(dp)<1?'inherit':'var(--c-danger,#ef4444)'};">${Math.abs(dp)<1?'OK':fmtWan(dp)}</td>
+          <td>${fmtWan(v.ours.actual)}</td><td>${fmtWan(v.manual.actual)}</td>
+          <td style="color:${Math.abs(da)<1?'inherit':'var(--c-danger,#ef4444)'};">${Math.abs(da)<1?'OK':fmtWan(da)}</td>
+          <td>${ok ? '✅' : '⚠️'}</td></tr>`;
+      }
+    }
+    h += '</tbody></table></div>';
+    document.getElementById('cmp-detail').innerHTML = h;
+  } catch (e) { st.textContent = `失败: ${e}`; }
+}
+
+document.addEventListener('DOMContentLoaded', runCompare);
+</script>
+{% endblock %}
