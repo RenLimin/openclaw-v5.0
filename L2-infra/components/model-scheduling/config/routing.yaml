@@ -16,9 +16,9 @@ task_routing:
   multimodal:
     description: "图片识别、视频分析、OCR、视觉理解"
     fallback_chain:
-      - "coding-plan/doubao-seed-2-1-turbo" # L1: 支持 image+video 多模态
-      - "coding-plan/doubao-seed-2.0-lite"  # L2: 支持 image+video+audio
-      - "coding-plan/ark-code-latest"       # L3: 纯文本保底(需说明不能读图)
+      - "coding-plan/doubao-seed-2-1-turbo"    # L1: 支持 image+video 多模态
+      - "coding-plan/doubao-seed-2-0-lite-260215" # L2: 便宜多模态
+      - "coding-plan/doubao-seed-code-preview-251028" # L3: code 模型保底
     preferred_context: 200000
     requires_input_types: ["image"]        # 任务需要图片输入能力
 
@@ -26,39 +26,37 @@ task_routing:
   coding:
     description: "代码生成、调试、重构、代码审查"
     fallback_chain:
-      - "coding-plan/ark-code-latest"      # L1: 主 code 模型
-      - "coding-plan/deepseek-v4-flash"     # L2: 大 ctx reasoning
-      - "deepseek/deepseek-chat"            # L3: DeepSeek V3 (外部推理)
-      - "coding-plan/doubao-seed-2.0-lite"  # L4: 便宜保底
+      - "coding-plan/doubao-seed-code-preview-251028" # L1: 主 code 模型
+      - "deepseek/deepseek-chat"            # L2: DeepSeek V3 (外部推理)
+      - "coding-plan/doubao-seed-2-0-lite-260215" # L3: 便宜保底
     preferred_context: 200000               # 偏好上下文窗口 ≥ 200k
 
   # 推理任务: 优先 reasoning 模型
   reasoning:
     description: "复杂推理、架构设计、深度分析"
     fallback_chain:
-      - "coding-plan/deepseek-v4-flash"     # L1: 大 ctx reasoning (coding-plan)
-      - "deepseek/deepseek-reasoner"        # L2: DeepSeek R1 (外部 reasoning)
-      - "longCat/LongCat-2.0"               # L3: LongCat 大 ctx 兜底
-      - "coding-plan/ark-code-latest"       # L4: code 模型保底
+      - "deepseek/deepseek-reasoner"        # L1: DeepSeek R1 (外部 reasoning)
+      - "longCat/LongCat-2.0"               # L2: LongCat 大 ctx 兜底
+      - "coding-plan/doubao-seed-2-1-turbo" # L3: 多模态保底
     preferred_context: 500000
 
   # 搜索/研究任务: 优先多模态模型
   research:
     description: "网络搜索、信息收集、文档分析"
     fallback_chain:
-      - "coding-plan/doubao-seed-2-1-turbo" # L1: 多模态
-      - "longCat/LongCat-2.0"               # L2: 大 ctx 文本模型
-      - "deepseek/deepseek-chat"            # L3: DeepSeek V3
-      - "coding-plan/doubao-seed-2.0-lite"  # L4: 便宜保底
+      - "coding-plan/doubao-seed-2-1-turbo"    # L1: 多模态
+      - "longCat/LongCat-2.0"                  # L2: 大 ctx 文本模型
+      - "deepseek/deepseek-chat"               # L3: DeepSeek V3
+      - "coding-plan/doubao-seed-2-0-lite-260215" # L4: 便宜保底
     preferred_context: 200000
 
   # 闲聊/日常: 优先便宜模型
   chat:
     description: "日常对话、简单问答、状态查询"
     fallback_chain:
-      - "coding-plan/doubao-seed-2.0-lite"  # L1: 便宜
-      - "deepseek/deepseek-chat"            # L2: DeepSeek V3 (免费)
-      - "coding-plan/ark-code-latest"       # L3: 主模型
+      - "coding-plan/doubao-seed-2-0-lite-260215" # L1: 便宜
+      - "deepseek/deepseek-chat"               # L2: DeepSeek V3 (免费)
+      - "coding-plan/doubao-seed-2-1-turbo"    # L3: 多模态保底
     preferred_context: 100000
 
   # 嵌入任务: 专用 embedding 模型
@@ -117,7 +115,6 @@ usage_thresholds:
 compaction_routing:
   strategy: "same_provider_largest_ctx"    # 核心策略
   fallback_chain:                          # 同 provider 找不到时的保底 fallback
-    - "coding-plan/deepseek-v4-flash"      # L1: coding-plan 大 ctx reasoning
-    - "longCat/LongCat-2.0"               # L2: 外部大 ctx 兜底
-    - "deepseek/deepseek-reasoner"        # L3: DeepSeek R1
-    - "coding-plan/ark-code-latest"       # L4: coding-plan 主模型保底
+    - "longCat/LongCat-2.0"               # L1: 大 ctx 兜底 (1M)
+    - "deepseek/deepseek-reasoner"        # L2: DeepSeek R1
+    - "coding-plan/doubao-seed-2-1-turbo" # L3: 多模态保底
