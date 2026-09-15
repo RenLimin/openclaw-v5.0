@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = 'BDMS — 交付管理系统' %}
+
+{% block content %}
+{{ page_header(
+    title='BDMS 交付管理系统',
+    subtitle='交付月报 · 确认收入 · 基础数据 · 统计看板 · 系统设定'
+) }}
+
+{% call card(title="功能导航") %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;">
+  <a href="/report" class="nav-tile">
+    <div style="font-size:1.8rem;">📋</div>
+    <div style="font-weight:600;margin-top:0.5rem;">交付月报</div>
+    <div style="font-size:0.8rem;color:var(--c-muted);">生成 / 导出月度交付报表</div>
+  </a>
+  <a href="/revenue" class="nav-tile">
+    <div style="font-size:1.8rem;">💰</div>
+    <div style="font-weight:600;margin-top:0.5rem;">确认收入汇总</div>
+    <div style="font-size:0.8rem;color:var(--c-muted);">递延 / 新签 月度确收</div>
+  </a>
+  <a href="/revenue/compare" class="nav-tile">
+    <div style="font-size:1.8rem;">🔍</div>
+    <div style="font-weight:600;margin-top:0.5rem;">对比分析</div>
+    <div style="font-size:0.8rem;color:var(--c-muted);">本方计算 vs 手工报表</div>
+  </a>
+  <a href="/master-data" class="nav-tile">
+    <div style="font-size:1.8rem;">📖</div>
+    <div style="font-weight:600;margin-top:0.5rem;">基础数据</div>
+    <div style="font-size:0.8rem;color:var(--c-muted);">图例 / 字典维护</div>
+  </a>
+  <a href="/dashboard" class="nav-tile">
+    <div style="font-size:1.8rem;">📊</div>
+    <div style="font-weight:600;margin-top:0.5rem;">统计看板</div>
+    <div style="font-size:0.8rem;color:var(--c-muted);">指标 / 趋势 / 下钻</div>
+  </a>
+  <a href="/settings" class="nav-tile">
+    <div style="font-size:1.8rem;">⚙️</div>
+    <div style="font-weight:600;margin-top:0.5rem;">系统设定</div>
+    <div style="font-size:0.8rem;color:var(--c-muted);">显示范围 / 默认月份</div>
+  </a>
+</div>
+{% endcall %}
+
+{% call card(title="系统状态") %}
+<div id="sys-status" style="color:var(--c-muted);">检查中...</div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const el = document.getElementById('sys-status');
+  try {
+    const r = await fetch('/api/health');
+    const d = await r.json();
+    const rm = await fetch('/api/report/months');
+    const dm = await rm.json();
+    const months = (dm.months || []).map(m => m.month || m);
+    el.innerHTML = `服务状态：<strong style="color:var(--c-success,#10b981);">${d.status}</strong>
+      &nbsp;·&nbsp; 已生成月份：${months.length ? months.join(', ') : '无'}`;
+  } catch (e) { el.textContent = `检查失败: ${e}`; }
+});
+</script>
+{% endblock %}

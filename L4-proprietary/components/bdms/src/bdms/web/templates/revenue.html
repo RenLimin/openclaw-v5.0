@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, chart_container with context %}
+
+{% set page_title = '确认收入汇总 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='确认收入汇总',
+    subtitle='递延 / 新签 月度确收（对齐手工报表列序）'
+) }}
+
+{% call card(title="查询") %}
+<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+  <div>
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
+    <select id="rv-month" class="input" style="width:160px;" onchange="loadSummary()"></select>
+  </div>
+  <button class="btn btn-primary" onclick="loadSummary()">查询</button>
+  <button class="btn" onclick="doImport()">从源表导入</button>
+</div>
+<div id="rv-status" style="margin-top:0.8rem;color:var(--c-muted);"></div>
+{% endcall %}
+
+{% call card(title="月度汇总") %}
+{{ chart_container(id="chart-revenue", title="", height=320) }}
+<div id="rv-table" style="margin-top:1rem;"></div>
+{% endcall %}
+
+{% call card(title="小计") %}
+<div id="rv-subtotal"></div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/app/js/chart.umd.min.js"></script>
+<script>
+const c = {};
+const fmtWan = v => (v == null) ? '-' : (v/10000).toLocaleString('zh-CN',{maximumFractionDigits:2}) + ' 万';
+
+async function loadMonths() {
+  const r = await fetch('/api/report/months');
+  const d = await r.json();
+  const months = (d.months || []).map(m => m.month || m).sort().reverse();
+  const sel = document.getElementById('rv-month');
+  sel.innerHTML = months.length ? months.map(m => `<option value="${m}">${m}</option>`).join('')
+                                : '<option value="202608">202608</option>';
+}
+
+async function loadSummary() {
+  const month = document.getElementById('rv-month').value;
+  const st = document.getElementById('rv-status');
+  st.textContent = '加载中...';
+  try {
+    const r = await fetch(`/api/revenue/summary/${month}`);
+    const d = await r.json();
+    if (!r.ok) { st.textContent = `⚠️ ${d.error}`; return; }
+    st.textContent = `已加载 ${month}`;
+    render(d);
+  } catch (e) { st.textContent = `失败: ${e}`; }
+}
+
+function render(d) {
+  const rows = d.rows || [];
+  const labels = rows.map(r => r.period);
+  const cats = ['递延', '新签', '合计'];
+  const colors = {'递延': '#8b5cf6', '新签': '#3b82f6', '合计': '#6b7280'};
+  const datasets = [];
+  for (const cat of cats) {
+    datasets.push({label: `${cat}-计划`, data: rows.map(r => (r.categories[cat]?.plan||0)/10000),
+      borderColor: colors[cat], borderDash: [5,4], tension: 0.3, fill: false});
+    datasets.push({label: `${cat}-实际`, data: rows.map(r => (r.categories[cat]?.actual||0)/10000),
+      borderColor: colors[cat], backgroundColor: colors[cat]+'26', tension: 0.3});
+  }
+  if (c.rev) c.rev.destroy();
+  c.rev = new Chart(document.getElementById('chart-revenue').getContext('2d'), {
+    type: 'line', data: {labels, datasets},
+    options: {responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {position: 'top'}, tooltip: {mode: 'index', intersect: false}}}
+  });
+
+  let h = '<div class="table-wrapper"><table class="table"><thead><tr><th>期间</th>';
+  for (const cat of cats) h += `<th colspan="3">${cat}</th>`;
+  h += '</tr><tr><th></th>' + cats.map(() => '<th>计划</th><th>实际</th><th>完成率</th>').join('') + '</tr></thead><tbody>';
+  for (const r of rows) {
+    h += `<tr><td><strong>${r.period}</strong></td>`;
+    for (const cat of cats) {
+      const v = r.categories[cat] || {};
+      h += `<td>${fmtWan(v.plan)}</td><td>${fmtWan(v.actual)}</td>
+            <td>${v.plan ? (v.actual/v.plan*100).toFixed(1)+'%' : '-'}</td>`;
+    }
+    h += '</tr>';
+  }
+  h += '</tbody></table></div>';
+  document.getElementById('rv-table').innerHTML = h;
+
+  const stt = d.subtotals || {};
+  let sh = '';
+  for (const [k, v] of Object.entries(stt)) {
+    sh += `<h4 style="margin:0.8rem 0 0.4rem;">${v.period || k}</h4>`;
+    sh += '<div class="table-wrapper"><table class="table"><thead><tr><th>维度</th><th>计划</th><th>实际</th><th>完成率</th></tr></thead><tbody>';
+    for (const cat of cats) {
+      const cv = v.categories?.[cat] || {};
+      sh += `<tr><td>${cat}</td><td>${fmtWan(cv.plan)}</td><td>${fmtWan(cv.actual)}</td>
+             <td>${cv.plan ? (cv.actual/cv.plan*100).toFixed(2)+'%' : '-'}</td></tr>`;
+    }
+    sh += '</tbody></table></div>';
+  }
+  document.getElementById('rv-subtotal').innerHTML = sh || '<p style="color:var(--c-muted);">无小计</p>';
+}
+
+async function doImport() {
+  const month = document.getElementById('rv-month').value;
+  const st = document.getElementById('rv-status');
+  st.textContent = '导入中（可能耗时较久）...';
+  try {
+    const r = await fetch('/api/revenue/import', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({month})
+    });
+    const d = await r.json();
+    st.textContent = r.ok ? `✅ 导入完成: ${JSON.stringify(d).slice(0, 200)}` : `⚠️ ${d.error}`;
+  } catch (e) { st.textContent = `失败: ${e}`; }
+}
+
+document.addEventListener('DOMContentLoaded', async () => { await loadMonths(); loadSummary(); });
+</script>
+{% endblock %}

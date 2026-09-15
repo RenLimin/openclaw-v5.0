@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '系统设定 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='交付管理系统设定',
+    subtitle='显示范围 / 默认月份 / 报表选项'
+) }}
+
+{% call card(title="设置项") %}
+<div id="st-status" style="color:var(--c-muted);margin-bottom:0.8rem;">加载中...</div>
+<div id="st-list"></div>
+{% endcall %}
+
+{% call card(title="可用月份") %}
+<div id="st-months" style="color:var(--c-muted);">加载中...</div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let settings = {};
+
+async function loadSettings() {
+  const st = document.getElementById('st-status');
+  try {
+    const r = await fetch('/api/settings');
+    const d = await r.json();
+    if (!r.ok) { st.textContent = `⚠️ ${d.error || r.statusText}`; return; }
+    settings = (d.settings || d) || {};
+    st.textContent = `${Object.keys(settings).length} 项设置`;
+    render();
+  } catch (e) { st.textContent = `加载失败: ${e}`; }
+}
+
+function render() {
+  let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
+          '<th>Key</th><th>值</th><th>操作</th></tr></thead><tbody>';
+  const keys = Object.keys(settings).sort();
+  if (!keys.length) h += '<tr><td colspan="3" style="color:var(--c-muted);">无设置项</td></tr>';
+  for (const k of keys) {
+    const v = Array.isArray(settings[k]) ? settings[k].join(', ') : settings[k];
+    h += `<tr><td style="font-family:var(--font-mono);font-size:0.85rem;">${k}</td>
+      <td><input class="input" id="set-${k}" value="${String(v ?? '').replace(/"/g,'&quot;')}"
+           style="width:100%;max-width:420px;"></td>
+      <td><button class="btn btn-sm btn-primary" onclick="saveSetting('${k}')">保存</button></td></tr>`;
+  }
+  h += '</tbody></table></div>';
+  document.getElementById('st-list').innerHTML = h;
+}
+
+async function saveSetting(key) {
+  const el = document.getElementById(`set-${key}`);
+  let value = el.value;
+  // 尝试解析为 JSON（数组/数字/布尔），失败则当字符串
+  try { value = JSON.parse(value); } catch (e) { /* 保持字符串 */ }
+  const st = document.getElementById('st-status');
+  try {
+    const r = await fetch('/api/settings', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key, value})
+    });
+    const d = await r.json();
+    st.textContent = r.ok ? `✅ ${key} 已保存` : `⚠️ ${d.error}`;
+    if (r.ok) settings[key] = value;
+  } catch (e) { st.textContent = `保存失败: ${e}`; }
+}
+
+async function loadMonths() {
+  const r = await fetch('/api/report/months');
+  const d = await r.json();
+  const months = (d.months || []).map(m => m.month || m);
+  document.getElementById('st-months').textContent =
+    months.length ? months.join(', ') : '尚无已生成月份';
+}
+
+document.addEventListener('DOMContentLoaded', () => { loadSettings(); loadMonths(); });
+</script>
+{% endblock %}

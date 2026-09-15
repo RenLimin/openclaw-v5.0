@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '基础数据 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='交付管理基础数据',
+    subtitle='图例 / 字典数据维护'
+) }}
+
+{% call card(title="数据类型") %}
+<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+  <div>
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">类型</label>
+    <select id="md-type" class="input" style="width:220px;" onchange="loadList()"></select>
+  </div>
+  <label style="display:flex;align-items:center;gap:0.4rem;">
+    <input type="checkbox" id="md-incl-disabled" onchange="loadList()"> 含已禁用
+  </label>
+  <button class="btn btn-primary" onclick="loadList()">刷新</button>
+</div>
+<div id="md-status" style="margin-top:0.8rem;color:var(--c-muted);"></div>
+{% endcall %}
+
+{% call card(title="数据列表") %}
+<div id="md-list" style="color:var(--c-muted);">加载中...</div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function loadTypes() {
+  const sel = document.getElementById('md-type');
+  try {
+    const r = await fetch('/api/master-data/types');
+    const d = await r.json();
+    if (!r.ok) {
+      sel.innerHTML = '<option value="">模块未就绪</option>';
+      document.getElementById('md-status').textContent = `⚠️ ${d.error}`;
+      return;
+    }
+    const types = d.types || [];
+    sel.innerHTML = types.length ? types.map(t => `<option value="${t}">${t}</option>`).join('')
+                                 : '<option value="">无类型</option>';
+    if (types.length) loadList();
+  } catch (e) {
+    document.getElementById('md-status').textContent = `加载类型失败: ${e}`;
+  }
+}
+
+async function loadList() {
+  const type = document.getElementById('md-type').value;
+  if (!type) return;
+  const incl = document.getElementById('md-incl-disabled').checked;
+  const st = document.getElementById('md-status');
+  st.textContent = '加载中...';
+  try {
+    const r = await fetch(`/api/master-data/list/${type}?include_disabled=${incl}`);
+    const d = await r.json();
+    if (!r.ok) { st.textContent = `⚠️ ${d.error}`; return; }
+    const items = d.items || [];
+    st.textContent = `${type}：${items.length} 条`;
+    if (!items.length) {
+      document.getElementById('md-list').innerHTML = '<p style="color:var(--c-muted);">暂无数据</p>';
+      return;
+    }
+    const cols = Object.keys(items[0]);
+    let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
+            cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+    for (const it of items.slice(0, 500)) {
+      h += '<tr>' + cols.map(c => `<td>${it[c] ?? '-'}</td>`).join('') + '</tr>';
+    }
+    h += '</tbody></table></div>';
+    if (items.length > 500) h += `<p style="color:var(--c-muted);">仅显示前 500 条（共 ${items.length}）</p>`;
+    document.getElementById('md-list').innerHTML = h;
+  } catch (e) { st.textContent = `加载失败: ${e}`; }
+}
+
+document.addEventListener('DOMContentLoaded', loadTypes);
+</script>
+{% endblock %}
