@@ -400,22 +400,6 @@ class ProxyHandler:
         await self._send_error(last_status, str(last_error)[:500], writer)
 
     async def _forward_once(self, request, model, provider_conf, stream, writer):
-        """单次转发请求。
-        Returns: (success, status_code, error_message)
-        """
-        base_url = provider_conf.get("base_url", "").rstrip("/")
-        api_key = get_api_key(model["provider"])
-        if not api_key:
-            return False, 500, f"Cannot get API key for {model['provider']}"
-
-        url = f"{base_url}/chat/completions"
-        payload = {**request, "model": model["model_id"]}
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-
-    async def _forward(self, request, model, provider_conf, writer, stream):
         base_url = provider_conf.get("base_url", "").rstrip("/")
         api_key = get_api_key(model["provider"])
 
