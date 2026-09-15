@@ -6,28 +6,49 @@
 {% set page_title = '系统设置 - FIN-L4' %}
 
 {% block content %}
-{{ page_header(title='系统设置', subtitle='基础配置和导出功能') }}
+{{ page_header(title='系统设置', subtitle='基础配置和数据管理') }}
 
 <div class="grid-2">
-    {% call card(title='数据库导出') %}
-        <p class="text-muted">
-            导出 SQLite 数据库文件到本地。所有数据都在本地，隐私安全。
+    {% call card(title='📦 数据管理') %}
+        <p class="text-muted" style="margin-bottom: var(--s-4);">
+            所有数据完全本地存储，你可以随时导出备份。
         </p>
-        <div style="margin-top: 1rem;">
+        <div style="display: flex; gap: var(--s-2); flex-wrap: wrap;">
             {{ button('导出数据库', variant='primary', url='/api/settings/export-db') }}
+            {{ button('恢复数据', url='#', onclick="alert('恢复功能：上传 .db 文件覆盖当前数据（开发中）')") }}
         </div>
     {% endcall %}
 
-    {% call card(title='关于 FIN-L4') %}
-        <p class="text-muted">
-            FIN-L4 是本地优先的个人及家庭理财管理系统，<br>
-            完全离线运行，数据全存储在你的电脑上。
+    {% call card(title='🎨 外观') %}
+        <p class="text-muted" style="margin-bottom: var(--s-4);">
+            切换深色/浅色主题，点击侧边栏底部按钮即可切换。
         </p>
-        <ul style="margin-top: 1rem; padding-left: 1.5rem;">
-            <li style="margin-bottom: 0.5rem;">版本: 0.1.0</li>
-            <li style="margin-bottom: 0.5rem;">架构: 分层 L0-L4</li>
-            <li>本地存储: SQLite</li>
-        </ul>
+        <div style="display: flex; gap: var(--s-2);">
+            <span class="badge badge-info">亮色</span>
+            <span class="badge badge-muted">暗色</span>
+            <span class="badge badge-success">跟随系统</span>
+        </div>
+    {% endcall %}
+
+    {% call card(title='🔐 安全') %}
+        <p class="text-muted" style="margin-bottom: var(--s-4);">
+            数据加密存储，支持设置访问密码。
+        </p>
+        <div style="display: flex; gap: var(--s-2); flex-wrap: wrap;">
+            {{ button('设置密码', url='#', onclick="alert('密码保护功能开发中')") }}
+        </div>
+    {% endcall %}
+
+    {% call card(title='ℹ️ 关于') %}
+        <div style="display: flex; flex-direction: column; gap: var(--s-2); font-size: 0.85rem;">
+            <div><b>版本:</b> 0.1.0</div>
+            <div><b>架构:</b> L4 专有业务层 (FIN-L4)</div>
+            <div><b>存储:</b> SQLite 单文件</div>
+            <div><b>许可证:</b> MIT</div>
+            <div style="margin-top: var(--s-2); color: var(--c-muted); font-size: 0.8rem;">
+                本地优先 · 零外部依赖 · 数据完全自主
+            </div>
+        </div>
     {% endcall %}
 </div>
 {% endblock %}

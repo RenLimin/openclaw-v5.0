@@ -1,17 +1,17 @@
 {% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
 {% from "components.html" import card with context %}
-{% from "forms.html" import button with context %}
 
 {% set page_title = '出错了 - FIN-L4' %}
 
 {% block content %}
-{% call card() %}
-    <div style="text-align: center; padding: 2rem 0;">
-        <h2 style="color: var(--c-danger); margin-bottom: 1rem;">⚠️ 出错了</h2>
-        <p class="text-muted">{{ error }}</p>
-        <div style="margin-top: 1.5rem;">
-            {{ button('返回首页', variant='primary', url='/') }}
-        </div>
+<div class="error-page">
+    <div class="error-page-icon">⚠️</div>
+    <h1 class="error-page-title">出错了</h1>
+    <p class="error-page-desc">{{ error }}</p>
+    <div class="error-page-actions">
+        <a href="/" class="btn btn-primary">返回首页</a>
+        <button onclick="history.back()" class="btn">返回上一页</button>
     </div>
-{% endcall %}
+</div>
 {% endblock %}

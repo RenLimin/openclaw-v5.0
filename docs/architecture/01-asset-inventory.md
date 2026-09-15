@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-15 10:55 UTC+08:00
+最后生成：2026-09-15 13:29 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -38,13 +38,35 @@
 
 ## L2 — 技能资产 (Skills)
 
-⚠️ 数据源不可用
+**总计** 102 个（可用 91）
+
+| 来源 | 数量 | 说明 |
+|---|---|---|
+| `openclaw-bundled` | 50 | OpenClaw 内置（随版本升级） |
+| `openclaw-custodian` | 4 | — |
+| `openclaw-extra` | 22 | 插件附带技能 |
+| `openclaw-managed` | 25 | 已安装的托管技能 |
+| `openclaw-workspace` | 1 | **本 workspace 自建**（受版本控制） |
+
+### 自建技能（按层分布）
+
+| 层级 | 名称 | 描述 | 路径 |
+|---|---|---|---|
+| L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
+| L4 专有业务 | `ones-browser-export` | ONES 浏览器自动化数据导出：通过 osascript 控制 Chrome 从 ONES 筛选器导出 CSV 数据，用于月报/签约统... | `L4-proprietary/skills/ones-browser-export` |
+| L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
+| L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
+| L2 基础设施 | `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 | `L2-infra/skills/ocr-digitalization` |
+| L2 基础设施 | `role-library` | 标准化 Agent 角色库。支持按角色执行任务，覆盖数据分析、报告生成、系统运维、文档管理等场景。 | `L2-infra/skills/role-library` |
+| Workspace 根目录 | `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `skills/bangcle-ppt` |
+
+_自建技能总计: 7 个（L2: 3, L3: 1, L4: 2, 根目录: 1）_
 
 ## L2 — Agent 资产
 
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
-| `main` | 🦞 main | `longcat/LongCat-2.0` | `/Users/bangcle/.openclaw/workspace` | — |
+| `main` | 🦞 main | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-coding` | 🦞 ms-coding | `coding-plan/doubao-seed-code-preview-251028` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-research` | 🦞 ms-research | `coding-plan/doubao-seed-2-1-turbo` | `/Users/bangcle/.openclaw/workspace` | — |
 | `ms-reasoning` | 🦞 ms-reasoning | `coding-plan/deepseek-v4-flash` | `/Users/bangcle/.openclaw/workspace` | — |
@@ -95,8 +117,8 @@
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
 | 模型注册表同步 | ✅ | cron `*/15 * * * *` | `isolated` |
-| provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 错误扫描 | ✅ | cron `0 */2 * * *` | `isolated` |
+| provider 健康探测 | ✅ | cron `0 */1 * * *` | `isolated` |
 | 会话错误自动处理 | ✅ | cron `0 */2 * * *` | `isolated` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 每日观测摘要投递 | ✅ | cron `50 23 * * *` | `isolated` |
@@ -104,13 +126,14 @@
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 | 仓库健康检查 | ✅ | cron `0 9 * * *` | `isolated` |
 | 内存维护（每周整理） | ✅ | cron `0 10 * * 1` | `isolated` |
+| 模型发现与差异报告 | ✅ | cron `0 11 * * 1` | `isolated` |
 
 ## 文档资产
 
 | 类别 | 数量 |
 |---|---|
 | ADR（架构决策记录） | 30 |
-| EXP（经验卡片） | 21 |
+| EXP（经验卡片） | 31 |
 | 模板 | 4 |
 
 ### ADR 清单
@@ -173,14 +196,24 @@
 | [`EXP-20260903-008-dms-framework-phase3`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-008-dms-framework-phase3.md) | — |
 | [`EXP-20260903-009-dms-framework-phase4`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-009-dms-framework-phase4.md) | — |
 | [`EXP-20260903-010-dms-framework-l3-complete`](../knowledge-base/by-category/project-experience/correct/EXP-20260903-010-dms-framework-l3-complete.md) | — |
+| [`EXP-20260915-013-double-entry-bookkeeping-for-family`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-013-double-entry-bookkeeping-for-family.md) | active |
+| [`EXP-20260915-014-decimal-precision-finance`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-014-decimal-precision-finance.md) | active |
+| [`EXP-20260915-015-bank-statement-import-4-formats`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-015-bank-statement-import-4-formats.md) | active |
+| [`EXP-20260915-016-web-ui-component-library`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-016-web-ui-component-library.md) | active |
+| [`EXP-20260915-020-dms-module-registry-capability`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-020-dms-module-registry-capability.md) | — |
+| [`EXP-20260915-021-dms-state-machine-capability`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-021-dms-state-machine-capability.md) | — |
+| [`EXP-20260915-022-dms-raci-capability`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-022-dms-raci-capability.md) | — |
+| [`EXP-20260915-023-dms-event-bus-capability`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-023-dms-event-bus-capability.md) | — |
+| [`EXP-20260915-024-dms-cli-usage-guide`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-024-dms-cli-usage-guide.md) | — |
+| [`EXP-20260915-025-dms-best-practices`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-025-dms-best-practices.md) | — |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9c2d74bc` |
-| Commit 数 | 329 |
+| HEAD | `1e87ac6d` |
+| Commit 数 | 330 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
