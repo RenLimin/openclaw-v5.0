@@ -1,4 +1,4 @@
-"""BDMS v2 Web API 路由"""
+"""BDMS Web API 路由"""
 
 import sys
 from pathlib import Path

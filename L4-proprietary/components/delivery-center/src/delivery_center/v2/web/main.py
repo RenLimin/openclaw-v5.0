@@ -1,5 +1,5 @@
 """
-BDMS v2 Web UI — FastAPI 主应用
+BDMS Web UI — FastAPI 主应用
 基于 L2 web-common 组件库构建
 """
 
@@ -27,9 +27,9 @@ sys.path.insert(0, str(BASE_DIR.parent))
 from services.report_service import list_reports, get_report_status
 
 app = FastAPI(
-    title="BDMS v2 — 交付月报管理系统",
+    title="BDMS — 交付月报管理系统",
     version="2.0.0",
-    description="Bangcle 交付管理系统 v2 — 月报生成与管理",
+    description="BDMS — 交付月报生成与管理",
 )
 
 # ── 静态资源 ──
@@ -42,7 +42,7 @@ templates.env.loader = FileSystemLoader([str(TEMPLATES_DIR), str(_WEB_COMMON_MAC
 
 # 全局模板变量
 templates.env.globals.update({
-    "brand_name": "BDMS v2",
+    "brand_name": "BDMS",
     "brand_icon": "📊",
     "storage_key": "bdms-v2-theme",
     "sidebar_items": [
