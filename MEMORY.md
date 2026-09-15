@@ -138,8 +138,22 @@ _(将由 `docs/knowledge-base/by-category/project-experience/` 自动汇聚)_
 - **审计工具有漏报**: `channels.wecom.secret` 不在官方 SecretRef 覆盖矩阵内（第三方插件渠道）
 - **卡片**: `EXP-20260823-009-review-selective-citation-and-drift-taxonomy.md`
 
+### 2026-09-15: L4 BDMS 交付管理系统全量交付 ★★★
+
+- **成果**：5 大模块 + Web UI + CLI，commit `08f07cd6` 已 push。6192 行，51 文件
+- **决定性验证**：对比 202606 手工报表黄金基准，同口径区间 **18/18 项零误差**（Web API + CLI 双通道一致）
+- **关键洞察**：手工报表列序为「**新签在前、递延在后**」，与直觉相反。按直觉写会错 12 项
+- **口径陷阱**：手工报表覆盖全年 12 月，但 7-12 月是"当时预测"，数据随月份演进 → **对比必须在报表月份及之前的同口径区间内判定**，否则误报差异
+- **表头自适应（方案 B）**：同一映射器适配 202606（93 列）/ 202608（44 列）两种表结构
+- **并行建设**：2 个 subagent 按模块边界切分（3+5 / 4），开工前先写 `MODULE-CONTRACT.md` 定契约 → 零返工、零冲突
+- **修复 6 缺陷**：缺 import / 相对导入越界 / 列序误判 / 宏参数 / 模板标签错配 / 路径层级
+- **测试**：48 passed（dashboard 18 + master_data 10 + settings 20）
+- **文档**：`L4-proprietary/components/bdms/docs/{ARCHITECTURE,MODULE-CONTRACT,VERIFICATION}.md`
+- **端口**：BDMS Web 8811
+
 ## 变更历史
 
+- 2026-09-15: L4 BDMS 交付管理系统全量交付（5 模块 + Web + CLI，对比 18/18 零误差）
 - 2026-08-21: 初始化
 - 2026-08-21: 补 EXP-20260821-001 经验沉淀
 - 2026-08-21: 补 EXP-20260821-002 (GitHub 凭据) + 3 份 ADR accepted + 首次推送 GitHub
