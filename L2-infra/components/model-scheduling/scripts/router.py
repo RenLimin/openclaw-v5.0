@@ -173,6 +173,10 @@ def select_model(task_type: str, models: list[dict], routing: dict, usage: dict)
         pu = provider_usage.get(provider, {})
         if pu.get("status") == "exhausted":
             continue
+        # 检查 provider 健康状态(如果 unreachable,跳过)
+        health_status = pu.get("health", {}).get("status")
+        if health_status == "unreachable":
+            continue
 
         return model
 
@@ -215,6 +219,10 @@ def select_compaction_model(main_model_id: str, models: list[dict], routing: dic
             pu = provider_usage.get(provider, {})
             if pu.get("status") == "exhausted":
                 continue
+            # 检查 provider 健康状态(如果 unreachable,跳过)
+            health_status = pu.get("health", {}).get("status")
+            if health_status == "unreachable":
+                continue
             candidates.append(m)
         
         if candidates:
@@ -237,6 +245,10 @@ def select_compaction_model(main_model_id: str, models: list[dict], routing: dic
             provider = model.get("provider", "")
             pu = provider_usage.get(provider, {})
             if pu.get("status") == "exhausted":
+                continue
+            # 检查 provider 健康状态(如果 unreachable,跳过)
+            health_status = pu.get("health", {}).get("status")
+            if health_status == "unreachable":
                 continue
             selected = model
             break
