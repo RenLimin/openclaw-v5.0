@@ -20,7 +20,9 @@ __pycache__/
 node_modules/
 
 # OpenClaw 运行时管理 (非 workspace assets)
-skills/
+# 仅排除根目录的 skills/（openclaw 托管技能目录）
+# 各层自建技能（L2-infra/skills/、L3-business/skills/、L4-proprietary/skills/）纳入版本控制
+/skills/
 
 # 业务日志
 business/*/logs/

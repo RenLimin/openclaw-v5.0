@@ -9,12 +9,10 @@ import asyncio
 import json
 import logging
 import os
-import subprocess
 import sys
-import time
-import urllib.request
-import urllib.error
 from pathlib import Path
+
+import aiohttp
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -163,10 +161,14 @@ _EMBEDDING_MIN_INTERVAL = 2.0  # 全局最小请求间隔(秒)
 _embedding_last_request_time = [0.0]
 _embedding_lock = asyncio.Lock()
 
+
 class ProxyHandler:
     def __init__(self):
         self.request_count = 0
         self.error_count = 0
+        self.session = aiohttp.ClientSession(
+            connector=aiohttp.TCPConnector(limit=10)
+        )
 
     async def handle_request(self, reader, writer):
         try:
@@ -264,17 +266,18 @@ class ProxyHandler:
                         await asyncio.sleep(wait)
                     _embedding_last_request_time[0] = _time.monotonic()
 
-                req = urllib.request.Request(
-                    f"{_EMBEDDING_BASE_URL}/embeddings",
-                    data=payload.encode(),
-                    headers={
-                        "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
-                    },
-                    method="POST",
-                )
-                response = urllib.request.urlopen(req, timeout=60)
-                result = json.loads(response.read())
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                url = f"{_EMBEDDING_BASE_URL}/embeddings"
+                async with self.session.post(url, headers=headers, data=payload.encode()) as resp:
+                    if resp.status != 200:
+                        error_text = await resp.text()
+                        logger.error(f"Embedding batch {batch_start} error: {resp.status} {error_text[:200]}")
+                        await self._send_error(resp.status, error_text[:500], writer)
+                        return
+                    result = await resp.json()
 
                 if "data" in result:
                     for item in result["data"]:
@@ -288,11 +291,6 @@ class ProxyHandler:
                     return
 
                 logger.debug(f"Batch {batch_start}-{batch_start + len(batch) - 1} OK")
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode("utf-8", errors="replace")
-            logger.error(f"Embedding provider error: {e.code} {error_body[:200]}")
-            await self._send_error(e.code, error_body[:500], writer)
-            return
         except Exception as e:
             logger.error(f"Embedding forwarding failed: {e}")
             await self._send_error(500, str(e)[:200], writer)
@@ -359,30 +357,35 @@ class ProxyHandler:
         url = f"{base_url}/chat/completions"
         payload = {**request, "model": model["model_id"]}
 
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode(),
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            method="POST",
-        )
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
 
         try:
+            timeout = aiohttp.ClientTimeout(total=120)
             if stream:
-                response = urllib.request.urlopen(req, timeout=120)
-                await self._stream_response(response, writer, model)
+                async with self.session.post(url, headers=headers, json=payload, timeout=timeout) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"Provider API 错误: {response.status} {error_text[:200]}")
+                        await self._send_error(response.status, error_text[:500], writer)
+                        return
+                    await self._stream_response(response, writer, model)
             else:
-                response = urllib.request.urlopen(req, timeout=120)
-                resp_body = response.read()
-                await self._send_response(200, resp_body, writer, model)
-        except urllib.error.HTTPError as e:
-            error_body = e.read().decode("utf-8", errors="replace")
-            logger.error(f"Provider API 错误: {e.code} {error_body[:200]}")
-            await self._send_error(e.code, error_body[:500], writer)
-        except Exception as e:
+                async with self.session.post(url, headers=headers, json=payload, timeout=timeout) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"Provider API 错误: {response.status} {error_text[:200]}")
+                        await self._send_error(response.status, error_text[:500], writer)
+                        return
+                    resp_body = await response.read()
+                    await self._send_response(200, resp_body, writer, model)
+        except aiohttp.ClientError as e:
             logger.error(f"转发失败: {e}")
             await self._send_error(500, str(e)[:200], writer)
 
-    async def _stream_response(self, response, writer, model):
+    async def _stream_response(self, response: aiohttp.ClientResponse, writer, model):
         header = (
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/event-stream\r\n"
@@ -393,14 +396,14 @@ class ProxyHandler:
         writer.write(header.encode())
         await writer.drain()
         try:
-            for line in response:
+            async for line in response.content:
                 if line:
                     writer.write(line)
                     await writer.drain()
         except Exception as e:
             logger.error(f"流式传输中断: {e}")
 
-    async def _send_response(self, status, body, writer, model=None):
+    async def _send_response(self, status: int, body: bytes, writer, model=None):
         try:
             response_data = json.loads(body)
             if model:
@@ -427,7 +430,7 @@ class ProxyHandler:
         writer.write(header.encode() + body)
         await writer.drain()
 
-    async def _send_error(self, status, message, writer):
+    async def _send_error(self, status: int, message: str, writer):
         body = json.dumps({"error": {"message": message, "type": "proxy_error"}}).encode()
         header = f"HTTP/1.1 {status} Error\r\nContent-Type: application/json\r\nContent-Length: {len(body)}\r\nConnection: close\r\n\r\n"
         writer.write(header.encode() + body)
@@ -442,10 +445,13 @@ async def main():
 
     watcher.start()
 
-    async def handle_client(reader, writer):
-        await ProxyHandler().handle_request(reader, writer)
+    handler = ProxyHandler()
 
-    server = await asyncio.start_server(handle_client, args.host, args.port)
+    server = await asyncio.start_server(
+        handler.handle_request, 
+        args.host, 
+        args.port
+    )
     addr = server.sockets[0].getsockname()
     logger.info(f"代理服务已启动: {addr[0]}:{addr[1]}")
     print(f"✅ 代理服务已启动: {addr[0]}:{addr[1]}")
