@@ -8,6 +8,7 @@
 """
 
 import argparse
+import re
 import json
 import subprocess
 import sys
@@ -102,6 +103,107 @@ def generate_yaml(models: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def parse_yaml_ids(yaml_text: str) -> set[str]:
+    """Naive YAML parser to extract all 'id: "..."' values (model IDs)."""
+    ids = set()
+    for line in yaml_text.splitlines():
+        line = line.strip()
+        if line.startswith("- id:"):
+            # Extract quoted value
+            m = re.match(r'- id:\s+"([^"]+)"', line)
+            if m:
+                ids.add(m.group(1))
+    return ids
+
+
+def extract_routing_model_ids(yaml_text: str) -> set[str]:
+    """Extract all model IDs from fallback_chain entries in routing.yaml."""
+    ids = set()
+    in_fallback = False
+    for line in yaml_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("fallback_chain:"):
+            in_fallback = True
+            continue
+        if in_fallback:
+            # fallback_chain entries start with "- " followed by quoted model ID
+            if stripped.startswith("- \""):
+                m = re.match(r'- "([^"]+)"', stripped)
+                if m:
+                    ids.add(m.group(1))
+            elif stripped and not stripped.startswith("-") and not stripped.startswith("#"):
+                # We've left the fallback_chain block
+                in_fallback = False
+            elif stripped == "":
+                continue  # blank lines within block are OK
+    return ids
+
+
+def check_reference_integrity(models_file: Path, routing_file: Path, providers: dict) -> int:
+    """Check that all models referenced in routing.yaml exist in models.yaml.
+
+    Returns:
+        0 if all references are valid
+        1 if there are missing references (WARNING or ERROR)
+    """
+    print("[校验] 引用完整性检查 ...")
+
+    if not routing_file.exists():
+        print(f"  ⚠️  routing.yaml 不存在: {routing_file}")
+        return 0  # nothing to check
+
+    routing_text = routing_file.read_text(encoding="utf-8")
+    routing_ids = extract_routing_model_ids(routing_text)
+
+    if not models_file.exists():
+        print(f"  ❌ models.yaml 不存在: {models_file}")
+        return 1
+
+    models_text = models_file.read_text(encoding="utf-8")
+    model_ids = parse_yaml_ids(models_text)
+
+    # Also include provider/model_id format from models.yaml
+    # model_ids already has "provider/model_id" format from id field
+
+    missing = routing_ids - model_ids
+
+    if not missing:
+        print(f"  ✅ 引用完整性检查通过 ({len(routing_ids)} 个引用全部有效)")
+        return 0
+
+    # Build set of known providers from openclaw.json
+    known_providers = set(providers.keys())
+
+    has_error = False
+    warnings = []
+    errors = []
+
+    for mid in sorted(missing):
+        provider = mid.split("/")[0] if "/" in mid else ""
+        if provider in known_providers:
+            # Provider exists in openclaw.json but model not in models.yaml
+            # This means sync didn't pick it up — likely a real issue
+            errors.append(mid)
+            has_error = True
+        else:
+            # Provider not in openclaw.json at all — dead reference
+            errors.append(mid)
+            has_error = True
+
+    for w in warnings:
+        print(f"  ⚠️  WARNING: routing.yaml 引用但 models.yaml 中缺失: {w}")
+
+    for e in errors:
+        print(f"  ❌ ERROR: 死引用 — routing.yaml 引用但 models.yaml 和 openclaw.json 中均不存在: {e}")
+
+    print()
+    print(f"  汇总: {len(routing_ids)} 个引用, {len(model_ids)} 个已注册, {len(missing)} 个缺失")
+    print(f"  结果: {'ERROR' if has_error else 'WARNING'}")
+
+    return 1 if has_error else 0  # always return non-zero for any missing
+
+
+
 def main():
     parser = argparse.ArgumentParser(description="同步 openclaw.json 模型到 model-scheduling 注册表")
     parser.add_argument("--dry-run", action="store_true", help="预览但不写入")
@@ -113,6 +215,7 @@ def main():
 
     # 1. 读取 openclaw.json(只读)
     print("[1/4] 读取 openclaw.json models.providers ...")
+    providers_config = get_openclaw_config("models").get("providers", {})
     models = fetch_all_models()
     print(f"  发现 {len(models)} 个模型")
 
@@ -132,12 +235,14 @@ def main():
             if not line.startswith("# 生成时间:")
         ).strip()
 
+    skip_write = False
     if MODELS_FILE.exists():
         existing = MODELS_FILE.read_text(encoding="utf-8")
         if _strip_timestamp(existing) == _strip_timestamp(yaml_content):
             print("[3/4] ✅ 模型数据未变化,跳过写入")
-            return
-        print("[3/4] 模型数据有变化,将更新")
+            skip_write = True
+        else:
+            print("[3/4] 模型数据有变化,将更新")
     else:
         print("[3/4] 文件不存在,将创建")
 
@@ -149,17 +254,27 @@ def main():
             print(f"  {line}")
         print("---")
         print(f"  完整内容: {len(yaml_content)} 字节")
-        return
+        # 继续执行引用完整性校验(只读)
 
-    if not args.force:
-        print("[4/4] 确认写入? (y/N): ", end="")
-        if input().strip().lower() != "y":
-            print("  已取消")
-            return
+    elif not skip_write:
+        if not args.force:
+            print("[4/4] 确认写入? (y/N): ", end="")
+            if input().strip().lower() != "y":
+                print("  已取消")
+                return
 
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    MODELS_FILE.write_text(yaml_content, encoding="utf-8")
-    print(f"[4/4] ✅ 已写入 {MODELS_FILE}")
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        MODELS_FILE.write_text(yaml_content, encoding="utf-8")
+        print(f"[4/4] ✅ 已写入 {MODELS_FILE}")
+
+    # 引用完整性校验(始终执行)
+    ROUTING_FILE = CONFIG_DIR / "routing.yaml"
+    integrity_rc = check_reference_integrity(MODELS_FILE, ROUTING_FILE, providers_config)
+    if integrity_rc != 0:
+        print()
+        print("=== 同步完成 (引用完整性问题) ===")
+        sys.exit(integrity_rc)
+
     print()
     print("=== 同步完成 ===")
 
