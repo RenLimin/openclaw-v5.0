@@ -201,7 +201,7 @@ def main():
     # serve
     p_serve = sub.add_parser("serve", help="启动 Web UI 服务")
     p_serve.add_argument("--host", default="127.0.0.1", help="监听地址")
-    p_serve.add_argument("--port", type=int, default=8000, help="端口")
+    p_serve.add_argument("--port", type=int, default=8787, help="端口（默认 8787，统一端口）")
     p_serve.set_defaults(func=cmd_serve)
 
     args = parser.parse_args()
