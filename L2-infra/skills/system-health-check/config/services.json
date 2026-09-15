@@ -1,0 +1,125 @@
+{
+  "_comment": "服务健康检测注册表。每个服务定义 L1/L2 两层检测及修复命令。L1=存活检测，L2=业务路径检测。",
+  "_version": "1.0.0",
+  "services": {
+    "openclaw-gateway": {
+      "name": "OpenClaw Gateway",
+      "description": "OpenClaw 核心网关服务，负责所有 API 和调度",
+      "category": "infra",
+      "priority": "critical",
+      "checks": {
+        "l1_process_status": {
+          "type": "command",
+          "command": "openclaw status 2>&1 | head -20",
+          "expect_contains": "Dashboard",
+          "timeout": 10,
+          "label": "Gateway 进程存活 (openclaw status)"
+        },
+        "l2_dashboard_http": {
+          "type": "http",
+          "url": "http://127.0.0.1:18789/",
+          "expect_status": [200, 302],
+          "timeout": 10,
+          "label": "Dashboard HTTP 可访问"
+        }
+      },
+      "fix": {
+        "command": "openclaw gateway restart",
+        "cooldown_seconds": 30,
+        "max_attempts": 2,
+        "label": "重启 Gateway (openclaw gateway restart)"
+      },
+      "dependencies": []
+    },
+    "model-scheduling-proxy": {
+      "name": "Model Scheduling Proxy",
+      "description": "模型调度代理服务，统一对外提供 chat/completions 接口",
+      "category": "infra",
+      "priority": "critical",
+      "checks": {
+        "l1_health_endpoint": {
+          "type": "http",
+          "url": "http://127.0.0.1:3000/health",
+          "expect_status": [200],
+          "expect_contains": "\"status\": \"ok\"",
+          "timeout": 5,
+          "label": "Proxy /health 端点响应"
+        },
+        "l2_chat_completion": {
+          "type": "command",
+          "command": "curl -s -m 15 -X POST http://127.0.0.1:3000/v1/chat/completions -H 'Content-Type: application/json' -d '{\"model\":\"doubao-seed-1-6-flash\",\"messages\":[{\"role\":\"user\",\"content\":\"say hi in 2 words\"}],\"max_tokens\":10}' 2>&1",
+          "expect_contains": "\"choices\"",
+          "timeout": 20,
+          "label": "最小 chat/completions 请求测试"
+        }
+      },
+      "fix": {
+        "command": "launchctl unload ~/Library/LaunchAgents/ai.openclaw.model-scheduling.plist && sleep 2 && launchctl load ~/Library/LaunchAgents/ai.openclaw.model-scheduling.plist",
+        "cooldown_seconds": 20,
+        "max_attempts": 2,
+        "label": "重启 model-scheduling proxy (launchctl unload + load)"
+      },
+      "dependencies": []
+    },
+    "bdms-web": {
+      "name": "BDMS Web UI",
+      "description": "业务交付管理系统 Web UI (delivery-center v2)",
+      "category": "business",
+      "priority": "high",
+      "checks": {
+        "l1_health_endpoint": {
+          "type": "http",
+          "url": "http://127.0.0.1:8787/health",
+          "expect_status": [200],
+          "expect_contains": "\"ok\"",
+          "timeout": 5,
+          "label": "BDMS /health 端点响应"
+        },
+        "l2_homepage": {
+          "type": "http",
+          "url": "http://127.0.0.1:8787/",
+          "expect_status": [200],
+          "timeout": 10,
+          "label": "BDMS 首页 HTTP 200"
+        }
+      },
+      "fix": {
+        "command": "pkill -f 'bdmsctl serve' 2>/dev/null; sleep 2; cd /Users/bangcle/.openclaw/workspace && nohup python3 -m delivery_center.v2.cli.bdmsctl serve --port 8787 > /tmp/bdms-web-restart.log 2>&1 &",
+        "cooldown_seconds": 15,
+        "max_attempts": 2,
+        "label": "重启 BDMS uvicorn 进程 (pkill + nohup 启动)"
+      },
+      "dependencies": []
+    },
+    "llama-cpp-embedding": {
+      "name": "Llama-cpp Embedding 服务",
+      "description": "本地向量嵌入服务（llama-server，用于 memory_search 语义检索）",
+      "category": "infra",
+      "priority": "high",
+      "checks": {
+        "l1_health_endpoint": {
+          "type": "http",
+          "url": "http://127.0.0.1:60600/health",
+          "expect_status": [200],
+          "expect_contains": "\"ok\"",
+          "timeout": 5,
+          "label": "Embedding 服务 /health 端点"
+        },
+        "l2_embedding_request": {
+          "type": "command",
+          "command": "curl -s -m 10 -X POST http://127.0.0.1:60600/v1/embeddings -H 'Content-Type: application/json' -d '{\"input\":\"health check test\",\"model\":\"embeddinggemma-300m-qat-q8_0\"}' 2>&1",
+          "expect_contains": "\"data\"",
+          "timeout": 15,
+          "label": "embeddings API 实际调用测试"
+        }
+      },
+      "fix": {
+        "command": "pkill -f 'port 60600' 2>/dev/null; sleep 2; cd /Users/bangcle/.openclaw/workspace && nohup /Users/bangcle/.openclaw/llama-cpp/b10534/darwin-arm64/llama-server --embeddings --host 127.0.0.1 --metrics --port 60600 --no-webui --alias embeddinggemma-300m-qat-q8_0 --model /Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf --ubatch-size 2048 > /tmp/llama-embedding-restart.log 2>&1 &",
+        "cooldown_seconds": 30,
+        "max_attempts": 1,
+        "label": "重启 llama-cpp embedding 服务 (pkill + nohup 启动)"
+      },
+      "dependencies": []
+    }
+  }
+}
