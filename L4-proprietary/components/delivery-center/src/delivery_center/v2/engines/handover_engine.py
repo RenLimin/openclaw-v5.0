@@ -18,6 +18,48 @@ from pathlib import Path
 LEGEND_PATH = Path(__file__).parent.parent / "v1" / "config" / "legend_pm_dept.json"
 
 
+def _normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
+    """规范化列名：去除前后空格、处理已知别名、统一格式。
+    
+    不同月份的 CSV 列名可能有差异（如「交接日期」vs「交付日期」、空格前后不同），
+    这里统一映射为标准列名。
+    """
+    # 列名别名映射（标准名: [各种变体]）
+    alias_map = {
+        "交接日期": ["交接日期", "交付日期", "  交付日期", " 交接日期"],
+        "BI履约ID": ["BI履约ID", "BI履约Id", "bi履约id"],
+        "合同编号": ["合同编号", "销售合同编号"],
+        "财务": ["财务", "   财务", "  财务", " 财务"],
+        "PMO": ["PMO", "pmo", "Pmo"],
+        "PMO备注": ["PMO备注", "pmo备注"],
+        "是否接收": ["是否接收", "财务是否接收"],
+        "是否修改ones状态": ["是否修改ones状态", "是否修改ONES状态"],
+        "交付邮件是否跨月": ["交付邮件是否跨月", "是否跨月"],
+        "财务反馈": ["财务反馈", "财务二次反馈"],
+    }
+    
+    # 构建反向映射（变体 → 标准名）
+    reverse_map = {}
+    for standard, aliases in alias_map.items():
+        for alias in aliases:
+            reverse_map[alias.strip()] = standard  # strip 后匹配
+    
+    # 重命名列
+    new_columns = {}
+    for col in df.columns:
+        col_stripped = col.strip()
+        if col_stripped in reverse_map:
+            new_columns[col] = reverse_map[col_stripped]
+        elif col_stripped != col:
+            # 只有空格差异的，直接 strip
+            new_columns[col] = col_stripped
+    
+    if new_columns:
+        df = df.rename(columns=new_columns)
+    
+    return df
+
+
 def _load_pm_dept_map():
     """加载项目经理 → 所属区域映射"""
     if LEGEND_PATH.exists():
@@ -37,6 +79,9 @@ def build_revenue_handover_df(df_raw: pd.DataFrame, period: str = "202606") -> p
         23 列 DataFrame，列顺序与参考表完全一致
     """
     df = df_raw.copy()
+    
+    # 列名规范化（处理不同月份的列名差异）
+    df = _normalize_column_names(df)
     
     # 预期列顺序（23 列）
     expected_cols = [
@@ -173,6 +218,9 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
         27 列 DataFrame，列顺序与参考表完全一致
     """
     df = df_raw.copy()
+    
+    # 列名规范化（处理不同月份的列名差异）
+    df = _normalize_column_names(df)
     
     # 预期列顺序（27 列）
     expected_cols = [
