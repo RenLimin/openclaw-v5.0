@@ -37,7 +37,9 @@ def test_make_code_stable():
     assert make_code("正常确收") == make_code("正常确收")
     assert make_code("正常确收") != make_code("预计确收")
     assert make_code("API") == "api"
-    assert make_code("正常确收").startswith("u")
+    # 中文保留可读，不转 unicode 码点串
+    assert make_code("正常确收") == "正常确收"
+    assert make_code("差异确收（当年可消除）") == "差异确收_当年可消除"
 
 
 # ─── 源文件解析 ───
@@ -64,8 +66,12 @@ def test_parse_real_legend_excel(svc):
     # 去重后为 4 —— 这是源数据事实，不是解析缺陷
     assert len(blocks["abnormal_category"]) == 4
     assert any("重复 label" in w for w in parsed["warnings"])
-    assert len(blocks["product"]) == 10           # 产线
+    # 产线：源 10 行含末尾汇总行 '*'（= 全部），应跳过 → 9 条
+    assert len(blocks["product"]) == 9            # 产线
+    assert all(i["label"] != "*" for i in blocks["product"])
+    assert any("汇总行" in w for w in parsed["warnings"])
     assert len(blocks["project_manager"]) == 34   # 项目经理
+    assert len(blocks["team"]) == 4              # 团队（同样跳过 '*' 汇总行）
     assert len(blocks["dept"]) == 5               # 部门（从第 2 列去重提取）
     assert "北区客户服务部" in [i["label"] for i in blocks["dept"]]
     # extra
@@ -147,10 +153,11 @@ def test_import_legend_from_excel(svc):
     assert r["total"] == sum(r["imported"].values())
     assert r["imported"]["legend"] == 7
     assert r["imported"]["project_manager"] == 34
-    assert r["imported"]["product"] == 10
+    assert r["imported"]["product"] == 9       # 跳过末尾 '*' 汇总行
+    assert r["imported"]["team"] == 4
     assert r["imported"]["abnormal_category"] == 4
     assert r["imported"]["dept"] == 5
-    assert r["total"] == 93          # 真实互异条目数（去重后）
+    assert r["total"] == 91          # 真实互异条目数（去重 + 跳过汇总行后）
 
     # 幂等：重复导入 total 不变
     r2 = svc.import_legend_from_excel(REAL_SOURCE, month="202606")
@@ -165,7 +172,8 @@ def test_import_legend_from_excel(svc):
     # 类型统计
     types = {t["data_type"]: t for t in svc.list_types()}
     assert types["legend"]["total"] == 7
-    assert types["product"]["total"] == 10
+    assert types["product"]["total"] == 9   # 跳过末尾 '*' 汇总行
+    assert types["team"]["total"] == 4      # 同样跳过汇总行
     assert types["dept"]["total"] == 5
     assert len(types) == 10
 

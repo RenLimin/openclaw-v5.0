@@ -73,8 +73,10 @@ LEGEND_BLOCKS: list[dict] = [
     {"data_type": "delay_accept_action", "title_col": 10, "label_col": 10},
     {"data_type": "abnormal_type", "title_col": 12, "label_col": 12},
     {"data_type": "abnormal_category", "title_col": 13, "label_col": 13},
-    {"data_type": "team", "title_col": 15, "label_col": 15},
-    {"data_type": "product", "title_col": 16, "label_col": 16},
+    {"data_type": "team", "title_col": 15, "label_col": 15,
+     "skip_labels": ["*"], "skip_note": "源表末尾为汇总行（* = 全部）"},
+    {"data_type": "product", "title_col": 16, "label_col": 16,
+     "skip_labels": ["*"], "skip_note": "源表末尾为汇总行（* = 全部）"},
     # 部门：源 sheet 无独立「部门」图例块，但第 2 列（项目经理的部门归属）
     # 提供了权威部门清单。用 dedup_from 从该列**去重提取**，让 dept 类型
     # 真正可用（报表按部门下钻时需要）。第 3 列备注中的「项目管理部」等
@@ -97,18 +99,25 @@ def _clean(val: Any) -> Optional[str]:
 
 
 def make_code(label: str) -> str:
-    """由 label 生成稳定的 code（同一 label 永远得到同一 code）。
+    """由 label 生成稳定可读的 code（同一 label 永远得到同一 code）。
 
-    规则：ASCII 字母数字下划线保留；中文等非 ASCII 转 unicode 码点串。
-    这样 code 与 label 一一对应、幂等可复现，且不依赖排序位置。
+    规则：
+      - 纯 ASCII 字母/数字/._-  → 小写原样
+      - 含中文等非 ASCII     → 保留中文/字母数字，其余转下划线
+
+    例：'正常确收' → '正常确收'；'差异确收（当年可消除）' → '差异确收_当年可消除'
+
+    这样 code 与 label 一一对应、幂等可复现，且在 Web/CLI 上直接可读。
     """
     s = str(label).strip()
     if not s:
         return ""
     if re.fullmatch(r"[A-Za-z0-9_.\-]+", s):
         return s.lower()
-    # 中文/混合：unicode 码点十六进制，稳定且唯一
-    return "u" + "_".join(f"{ord(ch):x}" for ch in s)
+    # 中文/混合：保留中文与字母数字，其余（括号/空格/标点）归一为下划线
+    cleaned = re.sub(r"[^\w\u4e00-\u9fff]+", "_", s, flags=re.UNICODE)
+    cleaned = re.sub(r"_+", "_", cleaned).strip("_")
+    return cleaned or "u"
 
 
 class MasterDataEngine:
@@ -274,9 +283,16 @@ class MasterDataEngine:
             items: list[dict] = []
             seen: set[str] = set()
             order = 1
+            skip_labels = set(blk.get("skip_labels") or [])
             for r in data_rows:
                 label = _clean(r[label_col - 1]) if label_col - 1 < len(r) else None
                 if not label:
+                    continue
+                if label in skip_labels:
+                    warnings.append(
+                        f"{dt}: 跳过汇总行 {label!r}"
+                        + (f"（{blk['skip_note']}）" if blk.get("skip_note") else "")
+                    )
                     continue
                 code = make_code(label)
                 if code in seen:

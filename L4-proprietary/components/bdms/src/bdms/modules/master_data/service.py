@@ -210,10 +210,28 @@ class MasterDataService:
         conn = _db.get_connection(self.db_path)
         imported: dict[str, int] = {}
         skipped: dict[str, int] = {}
+        purged: dict[str, int] = {}
         try:
             for dt, items in parsed["blocks"].items():
                 if data_types and dt not in data_types:
                     continue
+                if overwrite:
+                    # 覆盖语义：先清除该类型下本次未出现的旧条目，
+                    # 否则历史 code 会残留（如早期 unicode 码点串），造成重复。
+                    keep_codes = [it["code"] for it in items]
+                    if keep_codes:
+                        qmarks = ",".join("?" for _ in keep_codes)
+                        cur = conn.execute(
+                            f"""DELETE FROM md_reference
+                                WHERE data_type = ? AND code NOT IN ({qmarks})""",
+                            [dt, *keep_codes],
+                        )
+                        purged[dt] = cur.rowcount
+                    else:
+                        cur = conn.execute(
+                            "DELETE FROM md_reference WHERE data_type = ?", (dt,))
+                        purged[dt] = cur.rowcount
+
                 n = 0
                 sk = 0
                 for it in items:
@@ -276,6 +294,7 @@ class MasterDataService:
             "max_row": parsed["max_row"],
             "imported": imported,
             "skipped": skipped,
+            "purged": {k: v for k, v in purged.items() if v},
             "total": sum(imported.values()),
             "warnings": parsed["warnings"],
         }
