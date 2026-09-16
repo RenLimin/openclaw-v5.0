@@ -180,6 +180,64 @@ chain 中跨 vendor 的模型天然就是跨 vendor fallback。
 
 ## 7. 与 OpenClaw 核心配置的关系
 
+### 7.1 Custom Provider 注册（OpenClaw 集成）
+
+**定位**: model-scheduling 注册为 OpenClaw 的 custom provider（和 coding-plan、longCat 并列），
+session model 设为 `model-scheduling/auto` 时，Gateway 将请求转发给 proxy，proxy 做智能路由 + 跨 vendor fallback。
+
+**分层设计（与 OpenClaw 解耦）**:
+```
+Layer 1: OpenClaw Gateway（标准 OpenAI-compatible 调用）
+    ↓ POST /v1/chat/completions {"model": "auto", ...}
+Layer 2: model-scheduling proxy（127.0.0.1:3000）
+    ↓ 任务分类 + fallback chain + 健康检查 + 跨 vendor failover
+Layer 3: 真实 provider（coding-plan / longCat / deepseek）
+```
+
+- proxy 是**标准 OpenAI-compatible endpoint**，不依赖 OpenClaw 特有 API
+- 换运行时只要支持 OpenAI-compatible custom provider，proxy 代码**零修改**
+- proxy 内部路由逻辑（任务分类/fallback/健康检查）完全自包含
+- 注册方式：`openclaw config patch` 写入 `models.providers.model-scheduling`
+- 注册脚本：`scripts/register_provider.py`（支持 --dry-run / --force / --unregister）
+
+**注册状态**: ✅ 已注册（2026-09-16）
+
+```json5
+{
+  "models": {
+    "providers": {
+      "model-scheduling": {
+        "baseUrl": "http://127.0.0.1:3000",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "auto",
+            "name": "Auto (Smart Routing)",
+            "contextWindow": 229376,
+            "maxTokens": 131072
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+**用法**:
+```
+/model model-scheduling/auto     # 切换到智能路由
+```
+
+**请求流程**:
+1. Gateway 解析 `model-scheduling/auto` → 查找 model-scheduling provider → baseUrl = 127.0.0.1:3000
+2. Gateway 发标准 `/v1/chat/completions` 请求到 proxy（body 中 `model: "auto"`）
+3. proxy 忽略 `model` 字段，自己通过 `classify_task()` + `build_fallback_chain()` 选模型
+4. proxy 用选中模型的 `model_id` 替换 `model` 字段，转发到真实 provider
+5. 失败时按 fallback chain 自动尝试下一个（跨 vendor）
+6. 响应返回 Gateway，附带 `model_scheduling` 元数据
+
+### 7.2 只读约束
+
 | 交互 | 方向 | 频率 |
 |---|---|---|
 | `openclaw config get models` | 只读 | 每次同步时 |
@@ -187,7 +245,10 @@ chain 中跨 vendor 的模型天然就是跨 vendor fallback。
 | `openclaw sessions patch model` | 运行时切换 | 按需(不写文件) |
 | `openclaw cron payload.model` | 运行时切换 | 按需(不写文件) |
 
-**绝不执行**: `openclaw config patch models.*` / `openclaw config set agents.defaults.*`
+**绝不执行**: `openclaw config patch models.*`（§7.1 注册除外） / `openclaw config set agents.defaults.*`
+
+> ⚠️ §7.1 的 `register_provider.py` 是唯一允许写 `models.providers` 的脚本，
+> 且仅注册 model-scheduling 自身，不修改其他 provider。
 
 ## 8. 自动启动
 

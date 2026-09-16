@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 4.5 (2026-09-15 — 资产实现方式规范对齐，新增开发规范补充实现方式选择章节) |
+| 文档版本 | 4.6 (2026-09-16 — model-scheduling 注册为 OpenClaw custom provider，分层设计与 OpenClaw 解耦) |
 | 文档状态 | active |
 | 运行时 cron | 9 个活跃业务 cron（模型同步/错误扫描与自动修复/调度健康巡检/备份/每日观测投递/会话生命周期/Memory Dreaming/仓库健康检查/模型发现）；0 个任务 disabled |
 | 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产对齐完成; L4 六个组件已上线 |
@@ -542,11 +542,16 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
       - 外部文件存储所有状态,故障不影响系统运行
       - 变更前必须 dry-run + 读回验证
     - 脚本: `sync_models.py` / `fetch_usage.py` / `router.py` / `health_check.py` / `proxy.py` / `config_watcher.py`
-    - 代理服务: `proxy.py`(:3000,自动任务路由 + 模型选择)
+    - 代理服务: `proxy.py`(:3000,智能路由 + 跨 vendor fallback + health TTL 自动降级)
+    - **OpenClaw 集成**: 注册为 custom provider (`models.providers.model-scheduling` → baseUrl 127.0.0.1:3000)
+      - session model 设为 `model-scheduling/auto` 时，Gateway → proxy → 智能路由 + fallback
+      - 注册脚本: `scripts/register_provider.py`（支持 --dry-run / --force / --unregister）
+      - 分层设计: proxy 是标准 OpenAI-compatible endpoint，与 OpenClaw 解耦，可移植到其他运行时
     - 热更新: `config_watcher.py`(文件变更 → ≤ 10 秒自动生效)
     - 自动启动: LaunchAgent `ai.openclaw.model-scheduling`(开机自启 + 崩溃重启)
     - 回退方案: `config/rollback_main_agent.json` + `config/rollback_defaults.json` + `config/rollback_provider.json`
     - 设计: `model-scheduling/DESIGN.md`
+    - 注册状态: ✅ 已注册（2026-09-16）
 
 12. **Office 文档生成** (2026-08-31)
     - 组件 ID: 011
