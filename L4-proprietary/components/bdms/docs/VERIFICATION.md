@@ -1,6 +1,6 @@
 # BDMS 交付管理系统 — 端到端验证报告
 
-> 生成时间：2026-09-15
+> 生成时间：2026-09-15（2026-09-16 补充遗留项修复）
 > 验证环境：`/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms`
 
 ## 1. 验证结论摘要
@@ -8,11 +8,15 @@
 | 验证项 | 结果 | 证据 |
 |---|---|---|
 | 模块1 交付月报 | ✅ 通过 | 24252 行落盘，Excel 导出 10.7MB |
-| 模块2 确认收入 | ✅ 通过 | **对比手工报表 18/18 零误差** |
+| 模块2 确认收入 | ✅ 通过 | **对比手工报表 18/18 零误差**；幂等三模式实测 |
+| 模块3 基础数据 | ✅ 通过 | 10 类型 / 91 条；连导 3 次幂等 |
 | 模块4 统计看板 | ✅ 通过 | pytest 18/18，KPI/趋势/状态/异常/部门/下钻 |
-| Web UI | ✅ 通过 | 7 个页面全部 HTTP 200 |
-| CLI | ✅ 通过 | 7 个子命令实测 |
+| 模块5 系统设定 | ✅ 通过 | 显示范围 / 默认月份 / 可用月份同步 |
+| Web UI | ✅ 通过 | 7 页面 + 16 API 全 HTTP 200 |
+| CLI | ✅ 通过 | 全子命令实测，退出码正确 |
 | 表头自适应 | ✅ 通过 | 202606（93列）/ 202608（44列）同一映射器 |
+| 契约合规 | ✅ 通过 | 5/5 模块均含 service.py |
+| 单元测试 | ✅ 通过 | **57 passed**（含 9 项模块2 回归） |
 
 ## 2. 核心验证：对比测试（黄金基准）
 
@@ -103,6 +107,25 @@ $ ./bdms settings get
 | 4 | `base_layout` 宏不接受 `brand_desc` | Web 500 | 移除该参数 |
 | 5 | `index.html` 中 `endblock` 应为 `endcall` | Web 500 | 修正 |
 | 6 | web-common 路径 `parents[6]` 层级错误 | Web TemplateNotFound | 改向上查找 |
+| 7 | `md_reference.code` 为 unicode 码点串（`u6b63_5e38...`）| 手工核对 code 字段 | `make_code()` 保留中文可读 |
+| 8 | 图例 sheet 末尾汇总行 `*` 混入 product/team | 数据条数对不上（10/5）| `LEGEND_BLOCKS` 加 `skip_labels` |
+| 9 | `overwrite=True` 只 UPSERT、不清历史残留 | 重导后出现新旧 code 并存 | 导入前先删除本次未出现的旧条目 |
+| 10 | 看板下钻传值与前端解析不匹配 | 下钻返回空数组 | `normalizeDist` 兼容 `items`/`label`/`value` |
+| 11 | CLI `master-data list` 调不存在的 `list_reference` | CLI 实测 AttributeError | 改用 `list_items` |
+| 12 | **模块2 缺 `service.py`**，`--mode` 幂等语义被静默忽略 | 契约核对 + CLI 实测 | 新增 `revenue/service.py`，CLI/Web 均改走 service |
+| 13 | **`has_data(month)` 忽略 month 参数**，任何月份都返回 True | 空月份 read 模式假成功 | SQL 加 `WHERE archive_month = ?` |
+
+## 6.1 契约合规
+
+MODULE-CONTRACT 要求每个模块有 `service.py`。修复 #12 后五模块齐备：
+
+| 模块 | service.py | engine.py |
+|---|---|---|
+| delivery_report | ✅ | ✅ |
+| revenue | ✅（本次新增）| ✅ |
+| master_data | ✅ | ✅ |
+| dashboard | ✅ | ✅ |
+| settings | ✅ | ✅ |
 
 ## 7. 复现命令
 
