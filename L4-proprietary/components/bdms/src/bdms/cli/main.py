@@ -65,10 +65,16 @@ def cmd_revenue(args) -> int:
         _print_json(r)
         return 0
     if args.action == "generate":
-        a = RevenueEngineAdapter()
-        r = a.compute(args.month)
-        for k, v in r.items():
-            n = len(v) if isinstance(v, (list, dict)) else "?"
+        # 走 service 层，让 --mode 幂等语义真正生效
+        from ..modules.revenue.service import RevenueService
+        svc = RevenueService()
+        try:
+            r = svc.generate(args.month, getattr(args, "mode", "auto"))
+        except ValueError as e:
+            print(f"❌ {e}")
+            return 1
+        print(f"✅ {r['month']} {r['action']} 完成")
+        for k, n in r["sheets"].items():
             print(f"   {k}: {n}")
         return 0
     if args.action == "summary":
@@ -131,11 +137,19 @@ def cmd_master_data(args) -> int:
         return 1
     svc = MasterDataService()
     if args.action == "list":
-        types = svc.list_types() if hasattr(svc, "list_types") else []
-        print(f"数据类型: {types}")
         if args.data_type:
-            for r in svc.list_reference(args.data_type):
+            try:
+                items = svc.list_items(args.data_type)
+            except Exception as e:
+                print(f"❌ 读取 {args.data_type} 失败: {e}")
+                return 1
+            print(f"{args.data_type} ({len(items)} 条):")
+            for r in items:
                 print(f"   {r.get('code')}: {r.get('label')}")
+        else:
+            print("数据类型:")
+            for t in svc.list_types():
+                print(f"   {t['data_type']:22} {t['total']:>3} 条  {t.get('label', '')}")
         return 0
     return 1
 

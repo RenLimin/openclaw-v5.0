@@ -77,11 +77,24 @@ async def revenue_summary(month: str):
     return r
 
 
+@router.post("/revenue/generate")
+async def revenue_generate(req: GenerateRequest):
+    """生成/读取确认收入（幂等，受 mode 控制）。"""
+    from bdms.modules.revenue.service import RevenueService
+    svc = RevenueService()
+    try:
+        return svc.generate(req.month, getattr(req, "mode", "auto") or "auto")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @router.post("/revenue/import")
 async def revenue_import(req: GenerateRequest):
-    from bdms.modules.revenue.engine import RevenueEngineAdapter
+    from bdms.modules.revenue.service import RevenueService
     try:
-        return RevenueEngineAdapter().import_source(req.month)
+        return RevenueService().import_source(req.month)
     except Exception as e:
         raise HTTPException(500, str(e))
 

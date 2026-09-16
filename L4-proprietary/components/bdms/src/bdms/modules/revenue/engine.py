@@ -132,7 +132,11 @@ class RevenueEngineAdapter:
         self._engine().upsert_reference_data(data_type, code, label, extra)
 
     def has_data(self, month: str) -> bool:
-        """检查确认收入数据是否已落盘。"""
+        """检查指定月份的确认收入数据是否已落盘。
+
+        注意：必须按 month 过滤。早期实现忽略 month 参数、只查“是否有任意行”，
+        导致 --mode read 对空月份也返回成功（数据完整性问题）。
+        """
         if not _HAS_REVENUE:
             return False
         if not self.db_path.exists():
@@ -142,7 +146,9 @@ class RevenueEngineAdapter:
             if not _db.table_exists(conn, "budget_exec"):
                 return False
             row = conn.execute(
-                "SELECT COUNT(*) AS n FROM budget_exec WHERE archive_month IS NOT NULL"
+                """SELECT COUNT(*) AS n FROM budget_exec
+                   WHERE archive_month = ?""",
+                (month,),
             ).fetchone()
             return bool(row and row["n"] > 0)
         except Exception:
