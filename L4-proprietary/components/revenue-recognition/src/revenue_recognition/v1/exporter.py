@@ -1731,6 +1731,28 @@ class RevenueExporter:
         delivery_report_path = "/Users/bangcle/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026交付月报-20260630.xlsx"
         _dr_signing_idx = {}      # 签约表: 合同编号(销售合同编号) → 行数据
         _dr_signing_by_name = {}  # 签约表: 合同名称(C14) → 行数据（校准编号常落在此列）
+        # 周报产线索引：{履约ID: 所属产线}
+        # 数据源为周报 CSV（需先经 weekly_importer 导入）；交付月报常缺此列
+        _weekly_prod_line: dict[str, str] = {}
+        try:
+            _c = self.engine._conn()
+            try:
+                # 注意：引擎连接返回 sqlite3.Row，必须用列名取值（行列下标会 KeyError）
+                # 手工报表是跨月 VLOOKUP：某履约项可能早已退出当月周报，
+                # 故取「报表月份及之前」的所有月份，近月优先覆盖远月。
+                _rows = _c.execute(
+                    "SELECT month, perf_id, prod_line FROM weekly_signing "
+                    "WHERE month <= ? AND prod_line IS NOT NULL "
+                    "ORDER BY month DESC", (period,)).fetchall()
+                for _r in _rows:
+                    _weekly_prod_line.setdefault(_r["perf_id"], _r["prod_line"])
+            finally:
+                _c.close()
+        except Exception as _e:
+            # 不静默：缺表/查错时明确告知，避免 c93 默默退回旧数据源
+            _weekly_prod_line = {}
+            import sys as _sys
+            print(f"⚠️ 周报产线索引加载失败（c93 将回退交付月报）: {_e}", file=_sys.stderr)
         _dr_signing_by_perf = {}  # 签约表: BI履约ID → 行数据（手工 J 键查找）
         _dr_confirm_idx = {}      # 确收交接表: 合同编号 → 行数据
         _dr_confirm2_idx = {}     # 确收交接表(校准): 合同编号(C7) → 行数据
@@ -2064,7 +2086,7 @@ class RevenueExporter:
                         _dr_sales_idx, _dr_sales_related_col, row,
                         row_data, _av_seen, _dr_signing_by_perf, _pm_team,
                         str(row_data.get("contract_no_cal") or "").strip() or None,
-                        _dr_sales_idx_norm, _dr_signing_by_name
+                        _dr_sales_idx_norm, _dr_signing_by_name, _weekly_prod_line
                     )
                 else:
                     # Map header to db column name
@@ -2614,7 +2636,7 @@ def _get_delivery_report_value(col_idx, contract_no, signing_idx, confirm_idx,
                                 sales_idx, sales_related_col, data_row,
                                 row_data=None, av_seen=None, signing_by_perf=None,
                                 pm_team=None, contract_no_cal=None, sales_idx_norm=None,
-                                signing_by_name=None):
+                                signing_by_name=None, weekly_prod_line=None):
     """按**手工黄金基准**的列语义取值（col_idx 为 0-based，47-92 对应手工 c48-c93）。
 
     权威来源：手工报表 r3 列标题 + r4-c100 样例 + 各列公式。
@@ -2625,6 +2647,7 @@ def _get_delivery_report_value(col_idx, contract_no, signing_idx, confirm_idx,
         av_seen = set()
     signing_by_perf = signing_by_perf or {}
     signing_by_name = signing_by_name or {}
+    weekly_prod_line = weekly_prod_line or {}
     pm_team = pm_team or {}
     contract_no_cal = contract_no_cal or contract_no
     # 手工报表 J 列 = 履约ID(budget_exec.perf_id)，匹配签约表 BI履约ID
@@ -2884,7 +2907,14 @@ def _get_delivery_report_value(col_idx, contract_no, signing_idx, confirm_idx,
         return _abn(35)
 
     # ── c93 所属产线（周报）（签约 C27）──
+    # 数据源：周报 CSV（weeklies），优先于交付月报；交付月报常缺此列
     if col_idx == 92:
+        if perf_id:
+            # 单元格可能用「、」串联多个履约ID —— 命中任一项即可（同手工 VLOOKUP）
+            for _p in perf_id.split("、"):
+                _p = _p.strip()
+                if _p and _p in weekly_prod_line:
+                    return weekly_prod_line[_p]
         return _sig_miss(_sig_by_j(), 27)
 
     return None
