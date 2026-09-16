@@ -1730,6 +1730,7 @@ class RevenueExporter:
         # ── 加载交付月报数据（用于填充 AV+ 列）──
         delivery_report_path = "/Users/bangcle/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026交付月报-20260630.xlsx"
         _dr_signing_idx = {}      # 签约表: 合同编号(销售合同编号) → 行数据
+        _dr_signing_by_name = {}  # 签约表: 合同名称(C14) → 行数据（校准编号常落在此列）
         _dr_signing_by_perf = {}  # 签约表: BI履约ID → 行数据（手工 J 键查找）
         _dr_confirm_idx = {}      # 确收交接表: 合同编号 → 行数据
         _dr_confirm2_idx = {}     # 确收交接表(校准): 合同编号(C7) → 行数据
@@ -1764,6 +1765,17 @@ class RevenueExporter:
                             _nkey = _norm_contract(_key)
                             if _nkey and _nkey not in _dr_signing_idx:
                                 _dr_signing_idx[_nkey] = _rdata
+                    # C14 (合同名称) — 单独索引，不污染主索引
+                    # 手工报表的"校准编号"有时落在 C14 而非 C13，需独立回退
+                    if len(_dr_row) >= 14:
+                        _cname = _dr_row[13].value
+                        if _cname is not None:
+                            _nk = str(_cname).strip()
+                            if _nk and _nk not in _dr_signing_by_name:
+                                _dr_signing_by_name[_nk] = _rdata
+                            _nnk = _norm_contract(_nk)
+                            if _nnk and _nnk not in _dr_signing_by_name:
+                                _dr_signing_by_name[_nnk] = _rdata
                     # BI履约ID (C1) — 手工报表 J 列查找键（精确整串匹配，含"、"连接的多键）
                     _bi = _dr_row[0].value if len(_dr_row) >= 1 else None
                     if _bi is not None:
@@ -2052,7 +2064,7 @@ class RevenueExporter:
                         _dr_sales_idx, _dr_sales_related_col, row,
                         row_data, _av_seen, _dr_signing_by_perf, _pm_team,
                         str(row_data.get("contract_no_cal") or "").strip() or None,
-                        _dr_sales_idx_norm
+                        _dr_sales_idx_norm, _dr_signing_by_name
                     )
                 else:
                     # Map header to db column name
@@ -2601,7 +2613,8 @@ def _get_delivery_report_value(col_idx, contract_no, signing_idx, confirm_idx,
                                 confirm2_idx, abnormal_idx, amount_col,
                                 sales_idx, sales_related_col, data_row,
                                 row_data=None, av_seen=None, signing_by_perf=None,
-                                pm_team=None, contract_no_cal=None, sales_idx_norm=None):
+                                pm_team=None, contract_no_cal=None, sales_idx_norm=None,
+                                signing_by_name=None):
     """按**手工黄金基准**的列语义取值（col_idx 为 0-based，47-92 对应手工 c48-c93）。
 
     权威来源：手工报表 r3 列标题 + r4-c100 样例 + 各列公式。
@@ -2611,6 +2624,7 @@ def _get_delivery_report_value(col_idx, contract_no, signing_idx, confirm_idx,
     if av_seen is None:
         av_seen = set()
     signing_by_perf = signing_by_perf or {}
+    signing_by_name = signing_by_name or {}
     pm_team = pm_team or {}
     contract_no_cal = contract_no_cal or contract_no
     # 手工报表 J 列 = 履约ID(budget_exec.perf_id)，匹配签约表 BI履约ID
@@ -2621,11 +2635,17 @@ def _get_delivery_report_value(col_idx, contract_no, signing_idx, confirm_idx,
         return signing_by_perf.get(perf_id)
 
     def _sig_by_c():
-        """C-key(VLOOKUP C) 命中：校准编号 → 原始编号 → 归一编号。"""
+        """C-key(VLOOKUP C) 命中：校准编号 → 原始编号 → 归一编号 → C14 合同名回退。"""
         for _k in (contract_no_cal, contract_no, _norm_contract(contract_no_cal),
                    _norm_contract(contract_no)):
             if _k:
                 r = signing_idx.get(_k)
+                if r is not None:
+                    return r
+        # 最后回退：校准编号不存在于 C13，但存在于 C14（合同名称）
+        for _k in (contract_no_cal, contract_no):
+            if _k:
+                r = signing_by_name.get(_k)
                 if r is not None:
                     return r
         return None

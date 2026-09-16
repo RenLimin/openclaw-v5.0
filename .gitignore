@@ -49,3 +49,9 @@ exports/
 gfpgan/
 facefusion/
 scripts/tmp/
+
+# 生成的报表输出（体积大、可重现，不提交；保留 .md 说明文档）
+L4-proprietary/components/*/src/output/*
+L4-proprietary/components/*/output/*
+!L4-proprietary/components/*/src/output/*.md
+**/~$*.xlsx
