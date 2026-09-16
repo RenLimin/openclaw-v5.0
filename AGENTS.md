@@ -112,7 +112,66 @@ Humans in group chats don't respond to every message - neither should you. Quali
 
 On platforms that support reactions (Discord, Slack), use emoji reactions naturally: to acknowledge without interrupting flow, when something's funny or interesting, or for a simple yes/no. One reaction per message max.
 
-## Tools
+## 网络与代理（实测事实）
+
+### 环境（2026-09-16 核实）
+
+- 网络：**公司 Wi-Fi**，github 等站点存在波动，正常链路是**走代理**
+- 代理客户端：Clash Verge (verge-mihomo)，mixed-port **7897**，mode=rule
+- 控制接口：`curl --unix-socket /tmp/verge/verge-mihomo.sock http://localhost/proxies`
+- 切换节点：`curl -X PUT --unix-socket /tmp/verge/verge-mihomo.sock -H 'Content-Type: application/json' -d '{"name":"节点名"}' http://localhost/proxies/<URL编码组名>`
+- 国内站点直连正常；github 直连被墙（预期）
+
+### 提交推送策略（重要）
+
+**代理失效时的绕过命令**（实测可用，直连 github 200）：
+
+```bash
+cd ~/.openclaw/workspace
+git -c http.proxy= -c https.proxy= push origin main
+```
+
+背景：git 全局配置了 `http.proxy=127.0.0.1:7897`，代理节点质量差时 push 会连续失败，但**直连往往可达**。
+
+### 节点健康判断（不要被延迟测试骗）
+
+**延迟测试 ≠ 真实可用性。** mihomo 的 delay 测试是单次小请求，探不出限速/过载节点。
+
+实测对照（2026-09-16）：
+
+| 节点 | delay 测试 | 真实流量 |
+|---|---|---|
+| 新加坡 02 | 99ms ✅ | 2/10 |
+| 日本区 01 | 115ms ✅ | 2/6 |
+| 凤凰城 01 | 278ms ✅ | 0/6 |
+
+**正确做法**：跑多次完整 HTTPS 请求统计成功率。
+
+```bash
+for i in $(seq 1 10); do
+  curl -s -o /dev/null -w "%{http_code} " --max-time 8 -x http://127.0.0.1:7897 https://github.com
+done; echo
+```
+
+### 分层定位故障（快速判层）
+
+```bash
+nc -z -G 4 aws-sg1.nekohub.xyz 443     # TCP 层
+curl -sI --max-time 8 -x http://127.0.0.1:7897 https://github.com   # 应用层
+```
+
+TCP 通 + TLS 死 = 节点限速/过载（不是本机问题，调本地无解）。
+
+### 排查排除清单（按顺序）
+
+1. 进程/端口：`lsof -nP -iTCP:7897 -sTCP:LISTEN`
+2. 订阅额度：节点名里的「剩余流量 / 到期」
+3. 国内对照：`curl --noproxy '*' https://www.baidu.com`
+4. MTU：`ping -c 1 -D -s 1472 <网关>`
+5. 节点固定 vs 自动选择：排除 URLTest 选到坏节点
+6. 分层测试：定位是节点侧还是本机侧
+
+## 工具策略（Tools）
 
 Skills define how tools work. This section is for details unique to your environment, such as camera names, SSH hosts, preferred TTS voices, speaker names, and device nicknames. Keeping local details here lets shared skills update without losing your notes or exposing your infrastructure when skills are shared.
 
