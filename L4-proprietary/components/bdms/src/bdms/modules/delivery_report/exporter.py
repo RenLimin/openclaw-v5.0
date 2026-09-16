@@ -53,12 +53,20 @@ class DeliveryReportExporter:
             ordered = [s for s in SHEET_ORDER if s in sheets]
             ordered += [s for s in sheets if s not in SHEET_ORDER]
 
+            # 手工报表的「签约」/「POC&提前实施」sheet 在 r1 有日期标题行
+            # （形如 2026-06-30），表头下移一行；其余 sheet 无标题行
+            titled = {"签约", "POC&提前实施"}
+            title_dt = _month_end_date(month)
+
             for sheet in ordered:
                 columns, rows = _db.load_sheet_rows(conn, month, sheet, prefix="dr")
                 if not rows:
                     continue
                 df = pd.DataFrame(rows, columns=columns)
-                self._write_sheet(wb, sheet, df)
+                self._write_sheet(
+                    wb, sheet, df,
+                    title=title_dt if sheet in titled else None,
+                )
         finally:
             conn.close()
 
@@ -68,35 +76,56 @@ class DeliveryReportExporter:
         return target
 
     @staticmethod
-    def _write_sheet(wb: Workbook, sheet_name: str, df: pd.DataFrame) -> None:
-        """写入单个 Sheet（带表头样式 + 冻结首行 + 自动列宽）。"""
+    def _write_sheet(wb: Workbook, sheet_name: str, df: pd.DataFrame,
+                     title=None) -> None:
+        """写入单个 Sheet（带表头样式 + 冻结首行 + 自动列宽）。
+
+        title 不为空时先在 r1 写入日期标题，表头下移到 r2
+        （对齐手工交付月报的版式）。
+        """
         ws = wb.create_sheet(sheet_name[:31])  # Excel sheet 名上限 31 字符
+        header_row = 2 if title is not None else 1
+
+        if title is not None:
+            ws.cell(row=1, column=1, value=title)
 
         # 表头
         for col_idx, col_name in enumerate(df.columns, start=1):
-            cell = ws.cell(row=1, column=col_idx, value=str(col_name))
+            cell = ws.cell(row=header_row, column=col_idx, value=str(col_name))
             cell.font = HEADER_FONT
             cell.fill = HEADER_FILL
             cell.alignment = HEADER_ALIGN
             cell.border = BORDER
 
         # 数据
-        for row_idx, record in enumerate(df.itertuples(index=False), start=2):
+        for row_idx, record in enumerate(df.itertuples(index=False),
+                                        start=header_row + 1):
             for col_idx, value in enumerate(record, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.font = DATA_FONT
                 cell.alignment = DATA_ALIGN
 
-        # 冻结首行
-        ws.freeze_panes = "A2"
+        # 冻结表头行
+        ws.freeze_panes = f"A{header_row + 1}"
 
         # 自动列宽（有上限）
         for col_idx, col_name in enumerate(df.columns, start=1):
             max_len = len(str(col_name))
             for value in df.iloc[:200, col_idx - 1]:  # 采样前 200 行
                 max_len = max(max_len, len(str(value)))
-            ws.column_dimensions[ws.cell(row=1, column=col_idx).column_letter].width = min(max_len + 2, 40)
+            ws.column_dimensions[ws.cell(row=header_row, column=col_idx).column_letter].width = min(max_len + 2, 40)
 
         # 自动筛选
         if len(df) > 0:
-            ws.auto_filter.ref = ws.dimensions
+            ws.auto_filter.ref = (
+                f"A{header_row}:{ws.cell(row=header_row, column=len(df.columns)).coordinate}"
+                f"{ws.max_row}"
+            )
+
+
+def _month_end_date(month: str):
+    """'202606' → datetime(2026, 6, 30)，用于 sheet r1 的日期标题。"""
+    import calendar
+    from datetime import date
+    y, m = int(month[:4]), int(month[4:6])
+    return date(y, m, calendar.monthrange(y, m)[1])
