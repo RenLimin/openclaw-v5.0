@@ -178,12 +178,18 @@ function renderTrend(t) {
 }
 
 function normalizeDist(d) {
-  // 返回 [{name, count}]
-  if (Array.isArray(d)) return d.map(x => ({name: x.name ?? x.label ?? String(x), count: x.count ?? x.value ?? 0}));
-  if (d && Array.isArray(d.groups)) return normalizeDist(d.groups);
+  // 兼容多种后端形状，统一为 [{name, count}]
+  // 后端实际返回：{items: [{label, value, percent}], total, month, ...}
+  if (Array.isArray(d)) {
+    return d.map(x => ({
+      name: x.name ?? x.label ?? String(x),
+      count: x.count ?? x.value ?? 0,
+    }));
+  }
   if (d && typeof d === 'object') {
-    const arr = d.distribution || d.items || d.data;
-    if (Array.isArray(arr)) return normalizeDist(arr);
+    for (const key of ['items', 'groups', 'distribution', 'data']) {
+      if (Array.isArray(d[key])) return normalizeDist(d[key]);
+    }
   }
   return [];
 }
