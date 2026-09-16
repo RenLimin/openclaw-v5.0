@@ -29,10 +29,25 @@ def _safe_str(val) -> Optional[str]:
     return s if s else None
 
 
+def _safe_num_or_str(val):
+    """数字则返回 float，非空文本原样返回（用于手工列中混有文本的数值列，如"服务期限（月）"）"""
+    if val is None:
+        return None
+    if isinstance(val, (int, float)):
+        return float(val)
+    s = str(val).strip()
+    if not s:
+        return None
+    try:
+        return float(s.replace(",", ""))
+    except (ValueError, TypeError):
+        return s
+
+
 def import_plan_draft(excel_path: Path = MANUAL_REPORT_PATH, db_path: Optional[Path] = None) -> int:
     """导入计划确收底稿"""
     print(f"📖 读取计划确收底稿: {excel_path}")
-    wb = openpyxl.load_workbook(excel_path, read_only=True)
+    wb = openpyxl.load_workbook(excel_path, read_only=True, data_only=True)
     ws = wb["计划确收底稿"]
 
     conn = get_connection(db_path)
@@ -70,7 +85,7 @@ def import_plan_draft(excel_path: Path = MANUAL_REPORT_PATH, db_path: Optional[P
             "sign_date": _safe_str(row[16]),         # Q
             "contract_start": _safe_str(row[17]),    # R
             "contract_end": _safe_str(row[18]),      # S
-            "service_months": _safe_float(row[19]),  # T
+            "service_months": _safe_num_or_str(row[19]),  # T（混有"按次/一次/无"等文本）
             "contract_type": _safe_str(row[20]),     # U
             "version_type": _safe_str(row[21]),      # V
             "gift": _safe_str(row[22]),              # W
@@ -93,8 +108,11 @@ def import_plan_draft(excel_path: Path = MANUAL_REPORT_PATH, db_path: Optional[P
             "perf_amount": _safe_float(row[39]),     # AN
             "plan_perf_amount": _safe_float(row[40]),# AO
             "rev_before_2025": _safe_float(row[41]), # AP
-            # AQ = AO - AP = plan_perf_amount - rev_before_2025 (公式列，data_only读不到)
-            "rev_2026_future": _safe_float(row[40]) - _safe_float(row[41]) if _safe_float(row[40]) is not None else None, # AQ = AO - AP
+            # AQ = AO - AP；优先读缓存值(row[42])，缺失时回退为 AO-AP
+            "rev_2026_future": (_safe_float(row[42]) if _safe_float(row[42]) is not None
+                                else (_safe_float(row[40]) - _safe_float(row[41])
+                                      if _safe_float(row[40]) is not None and _safe_float(row[41]) is not None
+                                      else None)),  # AQ
             "plan_disappear": _safe_float(row[43]),  # AR
             "disappear_reason": _safe_str(row[44] if len(row) > 44 else None),  # AS
         }

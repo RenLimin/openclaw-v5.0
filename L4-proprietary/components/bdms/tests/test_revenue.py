@@ -11,7 +11,8 @@ from bdms.modules.revenue.service import (
     RevenueService, MODE_AUTO, MODE_READ, MODE_REGENERATE,
 )
 
-HAS_DATA_MONTH = "202608"
+# 仓库内 revenue.db 实际导入的最大月份为 202606（202608 从未导入）
+HAS_DATA_MONTH = "202606"
 EMPTY_MONTH = "203012"  # 远期月份，确定无数据
 
 
