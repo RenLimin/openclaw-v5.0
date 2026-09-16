@@ -90,9 +90,37 @@ def classify_task(messages: list[dict]) -> str:
 
 # ─── Provider 健康状态 ───
 def _get_provider_health(provider_id: str) -> str:
-    """从 usage.json 获取 provider 健康状态。"""
+    """从 usage.json 获取 provider 健康状态(大小写不敏感)。
+
+    TTL 自动降级:
+    - unreachable 状态超过 HEALTH_TTL_SECONDS(1小时) → 自动降级为 unknown
+      让请求去实际试探，避免永久跳过某个 provider
+    - exhausted / healthy 不受 TTL 影响
+    """
+    import time as _time
     usage_data = watcher.get("usage.json") if hasattr(watcher, "get") else {}
-    return usage_data.get("providers", {}).get(provider_id, {}).get("health", {}).get("status", "")
+    providers = usage_data.get("providers", {})
+    now = _time.time()
+    for pid, pdata in providers.items():
+        if pid.lower() == provider_id.lower():
+            health = pdata.get("health", {})
+            status = health.get("status", "")
+            last_checked = health.get("last_checked", "")
+            # unreachable TTL 自动降级
+            if status == "unreachable" and last_checked:
+                try:
+                    from datetime import datetime, timezone
+                    checked_time = datetime.fromisoformat(last_checked)
+                    if checked_time.tzinfo is None:
+                        checked_time = checked_time.replace(tzinfo=timezone.utc)
+                    age_seconds = now - checked_time.timestamp()
+                    if age_seconds > 3600:  # 1 hour TTL
+                        logger.info(f"Provider {provider_id} unreachable 已超 1h TTL，自动降级为 unknown")
+                        return "unknown"
+                except (ValueError, TypeError):
+                    pass
+            return status
+    return ""
 
 # ─── 模型选择(返回 chain 列表) ───
 def build_fallback_chain(task_type: str) -> list[dict]:
@@ -105,6 +133,8 @@ def build_fallback_chain(task_type: str) -> list[dict]:
     fallback_chain_refs = config.get("fallback_chain", [])
     models = {m["id"]: m for m in models_config.get("models", [])}
     provider_confs = providers_config.get("providers", {})
+    # 建立大小写不敏感的 provider 查找映射
+    provider_confs_lower = {k.lower(): v for k, v in provider_confs.items()}
     required_input_types = config.get("requires_input_types", [])
 
     chain = []
@@ -112,12 +142,12 @@ def build_fallback_chain(task_type: str) -> list[dict]:
         model = models.get(model_ref)
         if not model or model.get("status") != "active":
             continue
-        # provider 必须启用
+        # provider 必须启用(大小写不敏感)
         provider_id = model.get("provider", "")
-        pconf = provider_confs.get(provider_id, {})
+        pconf = provider_confs_lower.get(provider_id.lower(), {})
         if not pconf.get("enabled", False):
             continue
-        # provider 健康状态不可达 → 跳过
+        # provider 健康状态 unreachable → 跳过(exhausted 不跳过,放进去让请求时触发 fallback)
         if _get_provider_health(provider_id) == "unreachable":
             continue
         # 能力匹配检查
@@ -391,8 +421,9 @@ class ProxyHandler:
             
             last_status = status_code
             last_error = result
-            # 4xx 不可重试,直接返回
-            if 400 <= status_code < 500:
+            # 4xx 中只有 401/403 不可重试(鉴权问题,换 provider 也没用)
+            # 402(余额不足)、429(限流)、404(模型不存在) → 继续 fallback
+            if status_code in (401, 403):
                 break
         
         # 所有模型都失败

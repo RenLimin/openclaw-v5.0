@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-16 16:21 UTC+08:00
+最后生成：2026-09-16 22:50 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -66,7 +66,7 @@ _自建技能总计: 8 个（L2: 4, L3: 1, L4: 3, 根目录: 0）_
 
 | ID | 身份 | 模型 | Workspace | 默认 |
 |---|---|---|---|---|
-| `main` | 🦞 main | `model-scheduling/auto` | `/Users/bangcle/.openclaw/workspace` | ✅ |
+| `main` | 🦞 main | `longcat/LongCat-2.0` | `/Users/bangcle/.openclaw/workspace` | ✅ |
 
 ## L2 — 工具策略资产
 
@@ -114,13 +114,13 @@ _自建技能总计: 8 个（L2: 4, L3: 1, L4: 3, 根目录: 0）_
 |---|---|---|---|
 | 模型注册表同步 | ✅ | cron `*/15 * * * *` | `isolated` |
 | 调度健康巡检 | ✅ | cron `0 */1 * * *` | `isolated` |
-| 错误扫描与自动修复 | ✅ | cron `0 */2 * * *` | `isolated` |
-| 代理恢复探测（github 推送通路） | ✅ | cron `0 11,15,19 * * *` | `isolated` |
-| openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 每日观测摘要投递 | ✅ | cron `50 23 * * *` | `isolated` |
+| 错误扫描与自动修复 | ✅ | cron `0 */2 * * *` | `isolated` |
 | 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 | 仓库健康检查 | ✅ | cron `0 9 * * *` | `isolated` |
+| 代理恢复探测（github 推送通路） | ✅ | cron `0 11,15,19 * * *` | `isolated` |
+| openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
 | 内存维护（每周整理） | ✅ | cron `0 10 * * 1` | `isolated` |
 | 模型发现与差异报告 | ✅ | cron `0 11 * * 1` | `isolated` |
 
@@ -208,8 +208,8 @@ _自建技能总计: 8 个（L2: 4, L3: 1, L4: 3, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `6898979d` |
-| Commit 数 | 351 |
+| HEAD | `7a7db8db` |
+| Commit 数 | 352 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

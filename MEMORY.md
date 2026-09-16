@@ -257,6 +257,21 @@ _(将由 `docs/knowledge-base/by-category/project-experience/` 自动汇聚)_
 <!-- openclaw-memory-promotion:memory:memory/2026-08-25.md:14:32 -->
 - ## model-scheduling 切换成功 + 三处 bug 修复 [score=0.789 signals=5 recalls=5 avg=0.779 source=memory/2026-08-25.md:14-15] <!-- trigger: model-scheduling, 15-10, 127.0.0.1 --> <!-- importance: 8 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 
+### 2026-09-16: model-scheduling 注册为 OpenClaw custom provider ★★★
+- **问题**：model-scheduling 只是本地 proxy，OpenClaw Gateway 不认识 `model-scheduling/auto`，用户切过去直接报 billing error
+- **根因**：设计时只做了内部路由，没有做 OpenClaw 层面的 provider 注册——核心集成点遗漏
+- **方案**：方案 A — 注册 model-scheduling 为 OpenClaw custom provider（baseUrl→127.0.0.1:3000），一个伪 model "auto"
+- **分层设计**：Gateway → proxy(标准 OpenAI-compatible) → 真实 provider。proxy 与 OpenClaw 解耦，可移植
+- **实现**：
+  - `scripts/register_provider.py` 注册脚本（dry-run/force/unregister）
+  - `openclaw config patch` 写入 `models.providers.model-scheduling`（Gateway 热加载，无需重启）
+  - proxy `_get_provider_health()` 加 TTL 自动降级（unreachable > 1h → unknown）
+  - proxy 4xx 错误细化：401/403 break，402/429/404 继续 fallback
+  - provider 名大小写不敏感查找（修复 longCat 找不到 providers 的问题）
+- **验证**：注册成功，`openclaw config get models.providers.model-scheduling` 返回正确配置
+- **教训 1**：L2 组件设计时必须确认与 L1 运行时的集成方式，不能只做内部逻辑
+- **教训 2**：`git stash` 会暂存所有改动（包括已修改文件），重启后可能跑旧代码——修改后必须立即重启服务
+
 ### 2026-09-04: 禁止功能共存，坚持迭代建设 ★★
 - **问题**：BDMS 月报存在两个生成路径——`generate_report_202606.py`（旧版）和 `build_stat_sheets.py`（新版），功能重叠、数据不一致
 - **根因**：每次修复时新建脚本而非迭代原有脚本，导致多版本共存

@@ -2,36 +2,30 @@
   "providers": {
     "coding-plan": {
       "health": {
-        "status": "unreachable",
-        "latency_ms": 6,
-        "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>",
-        "last_checked": "2026-09-08T12:08:05.052359+00:00",
+        "status": "healthy",
+        "latency_ms": 260,
+        "last_checked": "2026-09-16T17:56:00.000000+00:00",
         "models": {
           "doubao-seed-2-1-turbo": {
-            "status": "unreachable",
-            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+            "status": "healthy"
           },
           "doubao-seed-2-0-lite-260215": {
-            "status": "unreachable",
-            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+            "status": "healthy"
           },
           "doubao-seed-code-preview-251028": {
-            "status": "unreachable",
-            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+            "status": "healthy"
           }
         }
       }
     },
     "longCat": {
       "health": {
-        "status": "unreachable",
-        "latency_ms": 2,
-        "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>",
-        "last_checked": "2026-09-08T12:08:05.061715+00:00",
+        "status": "healthy",
+        "latency_ms": 102,
+        "last_checked": "2026-09-16T17:56:00.000000+00:00",
         "models": {
           "LongCat-2.0": {
-            "status": "unreachable",
-            "error": "<urlopen error [Errno 8] nodename nor servname provided, or not known>"
+            "status": "healthy"
           }
         }
       }
@@ -40,7 +34,15 @@
       "health": {
         "status": "healthy",
         "latency_ms": 0,
-        "last_checked": "2026-09-08T12:08:05.066627+00:00"
+        "last_checked": "2026-09-16T17:56:00.000000+00:00"
+      }
+    },
+    "deepseek": {
+      "health": {
+        "status": "exhausted",
+        "latency_ms": 348,
+        "error": "Insufficient Balance (402)",
+        "last_checked": "2026-09-16T17:54:00.000000+00:00"
       }
     },
     "llama-cpp": {
@@ -62,5 +64,5 @@
       }
     }
   },
-  "last_health_check": "2026-09-08T12:08:05.066891+00:00"
+  "last_health_check": "2026-09-16T17:56:00.000000+00:00"
 }
