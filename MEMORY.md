@@ -151,6 +151,20 @@ _(将由 `docs/knowledge-base/by-category/project-experience/` 自动汇聚)_
 - **文档**：`L4-proprietary/components/bdms/docs/{ARCHITECTURE,MODULE-CONTRACT,VERIFICATION}.md`
 - **端口**：BDMS Web 8811
 
+### 2026-09-16: 交付验收 7 步法（制度化）★★★
+
+- **背景**：BDMS 昨晚自我汇报"全部完成"，今早独立审计挖出 3 个真实缺陷 —— 报告是"我以为的状态"，不是"实际的状态"
+- **决策**：制定交付验收 7 步法，写入 `AGENTS.md`（强制）+ `docs/conventions/delivery-acceptance.md`（完整规范）
+- **7 步**：独立审计 → 契约对齐 → 全入口执行 → 黄金基准 → 幂等测试 → 调用点扫描 → 回归锁定
+- **通过标准**：7 项同时满足（含凭据扫描 + Git 工作树干净）
+- **四条铁律**（均来自真实踩坑）：
+  1. 参数被解析 ≠ 参数生效（`--mode` 被 argparse 收下但未传给引擎）
+  2. 收参数必须用参数（`has_data(month)` 签名接了 month 却在 SQL 里忽略）
+  3. 修 bug 要 grep 全调用点（同一方法名漂移，只修了 Web 漏了 CLI）
+  4. 验证覆盖率比验证结论更值得怀疑（"7 个子命令实测"实际没全覆盖）
+- **核心认知**：自己验证自己的产出天然有结构盲点；修 bug 容易，难的是修"以为自己测过了"
+- 相关项目: github.com/RenLimin/openclaw-v5.0
+
 ## 变更历史
 
 - 2026-09-15: L4 BDMS 交付管理系统全量交付（5 模块 + Web + CLI，对比 18/18 零误差）
