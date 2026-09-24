@@ -76,6 +76,50 @@ Memory is limited. "Mental notes" don't survive session restarts; files do. Befo
 - You learn a lesson -> update `AGENTS.md` or the relevant skill.
 - You make a mistake -> document it so future-you doesn't repeat it.
 
+## 开发流程铁律（强制）
+
+**所有功能开发必须严格按以下顺序执行，不可跳步：**
+
+```
+1. 明确需求      — PRD（产品需求文档），功能清单 + 验收标准 + 问题清单
+2. 设计大纲文档  — DESIGN-OUTLINE 级别，整体架构 + 模块划分
+3. 详细设计文档  — DESIGN-DETAIL 级别，接口契约 + 数据模型 + 技术方案 + 逐 Sheet 定义
+4. 测试方案      — 验收标准 + 测试用例 + 黄金基准对比方案
+5. 开发建设计划  — IMPLEMENTATION-PLAN，Phase 拆分 + 工时估算
+6. 开发建设      — 按 Phase 逐步实现，每 Phase 交付验收
+7. E2E 自测      — 自动化测试全部通过（含黄金基准对比）
+8. E2E 人工测试  — Rex 人工审核
+```
+
+**红线**：
+- ❌ 禁止跳过设计文档直接写代码
+- ❌ 禁止先开发再补设计文档（追认制仅适用于紧急修复）
+- ❌ 禁止设计文档未审核就开始建设
+- ✅ 每份设计文档必须经 Rex 明确"通过"后才能进入下一阶段
+
+**旧代码迁移/复用规范**：
+- ✅ 迁移或复用任何旧代码前，必须先读对应模块的 DESIGN-DETAIL 文档，理解架构契约
+- ❌ 禁止直接复制旧代码到新架构而不检查是否违反设计契约
+- ✅ 如果旧代码和文档契约不一致，以文档为准，重构旧代码使其符合契约
+- ✅ 迁移完成后，验证新代码的数据流、生命周期、接口签名与文档一致
+
+**测试规范**：
+- ✅ Web/安全功能验收必须用真实 HTTP（浏览器或 urllib），完整走浏览器流程
+- ✅ 测试流程：登录 → Set-Cookie → 带 Cookie 访问页面 → 带 Cookie 调 API
+- ❌ 禁止用 FastAPI TestClient 测试网络安全/Cookie/访问控制相关功能（TestClient host=`testserver` 会误判）
+- ✅ 单元测试用 pytest，集成/端到端测试用真实 HTTP
+- ✅ E2E 测试必须覆盖真实用户操作路径（浏览器实际传什么格式/参数，测试就传什么）
+- ✅ 后端 API 应同时兼容多种输入格式（如 `YYYY-MM` 和 `YYYYMM`），不依赖前端做格式转换
+- ❌ 不能只测 API 层就认为功能正常（前端 JS 的格式转换、按钮点击等也必须覆盖）
+
+**文档命名规范**：
+- 大纲：`DESIGN-OUTLINE-<topic>-<version>.md`
+- 详细设计：`DESIGN-DETAIL-<module>-<version>.md`
+- 开发计划：`IMPLEMENTATION-PLAN-<version>.md`
+- 验收报告：`VERIFICATION-<phase>-<version>.md`
+
+> 2026-09-21 Rex 制定 | 违反此规则 = 开发事故
+
 ## Red Lines
 
 - Don't exfiltrate private data. Ever.
@@ -184,6 +228,13 @@ Example placeholders (replace or remove them):
 - SSH: home-server -> 192.168.1.100, user admin
 - TTS: preferred voice "Nova"; default speaker Kitchen HomePod
 ```
+
+**Skills 落盘位置（2026-09-24 教训）**：sandbox 里 `/workspace/skills/`（91个）是运行时聚合副本，**不是**持久化位置。新建 skill 必须落到 workspace 分层目录才会持久化 + 进 git：
+- `L2-infra/skills/` — 通用基础能力（如 pdf-toolkit、ocr-digitalization）
+- `L3-business/skills/` — 通用业务（如 contract-approval、fin-l4）
+- `L4-proprietary/skills/` — 专有业务（如 bangcle-ppt）
+- 注册路径：`openclaw.json` → `skills.load.extraDirs`
+- 另：`~/.openclaw/skills/`（arkcli 25个）+ `~/.openclaw/plugin-skills/`（wecom 16个）是系统级目录，勿动
 
 **Voice storytelling:** `sag` (ElevenLabs TTS) is **currently unavailable** — missing `ELEVENLABS_API_KEY` (verified 2026-08-22 via `openclaw skills check`). Don't attempt voice output until it's configured; use text. See ADR-008 §6.
 
