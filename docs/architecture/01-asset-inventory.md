@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-09-16 22:50 UTC+08:00
+最后生成：2026-09-24 10:21 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -38,13 +38,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 102 个（可用 91）
+**总计** 103 个（可用 92）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 50 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 23 | 插件附带技能 |
+| `openclaw-extra` | 24 | 插件附带技能 |
 | `openclaw-managed` | 25 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -57,10 +57,11 @@
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
 | L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
 | L2 基础设施 | `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 | `L2-infra/skills/ocr-digitalization` |
+| L2 基础设施 | `pdf-toolkit` | Page-level PDF operations: merge multiple PDFs into one, split into... | `L2-infra/skills/pdf-toolkit` |
 | L2 基础设施 | `role-library` | 标准化 Agent 角色库。支持按角色执行任务，覆盖数据分析、报告生成、系统运维、文档管理等场景。 | `L2-infra/skills/role-library` |
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 
-_自建技能总计: 8 个（L2: 4, L3: 1, L4: 3, 根目录: 0）_
+_自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -112,17 +113,11 @@ _自建技能总计: 8 个（L2: 4, L3: 1, L4: 3, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| 模型注册表同步 | ✅ | cron `*/15 * * * *` | `isolated` |
-| 调度健康巡检 | ✅ | cron `0 */1 * * *` | `isolated` |
-| 每日观测摘要投递 | ✅ | cron `50 23 * * *` | `isolated` |
-| 错误扫描与自动修复 | ✅ | cron `0 */2 * * *` | `isolated` |
-| 会话生命周期管理 | ✅ | cron `0 2 * * *` | `isolated` |
-| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
-| 仓库健康检查 | ✅ | cron `0 9 * * *` | `isolated` |
-| 代理恢复探测（github 推送通路） | ✅ | cron `0 11,15,19 * * *` | `isolated` |
 | openclaw-backup-scheduled | ✅ | 每 86400s | `isolated` |
+| 每日观测摘要投递 | ✅ | cron `50 23 * * *` | `isolated` |
+| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 | 内存维护（每周整理） | ✅ | cron `0 10 * * 1` | `isolated` |
-| 模型发现与差异报告 | ✅ | cron `0 11 * * 1` | `isolated` |
+| 模型额度检查与 fallback 恢复 | ✅ | cron `0 10 * * 1` | `isolated` |
 
 ## 文档资产
 
@@ -208,8 +203,8 @@ _自建技能总计: 8 个（L2: 4, L3: 1, L4: 3, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `7a7db8db` |
-| Commit 数 | 352 |
+| HEAD | `4a43d7ad` |
+| Commit 数 | 353 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
