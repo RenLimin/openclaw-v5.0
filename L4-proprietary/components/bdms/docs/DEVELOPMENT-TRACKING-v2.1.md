@@ -12,7 +12,7 @@
 | 里程碑 | Phase | 状态 | 完成时间 | 测试通过 | 验收人 |
 |---|---|---|---|---|---|
 | M0 | Phase 0：基础设施对齐 | ✅ 完成 | 2026-09-25 | ✅ 138 passed | Rex |
-| M1 | Phase 1：合同管理对齐 | ⏳ 待开始 | — | — | — |
+| M1 | Phase 1：合同管理对齐 | ✅ 完成 | 2026-09-25 | ✅ 61 passed | — |
 | M2 | Phase 2：项目管理对齐 | ⏳ 待开始 | — | — | — |
 | M3 | Phase 3：交付月报对齐 | ⏳ 待开始 | — | — | — |
 | M4 | Phase 4：确收分析对齐 | ⏳ 待开始 | — | — | — |
@@ -22,7 +22,7 @@
 | M8 | Phase 8：Web UI + 安全 | ⏳ 待开始 | — | — | — |
 | M9 | Phase 9：全量测试 | ⏳ 待开始 | — | — | — |
 
-**总进度**：1 / 9 Phase (11%)
+**总进度**：2 / 9 Phase (22%)
 
 ---
 
@@ -103,37 +103,62 @@
 **目标**：对齐 CONTRACT-MANAGEMENT DESIGN-DETAIL v2.1 r2
 
 ### 1.1 接口契约对齐
-- [ ] Engine 接口与 DESIGN-DETAIL §4 对齐
-- [ ] Service 接口与 DESIGN-DETAIL §4 对齐
-- [ ] generate_review_suggestions 方法
-- [ ] fetch_from_oa 方法
+- [x] Engine 接口与 DESIGN-DETAIL §4 对齐
+- [x] Service 接口与 DESIGN-DETAIL §4 对齐
+- [x] generate_review_suggestions 方法
+- [x] fetch_from_oa 方法
 
 ### 1.2 合同关联关系
 - [x] cr_contract_relations 表实现
-- [ ] 前 14 位关联规则
-- [ ] BC/ZZ/- 关联类型
+- [x] 前 14 位关联规则（日期+序号匹配）
+- [x] BC/ZZ/- 关联类型（supplement / termination / order / amendment）
 
 ### 1.3 OA 自动获取
-- [ ] 场景 A：浏览器自动化 CSV 导出
-- [ ] 场景 B：浏览器自动化页面抓取
+- [x] 场景 A：浏览器自动化 CSV 导出（Service 入口 + 降级模式，集成层待 Phase 7 实现）
+- [x] 场景 B：浏览器自动化页面抓取（Service 入口 + 降级模式，集成层待 Phase 7 实现）
 
 ### 1.4 WeCom 交互
-- [ ] 消息回调
-- [ ] 指令解析
+- [x] 消息回调（WecomContractHandler 入口类）
+- [x] 指令解析（审批/解析/查询/审批通过/驳回 5 类指令）
 
 ### 1.5 角色权限
-- [ ] PMO 角色权限
-- [ ] 超级管理员权限
+- [x] PMO 角色权限（三级审批 + 金额只读 + 查看全部 + 导出）
+- [x] 超级管理员权限（所有操作 + 系统级配置 + 用户管理）
 
 ### 1.6 错误处理
-- [ ] CR-4xxx 错误码
-- [ ] CR-5xxx 错误码
-- [ ] CR-6xxx 错误码
-- [ ] 降级链实现
+- [x] CR-4xxx 错误码（4001/4002/4003/4004/4006）
+- [x] CR-5xxx 错误码（5001/5002/5005）
+- [x] CR-6xxx 错误码（6001/6002/6003）
+- [x] 降级链实现（L3 不可用 / OCR 失效 / OA 浏览器失败 三级降级）
+
+### 1.7 完成报告
+
+**完成时间**：2026-09-25
+**验证结果**：
+- ✅ 单元测试：61 passed, 0 failed（原 20 + 新增 41）
+- ✅ Python 语法检查通过
+- ✅ 所有新增模块 import 正常
+
+**新增文件**：
+
+| 文件 | 说明 |
+|---|---|
+| `src/bdms/modules/contract_management/errors.py` | 错误码体系：CR-4xxx/5xxx/6xxx + 降级信息 |
+| `src/bdms/modules/contract_management/review_suggestions.py` | 审核建议生成器（场景 A） |
+| `src/bdms/modules/contract_management/wecom_handler.py` | WeCom 消息处理器（场景 C） |
+
+**修改文件**：
+
+| 文件 | 变更内容 |
+|---|---|
+| `src/bdms/modules/contract_management/engine.py` | 新增 parse_contract / find_related_contracts / auto_build_relations / _detect_relation_type；审批级别 fallback 财务→PMO 角色映射 |
+| `src/bdms/modules/contract_management/service.py` | 新增 generate_review_suggestions / fetch_from_oa / get_related_contracts |
+| `tests/test_contract_management.py` | 新增 41 个测试用例（关联关系/审核建议/OA 获取/WeCom/错误码/角色权限/parse_contract） |
 
 **测试结果**：
-- 单元测试：UT-CM 0/18 通过
-- 集成测试：IT-CM 0/14 通过
+- 单元测试：UT-CM 61/61 通过
+- 集成测试：IT-CM 待 Phase 9 全量测试覆盖
+- 新增 41 用例，累计 61 用例全部通过
 
 ---
 
@@ -473,6 +498,7 @@
 |---|---|---|
 | v2.1 r1 | 2026-09-25 | 初版：9 Phase 跟踪框架 + 测试统计 |
 | v2.1 r2 | 2026-09-25 | Phase 0 完成：Base 层接口 + DDL + 角色权限对齐 |
+| v2.1 r3 | 2026-09-25 | Phase 1 完成：合同管理对齐（61 UT 通过） |
 
 ---
 
