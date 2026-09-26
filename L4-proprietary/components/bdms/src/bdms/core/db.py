@@ -6,20 +6,54 @@
 
 import sqlite3
 import json
-from pathlib import Path
-from typing import Any, Optional
+import threading
+from contextlib import contextmanager
+from typing import Any, Iterator, Optional
 
 from .paths import DB_PATH, ensure_dirs
 
 
+# 线程本地连接缓存（业务代码大量使用 conn.close()，缓存必须自愈）
+_thread_local = threading.local()
+
+
 def get_connection(db_path: Optional[Path] = None) -> sqlite3.Connection:
-    """获取数据库连接。"""
+    """获取数据库连接。
+
+    注意：每次返回新连接，由调用方负责 close。
+    业务模块大量使用 `finally: conn.close()` 模式，缓存连接会互相踩踏。
+    """
     ensure_dirs()
     path = str(db_path or DB_PATH)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+@contextmanager
+def transaction(db_path: Optional[Path] = None) -> Iterator[sqlite3.Connection]:
+    """事务上下文：成功 commit，异常 rollback。"""
+    conn = get_connection(db_path)
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def close_connection(db_path: Optional[Path] = None) -> None:
+    """关闭当前线程的缓存连接（测试用）。"""
+    ensure_dirs()
+    path = str(db_path or DB_PATH)
+    conn = getattr(_thread_local, path, None)
+    if conn is not None:
+        try:
+            conn.close()
+        except sqlite3.ProgrammingError:
+            pass
+        delattr(_thread_local, path)
 
 
 # ─── Schema 定义 ───
@@ -97,18 +131,34 @@ CREATE TABLE IF NOT EXISTS import_log (
 
 
 def init_db(db_path: Optional[Path] = None) -> None:
-    """初始化 schema（幂等）。"""
+    """初始化 schema（幂等）。加载 v1 基础 + v2.1 全部模块 schema。"""
     from .schemas import DR_SCHEMA, RR_SCHEMA, DASHBOARD_SCHEMA
+    from .schemas_v21 import (
+        CR_SCHEMA, PM_SCHEMA, CT_SCHEMA, RK_SCHEMA,
+        AS_SCHEMA, CH_SCHEMA, INT_SCHEMA, KB_SCHEMA,
+        DASH_V2_SCHEMA, OUTBOX_SCHEMA,
+    )
     conn = get_connection(db_path)
     try:
         conn.executescript(SCHEMA)
         conn.executescript(DR_SCHEMA)
         conn.executescript(RR_SCHEMA)
         conn.executescript(DASHBOARD_SCHEMA)
+        # v2.1 模块 schema
+        conn.executescript(CR_SCHEMA)
+        conn.executescript(PM_SCHEMA)
+        conn.executescript(CT_SCHEMA)
+        conn.executescript(RK_SCHEMA)
+        conn.executescript(AS_SCHEMA)
+        conn.executescript(CH_SCHEMA)
+        conn.executescript(INT_SCHEMA)
+        conn.executescript(KB_SCHEMA)
+        conn.executescript(DASH_V2_SCHEMA)
+        conn.executescript(OUTBOX_SCHEMA)
         seed_defaults(conn)
         conn.commit()
     finally:
-        conn.close()
+        pass  # 线程本地连接不 close，避免后续操作拿到已关闭连接
 
 
 # ─── 宽表行读写（月报/确收共用）───
