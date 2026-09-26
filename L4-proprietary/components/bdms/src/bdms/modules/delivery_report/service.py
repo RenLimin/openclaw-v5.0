@@ -11,6 +11,7 @@ from typing import Optional
 
 from bdms.core import db as _db
 from .engine import DeliveryReportEngine
+from .validator import DeliveryReportValidator
 
 MODE_AUTO = "auto"
 MODE_READ = "read"
@@ -92,3 +93,42 @@ class DeliveryReportService:
             return _db.list_months(conn, "delivery_report")
         finally:
             conn.close()
+
+    # ─── 分步生成（v2.1：Step 1-3 + 校验）───
+
+    def generate_with_validation(self, month: str,
+                                 fixes: list[dict] = None) -> dict:
+        """带校验的生成流程（Step 1 → 2 → 3）。
+
+        Step 1: extract_raw_data + persist
+        Step 2: validate → 如有存疑且无 fixes，返回存疑清单等人工处理
+        Step 3: compute + persist
+        """
+        validator = DeliveryReportValidator(self.db_path)
+
+        # 先应用人工调整（如有）
+        if fixes:
+            validator.apply_manual_fixes(month, fixes)
+
+        # Step 1: 原始数据
+        if not self.engine.has_data(month):
+            result = self.generate(month, mode=MODE_REGENERATE)
+        else:
+            result = {"month": month, "action": "read"}
+
+        # Step 2: 校验
+        suspicious = validator.collect_suspicious(month)
+
+        return {
+            **result,
+            "validation": suspicious,
+            "pending_fixes": suspicious["summary"]["total_errors"] > 0,
+        }
+
+    def validate(self, month: str) -> dict:
+        """单独执行 Step 2 校验。"""
+        return DeliveryReportValidator(self.db_path).collect_suspicious(month)
+
+    def apply_fixes(self, month: str, fixes: list[dict]) -> dict:
+        """单独应用人工调整。"""
+        return DeliveryReportValidator(self.db_path).apply_manual_fixes(month, fixes)
