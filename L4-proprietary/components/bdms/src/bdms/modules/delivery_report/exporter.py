@@ -1,6 +1,9 @@
-"""交付月报 Excel 导出。
+"""交付月报 Excel 导出（15 Sheet 完整版）。
 
-从 DB 读数据 → 渲染为格式化 Excel。复用 delivery-center 的格式化配置。
+从 DB 读数据 → 渲染为格式化 Excel。
+- 核心数据 Sheet（1-5）：读 dr_sheet_row
+- 统计 Sheet（6-14）：读 DASHBOARD 实时聚合（delivery_report_connector）
+- 图例 Sheet（15）：读 md_reference legend_config
 """
 
 from pathlib import Path
@@ -24,19 +27,29 @@ DATA_ALIGN = Alignment(horizontal="left", vertical="center")
 THIN = Side(style="thin", color="FFD9D9D9")
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 
-# Sheet 顺序（对齐业务报表）
-SHEET_ORDER = ["签约", "POC&提前实施", "异常项目", "确收交接", "验收交接"]
+# Sheet 顺序（15 Sheet，对齐黄金基准）
+SHEET_ORDER = [
+    "签约", "POC&提前实施", "异常项目", "确收交接", "验收交接",   # 核心数据 1-5
+    "异常台账", "交付效率统计", "签约统计", "产品-授权&维保统计",     # 统计 6-9
+    "POC&提前实施统计", "提前实施分事业部统计", "异常统计",           # 统计 10-12
+    "交付异常分事业部统计", "交接统计", "图例",                       # 统计 13-14 + 图例 15
+]
+
+# 统计 Sheet（通过 DASHBOARD 实时聚合）
+STAT_SHEETS = {
+    "异常台账", "交付效率统计", "签约统计", "交接统计",
+}
 
 
 class DeliveryReportExporter:
-    """交付月报 Excel 导出器。"""
+    """交付月报 Excel 导出器（只做 IO + 格式，不做业务计算）。"""
 
     def __init__(self, db_path: Optional[Path] = None):
         self.engine = DeliveryReportEngine(db_path)
         self.db_path = db_path
 
     def export(self, month: str, out_path: Optional[Path] = None) -> Path:
-        """导出某月数据为 Excel。
+        """导出某月数据为 Excel（15 Sheet）。
 
         要求数据已在 DB 中（先调用 service.generate）。
         """
@@ -50,7 +63,7 @@ class DeliveryReportExporter:
             wb.remove(wb.active)
 
             # 按业务顺序排列，多余的追加
-            ordered = [s for s in SHEET_ORDER if s in sheets]
+            ordered = [s for s in SHEET_ORDER if s in sheets or s in STAT_SHEETS or s == "图例"]
             ordered += [s for s in sheets if s not in SHEET_ORDER]
 
             # 手工报表的「签约」/「POC&提前实施」sheet 在 r1 有日期标题行
@@ -58,7 +71,23 @@ class DeliveryReportExporter:
             titled = {"签约", "POC&提前实施"}
             title_dt = _month_end_date(month)
 
+            # 统计 Sheet：DASHBOARD 实时聚合
+            from bdms.modules.dashboard.delivery_report_connector import DeliveryReportConnector
+            connector = DeliveryReportConnector(self.db_path)
+            stats_cache = connector.build_stats_sheets(month)
+
             for sheet in ordered:
+                if sheet == "图例":
+                    legend_df = connector.get_legend_config()
+                    if legend_df is not None and not legend_df.empty:
+                        self._write_sheet(wb, "图例", legend_df)
+                    continue
+                if sheet in STAT_SHEETS:
+                    df = stats_cache.get(sheet)
+                    if df is not None and not df.empty:
+                        self._write_sheet(wb, sheet, df)
+                    continue
+
                 columns, rows = _db.load_sheet_rows(conn, month, sheet, prefix="dr")
                 if not rows:
                     continue
