@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '安全设置 — BDMS' %}
+
+{% block content %}
+{{ page_header(title='安全设置', subtitle='访问控制 · Token 管理') }}
+
+{% call card(title="访问控制") %}
+<div style="display:grid;gap:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;background:var(--c-surface);border-radius:var(--r-md);border:1px solid var(--c-border);">
+        <div>
+            <div style="font-weight:600;">🌍 外网访问</div>
+            <div style="color:var(--c-muted);font-size:0.85rem;">关闭后拒绝所有非内网请求</div>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="toggle-external" onchange="toggleSetting('allow_external')">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;background:var(--c-surface);border-radius:var(--r-md);border:1px solid var(--c-border);">
+        <div>
+            <div style="font-weight:600;">🏠 内网访问</div>
+            <div style="color:var(--c-muted);font-size:0.85rem;">关闭后仅 localhost 可访问</div>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="toggle-internal" onchange="toggleSetting('allow_internal')">
+            <span class="slider"></span>
+        </label>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem;background:var(--c-surface);border-radius:var(--r-md);border:1px solid var(--c-border);">
+        <div>
+            <div style="font-weight:600;">🔑 Token 鉴权</div>
+            <div style="color:var(--c-muted);font-size:0.85rem;">所有请求需携带有效 Token</div>
+        </div>
+        <label class="switch">
+            <input type="checkbox" id="toggle-auth" onchange="toggleSetting('token_auth_enabled')">
+            <span class="slider"></span>
+        </label>
+    </div>
+</div>
+{% endcall %}
+
+{% call card(title="Token 管理") %}
+<div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+    <input id="new-token-label" class="input" placeholder="Token 标签（如：admin、reviewer）" style="flex:1;">
+    <input id="new-token-days" class="input" placeholder="过期天数（留空=永久）" style="max-width:120px;" type="number">
+    <button class="btn btn-primary" onclick="generateToken()">生成 Token</button>
+</div>
+<div id="token-list"></div>
+{% endcall %}
+
+{% call card(title="访问说明") %}
+<div style="line-height:1.8;color:var(--c-text-2);">
+    <p><strong>本机访问：</strong> <code id="local-url">http://127.0.0.1:8812</code></p>
+    <p><strong>内网访问：</strong> <code id="lan-url">—</code></p>
+    <p><strong>外网访问：</strong> 需先开启外网开关，再通过 ngrok 等工具穿透</p>
+    <p style="margin-top:1rem;padding:0.75rem;background:var(--c-surface-2);border-radius:var(--r-sm);font-size:0.85rem;">
+        ⚠️ <strong>安全提示：</strong>外网访问存在风险，建议仅在必要时开启，使用完毕后立即关闭。
+    </p>
+</div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// 加载当前设置
+async function loadSettings() {
+    const res = await fetch('/api/security/config');
+    const data = await res.json();
+    document.getElementById('toggle-external').checked = data.allow_external;
+    document.getElementById('toggle-internal').checked = data.allow_internal;
+    document.getElementById('toggle-auth').checked = data.token_auth_enabled;
+    loadTokens();
+    // 显示 LAN URL
+    document.getElementById('lan-url').textContent = window.location.origin;
+}
+
+async function toggleSetting(key) {
+    const checkbox = document.getElementById('toggle-' + key.replace('_', '-'));
+    const value = checkbox.checked;
+    await fetch('/api/security/config', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({[key]: value}),
+    });
+    showToast(key + ' 已' + (value ? '开启' : '关闭'));
+}
+
+async function generateToken() {
+    const label = document.getElementById('new-token-label').value || 'user';
+    const days = document.getElementById('new-token-days').value;
+    const res = await fetch('/api/security/tokens', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({label, expires_days: days ? parseInt(days) : null}),
+    });
+    const data = await res.json();
+    if (data.token) {
+        prompt('Token 已生成（请妥善保存，此信息仅显示一次）：', data.token);
+        loadTokens();
+    }
+    document.getElementById('new-token-label').value = '';
+    document.getElementById('new-token-days').value = '';
+}
+
+async function loadTokens() {
+    const res = await fetch('/api/security/tokens');
+    const tokens = await res.json();
+    const container = document.getElementById('token-list');
+    if (!tokens.length) {
+        container.innerHTML = '<p style="color:var(--c-muted);">暂无 Token</p>';
+        return;
+    }
+    container.innerHTML = '<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:2px solid var(--c-border);"><th style="padding:0.5rem;text-align:left;">标签</th><th style="padding:0.5rem;text-align:left;">预览</th><th style="padding:0.5rem;text-align:left;">创建时间</th><th style="padding:0.5rem;text-align:left;">过期</th><th style="padding:0.5rem;text-align:center;">操作</th></tr></thead><tbody>' +
+        tokens.map(t => '<tr style="border-bottom:1px solid var(--c-border);"><td style="padding:0.5rem;">' + t.label + '</td><td style="padding:0.5rem;font-family:monospace;font-size:0.85rem;">' + t.token_preview + '</td><td style="padding:0.5rem;font-size:0.85rem;">' + (t.created_at || '-') + '</td><td style="padding:0.5rem;font-size:0.85rem;">' + (t.expires_at || '永久') + '</td><td style="padding:0.5rem;text-align:center;"><button class="btn btn-sm btn-danger" onclick="revokeToken(\'' + t.token_preview + '\')">撤销</button></td></tr>').join('') +
+        '</tbody></table>';
+}
+
+async function revokeToken(preview) {
+    if (!confirm('确定要撤销此 Token 吗？')) return;
+    await fetch('/api/security/tokens/' + encodeURIComponent(preview), {method: 'DELETE'});
+    loadTokens();
+}
+
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = 'position:fixed;bottom:2rem;right:2rem;padding:0.75rem 1.5rem;background:var(--c-success);color:white;border-radius:8px;z-index:9999;';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2000);
+}
+
+document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+{% endblock %}
