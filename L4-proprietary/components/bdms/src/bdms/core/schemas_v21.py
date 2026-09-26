@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS cr_contracts (
     archive_date TEXT,
     source TEXT DEFAULT 'manual',         -- manual / oa_fetch / oa_approval / ocr_import
     oa_process_id TEXT,                   -- OA 流程 ID（OA 获取时记录）
+    impl_owner TEXT,                      -- 实施负责人（v2.1 P1）
+    impl_status TEXT DEFAULT 'not_started', -- 实施状态: not_started/in_progress/completed/suspended（v2.1 P1）
     -- 审计字段
     created_by TEXT,
     updated_by TEXT,
@@ -37,6 +39,8 @@ CREATE TABLE IF NOT EXISTS cr_contracts (
 CREATE INDEX IF NOT EXISTS idx_cr_status ON cr_contracts(status);
 CREATE INDEX IF NOT EXISTS idx_cr_deleted ON cr_contracts(deleted_at);
 CREATE INDEX IF NOT EXISTS idx_cr_no_prefix ON cr_contracts(substr(contract_no, 1, 14));
+CREATE INDEX IF NOT EXISTS idx_cr_impl_owner ON cr_contracts(impl_owner);
+CREATE INDEX IF NOT EXISTS idx_cr_impl_status ON cr_contracts(impl_status);
 
 CREATE TABLE IF NOT EXISTS cr_contract_documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
