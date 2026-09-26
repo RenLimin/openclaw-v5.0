@@ -141,6 +141,8 @@ def init_db(db_path: Optional[Path] = None) -> None:
     )
     conn = get_connection(db_path)
     try:
+        # 轻量列迁移：旧库已存在的表，ALTER TABLE 补齐新增列（幂等）
+        _migrate_columns(conn)
         conn.executescript(SCHEMA)
         conn.executescript(DR_SCHEMA)
         conn.executescript(RR_SCHEMA)
@@ -164,6 +166,50 @@ def init_db(db_path: Optional[Path] = None) -> None:
         conn.commit()
     finally:
         pass  # 线程本地连接不 close，避免后续操作拿到已关闭连接
+
+
+def _migrate_columns(conn: sqlite3.Connection) -> None:
+    """轻量列迁移：对已存在的表补齐新增列（幂等）。
+
+    SQLite 的 CREATE TABLE IF NOT EXISTS 不会给已存在的表加列，
+    新版本 schema 新增的列需要 ALTER TABLE 补上。
+    """
+    migrations: list[tuple[str, str, str]] = [
+        # (表名, 列名, 列定义)
+        ("cr_contracts", "impl_owner", "TEXT"),
+        ("cr_contracts", "impl_status", "TEXT DEFAULT 'not_started'"),
+        ("pm_projects", "impl_owner", "TEXT"),
+        ("pm_projects", "impl_status", "TEXT DEFAULT 'not_started'"),
+        ("pm_projects", "impl_start_date", "TEXT"),
+        ("pm_projects", "impl_end_date", "TEXT"),
+        ("as_tickets", "description", "TEXT"),
+        ("as_tickets", "state", "TEXT DEFAULT 'open'"),
+        ("as_tickets", "service_level", "TEXT DEFAULT 'silver'"),
+        ("as_tickets", "source", "TEXT DEFAULT 'warranty'"),
+        ("as_tickets", "response_deadline", "TEXT"),
+        ("as_tickets", "resolution_deadline", "TEXT"),
+        ("as_tickets", "response_at", "TEXT"),
+        ("as_tickets", "resolution", "TEXT"),
+        ("as_tickets", "resolution_type", "TEXT"),
+        ("as_tickets", "close_note", "TEXT"),
+        ("as_tickets", "customer_contact", "TEXT"),
+        ("as_tickets", "customer_phone", "TEXT"),
+        ("as_warranty_contracts", "contract_no", "TEXT"),
+        ("as_warranty_contracts", "customer_contact", "TEXT"),
+        ("as_warranty_contracts", "customer_phone", "TEXT"),
+        ("ct_timesheets", "created_by", "TEXT"),
+        ("ct_timesheets", "updated_by", "TEXT"),
+        ("ct_timesheets", "updated_at", "TEXT"),
+        ("pf_timesheet", "approval_comment", "TEXT"),
+        ("pf_timesheet", "created_by", "TEXT"),
+    ]
+    for table, column, coldef in migrations:
+        try:
+            cols = [r[1] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()]
+            if cols and column not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coldef}")
+        except sqlite3.Error:
+            pass  # 表不存在则跳过（executescript 会建）
 
 
 # ─── 宽表行读写（月报/确收共用）───

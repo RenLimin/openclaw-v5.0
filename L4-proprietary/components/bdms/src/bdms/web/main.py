@@ -168,5 +168,7 @@ async def generic_error_handler(request: Request, exc: Exception):
 # ========== API 路由 ==========
 
 from .api import router as api_router  # noqa: E402
+from .api_v2 import router as api_v2_router  # noqa: E402
 
 app.include_router(api_router)
+app.include_router(api_v2_router)
