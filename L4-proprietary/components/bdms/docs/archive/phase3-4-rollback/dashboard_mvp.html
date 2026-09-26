@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = 'MVP 看板 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='MVP 看板',
+    subtitle='8 个核心指标 · 实时聚合',
+    actions=[{"label": "刷新", "variant": "primary", "onclick": "refreshMVP()"}]
+) }}
+
+{% call card(title="数据范围") %}
+<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+    <label style="font-weight:600;">数据月份：</label>
+    <select id="month-select" class="input" style="max-width:200px;" onchange="loadMVP()">
+        <option value="2026-09">2026-09</option>
+        <option value="2026-08">2026-08</option>
+        <option value="2026-07">2026-07</option>
+        <option value="2026-06">2026-06</option>
+    </select>
+    <span id="load-status" style="color:var(--c-muted);font-size:0.85rem;"></span>
+</div>
+{% endcall %}
+
+{% call card(title="核心指标") %}
+<div id="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.5rem;">
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📄</div>
+        <div id="kpi-contract-count" style="font-size:2rem;font-weight:700;color:var(--c-primary);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">合同数</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">💰</div>
+        <div id="kpi-contract-amount" style="font-size:2rem;font-weight:700;color:var(--c-primary);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">合同金额（万元）</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📁</div>
+        <div id="kpi-project-count" style="font-size:2rem;font-weight:700;color:var(--c-primary);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">项目数</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🔵</div>
+        <div id="kpi-active-projects" style="font-size:2rem;font-weight:700;color:var(--c-info);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">执行中项目</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🚚</div>
+        <div id="kpi-delivering-projects" style="font-size:2rem;font-weight:700;color:var(--c-warning);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">交付中项目</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">✅</div>
+        <div id="kpi-completed-projects" style="font-size:2rem;font-weight:700;color:var(--c-success);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">已结项项目</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">⚠️</div>
+        <div id="kpi-risk-count" style="font-size:2rem;font-weight:700;color:var(--c-warning);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">风险数</div>
+    </div>
+    <div class="kpi-card" style="text-align:center;padding:1.5rem;background:var(--c-surface);border-radius:var(--r-lg);border:1px solid var(--c-border);">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">🔴</div>
+        <div id="kpi-high-risk-count" style="font-size:2rem;font-weight:700;color:var(--c-danger);">-</div>
+        <div style="color:var(--c-muted);margin-top:0.25rem;">高风险数</div>
+    </div>
+</div>
+{% endcall %}
+
+{% call card(title="趋势图表") %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+    <div>
+        <h4>合同金额趋势</h4>
+        <canvas id="chart-contract-trend"></canvas>
+    </div>
+    <div>
+        <h4>项目状态分布</h4>
+        <canvas id="chart-project-status"></canvas>
+    </div>
+</div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_head %}
+<script src="/static/app/js/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/app/js/dashboard_mvp.js"></script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card with context %}
+
+{% set page_title = '新建合同 — BDMS' %}
+
+{% block content %}
+{{ page_header(title='新建合同', subtitle='填写合同基本信息') }}
+
+{% call card(title="合同信息") %}
+<form id="contract-form" style="display:grid;gap:1rem;max-width:600px;">
+    <div>
+        <label style="font-weight:600;">合同标题 *</label>
+        <input name="title" class="input" style="width:100%;" required>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+            <label style="font-weight:600;">甲方</label>
+            <input name="party_a" class="input" style="width:100%;">
+        </div>
+        <div>
+            <label style="font-weight:600;">乙方</label>
+            <input name="party_b" class="input" style="width:100%;">
+        </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+            <label style="font-weight:600;">合同类型</label>
+            <select name="contract_type" class="input" style="width:100%;">
+                <option value="">请选择</option>
+                <option value="software_license">软件授权</option>
+                <option value="security_service">安全服务</option>
+                <option value="tech_development">技术开发</option>
+                <option value="comprehensive">综合服务</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-weight:600;">金额（元）</label>
+            <input name="amount" type="number" class="input" style="width:100%;">
+        </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div>
+            <label style="font-weight:600;">生效日期</label>
+            <input name="effective_date" type="date" class="input" style="width:100%;">
+        </div>
+        <div>
+            <label style="font-weight:600;">到期日期</label>
+            <input name="expiry_date" type="date" class="input" style="width:100%;">
+        </div>
+    </div>
+    <div style="display:flex;gap:1rem;margin-top:1rem;">
+        <button type="submit" class="btn btn-primary">创建合同</button>
+        <a href="/contract" class="btn btn-secondary">取消</a>
+    </div>
+</form>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.getElementById('contract-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+        title: form.title.value,
+        party_a: form.party_a.value,
+        party_b: form.party_b.value,
+        contract_type: form.contract_type.value,
+        amount: parseFloat(form.amount.value) || 0,
+        effective_date: form.effective_date.value,
+        expiry_date: form.expiry_date.value,
+        operator: 'web_user',
+    };
+    try {
+        const res = await fetch('/api/contract/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        const result = await res.json();
+        if (res.ok) {
+            alert('合同创建成功！');
+            window.location.href = '/contract';
+        } else {
+            alert('创建失败: ' + (result.detail || result.error));
+        }
+    } catch (e) {
+        alert('请求失败: ' + e.message);
+    }
+});
+</script>
+{% endblock %}

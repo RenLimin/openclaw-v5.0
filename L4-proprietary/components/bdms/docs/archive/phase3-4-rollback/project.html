@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, badge with context %}
+
+{% set page_title = '项目管理 — BDMS' %}
+
+{% block content %}
+{{ page_header(
+    title='项目管理',
+    subtitle='项目全生命周期管理',
+    actions=[{"label": "+ 新建项目", "variant": "primary", "href": "/project/new"}]
+) }}
+
+{% call card(title="筛选") %}
+<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+    <label>状态：</label>
+    <select id="filter-status" class="input" style="max-width:150px;" onchange="loadProjects()">
+        <option value="">全部</option>
+        <option value="initiating">立项中</option>
+        <option value="planning">规划中</option>
+        <option value="executing">执行中</option>
+        <option value="delivering">交付中</option>
+        <option value="accepting">验收中</option>
+        <option value="closing">结项中</option>
+        <option value="closed">已结项</option>
+        <option value="cancelled">已取消</option>
+    </select>
+    <label>PM：</label>
+    <input id="filter-pm" class="input" style="max-width:150px;" placeholder="项目经理" onchange="loadProjects()">
+    <label>关键词：</label>
+    <input id="filter-keyword" class="input" style="max-width:200px;" placeholder="项目名称/编号" onchange="loadProjects()">
+</div>
+{% endcall %}
+
+{% call card(title="项目列表") %}
+<div id="project-list" style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;">
+        <thead>
+            <tr style="border-bottom:2px solid var(--c-border);">
+                <th style="padding:0.75rem;text-align:left;">项目编号</th>
+                <th style="padding:0.75rem;text-align:left;">名称</th>
+                <th style="padding:0.75rem;text-align:left;">PM</th>
+                <th style="padding:0.75rem;text-align:center;">状态</th>
+                <th style="padding:0.75rem;text-align:left;">进度</th>
+                <th style="padding:0.75rem;text-align:center;">风险</th>
+                <th style="padding:0.75rem;text-align:center;">操作</th>
+            </tr>
+        </thead>
+        <tbody id="project-tbody">
+            <tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--c-muted);">加载中...</td></tr>
+        </tbody>
+    </table>
+</div>
+<div id="project-pagination" style="display:flex;justify-content:center;gap:0.5rem;margin-top:1rem;"></div>
+{% endcall %}
+
+<!-- 详情弹窗 -->
+<div id="project-detail-modal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width:900px;">
+        <div class="modal-header">
+            <h3 id="modal-title">项目详情</h3>
+            <button onclick="closeProjectModal()" class="btn btn-secondary">✕</button>
+        </div>
+        <div id="modal-body"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/app/js/project.js"></script>
+{% endblock %}
