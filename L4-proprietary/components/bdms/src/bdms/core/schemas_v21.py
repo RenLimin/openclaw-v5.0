@@ -328,6 +328,8 @@ CREATE TABLE IF NOT EXISTS pf_timesheet (
     approver TEXT,
     approved_by TEXT,
     approved_at TEXT,
+    approval_comment TEXT,
+    created_by TEXT,
     created_at TEXT DEFAULT (datetime('now','localtime')),
     updated_at TEXT DEFAULT (datetime('now','localtime')),
     deleted_at TEXT DEFAULT NULL,
