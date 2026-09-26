@@ -170,6 +170,11 @@ CREATE TABLE IF NOT EXISTS pm_projects (
     impl_security INTEGER DEFAULT 0,      -- 安服实施 0/1
     impl_custom INTEGER DEFAULT 0,        -- 定制开发 0/1
     impl_outsourcing INTEGER DEFAULT 0,   -- 外包/外采 0/1
+    -- 实施管理字段（v2.1 P2）
+    impl_owner TEXT,                      -- 实施负责人
+    impl_status TEXT DEFAULT 'not_started', -- 实施状态: not_started/in_progress/delayed/completed
+    impl_start_date TEXT,                 -- 实际开始日期
+    impl_end_date TEXT,                   -- 实际结束日期
     -- 审计字段
     created_by TEXT,
     updated_by TEXT,
@@ -251,11 +256,14 @@ CREATE TABLE IF NOT EXISTS ct_timesheets (
     hours REAL NOT NULL DEFAULT 0,
     work_type TEXT,
     description TEXT,
-    status TEXT DEFAULT 'submitted',
+    status TEXT DEFAULT 'pending',
     approver TEXT,
     approved_by TEXT,
     approved_at TEXT,
+    created_by TEXT,
+    updated_by TEXT,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
+    updated_at TEXT DEFAULT (datetime('now', 'localtime')),
     deleted_at TEXT DEFAULT NULL,
     FOREIGN KEY (project_id) REFERENCES pm_projects(id)
 );
@@ -559,22 +567,27 @@ CREATE TABLE IF NOT EXISTS as_tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ticket_no TEXT UNIQUE NOT NULL,
     title TEXT NOT NULL,
+    description TEXT,                     -- 问题描述
     ticket_type TEXT,
-    priority TEXT DEFAULT 'medium',
-    status TEXT DEFAULT 'open',
+    priority TEXT DEFAULT 'medium',       -- low/medium/high/critical
+    state TEXT DEFAULT 'open',            -- 工单状态: open/assigned/in_progress/resolved/closed
     project_id INTEGER,
     customer_name TEXT,
-    contact_person TEXT,
-    contact_phone TEXT,
+    customer_contact TEXT,                -- 客户联系人
+    customer_phone TEXT,                  -- 客户电话
     product_id TEXT,
     product_version TEXT,
     assignee TEXT,
-    sla_level TEXT DEFAULT 'SILVER',
-    sla_response_hours INTEGER DEFAULT 8,
-    sla_resolve_hours INTEGER DEFAULT 48,
-    first_response_at TEXT,
+    service_level TEXT DEFAULT 'silver',  -- gold/silver/bronze
+    source TEXT DEFAULT 'warranty',       -- warranty/paid/free/other
+    response_deadline TEXT,               -- SLA 响应截止
+    resolution_deadline TEXT,             -- SLA 解决截止
+    response_at TEXT,                     -- 首次响应时间
     resolved_at TEXT,
     closed_at TEXT,
+    close_note TEXT,
+    resolution TEXT,                      -- 解决方案
+    resolution_type TEXT,                 -- fixed/workaround/duplicate/wont_fix
     satisfaction_score INTEGER,
     -- 审计字段
     created_by TEXT,
@@ -584,7 +597,8 @@ CREATE TABLE IF NOT EXISTS as_tickets (
     deleted_at TEXT DEFAULT NULL,
     FOREIGN KEY (project_id) REFERENCES pm_projects(id)
 );
-CREATE INDEX IF NOT EXISTS idx_as_status ON as_tickets(status);
+CREATE INDEX IF NOT EXISTS idx_as_state ON as_tickets(state);
+CREATE INDEX IF NOT EXISTS idx_as_priority ON as_tickets(priority);
 CREATE INDEX IF NOT EXISTS idx_as_project ON as_tickets(project_id);
 CREATE INDEX IF NOT EXISTS idx_as_assignee ON as_tickets(assignee);
 CREATE INDEX IF NOT EXISTS idx_as_deleted ON as_tickets(deleted_at);
@@ -592,8 +606,11 @@ CREATE INDEX IF NOT EXISTS idx_as_deleted ON as_tickets(deleted_at);
 CREATE TABLE IF NOT EXISTS as_ticket_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     ticket_id INTEGER NOT NULL,
+    from_state TEXT,                       -- 原状态
+    to_state TEXT,                         -- 新状态
     action TEXT NOT NULL,
     operator TEXT NOT NULL,
+    comment TEXT,                          -- 备注
     detail TEXT,
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY (ticket_id) REFERENCES as_tickets(id) ON DELETE CASCADE
@@ -601,11 +618,14 @@ CREATE TABLE IF NOT EXISTS as_ticket_history (
 
 CREATE TABLE IF NOT EXISTS as_warranty_contracts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    contract_no TEXT,                     -- 维保合同号 WC-PROJID-NNN
     project_id INTEGER NOT NULL,
     warranty_start DATE,
     warranty_end DATE,
-    service_level TEXT DEFAULT 'SILVER',
+    service_level TEXT DEFAULT 'silver',
     remaining_tickets INTEGER DEFAULT 0,
+    customer_contact TEXT,
+    customer_phone TEXT,
     status TEXT DEFAULT 'active',
     created_at TEXT DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY (project_id) REFERENCES pm_projects(id) ON DELETE CASCADE,
@@ -1044,4 +1064,23 @@ CREATE TABLE IF NOT EXISTS outbox_events (
 );
 CREATE INDEX IF NOT EXISTS idx_outbox_status ON outbox_events(status);
 CREATE INDEX IF NOT EXISTS idx_outbox_created ON outbox_events(created_at);
+"""
+
+
+# ===== 系统级：导入校验错误（v2.1 P2，ProjectValidator 依赖）=====
+
+IMPORT_ERRORS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS sys_import_errors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_no TEXT NOT NULL,
+    sheet TEXT,
+    row_index INTEGER,
+    field_name TEXT,
+    error_type TEXT NOT NULL,             -- missing/invalid/duplicate/format
+    error_message TEXT NOT NULL,
+    severity TEXT DEFAULT 'error',        -- error/warning
+    raw_value TEXT,
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_sys_import_errors_batch ON sys_import_errors(batch_no);
 """
