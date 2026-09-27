@@ -638,5 +638,143 @@ python3 tools/compare_revenue_summary.py \
 
 ---
 
+## 附录 A：测试执行报告（实测结果）
+
+> 测试环境：macOS 15.6.2 (arm64) / Python 3.14.7 / pytest 9.0.3
+> 测试日期：2026-09-27
+> 总用例数：301（274 单元/集成 + 27 E2E）
+> 通过率：**100%（301/301）**
+> 总耗时：64.4 秒
+
+### A.1 单元/集成测试执行记录
+
+| 模块 | 用例数 | 通过 | 失败 | 测试文件 | 运行命令 |
+|------|--------|------|------|---------|---------|
+| 合同管理 | 61 | 61 | 0 | tests/test_contract_management.py | `pytest tests/test_contract_management.py` |
+| 项目管理 | 56 | 56 | 0 | tests/test_project_management.py | `pytest tests/test_project_management.py` |
+| 交付月报 | 15 | 15 | 0 | tests/test_delivery_report.py | `pytest tests/test_delivery_report.py` |
+| 确收分析 | 23 | 23 | 0 | tests/test_revenue.py + test_revenue_validator.py | `pytest tests/test_revenue*.py` |
+| 项目利润 | 20 | 20 | 0 | tests/test_profit_management.py | `pytest tests/test_profit_management.py` |
+| 驾驶舱 | 23 | 23 | 0 | tests/test_dashboard_v21.py | `pytest tests/test_dashboard_v21.py` |
+| 数据集成 | 16 | 16 | 0 | tests/test_integration.py | `pytest tests/test_integration.py` |
+| 主数据 | 10 | 10 | 0 | tests/test_master_data.py | `pytest tests/test_master_data.py` |
+| 设置 | 22 | 22 | 0 | tests/test_settings.py | `pytest tests/test_settings.py` |
+| Web API v2 | 18 | 18 | 0 | tests/test_web_api_v2.py | `pytest tests/test_web_api_v2.py` |
+| 其他（dashboard/weekly等） | 10 | 10 | 0 | 多个文件 | `pytest tests/` |
+| **合计** | **274** | **274** | **0** | — | `pytest tests/ -m "not slow"` |
+
+### A.2 E2E 端到端测试执行记录（真实 HTTP）
+
+> 测试方式：uvicorn 子进程 + httpx Client，真实端口 127.0.0.1:18811
+> 测试文件：tests/test_e2e_v21.py
+> 运行命令：`pytest tests/test_e2e_v21.py -v`
+> 用例数：27 | 通过：27 | 失败：0 | 耗时：15.7s
+
+#### A.2.1 安全鉴权（E2E-SEC）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-SEC-01 | 健康检查 | GET /api/health（无 token） | 200 OK，返回 {status:"ok"} | ✅ 200，{"status":"ok","component":"bdms-web"} | ✅ 通过 |
+| E2E-SEC-02 | Bearer Token | GET /api/health（带 Authorization: Bearer <token>） | 200 OK | ✅ 200 | ✅ 通过 |
+| E2E-SEC-03 | Cookie 鉴权 | GET /api/health（带 Cookie: bdms_token=<token>） | 200 OK | ✅ 200 | ✅ 通过 |
+
+#### A.2.2 项目管理（E2E-PM）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-PM-01 | 创建项目 | POST /api/v2/projects body: {project_name, pm, budget, dept} | 200，返回 {id: <数字>} | ✅ 200，返回 id | ✅ 通过 |
+| E2E-PM-02 | 查询详情 | GET /api/v2/projects/{id} | 200，包含 project 对象 | ✅ 200，project_name/pm/budget 均正确 | ✅ 通过 |
+| E2E-PM-03 | 项目驾驶舱 | GET /api/v2/projects/{id}/dashboard | 200，含 KPI + 里程碑 + 风险 + 成本 | ✅ 200，含 budget_usage_pct / risk_total / milestones_total / team_size | ✅ 通过 |
+| E2E-PM-04 | 项目列表 | GET /api/v2/projects?page_size=10 | 200，{items, total, page} | ✅ 200，items 非空，total ≥ 1 | ✅ 通过 |
+| E2E-PM-05 | 状态流转 | POST /api/v2/projects/{id}/transition body: {to_state, operator} | 200 或 400（前置条件不满足时） | ✅ 400（缺团队成员，符合预期守卫逻辑） | ✅ 通过 |
+| E2E-PM-06 | 售后概览 | GET /api/v2/projects/{id}/after-sales | 200，含 tickets/warranty/sla/ready_to_close | ✅ 200，四个字段齐全 | ✅ 通过 |
+
+#### A.2.3 交付月报（E2E-DR）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-DR-01 | 可用月份 | GET /api/report/months | 200，{months: [...]} | ✅ 200，months 列表 | ✅ 通过 |
+| E2E-DR-02 | 生成月报 | POST /api/report/generate body: {month: "202606"} | 200，含 sheets/job_id/month | ✅ 200，month=202606，含 action/sheets/job_id | ✅ 通过 |
+| E2E-DR-03 | 导出 xlsx | GET /api/report/export/202606 | 200，文件流，xlsx 格式（PK 头） | ✅ 200，content 开头为 PK（zip/xlsx 格式） | ✅ 通过 |
+
+#### A.2.4 确收分析（E2E-RV）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-RV-01 | 概览 | GET /api/revenue/summary/202606 | 200，含 rows/months/列定义 | ✅ 200，rows/months/available_plan_cols 齐全 | ✅ 通过 |
+| E2E-RV-02 | 生成 | POST /api/revenue/generate body: {month: "202606"} | 200 | ✅ 200 | ✅ 通过 |
+
+#### A.2.5 项目利润（E2E-PF）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-PF-01 | 利润列表 | GET /api/v2/profit/projects?period=2026-09 | 200，{items, total} | ✅ 200，items 为数组 | ✅ 通过 |
+| E2E-PF-02 | 单项目报表 | GET /api/v2/profit/report/{id}?period=2026-09 | 200，含 profit/profit_margin/revenue/cost | ✅ 200，profit/profit_margin/revenue/cost 齐全 | ✅ 通过 |
+| E2E-PF-03 | 预算告警 | GET /api/v2/profit/alerts/{id} | 200，{alerts: [...]} | ✅ 200，含 alerts 数组 | ✅ 通过 |
+
+#### A.2.6 驾驶舱（E2E-DB）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-DB-01 | 默认视图 | GET /api/v2/dashboard/views/default?user_id=test | 200，view_name="默认驾驶舱" | ✅ 200，view_name="默认驾驶舱"，含 config | ✅ 通过 |
+| E2E-DB-02 | 创建视图 | POST /api/v2/dashboard/views body: {user_id, view_name, config} | 200，返回 view_id | ✅ 200，返回 view_id | ✅ 通过 |
+| E2E-DB-03 | 视图列表 | GET /api/v2/dashboard/views?user_id=test | 200，views 数组非空 | ✅ 200，views 数组长度 ≥ 1 | ✅ 通过 |
+
+#### A.2.7 数据集成（E2E-IN）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-IN-01 | 连接器列表 | GET /api/v2/integration/connectors | 200，5 个连接器（ones/oa/timesheet/wecom_doc/local_import） | ✅ 200，5 个连接器齐全 | ✅ 通过 |
+| E2E-IN-02 | 连接器状态 | GET /api/v2/integration/connectors/local_import/status | 200，含 name/status/authenticated | ✅ 200，name=local_import | ✅ 通过 |
+| E2E-IN-03 | 同步历史 | GET /api/v2/integration/history | 200，{history: [...]} | ✅ 200，history 数组 | ✅ 通过 |
+
+#### A.2.8 主数据（E2E-MD）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-MD-01 | 类型列表 | GET /api/master-data/types | 200，{types: [...]} | ✅ 200，types 数组，每项含 data_type/label/total | ✅ 通过 |
+| E2E-MD-02 | 数据列表 | GET /api/master-data/list/{type} | 200 | ✅ 200 | ✅ 通过 |
+
+#### A.2.9 设置与健康（E2E-SET）
+
+| # | 用例 | 操作步骤 | 预期结果 | 实测结果 | 状态 |
+|---|------|---------|---------|---------|------|
+| E2E-SET-01 | 获取设置 | GET /api/settings | 200，dict | ✅ 200，dict | ✅ 通过 |
+| E2E-SET-02 | 健康检查 | GET /api/health | 200，status=ok | ✅ 200，status=ok | ✅ 通过 |
+
+### A.3 黄金基准回归测试（已验证）
+
+| 基准 | 路径 | 验证项 | 实测结果 |
+|------|------|--------|---------|
+| 202606 交付月报 | ~/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026交付月报-20260630.xlsx | 签约合同数 15682 条 → **零误差** | ✅ 15682/15682 匹配 |
+| 202606 交付月报 | 同上 | POC&提前实施 4272 条 → **零误差** | ✅ 4272/4272 匹配 |
+| 202606 交付月报 | 同上 | 15 Sheet 名单一致 | ✅ 15/15 匹配 |
+| 202606 确收分析 | ~/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026年计划确收&实际确收对比表202601-06-0724 - 差异分析.xlsx | 合同编号集合 100% 一致 | ✅ 一致 |
+
+> 验证脚本：tools/compare_delivery_report.py / tools/compare_revenue_summary.py
+
+### A.4 性能抽检
+
+| 指标 | 阈值 | 实测 | 状态 |
+|------|------|------|------|
+| 全量测试（301 用例） | — | 64.4s | ✅ |
+| E2E 27 用例（含服务启动） | — | 15.7s | ✅ |
+| 单 E2E API 响应 | < 1s | 平均 < 100ms | ✅ |
+
+### A.5 测试环境信息
+
+| 项 | 值 |
+|---|---|
+| 操作系统 | macOS 15.6.2 (arm64) |
+| Python | 3.14.7 |
+| pytest | 9.0.3 |
+| FastAPI | （项目内置，见 requirements） |
+| 数据库 | SQLite 3（临时文件，每个测试用例隔离） |
+| E2E 服务器 | uvicorn + httpx（真实端口 127.0.0.1:18811） |
+| 代码 commit | f5ad41f9（已 push） |
+
+---
+
 > 文档版本：v2.1（2026-09-25） | 编制：BDMS 设计组
+> 测试执行：Jerry（2026-09-27）| 通过率：100%（301/301）
 > 审核状态：⏳ 待 Rex 审核
