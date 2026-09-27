@@ -775,6 +775,317 @@ python3 tools/compare_revenue_summary.py \
 
 ---
 
+## 附录 B：人工 E2E 测试操作手册
+
+> 用途：Rex 人工审核时按此步骤执行，与自动化测试共用同一套标准
+> 预计耗时：30 分钟
+> 前置条件：代码已拉取到最新，Python 3.14+ 环境就绪
+
+### B.0 启动服务（必做）
+
+打开终端，执行：
+
+```bash
+cd ~/.openclaw/workspace/L4-proprietary/components/bdms
+export PYTHONPATH=src
+python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8811
+```
+
+**预期**：看到 `Uvicorn running on http://127.0.0.1:8811`，无报错。
+
+**验证**：打开另一个终端执行：
+
+```bash
+curl -s http://127.0.0.1:8811/api/health | python3 -m json.tool
+```
+
+**预期结果**：
+```json
+{"status": "ok", "component": "bdms-web"}
+```
+
+---
+
+### B.1 第一组：页面浏览验证（约 5 分钟）
+
+**操作**：浏览器访问 http://127.0.0.1:8811/
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B1-01 | 打开首页 | 页面正常渲染，无白屏、无 404 | | ⬜ |
+| B1-02 | 打开 DevTools Console | 无 JS 报错（红色 error 为 0） | | ⬜ |
+| B1-03 | 点击「交付月报」菜单 | 跳转到 /report，页面正常加载 | | ⬜ |
+| B1-04 | 点击「确收分析」菜单 | 跳转到 /revenue，页面正常加载 | | ⬜ |
+| B1-05 | 点击「驾驶舱」菜单 | 跳转到 /dashboard，页面正常加载 | | ⬜ |
+| B1-06 | 点击「主数据」菜单 | 跳转到 /master_data，页面正常加载 | | ⬜ |
+| B1-07 | 点击「设置」菜单 | 跳转到 /settings，页面正常加载 | | ⬜ |
+
+> 对应自动化用例：E2E-SET-01 / E2E-SET-02
+
+---
+
+### B.2 第二组：API 层功能验证（约 10 分钟）
+
+**操作**：在终端执行以下 curl 命令，逐条验证。
+
+#### B.2.1 项目管理
+
+```bash
+# 创建项目
+curl -s -X POST http://127.0.0.1:8811/api/v2/projects \
+  -H "Content-Type: application/json" \
+  -d '{"project_name":"人工审核测试项目","pm":"rex","budget":100000,"dept":"测试部"}' \
+  | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-01 | 执行创建项目命令 | HTTP 200，返回 `{"id": <数字>}` | | ⬜ |
+
+```bash
+# 项目列表
+curl -s http://127.0.0.1:8811/api/v2/projects?page_size=10 | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-02 | 执行项目列表命令 | HTTP 200，返回 `{items: [...], total: <数字>, page: 1}`，items 非空 | | ⬜ |
+
+```bash
+# 项目驾驶舱（把 {id} 换成刚创建的项目 ID）
+curl -s http://127.0.0.1:8811/api/v2/projects/{id}/dashboard | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-03 | 执行驾驶舱命令 | HTTP 200，含 project_id / budget_usage_pct / risk_total / milestones_total / team_size | | ⬜ |
+
+```bash
+# 售后概览
+curl -s http://127.0.0.1:8811/api/v2/projects/{id}/after-sales | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-04 | 执行售后概览命令 | HTTP 200，含 tickets / warranty / sla / ready_to_close 四个字段 | | ⬜ |
+
+> 对应自动化用例：E2E-PM-01 ~ E2E-PM-06
+
+#### B.2.2 交付月报
+
+```bash
+# 生成月报
+curl -s -X POST http://127.0.0.1:8811/api/report/generate \
+  -H "Content-Type: application/json" \
+  -d '{"month":"202606"}' | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-05 | 执行生成月报命令 | HTTP 200，含 month / action / sheets / job_id 字段 | | ⬜ |
+
+```bash
+# 导出 xlsx
+curl -s -o /tmp/bdms_manual_test_report.xlsx http://127.0.0.1:8811/api/report/export/202606
+file /tmp/bdms_manual_test_report.xlsx
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-06 | 执行导出命令 | file 显示 "Zip archive data"（xlsx 格式），文件大小 > 0 | | ⬜ |
+| B2-07 | 用 Excel 打开文件 | 15 Sheet 全部存在，数据正常显示 | | ⬜ |
+
+> 对应自动化用例：E2E-DR-01 ~ E2E-DR-03
+
+#### B.2.3 确收分析
+
+```bash
+# 确收概览
+curl -s http://127.0.0.1:8811/api/revenue/summary/202606 | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-08 | 执行确收概览命令 | HTTP 200，含 months / rows / available_plan_cols / available_actual_cols | | ⬜ |
+
+```bash
+# 生成确收分析
+curl -s -X POST http://127.0.0.1:8811/api/revenue/generate \
+  -H "Content-Type: application/json" \
+  -d '{"month":"202606"}' | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-09 | 执行生成命令 | HTTP 200 | | ⬜ |
+
+> 对应自动化用例：E2E-RV-01 ~ E2E-RV-02
+
+#### B.2.4 项目利润
+
+```bash
+# 利润列表
+curl -s "http://127.0.0.1:8811/api/v2/profit/projects?period=2026-09" | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-10 | 执行利润列表命令 | HTTP 200，返回 items 数组 | | ⬜ |
+
+```bash
+# 单项目利润报表（{id} 换成创建的项目 ID）
+curl -s "http://127.0.0.1:8811/api/v2/profit/report/{id}?period=2026-09" | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-11 | 执行利润报表命令 | HTTP 200，含 profit / profit_margin / revenue / cost | | ⬜ |
+
+> 对应自动化用例：E2E-PF-01 ~ E2E-PF-03
+
+#### B.2.5 驾驶舱视图
+
+```bash
+# 默认视图
+curl -s "http://127.0.0.1:8811/api/v2/dashboard/views/default?user_id=rex" | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-12 | 执行默认视图命令 | HTTP 200，view_name = "默认驾驶舱"，含 config | | ⬜ |
+
+```bash
+# 创建自定义视图
+curl -s -X POST http://127.0.0.1:8811/api/v2/dashboard/views \
+  -H "Content-Type: application/json" \
+  -d '{"user_id":"rex","view_name":"人工审核视图","config":{"layout":["kpi","delivery"]}}' \
+  | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-13 | 执行创建视图命令 | HTTP 200，返回 view_id | | ⬜ |
+
+> 对应自动化用例：E2E-DB-01 ~ E2E-DB-03
+
+#### B.2.6 数据集成
+
+```bash
+# 连接器列表
+curl -s http://127.0.0.1:8811/api/v2/integration/connectors | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-14 | 执行连接器列表命令 | HTTP 200，返回 5 个连接器：ones / oa / timesheet / wecom_doc / local_import | | ⬜ |
+
+```bash
+# 连接器状态
+curl -s http://127.0.0.1:8811/api/v2/integration/connectors/local_import/status | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-15 | 执行连接器状态命令 | HTTP 200，name = "local_import" | | ⬜ |
+
+> 对应自动化用例：E2E-IN-01 ~ E2E-IN-03
+
+#### B.2.7 主数据
+
+```bash
+# 主数据类型
+curl -s http://127.0.0.1:8811/api/master-data/types | python3 -m json.tool
+```
+
+| # | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|---------|-------------------|---------|------|
+| B2-16 | 执行主数据类型命令 | HTTP 200，types 数组非空，每项含 data_type / label / total | | ⬜ |
+
+> 对应自动化用例：E2E-MD-01 ~ E2E-MD-02
+
+---
+
+### B.3 第三组：黄金基准对比（核心验收，约 15 分钟）
+
+**操作**：将系统生成的 202606 交付月报与手工报表逐格比对。
+
+```bash
+cd ~/.openclaw/workspace/L4-proprietary/components/bdms
+
+# 1. 确保已生成并导出
+curl -s -X POST http://127.0.0.1:8811/api/report/generate \
+  -H "Content-Type: application/json" -d '{"month":"202606"}'
+
+curl -s -o /tmp/bdms_dr_202606.xlsx http://127.0.0.1:8811/api/report/export/202606
+
+# 2. 对比（如果 compare 脚本可用）
+python3 tools/compare_delivery_report.py \
+  --baseline "$HOME/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026交付月报-20260630.xlsx" \
+  --output /tmp/bdms_dr_202606.xlsx
+```
+
+| # | 验证项 | 测试标准 | 实测结果 | 状态 |
+|---|--------|---------|---------|------|
+| B3-01 | Sheet 数量 | = 15 个 Sheet | | ⬜ |
+| B3-02 | 签约合同行数 | = 15682 行（±1 行容差） | | ⬜ |
+| B3-03 | POC合同行数 | = 4272 行（±1 行容差） | | ⬜ |
+| B3-04 | 列名一致性 | 100% 与手工报表一致 | | ⬜ |
+| B3-05 | 统计 Sheet 聚合 | 数据准确（误差 ≤ 0.01 元） | | ⬜ |
+| B3-06 | 确收分析汇总行数 | = 31 行 | | ⬜ |
+| B3-07 | 确收合同编号集合 | 100% 与手工报表一致 | | ⬜ |
+
+> 对应自动化回归测试：RT-01 ~ RT-08
+
+---
+
+### B.4 第四组：页面交互验证（约 5 分钟）
+
+| # | 页面 | 操作步骤 | 预期结果（测试标准） | 实测结果 | 状态 |
+|---|------|---------|-------------------|---------|------|
+| B4-01 | 交付月报 | 选择 202606 → 点「生成」 | 表格数据加载，Sheet 可切换 | | ⬜ |
+| B4-02 | 确收分析 | 切换月份到 202605 | 数据随之更新 | | ⬜ |
+| B4-03 | 主数据 | 选「项目经理」类型 | 数据网格正常显示列表 | | ⬜ |
+| B4-04 | 驾驶舱 | 查看默认视图 | KPI 卡片 + 图表正常渲染 | | ⬜ |
+| B4-05 | 设置 | 修改一项设置 → 保存 → 刷新 | 设置值保持不变 | | ⬜ |
+
+---
+
+### B.5 测试结果汇总
+
+| 组 | 用例数 | 通过 | 失败 | 通过率 |
+|---|--------|------|------|--------|
+| B.1 页面浏览 | 7 | | | |
+| B.2 API 功能 | 16 | | | |
+| B.3 黄金基准 | 7 | | | |
+| B.4 页面交互 | 5 | | | |
+| **合计** | **35** | | | |
+
+**审核结论**：⬅️ 通过 / ❌ 不通过 / ⚠️ 有条件通过（附问题清单）
+
+**问题清单**：
+1. 
+2. 
+3. 
+
+---
+
+## 附录 C：自动化与人工测试对应关系
+
+| 自动化测试 | 人工测试 | 共用标准 |
+|-----------|---------|---------|
+| E2E-PM-01 ~ 06 | B2-01 ~ 04 | 项目管理 API 契约 |
+| E2E-DR-01 ~ 03 | B2-05 ~ 07 | 交付月报生成 + 导出格式 |
+| E2E-RV-01 ~ 02 | B2-08 ~ 09 | 确收分析 API 契约 |
+| E2E-PF-01 ~ 03 | B2-10 ~ 11 | 利润计算 + 告警 |
+| E2E-DB-01 ~ 03 | B2-12 ~ 13 | 视图 CRUD |
+| E2E-IN-01 ~ 03 | B2-14 ~ 15 | 连接器列表 + 状态 |
+| E2E-MD-01 ~ 02 | B2-16 | 主数据类型 + 列表 |
+| E2E-SET-01 ~ 02 | B1-01 / B1-02 | 健康检查 + 页面渲染 |
+| RT-01 ~ 08 | B3-01 ~ 07 | 黄金基准对比 |
+
+---
+
 > 文档版本：v2.1（2026-09-25） | 编制：BDMS 设计组
 > 测试执行：Jerry（2026-09-27）| 通过率：100%（301/301）
+> 人工审核：⏳ 待 Rex 执行
 > 审核状态：⏳ 待 Rex 审核

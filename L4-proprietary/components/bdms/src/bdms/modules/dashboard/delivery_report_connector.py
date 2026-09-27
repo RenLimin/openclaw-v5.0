@@ -260,9 +260,38 @@ class DeliveryReportConnector:
     # ========================================================
 
     def get_legend_config(self) -> pd.DataFrame:
-        """读 md_reference legend_config → 图例 DataFrame。"""
+        """读 md_reference legend_config → 图例 DataFrame。
+
+        与黄金基准 Sheet-15 结构完全一致：
+        - 列名 = 实际表头名（项目经理/部门/中心...），共 48 列
+        - 行数 = 数据行数（505 行，不含表头；导出时 pandas 会写表头行，共 506 行）
+        - 不含 code/label 列（那是 md_reference 内部字段）
+        """
         conn = _db.get_connection(self.db_path)
         try:
+            # 1. 读表头行（确定列顺序）
+            header_row = conn.execute(
+                "SELECT extra FROM md_reference "
+                "WHERE data_type = 'legend_config' AND code = '__header__'"
+            ).fetchone()
+            if not header_row:
+                # 旧格式 fallback：从第一条数据的 extra key 推断
+                sample = conn.execute(
+                    "SELECT extra FROM md_reference "
+                    "WHERE data_type = 'legend_config' AND enabled = 1 LIMIT 1"
+                ).fetchone()
+                if not sample or not sample['extra']:
+                    return pd.DataFrame()
+                import json as _json
+                extra = _json.loads(sample['extra'])
+                columns = list(extra.keys())
+            else:
+                import json as _json
+                header_extra = _json.loads(header_row['extra'])
+                # 按列在表头中的顺序排列
+                columns = list(header_extra.values())
+
+            # 2. 读数据行
             rows = conn.execute(
                 "SELECT code, label, extra FROM md_reference "
                 "WHERE data_type = 'legend_config' AND enabled = 1 "
@@ -270,10 +299,17 @@ class DeliveryReportConnector:
             ).fetchall()
             if not rows:
                 return pd.DataFrame()
-            return pd.DataFrame(
-                [{"code": r[0], "label": r[1],
-                  **(json.loads(r[2]) if r[2] else {})} for r in rows]
-            )
+
+            # 3. 构造 DataFrame，列顺序与表头一致
+            import json as _json
+            data = []
+            for r in rows:
+                extra = _json.loads(r['extra']) if r['extra'] else {}
+                # 按 columns 顺序取值
+                row_data = {col: extra.get(col, "") for col in columns}
+                data.append(row_data)
+
+            return pd.DataFrame(data, columns=columns)
         finally:
             conn.close()
 
