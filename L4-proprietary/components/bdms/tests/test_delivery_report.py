@@ -186,10 +186,15 @@ class TestLegendSeed:
 
         conn = _db.get_connection(tmp)
         n = conn.execute(
-            "SELECT COUNT(*) FROM md_reference WHERE data_type='legend_config'"
+            "SELECT COUNT(*) FROM md_reference WHERE data_type='legend_config' AND enabled=1"
         ).fetchone()[0]
+        assert n == r1["seeded"]  # 数据行 = seeded 数
+        # 表头行（enabled=0, code='__header__'）单独存
+        header_count = conn.execute(
+            "SELECT COUNT(*) FROM md_reference WHERE data_type='legend_config' AND code='__header__'"
+        ).fetchone()[0]
+        assert header_count == 1
         conn.close()
-        assert n == r1["seeded"]
 
 
 # ─── 5. 导出结构（真实数据，慢速标记）───
