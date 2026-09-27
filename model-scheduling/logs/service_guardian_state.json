@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-09-27T09:05:25.301291",
+  "gateway": true,
+  "services": [
+    {
+      "label": "ai.openclaw.model-scheduling",
+      "action": "already_running",
+      "port_ok": true
+    }
+  ]
+}
