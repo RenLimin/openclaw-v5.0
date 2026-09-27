@@ -779,9 +779,53 @@ python3 tools/compare_revenue_summary.py \
 
 > 用途：Rex 人工审核时按此步骤执行，与自动化测试共用同一套标准
 > 预计耗时：30 分钟
-> 前置条件：代码已拉取到最新，Python 3.14+ 环境就绪
 
-### B.0 启动服务（必做）
+### B.0 环境准备（首次执行必做）
+
+#### B.0.1 Python 环境
+
+BDMS 运行需要以下 Python 包（已写入 `requirements.txt`）：
+
+| 包 | 最低版本 | 用途 |
+|---|---|---|
+| fastapi | 0.100 | Web 框架 |
+| uvicorn | 0.23 | ASGI 服务器 |
+| openpyxl | 3.1 | Excel 读写 |
+| pandas | 2.0 | 数据处理 |
+| jinja2 | 3.1 | 模板渲染 |
+| httpx | 0.25 | 测试用 HTTP 客户端 |
+| pytest | 7.0 | 测试框架 |
+
+安装命令：
+
+```bash
+pip install -r ~/.openclaw/workspace/L4-proprietary/components/bdms/requirements.txt
+```
+
+> 注意：如果你用的是 conda 环境，请确保在 base 环境或对应虚拟环境中执行上述命令。
+
+#### B.0.2 黄金基准文件
+
+人工测试需要手工报表黄金基准文件，路径：
+
+| 文件 | 用途 | 路径 |
+|---|---|---|
+| 交付月报 | 黄金基准对比 | `~/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026交付月报-20260630.xlsx` |
+| 确收分析 | 黄金基准对比 | `~/Bangcle Workspace/01. Management/2026/2026团队报告/202606/2026年计划确收&实际确收对比表202601-06-0724 - 差异分析.xlsx` |
+
+> 如果黄金基准路径不同，请修改 `src/bdms/modules/delivery_report/seed_legend.py` 中的 `DEFAULT_GOLDEN`。
+
+#### B.0.3 数据库初始化
+
+首次运行前，确保数据库已初始化（通常会自动初始化）。手动初始化命令：
+
+```bash
+cd ~/.openclaw/workspace/L4-proprietary/components/bdms
+export PYTHONPATH=src
+python3 -c "from bdms.core.db import init_db; init_db()"
+```
+
+### B.0.4 启动服务（每次测试必做）
 
 打开终端，执行：
 
