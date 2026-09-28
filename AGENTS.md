@@ -84,11 +84,12 @@ Memory is limited. "Mental notes" don't survive session restarts; files do. Befo
 1. 明确需求      — PRD（产品需求文档），功能清单 + 验收标准 + 问题清单
 2. 设计大纲文档  — DESIGN-OUTLINE 级别，整体架构 + 模块划分
 3. 详细设计文档  — DESIGN-DETAIL 级别，接口契约 + 数据模型 + 技术方案 + 逐 Sheet 定义
-4. 测试方案      — 验收标准 + 测试用例 + 黄金基准对比方案
-5. 开发建设计划  — IMPLEMENTATION-PLAN，Phase 拆分 + 工时估算
-6. 开发建设      — 按 Phase 逐步实现，每 Phase 交付验收
-7. E2E 自测      — 自动化测试全部通过（含黄金基准对比）
-8. E2E 人工测试  — Rex 人工审核
+4. 测试方案      — 验收标准 + 测试用例 + 黄金基准对比方案 + 人工操作手册（附录 B）
+5. 操作手册      — OPERATIONS，安装/启动/操作指南/故障排查/FAQ（按架构文档模板）
+6. 开发建设计划  — IMPLEMENTATION-PLAN，Phase 拆分 + 工时估算
+7. 开发建设      — 按 Phase 逐步实现，每 Phase 交付验收
+8. E2E 自测      — 自动化测试全部通过（含黄金基准对比）
+9. E2E 人工测试  — 按操作手册逐条执行，Rex 审核
 ```
 
 **红线**：
