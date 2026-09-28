@@ -14,7 +14,8 @@
 <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
   <div>
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <select id="rv-month" class="input" style="width:160px;" onchange="loadSummary()"></select>
+    <input id="rv-month" class="input" list="rv-month-list" placeholder="YYYYMM 或选择已有" style="width:160px;" onchange="loadSummary()">
+    <datalist id="rv-month-list"></datalist>
   </div>
   <button class="btn btn-primary" onclick="loadSummary()">查询</button>
   <button class="btn" onclick="doImport()">从源表导入</button>
@@ -43,8 +44,9 @@ async function loadMonths() {
   const d = await r.json();
   const months = (d.months || []).map(m => m.month || m).sort().reverse();
   const sel = document.getElementById('rv-month');
-  sel.innerHTML = months.length ? months.map(m => `<option value="${m}">${m}</option>`).join('')
-                                : '<option value="202608">202608</option>';
+  const dl = document.getElementById('rv-month-list');
+  dl.innerHTML = months.length ? months.map(m => `<option value="${m}">${m.slice(0,4)}年${m.slice(4)}月</option>`).join('')
+                            : '<option value="202608">202608</option>';
 }
 
 async function loadSummary() {

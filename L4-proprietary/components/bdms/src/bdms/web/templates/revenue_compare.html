@@ -14,7 +14,8 @@
 <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
   <div>
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <select id="cmp-month" class="input" style="width:160px;" onchange="loadCompare()"></select>
+    <input id="cmp-month" class="input" list="cmp-month-list" placeholder="YYYYMM 或选择已有" style="width:160px;" onchange="loadCompare()">
+    <datalist id="cmp-month-list"></datalist>
   </div>
   <div style="flex:1;min-width:280px;">
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">手工报表路径（留空自动查找）</label>
@@ -94,7 +95,8 @@ async function loadMonthOptions() {
   const months = (d.months || []).map(m => m.month || m);
   const sel = document.getElementById('cmp-month');
   if (sel && months.length) {
-    sel.innerHTML = months.map(m => `<option value="${m}">${m.slice(0,4)}年${m.slice(4)}月</option>`).join('');
+    const dl = document.getElementById('cmp-month-list');
+    dl.innerHTML = months.map(m => `<option value="${m}">${m.slice(0,4)}年${m.slice(4)}月</option>`).join('');
   }
 }
 document.addEventListener('DOMContentLoaded, runCompare);
