@@ -106,6 +106,9 @@ def _get_provider_health(provider_id: str) -> str:
             health = pdata.get("health", {})
             status = health.get("status", "")
             last_checked = health.get("last_checked", "")
+            # exhausted(余额不足) → degraded(路由排到末尾)
+            if status == "exhausted":
+                return "degraded"
             # unreachable TTL 自动降级
             if status == "unreachable" and last_checked:
                 try:
@@ -148,14 +151,21 @@ def build_fallback_chain(task_type: str) -> list[dict]:
         if not pconf.get("enabled", False):
             continue
         # provider 健康状态 unreachable → 跳过(exhausted 不跳过,放进去让请求时触发 fallback)
-        if _get_provider_health(provider_id) == "unreachable":
+        health = _get_provider_health(provider_id)
+        if health == "unreachable":
             continue
         # 能力匹配检查
         model_input_types = set(model.get("input_types", ["text"]))
         if any(t not in model_input_types for t in required_input_types):
             continue
-        chain.append(model)
-    return chain
+        # degraded(余额不足) → 标记,后续排到链末尾
+        if health == "degraded":
+            chain.append({"model": model, "_degraded": True})
+        else:
+            chain.append({"model": model, "_degraded": False})
+    # 排序: healthy 在前, degraded 在后(保持各自原有顺序)
+    chain.sort(key=lambda x: x.get("_degraded", False))
+    return [x["model"] for x in chain]
 
 def select_model(task_type: str) -> dict | None:
     """兼容旧接口: 返回 chain 第一个模型。"""
@@ -452,6 +462,22 @@ class ProxyHandler:
             
             last_status = status_code
             last_error = result
+            # 402(余额不足) → 标记 provider exhausted,后续路由排到末尾
+            if status_code == 402:
+                try:
+                    import json as _json, time as _time
+                    usage_path = Path(__file__).parent.parent / "config" / "usage.json"
+                    if usage_path.exists():
+                        usage = _json.loads(usage_path.read_text())
+                        providers = usage.setdefault("providers", {})
+                        for pid, pdata in providers.items():
+                            if pid.lower() == provider_id.lower():
+                                pdata.setdefault("health", {})["status"] = "exhausted"
+                                pdata["health"]["last_checked"] = _time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                        usage_path.write_text(_json.dumps(usage, indent=2, ensure_ascii=False))
+                        logger.info(f"Provider {provider_id} 余额不足(402), 标记 exhausted")
+                except Exception as e:
+                    logger.warning(f"标记 exhausted 失败: {e}")
             # 4xx 中只有 401/403 不可重试(鉴权问题,换 provider 也没用)
             # 402(余额不足)、429(限流)、404(模型不存在) → 继续 fallback
             if status_code in (401, 403):
