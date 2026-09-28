@@ -165,6 +165,14 @@ def build_fallback_chain(task_type: str, est_tokens: int = 0) -> list[dict]:
     required_input_types = config.get("requires_input_types", [])
 
     chain = []
+    # 大上下文兜底: 估算超过 200k 时,确保链里有 longCat(1M ctx) 兜底
+    # 背景: 2026-09-28 事故 — 234k 请求估算在 doubao 阈值下,真实编码超限,
+    #       chat 链无 longCat,全链失败 → 503。任何链都应有大 ctx 兜底。
+    if est_tokens > 200000:
+        LONGCAT_ID = "longCat/LongCat-2.0"
+        if LONGCAT_ID not in fallback_chain_refs:
+            fallback_chain_refs = fallback_chain_refs + [LONGCAT_ID]
+            logger.info(f"大上下文({est_tokens} tokens): 链末尾追加 longCat 兜底")
     for model_ref in fallback_chain_refs:
         model = models.get(model_ref)
         if not model or model.get("status") != "active":
@@ -194,7 +202,26 @@ def build_fallback_chain(task_type: str, est_tokens: int = 0) -> list[dict]:
             chain.append({"model": model, "_degraded": False})
     # 排序: healthy 在前, degraded 在后(保持各自原有顺序)
     chain.sort(key=lambda x: x.get("_degraded", False))
-    return [x["model"] for x in chain]
+    result = [x["model"] for x in chain]
+
+    # 修复(2026-09-28): ctx 过滤后链空 → 放宽重建(不过滤 ctx)
+    # 背景: 1.05M tokens 会话把 longCat(1M) 也过滤掉 → 空链 → 503。
+    # 宁可让最大的模型硬试(可能被 provider 截断),不可直接 503。
+    if not result and est_tokens > 0:
+        logger.warning(f"ctx 过滤后链空({est_tokens} tokens), 放宽 ctx 过滤重建链")
+        result = build_fallback_chain(task_type, 0)
+        # 大 ctx 优先: 按 context_window 降序
+        result.sort(key=lambda m: -m.get("context_window", 0))
+        # longCat(1M) 不在链里 → 强制追加为兜底(它是全系统唯一 1M ctx 模型)
+        LONGCAT_ID = "longCat/LongCat-2.0"
+        all_ids = [m["id"] for m in result]
+        if LONGCAT_ID not in all_ids:
+            models_config = watcher.get("models.yaml")
+            for m in models_config.get("models", []):
+                if m["id"] == LONGCAT_ID and m.get("status") == "active":
+                    result.insert(0, m)  # 1M ctx 最大,放最前
+                    break
+    return result
 
 def select_model(task_type: str) -> dict | None:
     """兼容旧接口: 返回 chain 第一个模型。"""
