@@ -126,8 +126,32 @@ def _get_provider_health(provider_id: str) -> str:
     return ""
 
 # ─── 模型选择(返回 chain 列表) ───
-def build_fallback_chain(task_type: str) -> list[dict]:
-    """根据任务类型构建 fallback 模型链,过滤不可用项。"""
+def estimate_tokens(request: dict) -> int:
+    """粗估请求 token 数（中文 ~1.5 字/token，英文 ~4 字符/token）。"""
+    try:
+        n = 0
+        for msg in request.get("messages", []):
+            content = msg.get("content", "")
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict):
+                        t = item.get("text", "")
+                        n += len(t) * (1.5 if any('\u4e00' <= ch <= '\u9fff' for ch in t) else 0.25)
+                        # 图片按 ~1.5k tokens 估
+                        if item.get("type") in ("image_url", "image"):
+                            n += 1500
+            elif isinstance(content, str):
+                n += len(content) * (1.5 if any('\u4e00' <= ch <= '\u9fff' for ch in content) else 0.25)
+        return int(n)
+    except Exception:
+        return 0
+
+
+def build_fallback_chain(task_type: str, est_tokens: int = 0) -> list[dict]:
+    """根据任务类型构建 fallback 模型链,过滤不可用项。
+
+    est_tokens > 0 时,过滤掉 context_window < est_tokens 的模型(上下文感知路由)。
+    """
     routing = watcher.get("routing.yaml")
     models_config = watcher.get("models.yaml")
     providers_config = watcher.get("providers.yaml")
@@ -158,6 +182,11 @@ def build_fallback_chain(task_type: str) -> list[dict]:
         model_input_types = set(model.get("input_types", ["text"]))
         if any(t not in model_input_types for t in required_input_types):
             continue
+        # 上下文感知: 估算 token 超过模型窗口 → 跳过(避免 400 exceed max tokens)
+        if est_tokens > 0:
+            ctx = model.get("context_window", 262144)
+            if est_tokens > ctx * 0.9:  # 留 10% 余量给输出
+                continue
         # degraded(余额不足) → 标记,后续排到链末尾
         if health == "degraded":
             chain.append({"model": model, "_degraded": True})
@@ -434,8 +463,11 @@ class ProxyHandler:
                     return
                 logger.warning(f"手动模型 {user_model} 失败({status_code})，回退到自动路由")
 
-        # 自动路由
-        chain = build_fallback_chain(task_type)
+        # 自动路由(上下文感知: 大请求自动路由到大 ctx 模型)
+        est = estimate_tokens(request)
+        if est > 200000:
+            logger.info(f"大上下文请求: 估算 ~{est} tokens, 启用上下文感知路由")
+        chain = build_fallback_chain(task_type, est)
         if not chain:
             await self._send_error(503, "No available model", writer)
             return
@@ -483,8 +515,11 @@ class ProxyHandler:
             if status_code in (401, 403):
                 break
         
-        # 所有模型都失败
+        # 所有模型都失败 — 返回聚合诊断而非最后一个错误(避免 Gateway 误判 billing)
         self.error_count += 1
+        if est > 200000:
+            await self._send_error(413, f"Request context (~{est} tokens) exceeds all available models. Tip: compact the session or switch to a large-context model (longCat/LongCat-2.0).", writer)
+            return
         await self._send_error(last_status, str(last_error)[:500], writer)
 
     async def _forward_once(self, request, model, provider_conf, stream, writer):
