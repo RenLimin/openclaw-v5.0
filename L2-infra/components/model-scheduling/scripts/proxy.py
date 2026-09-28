@@ -496,7 +496,20 @@ class ProxyHandler:
             return
 
         url = f"{base_url}/chat/completions"
-        payload = {**request, "model": model["model_id"]}
+        # 消息格式转换: OpenClaw content 数组 → provider 期望格式
+        messages = request.get("messages", [])
+        normalized = []
+        for msg in messages:
+            content = msg.get("content", "")
+            if isinstance(content, list):
+                text_parts = []
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        text_parts.append(item.get("text", ""))
+                normalized.append({**msg, "content": "\n".join(text_parts) if text_parts else ""})
+            else:
+                normalized.append(msg)
+        payload = {**request, "model": model["model_id"], "messages": normalized}
 
         headers = {
             "Authorization": f"Bearer {api_key}",
