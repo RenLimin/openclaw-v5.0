@@ -16,7 +16,7 @@ providers:
       tokens_per_minute: 100000
     notes: "火山方舟 Coding Plan,主力 provider"
 
-  longcat:
+  longCat:
     base_url: "https://api.longcat.chat/openai/v1"
     api_type: "openai-completions"
     auth_type: "bearer"

@@ -3,8 +3,8 @@
     "coding-plan": {
       "health": {
         "status": "healthy",
-        "latency_ms": 260,
-        "last_checked": "2026-09-16T17:56:00.000000+00:00",
+        "latency_ms": 446,
+        "last_checked": "2026-09-27T20:07:06.249371+00:00",
         "models": {
           "doubao-seed-2-1-turbo": {
             "status": "healthy"
@@ -21,8 +21,8 @@
     "longCat": {
       "health": {
         "status": "healthy",
-        "latency_ms": 102,
-        "last_checked": "2026-09-16T17:56:00.000000+00:00",
+        "latency_ms": 84,
+        "last_checked": "2026-09-27T20:07:06.249371+00:00",
         "models": {
           "LongCat-2.0": {
             "status": "healthy"
@@ -34,23 +34,22 @@
       "health": {
         "status": "healthy",
         "latency_ms": 0,
-        "last_checked": "2026-09-16T17:56:00.000000+00:00"
+        "last_checked": "2026-09-27T20:07:06.249371+00:00"
       }
     },
     "deepseek": {
       "health": {
-        "status": "exhausted",
-        "latency_ms": 348,
-        "error": "Insufficient Balance (402)",
-        "last_checked": "2026-09-16T17:54:00.000000+00:00"
+        "status": "healthy",
+        "latency_ms": 211,
+        "last_checked": "2026-09-27T20:07:06.249371+00:00"
       }
     },
     "llama-cpp": {
       "health": {
         "status": "unreachable",
         "latency_ms": 0,
-        "error": "<urlopen error [Errno 61] Connection refused>",
-        "last_checked": "2026-09-08T12:08:05.066740+00:00",
+        "error": "Connection refused on port 8080",
+        "last_checked": "2026-09-27T20:07:06.249371+00:00",
         "models": {
           "gemma-4-e4b-it-q4_k_m": {
             "status": "unreachable",
@@ -64,5 +63,5 @@
       }
     }
   },
-  "last_health_check": "2026-09-16T17:56:00.000000+00:00"
+  "last_health_check": "2026-09-27T20:07:06.249371+00:00"
 }

@@ -172,30 +172,33 @@ def select_model(task_type: str) -> dict | None:
 
 # ─── API Key 获取 ───
 def get_api_key(provider_id: str) -> str:
-    # 1. 从 ~/.zshenv 加载环境变量
-    zshenv = Path.home() / ".zshenv"
-    if zshenv.exists():
-        for line in zshenv.read_text().splitlines():
-            line = line.strip()
-            if line.startswith("export ") and "=" in line:
-                _, _, kv = line.partition("export ")
-                key, _, val = kv.partition("=")
-                key = key.strip()
-                val = val.strip().strip('"').strip("'")
-                if key and val and key not in os.environ:
-                    os.environ[key] = val
+    """获取 provider API key。
 
+    优先级:
+    1. 环境变量(LaunchAgent 启动时已 source ~/.zshenv)
+    2. auth-profiles.json(OpenClaw 认证配置)
+    3. openclaw.json provider 配置(SecretRef 除外)
+
+    注意: 不直接读取 ~/.zshenv,因为 LaunchAgent 已保证环境变量注入。
+    """
     env_keys = {
         "coding-plan": ["ARK_API_KEY", "VOLCENGINE_API_KEY", "CODING_PLAN_API_KEY"],
         "longcat": ["LONGCAT_API_KEY", "LONGCAT_KEY"],
         "deepseek": ["DEEPSEEK_API_KEY"],
     }
-    for env_key in env_keys.get(provider_id, []):
+    # 1. 环境变量(LaunchAgent source ~/.zshenv 后可用)
+    # 大小写不敏感查找(provider 可能是 longCat/longcat/LONGCAT)
+    matched_keys = []
+    for k, v in env_keys.items():
+        if k.lower() == provider_id.lower():
+            matched_keys = v
+            break
+    for env_key in matched_keys:
         val = os.environ.get(env_key, "")
         if val:
             return val
 
-    # 2. 尝试 auth-profiles.json
+    # 2. auth-profiles.json
     auth_file = Path.home() / ".openclaw" / "auth-profiles.json"
     if auth_file.exists():
         try:
@@ -205,6 +208,19 @@ def get_api_key(provider_id: str) -> str:
                     key = pconf.get("apiKey", "")
                     if key:
                         return key
+        except Exception:
+            pass
+
+    # 3. openclaw.json(非 SecretRef)
+    config_path = Path.home() / ".openclaw" / "openclaw.json"
+    if config_path.exists():
+        try:
+            ocfg = json.loads(config_path.read_text())
+            providers = ocfg.get("models", {}).get("providers", {})
+            pconf = providers.get(provider_id, {})
+            key = pconf.get("apiKey", "")
+            if isinstance(key, str) and key and not key.startswith("secretref-"):
+                return key
         except Exception:
             pass
 
@@ -390,14 +406,29 @@ class ProxyHandler:
         messages = request.get("messages", [])
         stream = request.get("stream", False)
         task_type = classify_task(messages)
-        
-        # 构建 fallback chain
+
+        # P1 修复: 用户手动指定模型时优先使用(不覆盖)
+        user_model = request.get("model", "")
+        providers_config = watcher.get("providers.yaml")
+        if user_model and user_model not in ("coding-plan/auto", "auto", "model-scheduling/auto"):
+            # 手动指定了具体模型 → 直接用，不走自动路由
+            models_config = watcher.get("models.yaml")
+            model_map = {m["id"]: m for m in models_config.get("models", [])}
+            target = model_map.get(user_model)
+            if target:
+                provider_id = target.get("provider", "")
+                provider_conf = providers_config.get("providers", {}).get(provider_id, {})
+                logger.info(f"手动路由: {user_model} (provider: {provider_id})")
+                success, status_code, result = await self._forward_once(request, target, provider_conf, stream, writer)
+                if success:
+                    return
+                logger.warning(f"手动模型 {user_model} 失败({status_code})，回退到自动路由")
+
+        # 自动路由
         chain = build_fallback_chain(task_type)
         if not chain:
             await self._send_error(503, "No available model", writer)
             return
-
-        providers_config = watcher.get("providers.yaml")
         fallback_path = []
         last_error = None
         last_status = 500
