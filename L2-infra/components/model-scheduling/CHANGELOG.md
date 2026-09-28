@@ -154,3 +154,27 @@ Python dict 遍历顺序不保证稳定，排序 key 必须包含唯一字段（
 **根因链**：362k 会话 → doubao(262k) 400 超限 → deepseek 402 → 链耗尽返回 402 → Gateway 误判 billing。
 **修复**：estimate_tokens + 上下文感知路由 + 413 诊断错误 + openclaw.json ctx 诚实声明(262k)。
 **教训**：E2E 测试必须包含大上下文场景，curl 小请求测不出真实会话行为。
+
+## 2026-09-28 15:15 — ctx 校准 + compaction 兜底链 + 会话水位预警
+
+### 修复（2026-09-28 /compact 失败复盘的加固）
+
+1. **deepseek-v4-flash-ga-260731 ctx 校准**: 131072 → 1048576
+   - 实测证据: 850,093 prompt tokens → HTTP 200, 正常回复 OK
+   - openclaw.json + models.yaml 双处同步
+2. **main agent fallback 链补强**: 首位插入 `coding-plan/deepseek-v4-flash-ga-260731`（1M ctx）
+   - 之前链 = auto(262k) → 2-1-turbo(262k) → code-preview(262k)，全是小 ctx，大会话溢出时无人能接
+3. **compaction.model 显式指定移除**（longcat/LongCat-2.0 → null）
+   - 显式指定 = 放弃 fallback 链（源码 compact-gStBcHDe.js + 官方 compaction.md:127）
+   - 现在压缩用会话模型起步，失败时继承 fallback 链（首位 1M deepseek 兜底）
+   - 修复 EXP-20260821-003 的设计当初为防小模型压缩死锁，现改为"会话模型 + 1M 兜底"双保险
+4. **maxActiveTranscriptBytes**: 20mb → 6mb（约 300k tokens 触发，1M ctx 的 30%）
+5. **新增会话上下文水位预警 cron**（每 30 分钟）
+   - 脚本: `L2-infra/scripts/maintenance/session_ctx_watch.py`
+   - WARN ≥70% / CRIT ≥85% → wecom:1313 通知；OK 静默
+   - 防止再次发生"会话膨胀到超过所有模型 ctx → /compact 死局 → /reset"事故
+
+### 教训
+
+- ctx 声明必须实测校准，不能抄默认值（deepseek-v4-flash-ga 声明 131k 实际 1M）
+- `openclaw agent --local` 测试必须指定 `--session-key`，否则污染主会话（今日实测踩坑）
