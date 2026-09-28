@@ -218,3 +218,59 @@ class TestExportStructure:
         assert wb.sheetnames[0] == "签约"
         assert wb.sheetnames[-1] == "图例"
         wb.close()
+
+# ─── 6. 月份格式统一（YYYYMM 规范化）───
+
+class TestMonthNormalization:
+    """月份格式统一测试。
+
+    背景：2026-09-27 人工审核发现月份重复显示（2026年06月 / 2026年-06月），
+    根因是 report_month 表混入 YYYY-MM 格式。修复：全链路规范化为 YYYYMM。
+    """
+
+    def test_normalize_month_formats(self):
+        """各格式输入统一规范化为 YYYYMM。"""
+        from bdms.core.db import normalize_month
+        assert normalize_month("202606") == "202606"
+        assert normalize_month("2026-06") == "202606"
+        assert normalize_month("2026/06") == "202606"
+        assert normalize_month("2026.06") == "202606"
+        assert normalize_month(" 2026-06 ") == "202606"
+
+    def test_normalize_month_invalid_passthrough(self):
+        """非法格式原样返回（由上层 validator 报错）。"""
+        from bdms.core.db import normalize_month
+        assert normalize_month("bogus") == "bogus"
+        assert normalize_month("") == ""
+        assert normalize_month("20266") == "20266"  # 5 位数字非 6 位
+
+    def test_register_month_normalizes(self, tmp_path):
+        """register_month 写入前规范化，YYYY-MM 不会重复登记。"""
+        p = tmp_path / "t.db"
+        _db.init_db(p)
+        conn = _db.get_connection(p)
+        _db.register_month(conn, "delivery_report", "2026-06")
+        _db.register_month(conn, "delivery_report", "202606")  # 同月不同格式
+        rows = conn.execute(
+            "SELECT COUNT(*) FROM report_month WHERE module='delivery_report'"
+        ).fetchone()[0]
+        assert rows == 1, f"同月两种格式应只登记一次，实际 {rows} 次"
+        conn.close()
+
+    def test_list_months_dedup(self, tmp_path):
+        """list_months 对历史脏数据去重 + 规范化。"""
+        p = tmp_path / "t.db"
+        _db.init_db(p)
+        conn = _db.get_connection(p)
+        # 模拟历史脏数据：直接插入两种格式
+        conn.execute(
+            "INSERT INTO report_month (module, month, generated_at) VALUES "
+            "('delivery_report', '2026-06', '2026-01-01'), "
+            "('delivery_report', '202606', '2026-01-02'), "
+            "('delivery_report', '202605', '2026-01-03')")
+        conn.commit()
+        months = _db.list_months(conn, "delivery_report")
+        assert len(months) == 2, f"去重后应 2 个月份，实际 {len(months)}"
+        assert months[0]["month"] == "202606"  # 降序
+        assert months[1]["month"] == "202605"
+        conn.close()

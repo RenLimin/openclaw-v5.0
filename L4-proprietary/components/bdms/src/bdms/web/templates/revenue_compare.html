@@ -14,7 +14,7 @@
 <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
   <div>
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <input id="cmp-month" class="input" placeholder="YYYYMM" value="202606" style="width:140px;">
+    <select id="cmp-month" class="input" style="width:160px;" onchange="loadCompare()"></select>
   </div>
   <div style="flex:1;min-width:280px;">
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">手工报表路径（留空自动查找）</label>
@@ -88,6 +88,15 @@ async function runCompare() {
   } catch (e) { st.textContent = `失败: ${e}`; }
 }
 
-document.addEventListener('DOMContentLoaded', runCompare);
+async function loadMonthOptions() {
+  const r = await fetch('/api/report/months');
+  const d = await r.json();
+  const months = (d.months || []).map(m => m.month || m);
+  const sel = document.getElementById('cmp-month');
+  if (sel && months.length) {
+    sel.innerHTML = months.map(m => `<option value="${m}">${m.slice(0,4)}年${m.slice(4)}月</option>`).join('');
+  }
+}
+document.addEventListener('DOMContentLoaded, runCompare);
 </script>
 {% endblock %}
