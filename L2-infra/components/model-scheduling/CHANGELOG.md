@@ -147,3 +147,10 @@ Python dict 遍历顺序不保证稳定，排序 key 必须包含唯一字段（
 8. **配置 key 大小写必须全链路一致**：models.yaml 的 provider 字段、providers.yaml 的 key、get_api_key 的 env_keys 字典 key，三者必须大小写一致或做大小写不敏感匹配。
 9. **nohup 启动的进程不继承 shell 环境**：API key 等敏感配置应通过 LaunchAgent EnvironmentVariables 或启动脚本显式注入。
 10. **调试时直接检查进程环境**：`ps -p PID -E` 可以看到进程的实际环境变量，比猜测高效得多。
+
+### 2026-09-28（续2）：上下文感知路由 ★★★
+
+**问题**：Rex 切换 model-scheduling 后报 "billing error"，实际根因是大上下文崩溃被误报。
+**根因链**：362k 会话 → doubao(262k) 400 超限 → deepseek 402 → 链耗尽返回 402 → Gateway 误判 billing。
+**修复**：estimate_tokens + 上下文感知路由 + 413 诊断错误 + openclaw.json ctx 诚实声明(262k)。
+**教训**：E2E 测试必须包含大上下文场景，curl 小请求测不出真实会话行为。
