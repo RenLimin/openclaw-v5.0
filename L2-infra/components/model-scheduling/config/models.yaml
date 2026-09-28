@@ -11,6 +11,7 @@
 models:
   # Provider: coding-plan
   - id: "coding-plan/doubao-seed-2-1-turbo"
+    priority: 30
     provider: "coding-plan"
     model_id: "doubao-seed-2-1-turbo"
     name: "doubao-seed-2-1-turbo"
@@ -24,6 +25,7 @@ models:
     tags: []
 
   - id: "coding-plan/doubao-seed-2-0-lite-260215"
+    priority: 20
     provider: "coding-plan"
     model_id: "doubao-seed-2-0-lite-260215"
     name: "doubao-seed-2-0-lite"
@@ -37,6 +39,7 @@ models:
     tags: []
 
   - id: "coding-plan/doubao-seed-code-preview-251028"
+    priority: 10
     provider: "coding-plan"
     model_id: "doubao-seed-code-preview-251028"
     name: "doubao-seed-code"

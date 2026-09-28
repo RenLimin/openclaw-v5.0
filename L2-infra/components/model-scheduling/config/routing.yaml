@@ -26,10 +26,11 @@ task_routing:
   coding:
     description: "代码生成、调试、重构、代码审查"
     fallback_chain:
-      - "coding-plan/doubao-seed-code-preview-251028" # L1: 主 code 模型
+      - "coding-plan/doubao-seed-2-0-lite-260215" # L1: 主 code 模型（多模态，支持图片）
       - "deepseek/deepseek-chat"            # L2: DeepSeek V3 (外部推理)
-      - "coding-plan/doubao-seed-2-0-lite-260215" # L3: 便宜保底
-    preferred_context: 200000               # 偏好上下文窗口 ≥ 200k
+      - "coding-plan/doubao-seed-code-preview-251028" # L3: 纯文本code保底（不支持图片）
+    preferred_context: 200000
+    requires_input_types: ["text"]        # 代码任务至少需要文本能力               # 偏好上下文窗口 ≥ 200k
 
   # 推理任务: 优先 reasoning 模型
   reasoning:

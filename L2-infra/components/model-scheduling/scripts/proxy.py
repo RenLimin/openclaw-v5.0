@@ -162,10 +162,10 @@ def select_model(task_type: str) -> dict | None:
     chain = build_fallback_chain(task_type)
     if chain:
         return chain[0]
-    # 兜底: 所有 active 模型按 priority
+    # 兜底: 所有 active 模型按 priority（稳定排序: priority → id）
     models_config = watcher.get("models.yaml")
     models = {m["id"]: m for m in models_config.get("models", [])}
-    for model in sorted(models.values(), key=lambda m: m.get("priority", 99)):
+    for model in sorted(models.values(), key=lambda m: (m.get("priority", 99), m.get("id", ""))):
         if model.get("status") == "active":
             return model
     return None
