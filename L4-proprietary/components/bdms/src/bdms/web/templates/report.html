@@ -14,7 +14,8 @@
 <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
   <div>
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <select id="gen-month" class="input" style="width:160px;"></select>
+    <input id="gen-month" class="input" list="gen-month-list" placeholder="YYYYMM 或选择已有" style="width:160px;">
+    <datalist id="gen-month-list"></datalist>
   </div>
   <div>
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">模式</label>
@@ -45,15 +46,13 @@ async function loadMonths() {
   const r = await fetch('/api/report/months');
   const d = await r.json();
   const months = d.months || [];
-  // 填充月份下拉框（与列表同源，格式统一 YYYYMM）
-  const sel = document.getElementById('gen-month');
-  if (sel && months.length) {
-    const cur = sel.value;
-    sel.innerHTML = months.map(m => {
+  // 填充月份 datalist（可输入新月份 + 选择已有月份）
+  const dl = document.getElementById('gen-month-list');
+  if (dl) {
+    dl.innerHTML = months.map(m => {
       const mm = m.month || m;
       return `<option value="${mm}">${mm.slice(0,4)}年${mm.slice(4)}月</option>`;
     }).join('');
-    if (cur && months.some(m => (m.month || m) === cur)) sel.value = cur;
   }
   document.getElementById('months-list').innerHTML = months.length
     ? '<div class="table-wrapper"><table class="table"><thead><tr><th>月份</th><th>操作</th></tr></thead><tbody>'
