@@ -1060,7 +1060,7 @@ L4 专有业务
 | 资产 | PRD | OUTLINE | DETAIL | VERIFICATION | OPERATIONS | 状态 |
 |------|-----|---------|--------|-------------|------------|------|
 | BDMS v2.1 | ✅ | ✅ | ✅ (7份) | ✅ | ❌ 缺失 | ⚠️ 需补 |
-| model-scheduling | ❌ | ❌ | ❌ | ❌ | ❌ | 🔴 需全补 |
+| model-scheduling | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | contract-approval | ❌ | ❌ | ❌ | ❌ | ❌ | 🔴 需全补 |
 | fin-l4 | ❌ | ❌ | ❌ | ❌ | ❌ | 🔴 需全补 |
 | OCR 数字化 | ❌ | ❌ | ❌ | ❌ | ❌ | 🔴 需全补 |
