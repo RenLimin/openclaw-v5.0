@@ -93,7 +93,7 @@
 | 任务分类 | 5 | 5 | 0 |
 | Fallback 链 | 4 | 4 | 0 |
 | 月份规范化 | 3 | 3 | 0 |
-| **合计** | **12** | **12** | **0** |
+| **合计** | **15** | **15** | **0** |
 
 ### A.2 E2E 测试结果
 
@@ -163,7 +163,8 @@ cat config/routing.yaml | grep -A 3 "coding:"
 
 | # | 场景 | 预期 | 实测 | 状态 |
 |---|------|------|------|------|
-| 1 | 纯文本代码路由 | 2-0-lite | | ⬜ |
-| 2 | 图片+文本路由 | 2-1-turbo | | ⬜ |
-| 3 | 健康检查 | status=ok | | ⬜ |
-| 4 | 热更新 | < 10s | | ⬜ |
+| 1 | 纯文本代码路由 | 2-0-lite | 2-0-lite，零 fallback | ✅ |
+| 2 | 手动指定 longCat | LongCat-2.0 | LongCat-2.0 | ✅ |
+| 3 | 手动指定 coding-plan | doubao-seed-2-1-turbo | doubao-seed-2-1-turbo-260628 | ✅ |
+| 4 | 健康检查 | status=ok | status=ok | ✅ |
+| 5 | 推理请求 | deepseek-reasoner | 402→fallback→2-0-lite | ⚠️ |
