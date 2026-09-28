@@ -36,9 +36,10 @@ task_routing:
   reasoning:
     description: "复杂推理、架构设计、深度分析"
     fallback_chain:
-      - "deepseek/deepseek-reasoner"        # L1: DeepSeek R1 (外部 reasoning)
-      - "longCat/LongCat-2.0"               # L2: LongCat 大 ctx 兜底
-      - "coding-plan/doubao-seed-2-1-turbo" # L3: 多模态保底
+      - "deepseek/deepseek-reasoner"        # L1: DeepSeek R1 (外部 reasoning,余额充足时)
+      - "coding-plan/doubao-seed-2-1-turbo" # L2: 多模态推理(deepseek 余额不足时跳过 LongCat)
+      - "longCat/LongCat-2.0"               # L3: 大 ctx 文本兜底
+      - "coding-plan/doubao-seed-2-0-lite"  # L4: 便宜保底
     preferred_context: 500000
 
   # 搜索/研究任务: 优先多模态模型
