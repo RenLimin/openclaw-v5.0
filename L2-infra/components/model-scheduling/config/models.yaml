@@ -95,7 +95,7 @@ models:
     provider: "coding-plan"
     model_id: "deepseek-v4-flash-ga-260731"
     name: "deepseek-v4-flash-ga"
-    context_window: 131072
+    context_window: 1048576
     max_tokens: 8192
     input_types: ["text"]
     reasoning: false
