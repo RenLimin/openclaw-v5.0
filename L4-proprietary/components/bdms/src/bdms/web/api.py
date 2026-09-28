@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from bdms.core import db as _db
+from bdms.core.db import normalize_month
 
 router = APIRouter(prefix="/api")
 
@@ -50,13 +51,14 @@ async def report_months():
 async def report_generate(req: GenerateRequest):
     from bdms.modules.delivery_report.service import DeliveryReportService
     try:
-        return DeliveryReportService().generate(req.month, req.mode)
+        return DeliveryReportService().generate(normalize_month(req.month), req.mode)
     except Exception as e:
         raise HTTPException(500, str(e))
 
 
 @router.get("/report/export/{month}")
 async def report_export(month: str):
+    month = normalize_month(month)
     from bdms.modules.delivery_report.exporter import DeliveryReportExporter
     try:
         path = DeliveryReportExporter().export(month)
@@ -70,6 +72,7 @@ async def report_export(month: str):
 
 @router.get("/revenue/summary/{month}")
 async def revenue_summary(month: str):
+    month = normalize_month(month)
     from bdms.modules.revenue.summary_engine import SummaryEngine
     r = SummaryEngine().compute_summary(month)
     if "error" in r:
@@ -83,7 +86,7 @@ async def revenue_generate(req: GenerateRequest):
     from bdms.modules.revenue.service import RevenueService
     svc = RevenueService()
     try:
-        return svc.generate(req.month, getattr(req, "mode", "auto") or "auto")
+        return svc.generate(normalize_month(req.month), getattr(req, "mode", "auto") or "auto")
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception as e:
@@ -94,13 +97,14 @@ async def revenue_generate(req: GenerateRequest):
 async def revenue_import(req: GenerateRequest):
     from bdms.modules.revenue.service import RevenueService
     try:
-        return RevenueService().import_source(req.month)
+        return RevenueService().import_source(normalize_month(req.month))
     except Exception as e:
         raise HTTPException(500, str(e))
 
 
 @router.get("/revenue/compare/{month}")
 async def revenue_compare(month: str, manual: Optional[str] = None):
+    month = normalize_month(month)
     from pathlib import Path
     from bdms.core import paths
     from bdms.modules.revenue.summary_engine import SummaryEngine

@@ -111,6 +111,9 @@
 | UT-DR-12 | 存疑数据展示 | 校验有 WARNING | 存疑列表返回 | 存疑流程 |
 | UT-DR-13 | Excel 导出 | 202606 | 文件存在，15 Sheet | 导出 |
 | UT-DR-14 | DASHBOARD 统计 | 202606 | 统计 Sheet 由 DASHBOARD 生成 | 集成 |
+| UT-DR-15 | 月份格式规范化 | YYYY-MM/YYYY/MM 输入 | 统一为 YYYYMM（normalize_month） | 格式统一 |
+| UT-DR-16 | 月份登记防重 | 同月两种格式登记 | report_month 只登记一条 | 幂等 |
+| UT-DR-17 | 月份列表去重 | 历史脏数据两种格式 | list_months 去重 + 规范化 | 数据质量 |
 
 ### 2.4 确收分析（revenue）
 
@@ -652,7 +655,7 @@ python3 tools/compare_revenue_summary.py \
 |------|--------|------|------|---------|---------|
 | 合同管理 | 61 | 61 | 0 | tests/test_contract_management.py | `pytest tests/test_contract_management.py` |
 | 项目管理 | 56 | 56 | 0 | tests/test_project_management.py | `pytest tests/test_project_management.py` |
-| 交付月报 | 15 | 15 | 0 | tests/test_delivery_report.py | `pytest tests/test_delivery_report.py` |
+| 交付月报 | 19 | 19 | 0 | tests/test_delivery_report.py | `pytest tests/test_delivery_report.py` |
 | 确收分析 | 23 | 23 | 0 | tests/test_revenue.py + test_revenue_validator.py | `pytest tests/test_revenue*.py` |
 | 项目利润 | 20 | 20 | 0 | tests/test_profit_management.py | `pytest tests/test_profit_management.py` |
 | 驾驶舱 | 23 | 23 | 0 | tests/test_dashboard_v21.py | `pytest tests/test_dashboard_v21.py` |

@@ -13,6 +13,24 @@ from typing import Any, Iterator, Optional
 from .paths import DB_PATH, ensure_dirs
 
 
+def normalize_month(month: str) -> str:
+    """规范化月份为 YYYYMM 格式。
+
+    支持的输入格式：YYYYMM / YYYY-MM / YYYY/MM / YYYY.MM
+    设计依据：DESIGN-DETAIL-DELIVERY-REPORT-v2.1.md 约定月份格式为 YYYYMM。
+    系统内存在 YYYY-MM（会计期间）格式，统一规范化避免重复。
+
+    Returns:
+        YYYYMM 格式字符串；非法则原样返回（上层 validator 负责报错）
+    """
+    if not month:
+        return month
+    s = str(month).strip().replace("-", "").replace("/", "").replace(".", "")
+    if len(s) == 6 and s.isdigit():
+        return s
+    return month
+
+
 # 线程本地连接缓存（业务代码大量使用 conn.close()，缓存必须自愈）
 _thread_local = threading.local()
 
@@ -370,7 +388,8 @@ def get_month_status(conn: sqlite3.Connection, module: str, month: str) -> Optio
 
 def register_month(conn: sqlite3.Connection, module: str, month: str,
                    source_path: str = None, row_counts: dict = None) -> None:
-    """登记某模块某月数据已落盘。"""
+    """登记某模块某月数据已落盘（month 自动规范化为 YYYYMM）。"""
+    month = normalize_month(month)
     conn.execute(
         """INSERT INTO report_month (module, month, source_path, row_counts, generated_at)
            VALUES (?, ?, ?, ?, datetime('now', 'localtime'))
@@ -384,16 +403,36 @@ def register_month(conn: sqlite3.Connection, module: str, month: str,
 
 
 def list_months(conn: sqlite3.Connection, module: str = None) -> list[dict]:
-    """列出已登记的月份。"""
+    """列出已登记的月份（去重 + 规范化为 YYYYMM，按月份降序）。
+
+    历史数据可能存在 YYYY-MM 和 YYYYMM 两种格式并存，
+    统一规范化后去重，避免前端显示重复。
+    """
     if module:
         rows = conn.execute(
-            "SELECT * FROM report_month WHERE module = ? ORDER BY month DESC", (module,)
+            "SELECT month, MAX(generated_at) as generated_at, MAX(row_counts) as row_counts "
+            "FROM report_month WHERE module = ? GROUP BY month ORDER BY month DESC",
+            (module,),
         ).fetchall()
     else:
         rows = conn.execute(
-            "SELECT * FROM report_month ORDER BY month DESC"
+            "SELECT module, month, MAX(generated_at) as generated_at, MAX(row_counts) as row_counts "
+            "FROM report_month GROUP BY module, month ORDER BY month DESC"
         ).fetchall()
-    return [dict(r) for r in rows]
+    # 规范化 + 去重（同一月份两种格式只保留一个）
+    seen = set()
+    result = []
+    for r in rows:
+        d = dict(r)
+        norm = normalize_month(d.get("month", ""))
+        if norm in seen:
+            continue
+        seen.add(norm)
+        d["month"] = norm
+        result.append(d)
+    # 按规范化后的月份重新降序（避免 YYYY-MM 和 YYYYMM 排序混乱）
+    result.sort(key=lambda x: x["month"], reverse=True)
+    return result
 
 
 # ─── 任务（job）生命周期 ───
