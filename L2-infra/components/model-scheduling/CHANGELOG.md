@@ -121,3 +121,29 @@ Python dict 遍历顺序不保证稳定，排序 key 必须包含唯一字段（
 | `scripts/health_check.py` | 健康探测 |
 | `scripts/sync_models.py` | 模型同步 |
 | `scripts/register_provider.py` | OpenClaw provider 注册 |
+
+### 2026-09-28（续）：P1 + P2 彻底修复 ★★★
+
+**Rex 反馈**：model-scheduling 完全无响应，违背设计初衷。如果做不到就删除。
+**Rex 要求**：避免补丁摞补丁，直接重构。满足 OpenClaw 官方文档要求。
+
+#### 问题 P1：手动指定模型被路由覆盖
+- **现象**：`model: "longCat/LongCat-2.0"` 被路由到 `doubao-seed-2-0-lite`
+- **根因**：`_handle_chat` 完全忽略 `request.model`
+- **修复**：加手动路由优先逻辑（检查 request.model 是否非 auto）
+
+#### 问题 P2：longCat API key 获取失败（真正根因）
+- **现象**：`get_api_key('longCat')` 返回空，尽管 `~/.zshenv` 有 `LONGCAT_API_KEY`
+- **根因（最终确认）**：
+  1. `providers.yaml` 的 key 是 `"longcat"`（小写c），`models.yaml` 的 provider 是 `"longCat"`（大写C）
+  2. `get_api_key` 的 `env_keys` 字典 key 是 `"longcat"`，但传入的 `provider_id` 是 `"longCat"`
+  3. `env_keys.get("longCat")` 返回空列表 → key 获取失败
+- **修复**：
+  1. `providers.yaml`: `"longcat"` → `"longCat"`（统一大小写）
+  2. `get_api_key`: provider 查找改为大小写不敏感
+  3. `LaunchAgent plist`: 改用 `bash -c "source ~/.zshenv && exec python3 ..."`
+
+#### 经验教训（新增）
+8. **配置 key 大小写必须全链路一致**：models.yaml 的 provider 字段、providers.yaml 的 key、get_api_key 的 env_keys 字典 key，三者必须大小写一致或做大小写不敏感匹配。
+9. **nohup 启动的进程不继承 shell 环境**：API key 等敏感配置应通过 LaunchAgent EnvironmentVariables 或启动脚本显式注入。
+10. **调试时直接检查进程环境**：`ps -p PID -E` 可以看到进程的实际环境变量，比猜测高效得多。
