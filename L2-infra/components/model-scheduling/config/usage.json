@@ -3,31 +3,15 @@
     "coding-plan": {
       "health": {
         "status": "healthy",
-        "latency_ms": 446,
-        "last_checked": "2026-09-27T20:07:06.249371+00:00",
-        "models": {
-          "doubao-seed-2-1-turbo": {
-            "status": "healthy"
-          },
-          "doubao-seed-2-0-lite-260215": {
-            "status": "healthy"
-          },
-          "doubao-seed-code-preview-251028": {
-            "status": "healthy"
-          }
-        }
+        "last_checked": "2026-09-29T06:24:02.779886+00:00",
+        "detail": "healthy (200)"
       }
     },
     "longCat": {
       "health": {
         "status": "healthy",
-        "latency_ms": 84,
-        "last_checked": "2026-09-27T20:07:06.249371+00:00",
-        "models": {
-          "LongCat-2.0": {
-            "status": "healthy"
-          }
-        }
+        "last_checked": "2026-09-29T06:24:02.779886+00:00",
+        "detail": "healthy (200)"
       }
     },
     "model-scheduling": {
@@ -39,9 +23,9 @@
     },
     "deepseek": {
       "health": {
-        "status": "exhausted",
-        "latency_ms": 211,
-        "last_checked": "2026-09-28T13:21:49+00:00"
+        "status": "healthy",
+        "last_checked": "2026-09-29T06:24:02.779886+00:00",
+        "detail": "healthy (200)"
       }
     },
     "llama-cpp": {

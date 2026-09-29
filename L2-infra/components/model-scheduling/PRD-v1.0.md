@@ -15,7 +15,7 @@
 | F-01 | 模型注册 | P0 | 管理所有 AI 模型（增删改查），外部配置驱动 |
 | F-02 | 任务路由 | P0 | 按任务类型（coding/reasoning/research/chat/multimodal）选择最优模型 |
 | F-03 | 多级 fallback | P0 | L1 优先 → L2 降级 → L3 保底，自动切换 |
-| F-04 | 健康探测 | P1 | 定期检测 provider 延迟/错误率，自动标记不可用 |
+| F-04 | 健康探测 | P1 | 启动时探活（DNS+TCP+/models）标记 provider 状态；运行时真实请求连续 3 次网络失败自动标记 unreachable（1h TTL 自愈） |
 | F-05 | 用量追踪 | P1 | 获取各模型 token 用量 + 费用统计 |
 | F-06 | 热更新 | P1 | 配置变更 ≤ 10 秒生效，无需重启 |
 | F-07 | 模型同步 | P2 | openclaw.json → models.yaml 自动同步 |
@@ -53,9 +53,11 @@
 
 | # | 场景 | 预期 |
 |---|------|------|
-| AC-08 | provider 延迟 < 5s | 标记 healthy |
-| AC-09 | provider 延迟 5-15s | 标记 degraded |
-| AC-10 | provider 延迟 > 15s 或不可达 | 标记 unavailable，路由时跳过 |
+| AC-08 | 启动探活：DNS+TCP+/models 全部正常 | 标记 healthy |
+| AC-09 | 启动探活：API key 缺失或 /models 非 200 | 标记 degraded（TCP 可达但不可用） |
+| AC-10 | 启动探活：DNS 解析失败或 TCP 不可达 | 标记 unreachable，路由时跳过 |
+| AC-11 | 运行时：真实请求连续 3 次网络失败(502/504) | 自动标记 unreachable，后续路由跳过 |
+| AC-12 | 运行时：provider 恢复后首次成功 | 重置失败计数，路由恢复正常 |
 
 ### 2.3 热更新
 

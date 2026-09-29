@@ -16,6 +16,30 @@
 
 ---
 
+## 2026-09-29: 健康探测内化 + 运行时失败反馈（修复 15h DNS 故障盲区）
+
+**背景**: 9-28 20:09 ~ 9-29 11:04 公司内网 DNS 解析 api.deepseek.com 连续故障约 15 小时，
+4 个模型全部不可用，cron 连续报错 3-5 次。根因不是 DNS 本身，而是 model-scheduling 的
+健康检查盲区：`health_check.py` 只检查 proxy 进程存活，不检测 provider 真实可用性。
+
+**变更**:
+1. **启动探活 `startup_probe()`**（内化到 proxy.py，替代独立 cron）
+   - 启动时并发检测所有 provider：DNS 解析 → TCP 连接 → /models 端点
+   - 结果写 usage.json：healthy / degraded / unreachable
+   - 全部不可用 → degraded 模式启动（路由层跳过），`--skip-probe` 可跳过
+2. **运行时失败反馈**（零额外网络请求）
+   - 真实请求连续 3 次网络失败(502/504) → 标记 unreachable（1h TTL 自愈）
+   - 成功后重置计数 — 复用现有 TTL 机制，无新增后台任务
+3. **删除独立 cron `Provider 健康探测`(2a027791)** — 逻辑内化到 proxy
+4. **文档五件套同步**: PRD / DESIGN / DESIGN-DETAIL / VERIFICATION / OPERATIONS
+
+**验证**:
+- 探活实测 3/3 healthy（coding-plan / longCat / deepseek 全 200）
+- 语法检查通过，LaunchAgent 重启后自动探活正常
+- 删除 cron 后不再有独立健康探测任务（零冗余）
+
+---
+
 ## 时间线
 
 ### 2026-09-07：首次开发

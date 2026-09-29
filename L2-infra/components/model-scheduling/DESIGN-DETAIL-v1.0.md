@@ -145,14 +145,23 @@ model-scheduling proxy
 - 监听文件变更，自动热重载（无需重启 proxy）
 - 缓存配置，实时生效
 
-#### 模块 3: 健康探测 (`scripts/health_check.py`)
+#### 模块 3: 启动探活 (`scripts/proxy.py::startup_probe`)
 
-负责定期探测 provider 健康状态：
+负责启动时一次性探活所有 provider，运行时轻量探测：
 
-- 频率：每小时一次
-- 探测 URL: `/health` 或简单 GET
-- 标记状态：`healthy` / `unreachable`
-- 持久化到 `usage.json`
+**启动探活**（`main()` 内执行）：
+- 时机：proxy 启动时、Gateway 加载前
+- 检测：DNS 解析 → TCP 连接 → `/models` 端点（并发）
+- 结果：写入 `usage.json` 标记 `healthy` / `degraded` / `unreachable`
+- 策略：全部不可用时标记 degraded（带病上线，路由层跳过）
+
+**运行时探测**（config_watcher 循环内异步）：
+- 频率：每 10 分钟
+- 检测：`/health` 端点（轻量，不消耗 token）
+- 连续 3 次失败 → 标记 degraded
+- 恢复后自动回升 healthy
+
+> 旧独立 cron `Provider 健康探测`（2a027791）已于 2026-09-29 删除。
 
 #### 模块 4: 路由引擎 (`scripts/proxy.py::select_model`)
 

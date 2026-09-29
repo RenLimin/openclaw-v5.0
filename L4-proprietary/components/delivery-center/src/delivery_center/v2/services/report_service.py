@@ -18,7 +18,7 @@ import pandas as pd
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
-from db import (
+from delivery_center.v2.db import (
     init_db, create_job, update_job_status, get_job, list_jobs,
     save_summaries, get_summaries_by_job,
 )
