@@ -1,16 +1,11 @@
 """BDMS Web API 路由"""
 
-import sys
-from pathlib import Path
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR))
-
-from services.report_service import (
+from delivery_center.v2.services.report_service import (
     generate_report_async, get_report_status, list_reports,
     get_report_file_path, get_report_summary, get_report_download_name,
 )

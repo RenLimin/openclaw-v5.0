@@ -20,9 +20,7 @@ from typing import Optional
 import pandas as pd
 
 # 模块路径
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BASE_DIR))
-from db import (
+from delivery_center.v2.db import (
     init_db, create_import_log, get_import_log,
     DB_PATH as META_DB_PATH
 )
@@ -443,7 +441,7 @@ def rollback_import(import_id: int, output_dir: Path = None) -> dict:
     shutil.copy2(backup_path, target_path)
 
     # 更新日志状态
-    from db import get_connection
+    from delivery_center.v2.db import get_connection
     conn = get_connection()
     conn.execute(
         "UPDATE import_logs SET status = 'rolled_back' WHERE id = ?",

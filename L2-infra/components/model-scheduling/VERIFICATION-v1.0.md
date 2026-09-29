@@ -81,6 +81,18 @@
 
 ---
 
+## 6. 启动探活测试（2026-09-29 新增）
+
+| # | 场景 | 操作 | 预期 |
+|---|------|------|------|
+| SP-01 | 全部 healthy | 正常启动 proxy | 日志 3/3 healthy，usage.json 全部 healthy |
+| SP-02 | DNS 故障 | hosts 屏蔽 api.deepseek.com | deepseek unreachable，其余 healthy |
+| SP-03 | /models 503 | 模拟 provider 端点异常 | degraded，TCP 可达 |
+| SP-04 | 全部不可用 | 断开网络 | degraded 模式启动，日志 critical |
+| SP-05 | 跳过探活 | `--skip-probe` 参数 | 正常启动，无探活日志 |
+
+---
+
 ## 附录 A：测试执行报告
 
 > 测试环境：macOS 15.6.2 (arm64) / Python 3.14.7

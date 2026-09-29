@@ -308,9 +308,43 @@ class ProxyHandler:
     def __init__(self):
         self.request_count = 0
         self.error_count = 0
+        # provider 连续失败计数（运行时健康反馈，零额外网络请求）
+        self._provider_fail_streak: dict[str, int] = {}
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit=10)
         )
+
+    def _mark_provider_failure(self, provider_id: str, status_code: int):
+        """运行时失败反馈：连续 3 次网络/5xx 失败 → 标记 unreachable（写入 usage.json）。
+        与 402(exhausted) 同通道，复用 TTL 自愈机制（1h 后自动降级 unknown 重新试探）。
+        仅处理网络类错误(502/504)，不处理 4xx(鉴权/参数)和限流(429)。
+        """
+        if status_code not in (502, 504):
+            return
+        import time as _time
+        usage_path = Path(__file__).parent.parent / "config" / "usage.json"
+        try:
+            streak = self._provider_fail_streak.get(provider_id, 0) + 1
+            self._provider_fail_streak[provider_id] = streak
+            if streak >= 3:
+                usage = json.loads(usage_path.read_text())
+                providers = usage.setdefault("providers", {})
+                for pid, pdata in providers.items():
+                    if pid.lower() == provider_id.lower():
+                        pdata.setdefault("health", {})["status"] = "unreachable"
+                        pdata["health"]["last_checked"] = _time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                        pdata["health"]["detail"] = f"连续 {streak} 次网络失败自动标记"
+                usage_path.write_text(json.dumps(usage, indent=2, ensure_ascii=False))
+                logger.warning(f"Provider {provider_id} 连续 {streak} 次网络失败 → 标记 unreachable（1h TTL 自愈）")
+                self._provider_fail_streak[provider_id] = 0
+        except Exception as e:
+            logger.warning(f"标记 provider 失败状态异常: {e}")
+
+    def _mark_provider_success(self, provider_id: str):
+        """成功后重置失败计数。"""
+        if provider_id in self._provider_fail_streak:
+            del self._provider_fail_streak[provider_id]
+
 
     async def handle_request(self, reader, writer):
         try:
@@ -515,12 +549,15 @@ class ProxyHandler:
             success, status_code, result = await self._forward_once(request, model, provider_conf, stream, writer)
             
             if success:
+                self._mark_provider_success(provider_id)
                 if fallback_path:
                     logger.info(f"Fallback 成功: 最终模型 {model['id']}, 路径: {' → '.join(fallback_path)}")
                 return
             
             last_status = status_code
             last_error = result
+            # 运行时健康反馈：连续网络失败 → 标记 unreachable（TTL 自愈）
+            self._mark_provider_failure(provider_id, status_code)
             # 402(余额不足) → 标记 provider exhausted,后续路由排到末尾
             if status_code == 402:
                 try:
@@ -656,13 +693,123 @@ class ProxyHandler:
         await writer.drain()
 
 
+async def startup_probe():
+    """启动时探活 — 并发检测所有 provider 的 DNS + TCP + /models 端点。
+    结果写入 usage.json，标记 healthy / degraded / unreachable。
+    全部不可用则标记 degraded（带病上线，路由层会跳过）。
+    """
+    import socket
+    from datetime import datetime, timezone
+
+    logger.info("启动探活: 检测所有 provider 健康状态...")
+    providers_config = watcher.get("providers.yaml")
+    providers = providers_config.get("providers", {})
+    if not providers:
+        logger.warning("无 provider 配置，跳过探活")
+        return
+
+    # 加载现有 usage.json
+    usage_path = Path(__file__).parent.parent / "config" / "usage.json"
+    if usage_path.exists():
+        usage = json.loads(usage_path.read_text())
+    else:
+        usage = {}
+    usage.setdefault("providers", {})
+
+    async def probe_one(provider_id: str, pconf: dict):
+        base_url = pconf.get("base_url", "")
+        if not base_url:
+            return provider_id, "unreachable", "无 base_url"
+        from urllib.parse import urlparse
+        parsed = urlparse(base_url)
+        host = parsed.hostname or ""
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+
+        # 1. DNS 解析
+        try:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: socket.getaddrinfo(host, port))
+        except socket.gaierror as e:
+            return provider_id, "unreachable", f"DNS 解析失败: {e}"
+        except Exception as e:
+            return provider_id, "unreachable", f"DNS 异常: {e}"
+
+        # 2. TCP 连接
+        try:
+            reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port), timeout=5.0
+            )
+            writer.close()
+            await writer.wait_closed()
+        except asyncio.TimeoutError:
+            return provider_id, "unreachable", "TCP 连接超时"
+        except ConnectionRefusedError:
+            return provider_id, "unreachable", "TCP 连接拒绝"
+        except Exception as e:
+            return provider_id, "unreachable", f"TCP 异常: {e}"
+
+        # 3. /models 端点
+        api_key = get_api_key(provider_id)
+        if not api_key:
+            return provider_id, "degraded", "API key 未配置（TCP 可达但无法认证）"
+        try:
+            timeout = aiohttp.ClientTimeout(total=10)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                headers = {"Authorization": f"Bearer {api_key}"}
+                async with session.get(f"{base_url}/models", headers=headers) as resp:
+                    if resp.status == 200:
+                        return provider_id, "healthy", f"healthy ({resp.status})"
+                    elif resp.status in (401, 403):
+                        return provider_id, "degraded", f"认证失败 ({resp.status})"
+                    else:
+                        return provider_id, "degraded", f"HTTP {resp.status}"
+        except asyncio.TimeoutError:
+            return provider_id, "degraded", "/models 超时（TCP 可达）"
+        except aiohttp.ClientError as e:
+            return provider_id, "degraded", f"/models 错误: {type(e).__name__}"
+        except Exception as e:
+            return provider_id, "degraded", f"/models 异常: {e}"
+
+    # 并发探活
+    tasks = [probe_one(pid, pconf) for pid, pconf in providers.items()]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    now = datetime.now(timezone.utc).isoformat()
+    healthy_count = 0
+    for result in results:
+        if isinstance(result, Exception):
+            logger.error(f"探活异常: {result}")
+            continue
+        pid, status, detail = result
+        usage["providers"].setdefault(pid, {})
+        usage["providers"][pid]["health"] = {
+            "status": status,
+            "last_checked": now,
+            "detail": detail
+        }
+        if status == "healthy":
+            healthy_count += 1
+        logger.info(f"  {pid}: {status} — {detail}")
+
+    usage_path.write_text(json.dumps(usage, indent=2, ensure_ascii=False))
+    total = len(results)
+    logger.info(f"探活完成: {healthy_count}/{total} healthy")
+    if healthy_count == 0:
+        logger.critical("⚠️ 所有 provider 不可用！proxy 将以 degraded 模式启动")
+
+
 async def main():
     parser = argparse.ArgumentParser(description="model-scheduling 代理服务")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=3000)
+    parser.add_argument("--skip-probe", action="store_true", help="跳过启动探活")
     args = parser.parse_args()
 
     watcher.start()
+
+    # 启动探活（除非显式跳过）
+    if not args.skip_probe:
+        await startup_probe()
 
     handler = ProxyHandler()
 

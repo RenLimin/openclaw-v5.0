@@ -24,7 +24,7 @@ _WEB_COMMON_MACROS = _WEB_COMMON_DIR / "macros"
 _WEB_COMMON_STATIC = _WEB_COMMON_DIR / "static"
 
 sys.path.insert(0, str(BASE_DIR.parent))
-from services.report_service import list_reports, get_report_status
+from delivery_center.v2.services.report_service import list_reports, get_report_status
 
 app = FastAPI(
     title="BDMS — 交付月报管理系统",
@@ -151,8 +151,10 @@ async def health():
 
 
 # ========== 注册 API 路由 ==========
+# 注意：api.py 的 router 自带 prefix="/api"，此处不可再加前缀，
+# 否则会变成 /api/v1/api/... 双重前缀（9028e615 引入的回归，2026-09-28 修复）
 from .api import router as api_router
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router)
 
 
 if __name__ == "__main__":

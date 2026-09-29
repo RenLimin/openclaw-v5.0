@@ -27,7 +27,22 @@ routing:
   default_task_type: "chat"
   cache_ttl_seconds: 300
 
-# 健康检查配置
+# 启动探活配置（内化到 proxy，替代独立 cron）
+startup_probe:
+  enabled: true
+  timeout_seconds: 10
+  # 全部 provider 不可用时是否拒绝启动（false = 带病上线，路由层跳过）
+  refuse_on_all_unhealthy: false
+
+# 运行时健康反馈（零额外网络请求）：
+# 真实请求连续 3 次网络失败(502/504) → 标记 unreachable（1h TTL 自愈）
+# 因此不需要额外的定时后台探测任务
+runtime_feedback:
+  enabled: true
+  fail_threshold: 3
+  ttl_seconds: 3600
+
+# 旧健康检查 cron 已废弃（2026-09-29 删除 2a027791）
 health_check:
   interval_seconds: 3600
   timeout_ms: 5000

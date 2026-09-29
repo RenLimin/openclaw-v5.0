@@ -83,9 +83,15 @@ setup.sh → sync_models.py → 读取 openclaw.json → 生成 models.yaml
 |---|---|---|
 | 模型同步 | 每周 | `sync_models.py` |
 | 用量获取 | 每周 | `fetch_usage.py` |
-| 健康探测 | 每小时 | `health_check.py` |
 
-### 4.3 实时(每次任务)
+### 4.3 启动时(一次性)
+
+```
+proxy.py main() → startup_probe() → 并发探测所有 provider
+                   → DNS → TCP → /models
+                   → 写入 usage.json (healthy/degraded/unreachable)
+                   → 全部不可用 → degraded 模式启动（路由层跳过）
+```
 
 ```
 任务消息 → proxy.py → 读 models.yaml + routing.yaml + usage.json

@@ -62,8 +62,12 @@ curl -s http://127.0.0.1:3000/health | python3 -m json.tool
 # 模型列表
 curl -s http://127.0.0.1:3000/v1/models | python3 -m json.tool
 
-# 路由状态
-python3 scripts/health_check.py
+# 启动探活（一次性检测所有 provider）
+python3 scripts/proxy.py --host 127.0.0.1 --port 3000
+# 日志中查看探活结果
+
+# 跳过探活启动（调试用）
+python3 scripts/proxy.py --skip-probe
 ```
 
 ---

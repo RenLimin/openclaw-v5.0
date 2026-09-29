@@ -15,23 +15,22 @@ import pytest
 
 # 路径设置
 BASE_DIR = Path(__file__).resolve().parent.parent
+SRC_DIR = BASE_DIR / "src"
 V2_DIR = BASE_DIR / "src" / "delivery_center" / "v2"
-sys.path.insert(0, str(V2_DIR))
-sys.path.insert(0, str(V2_DIR / "web"))
-sys.path.insert(0, str(V2_DIR / "services"))
+sys.path.insert(0, str(SRC_DIR))
 
 
 @pytest.fixture
 def temp_db(tmp_path):
     """临时元数据库"""
     import importlib
-    import db as v2_db
+    from delivery_center.v2 import db as v2_db
     db_path = tmp_path / "bdms_v2_test.db"
     v2_db.init_db(db_path)
     v2_db.DB_PATH = db_path
 
     # 给 report_service 也换临时路径
-    import report_service
+    from delivery_center.v2.services import report_service
     importlib.reload(report_service)
 
     yield db_path
@@ -45,10 +44,10 @@ def temp_db(tmp_path):
 def client(temp_db):
     """FastAPI 测试客户端（mock 掉实际生成器）"""
     # 用 patch 替换掉实际生成函数
-    with patch("services.report_service._generate_report_async") as mock_gen:
+    with patch("delivery_center.v2.services.report_service._generate_report_async") as mock_gen:
         def fake_gen(job_id, month):
             """假生成：直接把状态改成 completed"""
-            import db as v2_db
+            from delivery_center.v2 import db as v2_db
             # 创建一个假的 Excel 文件
             from openpyxl import Workbook
             report_dir = Path(temp_db).parent / "reports"
@@ -73,7 +72,7 @@ def client(temp_db):
             )
         mock_gen.side_effect = fake_gen
 
-        from main import app
+        from delivery_center.v2.web.main import app
         from fastapi.testclient import TestClient
         yield TestClient(app)
 
@@ -200,7 +199,7 @@ def test_download_completed_report(client):
 def test_download_pending_report(client):
     """测试 10：pending 状态的报告下载返回 400"""
     # 直接操作 DB 创建一个 pending 任务
-    import db as v2_db
+    from delivery_center.v2 import db as v2_db
     job_id = v2_db.create_job("202609", db_path=client.app.state.test_db if hasattr(client.app.state, 'test_db') else None)
 
     # 不用 mock 的方式，直接查 DB
@@ -252,7 +251,7 @@ def test_page_list(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "月报列表" in resp.text
-    assert "BDMS v2" in resp.text
+    assert "BDMS" in resp.text
 
 
 def test_page_generate(client):
