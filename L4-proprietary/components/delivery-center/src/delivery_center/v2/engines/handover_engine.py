@@ -325,9 +325,9 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
         df["财务接收人"] = ""
     
     # 13. 是否接收 ← 财务是否接收
-    if "财务是否接收" in df.columns:
-        df["是否接收"] = df["财务是否接收"]
-    else:
+    # 注意：_normalize_column_names 已将 "财务是否接收" 重命名为 "是否接收"
+    # 所以这里只需检查 "是否接收" 是否已存在，不存在才设空
+    if "是否接收" not in df.columns:
         df["是否接收"] = ""
     
     # 14. 截至目前全部/部分验收.1（第二个）
