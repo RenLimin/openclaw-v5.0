@@ -2,16 +2,16 @@
   "providers": {
     "coding-plan": {
       "health": {
-        "status": "healthy",
-        "last_checked": "2026-09-29T06:24:02.779886+00:00",
-        "detail": "healthy (200)"
+        "status": "unreachable",
+        "last_checked": "2026-09-30T00:04:40+00:00",
+        "detail": "连续 3 次网络失败自动标记"
       }
     },
     "longCat": {
       "health": {
-        "status": "healthy",
-        "last_checked": "2026-09-29T06:24:02.779886+00:00",
-        "detail": "healthy (200)"
+        "status": "unreachable",
+        "last_checked": "2026-09-30T08:50:54+00:00",
+        "detail": "连续 3 次网络失败自动标记"
       }
     },
     "model-scheduling": {
@@ -23,9 +23,9 @@
     },
     "deepseek": {
       "health": {
-        "status": "healthy",
-        "last_checked": "2026-09-29T06:24:02.779886+00:00",
-        "detail": "healthy (200)"
+        "status": "unreachable",
+        "last_checked": "2026-09-30T00:04:39+00:00",
+        "detail": "连续 3 次网络失败自动标记"
       }
     },
     "llama-cpp": {

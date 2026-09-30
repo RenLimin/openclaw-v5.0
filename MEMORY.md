@@ -214,14 +214,6 @@ _(将由 `docs/knowledge-base/by-category/project-experience/` 自动汇聚)_
 - 2026-08-24: **sticky 隔离 + 供应链加固** — `agents.entries.main.model` 实测阻断 defaults 污染；4/4 插件钉版本+integrity；卸载 `openclaw-weixin`；security audit 3 WARN→1；commit `2cc185e`
 - 2026-08-24: **火山 embedding 结案（保持本地）** — Coding Plan 本就含 embedding（未单独付费），唯一可用 `doubao-embedding-vision-251215` 实测 dims=2048 语义正常，但 OpenClaw 发 81 条/火山限 10 条且无配项可解，已回退 `provider: local`（406 chunks / vectorScore 0.691 验证通过）
 
-## Promoted From Short-Term Memory (2026-08-26)
-
-<!-- openclaw-memory-promotion:memory:memory/2026-08-25.md:30:48 -->
-- **核对 01-asset-inventory.md**: 8 cron / 5 agent / 4 plugins / 14 ADR / 12 EXP / 504 chunks 记忆检索 / 24 记忆文件全部对得上。 - **memory_search 健康**: local provider, 504 chunks / 768 dims / FTS ready / Dirty: no。 - **git**: 最新 commit `71c75d9`,已 push 待确认。 - **备份**: memory-snapshot 2 个 .enc 加密备份在 `~/.openclaw/backups/memory-snapshot/`。 - **配置快照**: 已重新生成,含 model-scheduling auto model contextWindow=229376 + agents.entries.main.model.primary=model-scheduling/auto。 - **已解决(09-04)**: "每日观测摘要投递" cron 任务已不存在；WeCom 报告由其他 4 个 cron 承担（错误扫描/健康探测/错误自动处理/生命周期管理），投递到 wecom:1313 正常。原"缺 Agent mode 凭据"记录已过时。... [score=0.843 signals=12 recalls=12 avg=0.756 source=memory/2026-08-25.md:30-39] <!-- trigger: backup, backups, 备份 --> <!-- importance: 8 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->
-<!-- openclaw-memory-promotion:memory:memory/2026-08-25.md:130:148 -->
-- **核对 01-asset-inventory.md**: 8 cron / 5 agent / 4 plugins / 14 ADR / 12 EXP / 504 chunks 记忆检索 / 24 记忆文件全部对得上。 - **memory_search 健康**: local provider, 504 chunks / 768 dims / FTS ready / Dirty: no。 - **git**: 最新 commit `71c75d9`,已 push 待确认。 - **备份**: memory-snapshot 2 个 .enc 加密备份在 `~/.openclaw/backups/memory-snapshot/`。 - **配置快照**: 已重新生成,含 model-scheduling auto model contextWindow=229376 + agents.entries.main.model.primary=model-scheduling/auto。 - **已解决(09-04)**: "每日观测摘要投递" cron 任务已不存在；WeCom 报告由其他 4 个 cron 承担（错误扫描/健康探测/错误自动处理/生命周期管理），投递到 wecom:1313 正常。原"缺 Agent mode 凭据"记录已过时。... [score=0.822 signals=8 recalls=8 avg=0.753 source=memory/2026-08-25.md:130-139] <!-- trigger: backup, backups, 备份 --> <!-- importance: 8 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->
-<!-- openclaw-memory-promotion:memory:memory/2026-08-25.md:190:206 -->
-- **已解决(09-04)**：每日观测摘要投递已不存在，WeCom 报告由其他 cron 承担。L3/L4 业务层暂缓；自建知识库系统 0/7 暂缓。 ## DESIGN.md 状态统一 + cron 重跑机制 + 备份机制落地（14:00-14:30） [score=0.793 signals=6 recalls=6 avg=0.695 source=memory/2026-08-25.md:190-193] <!-- trigger: network, 备份, l3/l4 --> <!-- importance: 8 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 ### 2026-08-26: 配置安全写入保护机制 ★★★
 - **背景**：全盘审计发现 2 个🔴危险点——`adapter.py config_set()` 无保护写入 + `setup_agents.sh` 回退文件过时
 - **修复 1**：`adapter.py config_set()` — 加 dry-run 预检 + 写入后 validate + 读回确认 + 失败自动回退到 .bak
@@ -278,3 +270,12 @@ _(将由 `docs/knowledge-base/by-category/project-experience/` 自动汇聚)_
 - **原则**：同一功能只允许一个实现路径；修复/增强必须迭代原有代码；废弃脚本必须删除（备份后可回滚）
 - **行动**：合并为单一 `build_stat_sheets.py`（15 Sheet），废弃 `generate_report_202606.py`
 - **教训**：迭代建设 > 平行重建；发现共存立即合并
+
+## Promoted From Short-Term Memory (2026-09-30)
+
+<!-- openclaw-memory-promotion:memory:memory/2026-09-28.md:232:258 -->
+- L2 19 组件 + L3 9 组件 + L4 7 组件 - 已达标：BDMS v2.1（今晨补齐）、model-scheduling - 缺口：OCR（缺 VERIF/OPS）、contract-approval（缺 4 份）、fin-l4（缺 4 份） **本次交付（10 份新文档）**： | 资产 | 新增文档 | 测试基线 | |---|---|---| | OCR-001 (L2) | VERIFICATION + OPERATIONS | 113/113 | | SCA-001 contract-approval (L3/L4) | PRD + OUTLINE + VERIFICATION + OPERATIONS | L3 契约 18/18 + L4 58/58 | | FIN-L4 (L4) | PRD + OUTLINE + VERIFICATION + OPERATIONS | 189/189 | **验证方式**：全部实测跑测试（非引用旧记录）— OCR 113 passed 0.61s / contract L3 18 通过 + L4 58 passed 0.35s / fin-l4 189 passed 1.32s **关键修正**： - contractctl CLI 实际入口是 `python3 -m office_contract`（PYTHONPATH=src），用 `--id` 数字 ID 而非合同编号 —... [score=0.874 signals=5 recalls=5 avg=0.745 source=memory/2026-09-28.md:232-258] <!-- trigger: v2.1, model-scheduling, verif/ops --> <!-- importance: 9 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+<!-- openclaw-memory-promotion:memory:memory/2026-09-28.md:267:285 -->
+- 4. `/plugins/wecom/agent/default` 404 = 插件未配 Agent mode（路由未注册，配置后即通） 5. 企微服务器（腾讯云国内）→ cloudflare edge：直连可达（403 证明） **待 Rex 操作**（企微管理后台，约 10 分钟）： 1. work.weixin.qq.com → 应用管理 → 创建自建应用 2. 记录 CorpID（我的企业页）/ CorpSecret（应用页）/ AgentId（应用页） 3. 应用 → API 接收消息 → 记录 Token + EncodingAESKey（先不要点保存！） 4. 通知 Jerry 配置 Gateway 侧五项凭据 + 起正式隧道 5. 最后回企微后台点保存（验证回调 URL） **部署形态决策待定**：快速隧道（trycloudflare.com 随机域名，重启即换）vs 命名隧道（需 Cloudflare 账号 + 域名，稳定）。企微回调 URL 不支持频繁变更，倾向命名隧道或 frp 固定域名。 [score=0.821 signals=4 recalls=4 avg=0.732 source=memory/2026-09-28.md:267-278] <!-- trigger: gateway, plugins/wecom/agent/default, work.weixin.qq.com --> <!-- importance: 8 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+<!-- openclaw-memory-promotion:memory:memory/2026-09-28.md:250:271 -->
+- **架构总表 §7.6 最终状态**：五资产 ✅（BDMS v2.1 / model-scheduling / OCR / contract-approval / fin-l4）；其余 L2 组件按"ADR+DESIGN+实现"三件齐备口径已达标，VERIF/OPS 按需补。 **commit**: 3f3e4b83 已 push [score=0.817 signals=4 recalls=4 avg=0.720 source=memory/2026-09-28.md:250-253] <!-- trigger: gateway, v2.1, model-scheduling --> <!-- importance: 8 --> <!-- project: github.com/RenLimin/openclaw-v5.0 -->

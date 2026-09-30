@@ -1057,14 +1057,26 @@ L4 专有业务
 
 ### 7.6 当前资产文档覆盖情况
 
-| 资产 | PRD | OUTLINE | DETAIL | VERIFICATION | OPERATIONS | 状态 |
-|------|-----|---------|--------|-------------|------------|------|
-| BDMS v2.1 | ✅ | ✅ | ✅ (7份) | ✅ | ✅ (2026-09-28 补齐) | ✅ 完成 |
-| model-scheduling | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
-| OCR 数字化 | ✅ (DESIGN.md §1-2) | ✅ (DESIGN.md §3-4) | ✅ (DESIGN.md 416行 + ADR-023) | ✅ (2026-09-28 补齐, 113 tests) | ✅ (2026-09-28 补齐) | ✅ 完成 |
-| contract-approval | ✅ (2026-09-28 补齐) | ✅ (2026-09-28 补齐) | ✅ (DESIGN.md + SKILL.md + ARCHITECTURE.md 276行) | ✅ (2026-09-28, L3 18/18 + L4 58/58) | ✅ (2026-09-28 补齐) | ✅ 完成 |
-| fin-l4 | ✅ (2026-09-28 补齐) | ✅ (2026-09-28 补齐) | ✅ (DESIGN.md 73行 + README 完整) | ✅ (2026-09-28, 189/189) | ✅ (2026-09-28 补齐) | ✅ 完成 |
-| 其他 L2 组件 | — | — | ✅ (DESIGN.md 均已备) | — | — | 📐 DESIGN.md 已备,VERIF/OPS 按需补 |
+| 层级 | 资产 | PRD | OUTLINE | DETAIL | VERIFICATION | OPERATIONS | 状态 |
+|------|------|-----|---------|--------|-------------|------------|------|
+| L2 | model-scheduling | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | OCR 数字化 | ✅ (DESIGN.md §1-2) | ✅ (DESIGN.md §3-4) | ✅ (DESIGN.md 416行 + ADR-023) | ✅ (113 tests) | ✅ | ✅ 完成 |
+| L2 | 其他 L2 组件 | — | — | ✅ (DESIGN.md 均已备) | — | — | 📐 DESIGN.md 已备,VERIF/OPS 按需补 |
+| L3 | contract-approval | ✅ | ✅ | ✅ (DESIGN.md + SKILL.md + ARCHITECTURE.md 276行) | ✅ (18/18) | ✅ | ✅ 完成 |
+| L3 | cissp-learning | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
+| L3 | delivery-management-framework | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
+| L3 | dms-framework | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
+| L3 | finance-engine | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
+| L3 | health-management | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
+| L3 | health-engine | — | — | ✅ (DESIGN.md) | — | — | 📐 设计态(空壳,py=0) |
+| L3 | office-business | 📋 | — | ✅ (DESIGN.md) | — | 📋 | ⚙️ 建设中(模板资产,简化口径) |
+| L4 | BDMS v2.1 | ✅ | ✅ | ✅ (7份) | ✅ | ✅ | ✅ 完成 |
+| L4 | bangcle-ppt | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L4 | cissp-trainer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L4 | delivery-center | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L4 | fin-l4 | ✅ | ✅ | ✅ (DESIGN.md 73行 + README 完整) | ✅ (189/189) | ✅ | ✅ 完成 |
+| L4 | office-contract | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L4 | revenue-recognition | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 
 > **TODO**：按优先级逐步补齐所有资产的 5 件套文档。
 > 新资产上线前必须 5 份齐全，否则不允许合并。
