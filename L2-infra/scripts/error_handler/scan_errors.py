@@ -441,13 +441,15 @@ def scan_asset_consistency():
 def scan_zombie_processes():
     """检测僵尸进程和已完成会话残留，建议清理"""
     errors = []
-    output, rc = run_cmd("ps axo pid,ppid,stat,comm | grep 'Z' | head -20")
+    # 注意：grep 'Z' 会误匹配路径中的字母 Z（如 WeDrive），必须用 awk 精确匹配 stat 列
+    output, rc = run_cmd("ps -eo pid,ppid,stat,comm | awk '$3 ~ /^Z/' | head -20")
     if rc == 0 and output.strip():
         zombie_count = len(output.strip().split("\n"))
-        errors.append({
-            "type": "zombie_processes",
-            "detail": f"Found {zombie_count} zombie processes. Recommend system reboot or manual kill."
-        })
+        if zombie_count > 0:
+            errors.append({
+                "type": "zombie_processes",
+                "detail": f"Found {zombie_count} zombie processes. Recommend system reboot or manual kill."
+            })
     
     # 检查残留子会话目录
     output, rc = run_cmd("ls -d /Users/bangcle/.openclaw/sandboxes/workspace-* 2>/dev/null | wc -l")
@@ -475,24 +477,25 @@ def scan_temp_files_cleanup():
             "detail": f"Found {len(files)} backup files in /tmp. Recommend review and cleanup."
         })
     
-    # 检查未跟踪文件在 workspace
+    # 检查未跟踪文件在 workspace（>20 才报，日常开发 10-15 个属正常）
     output, rc = run_cmd("cd /Users/bangcle/.openclaw/workspace && git status --porcelain | grep '^??' | wc -l")
     if rc == 0 and output.strip():
         count = int(output.strip())
-        if count > 10:
+        if count > 20:
             errors.append({
                 "type": "untracked_files",
                 "detail": f"Found {count} untracked files in workspace. Recommend commit or cleanup."
             })
     
-    # 检查日志文件大小 (gateway logs)
-    output, rc = run_cmd("du -h ~/.openclaw/logs/ | tail -1")
-    if rc == 0 and output:
-        size_str = output.split()[0]
-        errors.append({
-            "type": "log_dir_size",
-            "detail": f"Gateway log directory size is {size_str}. Cleanup old logs if > 100M."
-        })
+    # 检查日志文件大小 (gateway logs) — 仅当 >100M 时报 error
+    output, rc = run_cmd("du -sm ~/.openclaw/logs/ 2>/dev/null | awk '{print $1}'")
+    if rc == 0 and output.strip():
+        size_mb = int(output.strip())
+        if size_mb > 100:
+            errors.append({
+                "type": "log_dir_size",
+                "detail": f"Gateway log directory is {size_mb}MB (>100M). Cleanup old logs recommended."
+            })
     
     return errors
 
