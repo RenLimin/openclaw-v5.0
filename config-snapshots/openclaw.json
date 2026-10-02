@@ -11,25 +11,28 @@
       "models": {
         "coding-plan/doubao-seed-2-1-turbo": {},
         "coding-plan/doubao-seed-2-0-lite-260215": {},
-        "coding-plan/doubao-seed-code-preview-251028": {}
+        "coding-plan/doubao-seed-code-preview-251028": {},
+        "longcat/LongCat-2.0": {
+          "alias": "LongCat 2.0"
+        }
       },
       "workspace": "/Users/bangcle/.openclaw/workspace",
       "compaction": {
         "mode": "safeguard",
         "keepRecentTokens": 30000,
-        "maxActiveTranscriptBytes": "20mb",
+        "maxActiveTranscriptBytes": "6mb",
         "midTurnPrecheck": {
           "enabled": true
         },
-        "model": "longcat/LongCat-2.0",
         "memoryFlush": {
-          "model": "coding-plan/doubao-seed-2-1-turbo",
+          "model": "longcat/LongCat-2.0",
           "softThresholdTokens": "<REDACTED>",
           "forceFlushTranscriptBytes": "200kb"
         },
         "qualityGuard": {
           "maxRetries": 3
-        }
+        },
+        "model": "longcat/LongCat-2.0"
       },
       "contextPruning": {
         "mode": "off",
@@ -70,6 +73,7 @@
         "model": {
           "primary": "model-scheduling/auto",
           "fallbacks": [
+            "coding-plan/deepseek-v4-flash-ga-260731",
             "coding-plan/doubao-seed-2-1-turbo",
             "coding-plan/doubao-seed-code-preview-251028"
           ]
@@ -242,7 +246,7 @@
             "input": [
               "text"
             ],
-            "contextWindow": 131072,
+            "contextWindow": 1048576,
             "maxTokens": 8192,
             "reasoning": false,
             "cost": {
@@ -306,42 +310,19 @@
           }
         ]
       },
-      "longCat": {
-        "baseUrl": "https://api.longcat.chat/openai/v1",
-        "apiKey": {
-          "source": "store",
-          "provider": "default",
-          "id": "LONGCAT_API_KEY"
-        },
-        "api": "openai-completions",
-        "authHeader": true,
-        "models": [
-          {
-            "id": "LongCat-2.0",
-            "name": "LongCat-2.0",
-            "reasoning": false,
-            "input": [
-              "text"
-            ],
-            "contextWindow": 1048576,
-            "maxTokens": 131072,
-            "compat": {
-              "maxTokensField": "max_tokens"
-            }
-          }
-        ]
-      },
       "model-scheduling": {
         "baseUrl": "http://127.0.0.1:3000",
         "api": "openai-completions",
         "models": [
           {
             "id": "auto",
-            "name": "Auto (智能调度)",
+            "name": "Auto (Smart Routing)",
             "api": "openai-completions",
             "reasoning": false,
             "input": [
-              "text"
+              "text",
+              "image",
+              "video"
             ],
             "cost": {
               "input": 0,
@@ -349,7 +330,7 @@
               "cacheRead": 0,
               "cacheWrite": 0
             },
-            "contextWindow": 229376,
+            "contextWindow": 1048576,
             "maxTokens": 131072
           }
         ]
@@ -475,8 +456,36 @@
             }
           }
         ]
+      },
+      "longcat": {
+        "baseUrl": "https://api.longcat.chat/openai/v1",
+        "api": "openai-completions",
+        "authHeader": true,
+        "models": [
+          {
+            "id": "LongCat-2.0",
+            "name": "LongCat-2.0",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 131072,
+            "compat": {
+              "maxTokensField": "max_tokens"
+            },
+            "cost": {
+              "input": 0.75,
+              "output": 2.95,
+              "cacheRead": 0.015,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          }
+        ]
       }
-    }
+    },
+    "mode": "merge"
   },
   "skills": {
     "install": {
@@ -546,9 +555,9 @@
     "alsoAllow": [
       "tavily_search",
       "tavily_extract",
-      "wecom_mcp",
       "message",
-      "group:messaging"
+      "group:messaging",
+      "wecom-cli"
     ],
     "sandbox": {
       "tools": {
@@ -687,5 +696,8 @@
   "telemetry": {
     "enabled": true,
     "consentedAt": "2026-09-10T04:08:00.788Z"
+  },
+  "cron": {
+    "sessionRetention": "6h"
   }
 }

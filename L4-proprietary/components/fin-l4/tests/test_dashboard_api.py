@@ -93,21 +93,21 @@ def client():
     txn_repo = TransactionRepository(conn)
     today = date.today()
 
-    # 收入交易
+    # 收入交易（本月内，避免跨月导致 monthly_income=0）
     for i in range(3):
-        d = today - timedelta(days=30 * i + 5)
+        d = today - timedelta(days=i * 3 + 1)
         txn_repo.create(
             family_id=family_id, date=str(d), amount='35000',
             debit_account_id=accounts['BANK'], credit_account_id=accounts['SALARY'],
             note=f'{d.month}月工资', category_id=categories['工资'], source='test',
         )
     txn_repo.create(
-        family_id=family_id, date=str(today - timedelta(days=15)), amount='5000',
+        family_id=family_id, date=str(today - timedelta(days=10)), amount='5000',
         debit_account_id=accounts['BANK'], credit_account_id=accounts['INV_INC'],
         note='投资收益', category_id=categories['投资'], source='test',
     )
 
-    # 支出交易
+    # 支出交易（本月内）
     patterns = [
         (3, 'FOOD', '餐饮', 300, '餐饮'),
         (2, 'TRANSPORT', '交通', 200, '交通'),
@@ -115,19 +115,17 @@ def client():
         (2, 'SHOPPING', '购物', 800, '购物'),
         (1, 'INSURANCE', '保险费', 2000, '保险'),
     ]
-    for month_offset in range(3):
-        base_day = today - timedelta(days=30 * month_offset)
-        for count, acc_code, note_prefix, avg_amt, cat_name in patterns:
-            for i in range(count):
-                d = base_day - timedelta(days=i * 7 + 1)
-                amt = str(avg_amt + i * 50)
-                txn_repo.create(
-                    family_id=family_id, date=str(d), amount=amt,
-                    debit_account_id=accounts[acc_code],
-                    credit_account_id=accounts['BANK'],
-                    note=f'{note_prefix}-{i}', category_id=categories[cat_name],
-                    source='test',
-                )
+    for count, acc_code, note_prefix, avg_amt, cat_name in patterns:
+        for i in range(count):
+            d = today - timedelta(days=i * 2 + 1)
+            amt = str(avg_amt + i * 50)
+            txn_repo.create(
+                family_id=family_id, date=str(d), amount=amt,
+                debit_account_id=accounts[acc_code],
+                credit_account_id=accounts['BANK'],
+                note=f'{note_prefix}-{i}', category_id=categories[cat_name],
+                source='test',
+            )
 
     # 设置预算
     budget_repo = BudgetRepository(conn)
