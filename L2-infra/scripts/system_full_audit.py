@@ -23,11 +23,15 @@ from pathlib import Path
 
 WORKSPACE = Path(__file__).resolve().parent.parent.parent.parent / "workspace"
 DATA_DIR = Path.home() / ".openclaw" / "data"
+LOG_DIR = Path.home() / ".openclaw" / "logs"
 BACKUP_DIR = Path.home() / ".openclaw" / "backups"
 DOCS_DIR = WORKSPACE / "docs" / "architecture"
 L4_COMPONENTS = WORKSPACE / "L4-proprietary" / "components"
 KB_INDEX = WORKSPACE / "L2-infra" / "components" / "knowledge-base" / "kb_index.py"
 KB_DIR = WORKSPACE / "docs" / "knowledge-base" / "by-category" / "project-experience"
+ERROR_SCAN_JSON = WORKSPACE / "memory" / "error-scan-latest.json"
+MODEL_SCHED_LOG = WORKSPACE / "L2-infra" / "components" / "model-scheduling" / "logs" / "model-scheduling.log"
+MODEL_SCHED_ERR = WORKSPACE / "L2-infra" / "components" / "model-scheduling" / "logs" / "proxy.stderr.log"
 
 # 验证路径存在（对齐 L3/L4 分层后的目录结构，ADR-026）
 assert WORKSPACE.exists(), f"WORKSPACE 不存在: {WORKSPACE}"
@@ -92,17 +96,36 @@ def audit_system_status() -> list[dict]:
     else:
         results.append(check("wecom channel", "⚠️", out[:200]))
 
-    # cron
+    # cron 列表（仅作数量统计）
     rc, out, _ = run("openclaw cron list --all 2>&1")
     if rc == 0:
-        lines = out.split("\n")
-        error_count = sum(1 for l in lines if "error" in l.lower())
-        if error_count > 0:
-            results.append(check("cron tasks", "⚠️", f"{error_count} 个任务异常"))
-        else:
-            results.append(check("cron tasks", "✅", "全部正常"))
+        lines = [l for l in out.split("\n") if l.strip() and not l.startswith("ID") and not l.startswith("-")]
+        results.append(check("cron tasks", "✅", f"共 {len(lines)} 个任务"))
     else:
         results.append(check("cron tasks", "❌", out[:200]))
+
+    # cron 执行质量 — 读取错误扫描脚本的输出（权威来源）
+    if ERROR_SCAN_JSON.exists():
+        try:
+            with open(ERROR_SCAN_JSON) as f:
+                scan_data = json.load(f)
+            errors = scan_data.get("errors", [])
+            healthy = scan_data.get("healthy", True)
+            if errors:
+                names = "; ".join(
+                    f"{e.get('name','?')}(x{e.get('consecutive_failures', 1)})"
+                    for e in errors[:3]
+                )
+                results.append(check(
+                    "cron execution", "❌" if not healthy else "⚠️",
+                    f"{len(errors)} 个任务连续失败: {names}"
+                ))
+            else:
+                results.append(check("cron execution", "✅", "全部执行成功"))
+        except (json.JSONDecodeError, Exception) as e:
+            results.append(check("cron execution", "⚠️", f"扫描结果解析失败: {e}"))
+    else:
+        results.append(check("cron execution", "⚠️", "未找到 error-scan-latest.json，建议先跑 scan_errors.sh"))
 
     return results
 
@@ -131,6 +154,69 @@ def audit_services() -> list[dict]:
         results.append(check("processes", "✅", f"{out} 个进程"))
     else:
         results.append(check("processes", "❌", "无进程"))
+
+    return results
+
+
+def audit_model_provider_health() -> list[dict]:
+    """4. 模型与 Provider 健康检测 — 扫 model-scheduling 日志中的失败"""
+    results = []
+
+    # model-scheduling proxy 是否在跑
+    rc, out, _ = run("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/v1/models 2>/dev/null")
+    if rc == 0 and out == "200":
+        results.append(check("proxy endpoint", "✅", "model-scheduling proxy 响应正常 (:3000)"))
+    else:
+        results.append(check("proxy endpoint", "❌", f"proxy 不可达 (HTTP {out})"))
+
+    # 最近 24h 模型请求错误统计
+    if MODEL_SCHED_LOG.exists():
+        rc, out, _ = run(
+            f"grep -c '\\[ERROR\\]' {MODEL_SCHED_LOG} 2>/dev/null"
+        )
+        total_errors = int(out) if out.isdigit() else 0
+
+        # 最近 1 小时的错误
+        from datetime import timedelta
+        one_hour_ago = (datetime.now() - timedelta(hours=1)).strftime("%Y-%m-%d %H")
+        rc, out2, _ = run(
+            f"grep '\\[ERROR\\]' {MODEL_SCHED_LOG} 2>/dev/null | grep -c '^{one_hour_ago}' 2>/dev/null || echo 0"
+        )
+        recent_errors = int(out2) if out2.isdigit() else 0
+
+        # 取最近 5 条错误做详情
+        rc, out3, _ = run(f"grep '\\[ERROR\\]' {MODEL_SCHED_LOG} 2>/dev/null | tail -3")
+        detail = f"累计 {total_errors} 条 / 近1h {recent_errors} 条"
+
+        if recent_errors == 0:
+            results.append(check("model request errors", "✅", detail))
+        elif recent_errors < 5:
+            results.append(check("model request errors", "⚠️", detail))
+        else:
+            results.append(check("model request errors", "❌", detail))
+    else:
+        results.append(check("model request errors", "⚠️", f"日志不存在: {MODEL_SCHED_LOG}"))
+
+    # 看门狗/僵尸日志检测
+    if LOG_DIR.exists():
+        zombie_logs = []
+        for logfile in LOG_DIR.glob("*.log"):
+            # 检查日志文件最后写入时间是否超过 7 天 + 里面全是相同错误
+            rc, out, _ = run(f"wc -l < {logfile}")
+            lines = int(out) if out.isdigit() else 0
+            if lines > 1000:
+                # 检查是不是同一条错误重复（死循环特征）
+                rc, out, _ = run(f"sort -u {logfile} | wc -l")
+                unique = int(out) if out.isdigit() else lines
+                if unique < 5 and lines > 1000:
+                    zombie_logs.append(f"{logfile.name}({lines}行/{unique}种)")
+
+        if zombie_logs:
+            results.append(check("zombie log files", "❌", f"疑似死循环日志: {', '.join(zombie_logs)}"))
+        else:
+            results.append(check("zombie log files", "✅", "无死循环日志"))
+    else:
+        results.append(check("zombie log files", "✅", "无 logs 目录"))
 
     return results
 
@@ -443,11 +529,12 @@ def main():
         ("1. 系统状态检测", audit_system_status),
         ("2. 系统各服务状态检测", audit_services),
         ("3. 自研资产状态检测", audit_assets),
-        ("4. 官方文档适配性检测", audit_official_compliance),
-        ("5. 系统架构文档符合性检测", audit_architecture_compliance),
-        ("6. 垃圾清理检测", audit_garbage),
-        ("7. 备份状态检查", audit_backups),
-        ("8. 子会话状态检测", audit_subagent_sessions),
+        ("4. 模型与 Provider 健康检测", audit_model_provider_health),
+        ("5. 官方文档适配性检测", audit_official_compliance),
+        ("6. 系统架构文档符合性检测", audit_architecture_compliance),
+        ("7. 垃圾清理检测", audit_garbage),
+        ("8. 备份状态检查", audit_backups),
+        ("9. 子会话状态检测", audit_subagent_sessions),
     ]
 
     if args.quick:
