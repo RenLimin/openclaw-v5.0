@@ -1,6 +1,10 @@
-"""Context Bus — 上下文总线（骨架）。"""
+"""Context Bus — 上下文总线组件。"""
 
-from models import BusEvent, BusContext
+from models import BusContext, BusEvent
 from bus import ContextBus
+from in_memory_bus import InMemoryBus, ContextScope
 
-__all__ = ["BusEvent", "BusContext", "ContextBus"]
+__all__ = [
+    "ContextBus", "InMemoryBus", "ContextScope",
+    "BusContext", "BusEvent",
+]

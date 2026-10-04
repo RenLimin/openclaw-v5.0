@@ -1,10 +1,16 @@
-"""Error Handler — 统一错误处理（骨架）。"""
+"""Error Handler — 统一错误处理组件。"""
 
-from models import AppError, ErrorOutcome, ErrorStats, Severity, ErrorCategory
+from models import (
+    AppError, ErrorOutcome, ErrorStats,
+    Severity, ErrorCategory, RecoveryAction,
+)
 from error_handler import ErrorHandler
+from handler import DefaultErrorHandler
 from strategy import RecoveryStrategy, RetryStrategy, FallbackStrategy
 
 __all__ = [
-    "AppError", "ErrorOutcome", "ErrorStats", "Severity", "ErrorCategory",
-    "ErrorHandler", "RecoveryStrategy", "RetryStrategy", "FallbackStrategy",
+    "ErrorHandler", "DefaultErrorHandler",
+    "RecoveryStrategy", "RetryStrategy", "FallbackStrategy",
+    "AppError", "ErrorOutcome", "ErrorStats",
+    "Severity", "ErrorCategory", "RecoveryAction",
 ]
