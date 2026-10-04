@@ -234,7 +234,7 @@ python3 L2-infra/skills/system-health-check/scripts/service_health_check.py --li
 ```json
 "my-service": {
   "name": "我的服务",
-  "description": "服务描述",
+  "description": "系统全量健康检查技能。覆盖 Gateway/Cron/凭据/网络/自定义资产，输出结构化报告。"
   "category": "business",
   "priority": "high",
   "checks": {
