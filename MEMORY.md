@@ -77,6 +77,19 @@ _(将由 `docs/knowledge-base/by-category/project-experience/` 自动汇聚)_
 
 ## 经验沉淀
 
+### 2026-10-03 ~ 10-04: 48小时运维实战经验沉淀 ★★★
+
+**6 类典型问题及其根治方法（全部实测验证）：**
+
+1. **僵尸 subagent settle 死循环** — 停 Gateway → 删 `subagent_runs` 记录 → 启 Gateway（重启无效，直接删 DB 会被写回）
+2. **cron job 跑 main session** → UI 污染 — 全部改 `sessionTarget: "isolated"`
+3. **WeCom 93006** — target 直接写 `1313`，不加 `user:` 前缀
+4. **subagent_runs 表有内存缓存** — 必须停 Gateway 才能编辑；`task_runs`/`delivery_queue` 可 WAL 并发写
+5. **DB 重制后凭据全丢** — 凭据存在 SQLite 里，需独立备份或保存原始值
+6. **AGENTS.md 超限** — 累积到 24679 字符被截断，需定期瘦身保持 < 15000
+
+**经验文档**：`docs/knowledge-base/by-category/project-experience/correct/EXP-20261003-001-48h-ops-retrospective.md`
+
 ### 2026-08-21: Tavily 显式工具解锁
 - **方案**: `tools.alsoAllow: ["tavily_search", "tavily_extract"]` — 保留 `profile=coding`，最小变更补充
 - **原因**: Tavily plugin 的 `contracts.tools` 与 `Capabilities` 是不同注册路径；alsoAllow 走 tool registry 而非 capability

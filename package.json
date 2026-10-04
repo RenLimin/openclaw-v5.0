@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@tencent-weixin/openclaw-weixin": "^2.4.9"
+  }
+}

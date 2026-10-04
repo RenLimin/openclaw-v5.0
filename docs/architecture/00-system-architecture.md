@@ -639,6 +639,8 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | CISSP 训练系统 | — | `L4-proprietary/components/cissp-trainer/` | 智能刷题 + 学习路径 + 模拟考试 + 知识图谱 + Web | ✅ 已上线 |
 | Office 合同审批 | — | `L4-proprietary/components/office-contract/` | 企业 Office 场景销售合同审批全流程（起草→归档） | ✅ 已上线 |
 | 家庭理财实例引擎 | ADR-027 | `L4-proprietary/components/fin-l4/` | FIN-L4 专有实例：Rex 家庭理财系统（CLI + Web UI + 测试数据） | ✅ 已上线 |
+| 收入确认引擎 | — | `L4-proprietary/components/revenue-recognition/` | ASC 606 / IFRS 15 收入确认：合同识别→履约义务→价格分配→时点/时段确认→报表（v1 + v2 双版本） | ✅ 已上线 |
+| CISSP 学习系统(v1) | — | `L4-proprietary/components/.deprecated/cissp-learning/` | 已被 cissp-trainer(v2) 替代 | 🗑️ 已废弃 |
 
 **L4 层技能**（`L4-proprietary/skills/`）:
 
