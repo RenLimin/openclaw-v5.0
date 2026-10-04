@@ -6,14 +6,14 @@ OpenClaw 适配器契约测试
 
 import pytest
 
-from adapters.base import (
+from L1_runtime.adapters.base import (
     ChannelInterface,
     CredentialInterface,
     MemoryInterface,
     RuntimeAdapter,
     SandboxInterface,
 )
-from adapters.openclaw.openclaw.runtime_adapter import (
+from L1_runtime.adapters.openclaw.openclaw.runtime_adapter import (
     OpenClawChannel,
     OpenClawCredentials,
     OpenClawMemory,
@@ -151,7 +151,7 @@ class TestOpenClawHealthCheck:
 
     def test_health_check_returns_health_status(self):
         """health_check 返回 HealthStatus 对象。"""
-        from adapters.base import HealthStatus
+        from L1_runtime.adapters.base import HealthStatus
         adapter = OpenClawRuntimeAdapter()
         # 注意：在测试环境中可能没有 openclaw 命令，
         # 但应该返回 status=down 的 HealthStatus，而不是抛异常

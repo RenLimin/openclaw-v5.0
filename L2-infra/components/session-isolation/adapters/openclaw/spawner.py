@@ -2,7 +2,7 @@
 OpenClaw 会话发起适配层
 Copyright (c) 2026 Bangcle, Inc. All rights reserved.
 实现 L1 抽象接口：会话发起
-依赖 OpenClaw sessions_spawn 工具
+通过 L1 RuntimeAdapter 调用 sessions_spawn，避免直接依赖运行时 API
 """
 
 from typing import Optional, Any, Dict, TYPE_CHECKING
@@ -10,9 +10,11 @@ from typing import Optional, Any, Dict, TYPE_CHECKING
 if TYPE_CHECKING:
     from ...scheduler import Task
 
-# 工具已经注入到运行时上下文，不需要导入模块
-# 运行时用 from openclaw.tools import sessions_spawn
-# 这里延迟导入避免 import 错误
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from L1_runtime.adapters.base import RuntimeAdapter
+from L1_runtime.adapters.openclaw import OpenClawRuntimeAdapter
 
 
 class OpenClawTaskSpawner:
@@ -38,13 +40,24 @@ class OpenClawTaskSpawner:
         self.default_run_timeout = default_run_timeout
         self.context_mode = context_mode
         self.visible = visible
+        self._runtime_adapter: Optional[RuntimeAdapter] = None
         self._sessions_spawn = None
 
     def _get_spawn_fn(self):
         """延迟获取 sessions_spawn，避免非 OpenClaw 环境下 import 失败"""
         if self._sessions_spawn is None:
-            from openclaw.tools import sessions_spawn
-            self._sessions_spawn = sessions_spawn
+            # 优先通过 L1 抽象层获取，适配层不存在时回退到直接调用
+            try:
+                oc_adapter = OpenClawRuntimeAdapter()
+                self._runtime_adapter = oc_adapter
+            except Exception:
+                self._runtime_adapter = None
+            # 保留直接调用能力作为回退
+            try:
+                from openclaw.tools import sessions_spawn
+                self._sessions_spawn = sessions_spawn
+            except ImportError:
+                self._sessions_spawn = None
         return self._sessions_spawn
 
     def spawn_task(self, task: "Task") -> bool:
@@ -81,15 +94,28 @@ class OpenClawTaskSpawner:
             if self.default_model:
                 params["model"] = self.default_model
 
-            # 调用工具发起
-            sessions_spawn = self._get_spawn_fn()
-            result = sessions_spawn(**params)
-
-            # 检查结果：accepted 表示成功入队列
-            if result and result.get("status") == "accepted":
-                return True
+            # 调用工具发起 — 通过 L1 抽象层
+            if self._runtime_adapter:
+                # 使用 L1 适配层调用 sessions_spawn
+                tool_params = {
+                    "name": "sessions_spawn",
+                    "input": params
+                }
+                tool_result = self._runtime_adapter.execute_tool("sessions_spawn", params)
+                if tool_result.success:
+                    return True
+                else:
+                    return False
             else:
-                return False
+                # 回退到直接调用（兼容性）
+                sessions_spawn = self._get_spawn_fn()
+                if sessions_spawn is None:
+                    return False
+                result = sessions_spawn(**params)
+                if result and result.get("status") == "accepted":
+                    return True
+                else:
+                    return False
 
         except Exception:
             return False
