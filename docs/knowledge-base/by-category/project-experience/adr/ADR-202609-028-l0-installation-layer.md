@@ -95,6 +95,6 @@ superseded_by: null
 
 ## 相关链接
 
-- [系统架构](../../../architecture/00-system-architecture.md) §3.1
-- [L0 DESIGN.md](../../../architecture/components/l0-install/DESIGN.md)
-- [开发规范](../../../../docs/conventions/dev-standards.md)
+- [系统架构](../../../../architecture/00-system-architecture.md) §3.1
+- [L0 DESIGN.md](../../../../architecture/components/l0-install/DESIGN.md)
+- [开发规范](../../../../../docs/conventions/dev-standards.md)
