@@ -1061,28 +1061,41 @@ L4 专有业务
 
 | 层级 | 资产 | PRD | OUTLINE | DETAIL | VERIFICATION | OPERATIONS | 状态 |
 |------|------|-----|---------|--------|-------------|------------|------|
+| L2 | backup | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | config | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | context-management | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | credentials | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | knowledge-base | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | logs | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | maintenance | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | memory-embedding | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
 | L2 | model-scheduling | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
-| L2 | OCR 数字化 | ✅ (DESIGN.md §1-2) | ✅ (DESIGN.md §3-4) | ✅ (DESIGN.md 416行 + ADR-023) | ✅ (113 tests) | ✅ | ✅ 完成 |
-| L2 | 其他 L2 组件 | — | — | ✅ (DESIGN.md 均已备) | — | — | 📐 DESIGN.md 已备,VERIF/OPS 按需补 |
-| L3 | contract-approval | ✅ | ✅ | ✅ (DESIGN.md + SKILL.md + ARCHITECTURE.md 276行) | ✅ (18/18) | ✅ | ✅ 完成 |
-| L3 | cissp-learning | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
-| L3 | delivery-management-framework | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
-| L3 | dms-framework | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
-| L3 | finance-engine | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
-| L3 | health-management | 📋 | 📋 | 📋 | 📋 | 📋 | ⚙️ 建设中(活代码) |
-| L3 | health-engine | — | — | ✅ (DESIGN.md) | — | — | 📐 设计态(空壳,py=0) |
-| L3 | office-business | 📋 | — | ✅ (DESIGN.md) | — | 📋 | ⚙️ 建设中(模板资产,简化口径) |
-| L4 | BDMS v2.1 | ✅ | ✅ | ✅ (7份) | ✅ | ✅ | ✅ 完成 |
+| L2 | observability | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | ocr-digitalization | ✅ (§1-2) | ✅ (§3-4) | ✅ (DESIGN.md 416行 + ADR-023) | ✅ (113 tests) | ✅ | ✅ 完成 |
+| L2 | office-generation | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | persistence | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | sandbox | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | session-isolation | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | session-isolation-sharing | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | session-recovery | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | tool-policy | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L2 | web-common | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
+| L3 | contract-approval | ✅ | ✅ | ✅ | ✅ (18/18) | ✅ | ✅ 完成 |
+| L3 | delivery-management-framework | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L3 | dms-framework | ✅ | ✅ | ✅ | ✅ (228/228) | ✅ | ✅ 完成 |
+| L3 | finance-engine | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L3 | health-engine | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L3 | health-management | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L3 | office-business | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L4 | bangcle-ppt | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L4 | BDMS v2.1 | ✅ | ✅ | ✅ (7份) | ✅ | ✅ | ✅ 完成 |
 | L4 | cissp-trainer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L4 | delivery-center | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
-| L4 | fin-l4 | ✅ | ✅ | ✅ (DESIGN.md 73行 + README 完整) | ✅ (189/189) | ✅ | ✅ 完成 |
+| L4 | fin-l4 | ✅ | ✅ | ✅ | ✅ (189/189) | ✅ | ✅ 完成 |
 | L4 | office-contract | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L4 | revenue-recognition | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 
-> **TODO**：按优先级逐步补齐所有资产的 5 件套文档。
-> 新资产上线前必须 5 份齐全，否则不允许合并。
-> **2026-09-28 进度**：BDMS v2.1 + model-scheduling + OCR 数字化 + contract-approval + fin-l4 五资产 5 件套全部完成。剩余 L2 组件 DESIGN.md 均已备（ADR+DESIGN+实现三件齐备口径），VERIF/OPS 按需补。
+> **2026-10-04 进度**：全部 33 个资产（L2: 19, L3: 7, L4: 7）5 件套全部补齐。
 
 ---
 
@@ -1171,6 +1184,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-04 | **4.7** | **全量资产 5 件套补齐 + 垃圾清理 + 架构文档对齐**：① L3 7 个组件 PRD + OUTLINE + VERIF + OPS（28 份）；② L2 19 个组件 VERIFICATION.md + OPERATIONS.md（38 份）；③ cissp-learning 移至 L4/.deprecated；④ revenue-recognition 补入 L4 清单；⑤ AGENTS.md 瘦身 24679→11175；⑥ 清理 __pycache__/ .pyc / .bak / /tmp 垃圾；⑦ 资产清单 §7.6 全部标记 ✅。 |
 | 2026-09-11 | **3.9** | **L0/L1 文档补齐 + L2 全量对齐**：① L0-gateway（auth-gateway/channel-router/session-manager）纳入架构文档，L0 双子层（Install + Gateway）正式定义；② L1-runtime 路径对齐（`adapters/<runtime>/` → `L1-runtime/adapters/<runtime>/`），纳入 4 个 L1 自建组件（tool-policy/context-bus/agent-registry/telemetry）；③ L2 DESIGN.md 从 3/26 → 18/18（0 缺失）；④ 纳入 13 个未声明 L2 组件；⑤ 命名对齐：config-management→config, sandbox-isolation→sandbox；⑥ 清理空目录 + __pycache__；⑦ 删除 L3-business 空目录。 |
 | 2026-08-21 | 0.1 | 初版骨架(4 层架构 + 契约 + 演进路线) |
 | 2026-08-21 | 0.3 | 新增 L2 上下文管理组件 |
