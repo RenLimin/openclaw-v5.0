@@ -69,7 +69,7 @@ cmd_audit() {
     if [[ ! -f "$SNAPSHOT" ]]; then
         log_warn "快照不存在 — 运行: bash scripts/config.sh snapshot"
         problems=$((problems + 1))
-    elif python3 scripts/snapshot_config.py --check >/dev/null 2>&1; then
+    elif python3 L2-infra/components/config/snapshot_config.py --check >/dev/null 2>&1; then
         log_ok "快照与当前配置一致"
     else
         log_warn "配置有未快照的变更 — 运行: bash scripts/config.sh snapshot"
@@ -162,7 +162,7 @@ PY
 # snapshot / diff
 # --------------------------------------------------------------------------
 cmd_snapshot() {
-    python3 scripts/snapshot_config.py
+    python3 L2-infra/components/config/snapshot_config.py
     if ! git diff --quiet -- config-snapshots/ 2>/dev/null || \
        [[ -n "$(git status --porcelain -- config-snapshots/ 2>/dev/null)" ]]; then
         echo ""
@@ -171,7 +171,7 @@ cmd_snapshot() {
     fi
 }
 
-cmd_diff() { python3 scripts/snapshot_config.py --diff; }
+cmd_diff() { python3 L2-infra/components/config/snapshot_config.py --diff; }
 
 # --------------------------------------------------------------------------
 # apply — 四步流程固化（核心价值）
@@ -271,7 +271,7 @@ PY
     echo ""
 
     log_step "[4/4] 快照入库 + 保存回退点"
-    python3 scripts/snapshot_config.py
+    python3 L2-infra/components/config/snapshot_config.py
     # 保存带时间戳的 rollback 快照（用于精确回退到此变更前）
     ROLLBACK_TS=$(date +%Y%m%d%H%M%S)
     ROLLBACK_FILE="config-snapshots/rollback_${ROLLBACK_TS}.json"
