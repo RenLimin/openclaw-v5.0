@@ -5,7 +5,7 @@
 
 ## 1. 基础身份
 
-- **Name**: Rex · **Timezone**: Asia/Shanghai · **语言**: 中英混合 · **主语言**: Python · **角色**: 全栈+管理
+- **Name**: Rex (Limin Ren) · **System ID**: gateway-owner · **Timezone**: Asia/Shanghai · **语言**: 中英混合 · **主语言**: Python · **角色**: 全栈+管理
 
 ## 2. 沟通风格
 

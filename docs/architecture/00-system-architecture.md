@@ -12,10 +12,10 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 4.6 (2026-09-16 — model-scheduling 注册为 OpenClaw custom provider，分层设计与 OpenClaw 解耦) |
+| 文档版本 | 4.8 (2026-10-04 — 全量资产文档补齐 + 架构文档与实际对齐 + 系统升级 2026.9.8) |
 | 文档状态 | active |
-| 运行时 cron | 9 个活跃业务 cron（模型同步/错误扫描与自动修复/调度健康巡检/备份/每日观测投递/会话生命周期/Memory Dreaming/仓库健康检查/模型发现）；0 个任务 disabled |
-| 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产对齐完成; L4 六个组件已上线 |
+| 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
+| 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
 | 配套文档 | `../knowledge-base/README.md` |
 | 待办 | 详见演进路线各阶段（L3 已完成，知识库自建系统 0/7 触发条件暂缓） |
 
@@ -337,7 +337,7 @@ L1-runtime/
 | `heartbeat` | 心跳轮询 | ❌ 抽象为 HealthCheck |
 | `compaction.model` | 压缩模型委托 | ❌ 抽象为 ContextManager |
 
-**OpenClaw 版本**: 2026.7.2-beta.7(适配层需同步更新)
+**OpenClaw 版本**: 2026.9.8 (fc23bc8) (适配层需同步更新)
 
 #### 3.2.4 L1 能力使用盘点(2026-08-24 实查)
 
@@ -656,7 +656,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | CISSP 学习系统(v1) | `L4-proprietary/components/.deprecated/cissp-learning/` | 已被 cissp-trainer(v2) 替代 |
 
 
-**L2 组件建设状态**: **18 个 L2 基础设施组件设计齐备**,其中 18 个已上线(9 个治理组件 + 沙箱 + 模型调度 + Office 生成 + OCR 数字化 + 2 个 cron 驱动型 + 备份 + MCP + 可观测 + 会话隔离 + 会话隔离共享),0 个设计态(会话任务编排已并入会话隔离与共享组件,不再单独计数)。
+**L2 组件建设状态**: **19 个 L2 基础设施组件设计齐备**,其中 19 个已上线,0 个设计态(会话任务编排已并入会话隔离与共享组件,不再单独计数)。
 总计 `docs/architecture/components/` 目录下有 **26 个 DESIGN.md**（含 L3/L4 组件设计）。
 
 ### 新增 L2 基础设施组件（2026-09-11 纳入）
@@ -781,7 +781,7 @@ L4 专有业务
 | **流程扩展** | 继承 L3 流程,插入专有步骤 | `checkout` L3 + `risk_assessment` L4 |
 | **接口扩展** | L4 暴露专有 API,不影响 L3 | `/api/proprietary/*` |
 
-**当前**: ✅ 已上线 — 3 个 L4 实例全部完成
+**当前**: ✅ 已上线 — 7 个 L4 实例全部完成
 
 **已建设组件** (通用框架 → 专有实例):
 
@@ -1208,6 +1208,7 @@ L4 专有业务
 | 2026-09-02 | 2.10 | 新增 L4 销售合同审批模块(SCA-001,ADR-018): 分级审批流程(按金额4级) + 风险扫描(基于民法典13项) + 合同生成(docx) + 审计追踪。Skill 形式交付,可独立使用。端到端验证通过。 |
 | 2026-09-02 | 2.11 | 新增 L2 OCR 文档数字化组件(OCR-001,ADR-023): 扫描件/图片→高精度文本。RapidOCR主引擎+Paddle可选+600DPI+8版本预处理+版面分析+合同场景40+规则纠错。与Office文档生成(ADR-016)形成一读一写对偶。10页扫描件合同实测通过。 |
 | 2026-09-03 | **3.0** | **L3 家庭及个人理财通用框架(FIN)启动: 6 个 FIN 组件设计齐备(ADR-026 accepted), DESIGN.md v1.0, 架构 v3.0 同步** |
+| 2026-10-04 | **4.8** | **全量资产文档补齐 + 架构文档与实际对齐 + 系统升级 2026.9.8**: ① L3 7 组件 PRD+OUTLINE+VERIF+OPS (28份); ② L2 19 组件 VERIFICATION+OPERATIONS (38份); ③ L4 补入 revenue-recognition; ④ 架构文档 §7.6 全部标记 ✅; ⑤ OpenClaw 版本 2026.7.2→2026.9.8; ⑥ USER.md/MEMORY.md 瘦身。 |
 | 2026-09-01 | **2.9** | **L4 交付中心运营引擎(BDMS v1.0)完整发布**: 24 个 Python 文件,3157 行代码。M1 数据采集(5个采集器) + M2 业务引擎(4个) + M3 报告生成(2个) + M4 审批流程 + M5 调度监控。端到端验证通过。** |
 | 2026-09-12 | **4.4** | **L2 logs 组件补录**: 补录 `L2-infra/components/logs/` 到 L2 组件表（骨架阶段，有 README + DESIGN.md 但未在文档声明）。 |
 | 2026-09-11 | **4.3** | **L2 路径补全 + fin-l4 纳入**: ① L2 组件表 19 处路径加 `L2-infra/` 前缀（消除旧格式 `components/xxx/`）；② L4 新增 fin-l4 组件（家庭理财实例引擎，ADR-027）；③ L4 新增 fin-l4 技能（FIN-L4 6 大模块）；④ session-orchestrator 标记为 ❌ 已废弃（已并入 session-isolation 子模块）。 |
