@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from adapters.base import (
+from L1_runtime.adapters.base import (
     ChannelInterface,
     Conversation,
     CredentialInterface,

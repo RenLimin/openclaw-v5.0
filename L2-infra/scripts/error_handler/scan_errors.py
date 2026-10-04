@@ -198,11 +198,18 @@ def scan_provider_config_full_chain():
     """配置全链路检测：apiKey 格式 + baseUrl 可达性 + 三层一致性 + 端到端验证"""
     errors = []
     
-    # 1. 从 openclaw.json 读 provider 配置（底层）
-    openclaw_json_path = os.path.expanduser("~/.openclaw/openclaw.json")
-    with open(openclaw_json_path, "r") as f:
-        openclaw_cfg = json.load(f)
-    openclaw_providers = openclaw_cfg.get("models", {}).get("providers", {})
+    # 1. 通过 L1 适配层读取配置（不直接读 openclaw.json）
+    from pathlib import Path
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+    from L1_runtime.adapters.openclaw import get_runtime_adapter
+    runtime = get_runtime_adapter()
+    openclaw_providers = runtime.get_config("models.providers") or {}
+    # 兼容：L1 get_config 返回的是对象引用，需要转为 dict
+    if hasattr(openclaw_providers, 'to_dict'):
+        openclaw_providers = openclaw_providers.to_dict()
+    elif not isinstance(openclaw_providers, dict):
+        openclaw_providers = {}
     
     # 2. 从 models.json 读 provider 配置（中层）
     models_json_path = os.path.expanduser("~/.openclaw/agents/main/agent/models.json")

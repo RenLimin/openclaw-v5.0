@@ -122,7 +122,10 @@ def cmd_scheduler(args):
         stats = scheduler.run(lambda t: True, dry_run=True)
     else:
         try:
-            from adapters.openclaw.spawner import OpenClawTaskSpawner
+            import sys
+            from pathlib import Path
+            sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+            from L1_runtime.adapters.openclaw import OpenClawTaskSpawner
         except ImportError as e:
             print(f"无法导入 OpenClawTaskSpawner: {e}")
             print("请确保在 OpenClaw 运行时环境下使用，或使用 --dry-run")

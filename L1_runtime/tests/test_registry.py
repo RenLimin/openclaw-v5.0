@@ -4,8 +4,8 @@
 
 import pytest
 
-from adapters.base import RuntimeAdapter
-from adapters.registry import RuntimeRegistry
+from L1_runtime.adapters.base import RuntimeAdapter
+from L1_runtime.adapters.registry import RuntimeRegistry
 
 
 # 测试用的 Mock 适配器
@@ -168,7 +168,7 @@ class TestGlobalRegistry:
 
     def test_module_level_functions(self):
         """模块级便捷函数可用。"""
-        from adapters.registry import (
+        from L1_runtime.adapters.registry import (
             get_adapter,
             get_adapter_class,
             is_registered,

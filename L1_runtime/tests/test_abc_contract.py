@@ -6,14 +6,14 @@ L1 抽象基类（ABC）契约测试
 
 import pytest
 
-from adapters.base import (
+from L1_runtime.adapters.base import (
     ChannelInterface,
     CredentialInterface,
     MemoryInterface,
     RuntimeAdapter,
     SandboxInterface,
 )
-from adapters.base.models import (
+from L1_runtime.adapters.base.models import (
     Conversation,
     ErrorCode,
     ExecResult,
