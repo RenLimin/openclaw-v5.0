@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-04 17:54 UTC+08:00
+最后生成：2026-10-04 20:40 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -16,14 +16,14 @@
 
 | 资产 | 值 |
 |---|---|
-| OpenClaw | OpenClaw 2026.9.1 (ad6fe23) |
+| OpenClaw | OpenClaw 2026.9.8 (fc23bc8) |
 | Node.js | v26.7.0 |
 
 > L1 不可修改，升级跟随官方版本。breaking changes 需走 ADR。
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 65 个（启用 5） · bundled 59 · global 6
+**总计** 70 个（启用 6） · bundled 64 · global 6
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
@@ -32,16 +32,17 @@
 | `llama-cpp` | global | — | model-provider: llama-cpp |
 | `longcat` | global | — | model-provider: longcat |
 | `memory-core` | bundled | `intent`, `memory_get`, `memory_search` | — |
+| `openclaw-weixin` | global | — | channel: openclaw-weixin |
 | `tavily` | global | `tavily_search`, `tavily_extract` | web-search: tavily |
 | `wecom-openclaw-plugin` | global | `wecom-cli`, `wecom_mcp` | channel: wecom |
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 105 个（可用 94）
+**总计** 104 个（可用 93）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
-| `openclaw-bundled` | 50 | OpenClaw 内置（随版本升级） |
+| `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
 | `openclaw-extra` | 25 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
@@ -192,15 +193,15 @@ _自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
 | [`EXP-20260915-023-dms-event-bus-capability`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-023-dms-event-bus-capability.md) | — |
 | [`EXP-20260915-024-dms-cli-usage-guide`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-024-dms-cli-usage-guide.md) | — |
 | [`EXP-20260915-025-dms-best-practices`](../knowledge-base/by-category/project-experience/correct/EXP-20260915-025-dms-best-practices.md) | — |
-| [`EXP-20261003-001-48h-ops-retrospective`](../knowledge-base/by-category/project-experience/correct/EXP-20261003-001-48h-ops-retrospective.md) | — |
+| [`EXP-20261003-001-48h-ops-retrospective`](../knowledge-base/by-category/project-experience/correct/EXP-20261003-001-48h-ops-retrospective.md) | active |
 
 ## 仓库资产
 
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `41bc6a83` |
-| Commit 数 | 400 |
+| HEAD | `0355d7c3` |
+| Commit 数 | 403 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
