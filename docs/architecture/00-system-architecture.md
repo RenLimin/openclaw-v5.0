@@ -683,7 +683,6 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 可观测性 | `L2-infra/components/observability/` | ✅ | agent_observer.py + logging + tracing + memory_search_monitor | ✅ 已上线 |
 | 持久化 | `L2-infra/components/persistence/` | ✅ | connection + repository + migration + schemas | ✅ 已上线 |
 | 会话隔离 | `L2-infra/components/session-isolation/` | ✅ | Task/State/Event 三协议 + 调度器 + Spawner | ✅ 已上线 |
-| 会话隔离共享 | `L2-infra/components/session-isolation-sharing/` | ✅ | cli + orchestrator + 协议层 | ✅ 已上线 |
 | 备份 | `L2-infra/components/backup/` | ✅ | backup.sh | ✅ 已上线 |
 | 凭据管理 | `L2-infra/components/credentials/` | ✅ | cred_scan.py + credentials.sh + scan_secrets.sh | ✅ 已上线 |
 | 工具策略 | `L2-infra/components/tool-policy/` | ✅ | tool_policy_audit.sh | ✅ 已上线 |
@@ -1086,7 +1085,6 @@ L4 专有业务
 | L2 | persistence | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
 | L2 | sandbox | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
 | L2 | session-isolation | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
-| L2 | session-isolation-sharing | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
 | L2 | session-recovery | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
 | L2 | tool-policy | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
 | L2 | web-common | — | — | ✅ | ✅ | ✅ | ✅ 完成 |
