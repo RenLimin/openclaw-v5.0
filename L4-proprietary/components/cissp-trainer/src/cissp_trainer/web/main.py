@@ -1,7 +1,7 @@
 """
 CISSP Trainer Web UI — FastAPI 主入口
 启动: cd cissp-trainer && python -m web.main
-      uvicorn web.main:app --host 0.0.0.0 --port 8082
+      uvicorn web.main:app --host 0.0.0.0 --port 8083
 """
 
 from __future__ import annotations
@@ -237,4 +237,4 @@ app.include_router(api_router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8082)
+    uvicorn.run(app, host="0.0.0.0", port=8083)

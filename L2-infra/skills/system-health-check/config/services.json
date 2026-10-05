@@ -114,7 +114,6 @@
         }
       },
       "fix": {
-        "command": "pkill -f 'port 60600' 2>/dev/null; sleep 2; cd /Users/bangcle/.openclaw/workspace && nohup /Users/bangcle/.openclaw/llama-cpp/b10534/darwin-arm64/llama-server --embeddings --host 127.0.0.1 --metrics --port 60600 --no-webui --alias embeddinggemma-300m-qat-q8_0 --model /Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf --ubatch-size 2048 > /tmp/llama-embedding-restart.log 2>&1 &",
         "cooldown_seconds": 30,
         "max_attempts": 1,
         "label": "重启 llama-cpp embedding 服务 (pkill + nohup 启动)"
