@@ -20,7 +20,7 @@
 | M6 | Phase 6：驾驶舱对齐 | ✅ 完成 | 2026-09-26 | ✅ 23 passed | — |
 | M7 | Phase 7：数据集成 | ✅ 完成 | 2026-09-26 | ✅ 16 passed | — |
 | M8 | Phase 8：Web API + 安全 | ✅ 完成 | 2026-09-26 | ✅ 18 passed | — |
-| M9 | Phase 9：全量测试 | ✅ 完成 | 2026-09-26 | ✅ 274 passed, 0 failed | Rex 待审 |
+| M9 | Phase 9：全量测试 | ✅ 完成 | 2026-09-26 | ✅ 274 passed, 0 failed | ✅ 已通过 — 306 passed, 16 skipped, 0 failed (2026-10-05) |
 
 **总进度**：9 / 9 Phase (100%) — 等待 Rex 人工审核
 
