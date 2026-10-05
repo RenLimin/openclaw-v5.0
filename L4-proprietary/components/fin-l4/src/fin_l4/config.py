@@ -51,7 +51,7 @@ class Settings:
     def __init__(self) -> None:
         # 服务监听
         self.host = os.getenv("FIN4_HOST", "127.0.0.1")
-        self.port = _get_env_int("FIN4_PORT", 8500)
+        self.port = _get_env_int("FIN4_PORT", 8501)
 
         # 数据目录（SQLite 存放位置）
         raw_db_dir = os.getenv("FIN4_DB_DIR")
