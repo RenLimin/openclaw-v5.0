@@ -59,7 +59,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const d = await r.json();
     const rm = await fetch('/api/report/months');
     const dm = await rm.json();
-    const months = (dm.months || []).map(m => m.month || m);
+    const months = (dm.months || []).map(m => {
+      const mm = (typeof m === 'string') ? m : (m.month || '');
+      return { month: mm };
+    }).filter(m => m.month && /^\d{6}$/.test(m.month));
     el.innerHTML = `服务状态：<strong style="color:var(--c-success,#10b981);">${d.status}</strong>
       &nbsp;·&nbsp; 已生成月份：${months.length ? months.join(', ') : '无'}`;
   } catch (e) { el.textContent = `检查失败: ${e}`; }

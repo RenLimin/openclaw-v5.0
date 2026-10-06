@@ -99,27 +99,34 @@ async function runCompare() {
 async function loadMonthOptions() {
   const r = await fetch('/api/report/months');
   const d = await r.json();
-  const months = (d.months || []).map(m => {
-    const mm = m.month || m;
-    return `${mm.slice(0,4)}-${mm.slice(4)}-01`;
-  }).sort().reverse();
-  
-  // 初始化 flatpickr
-  window.cmpMonthPicker = flatpickr('#cmp-month', {
-    locale: flatpickr.l10ns.zh,
-    allowInput: true,
-    dateFormat: "Y年F月",
-    minDate: "2025-01-01",
-    maxDate: "2030-12-31",
-    defaultDate: months[0] || null,
-    onChange: function(selectedDates, dateStr) {
-      if (selectedDates.length) runCompare();
-    }
-  });
-  
-  // 默认选择第一个月份
-  if (months.length && window.cmpMonthPicker) {
-    window.cmpMonthPicker.setDate(months[0], true);
+  const raw = d.months || [];
+
+  const months = raw
+    .map(m => {
+      const mm = (typeof m === 'string') ? m : (m.month || '');
+      return { month: mm, row_counts: m.row_counts, generated_at: m.generated_at };
+    })
+    .filter(m => m.month && /^\d{6}$/.test(m.month))
+    .sort((a, b) => b.month.localeCompare(a.month));
+
+  const sel = document.getElementById('cmp-month');
+  // 如果 cmp-month 是 input，改成 select
+  if (sel.tagName === 'INPUT') {
+    const newSel = document.createElement('select');
+    newSel.id = 'cmp-month';
+    newSel.className = 'input';
+    newSel.style.width = '180px';
+    sel.parentNode.replaceChild(newSel, sel);
+  }
+  const selEl = document.getElementById('cmp-month');
+  selEl.innerHTML = months.length
+    ? months.map(m => `<option value="${m.month}">${m.month.slice(0,4)}年${m.month.slice(4)}月</option>`).join('')
+    : '<option value="">无可用月份</option>';
+
+  selEl.onchange = function() { runCompare(); };
+
+  if (months.length) {
+    runCompare();
   }
 }
 document.addEventListener('DOMContentLoaded', () => { loadMonthOptions(); });

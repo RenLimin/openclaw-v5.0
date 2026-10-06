@@ -72,7 +72,10 @@ async function saveSetting(key) {
 async function loadMonths() {
   const r = await fetch('/api/report/months');
   const d = await r.json();
-  const months = (d.months || []).map(m => m.month || m);
+  const months = (d.months || []).map(m => {
+    const mm = (typeof m === 'string') ? m : (m.month || '');
+    return { month: mm };
+  }).filter(m => m.month && /^\d{6}$/.test(m.month));
   document.getElementById('st-months').textContent =
     months.length ? months.join(', ') : '尚无已生成月份';
 }
