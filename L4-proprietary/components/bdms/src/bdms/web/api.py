@@ -68,6 +68,32 @@ async def report_export(month: str):
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
+@router.get("/report/data/{month}/{sheet}")
+async def report_data(month: str, sheet: str, page: int = 1, page_size: int = 50):
+    """获取某月某 Sheet 的数据（分页）。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.engine import DeliveryReportEngine
+    engine = DeliveryReportEngine()
+    data = engine.load(month)
+    if sheet not in data:
+        raise HTTPException(404, f"{month} 无 {sheet} 数据")
+    df = data[sheet]
+    total = len(df)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_df = df.iloc[start:end]
+    return {
+        "month": month,
+        "sheet": sheet,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+        "columns": list(page_df.columns),
+        "rows": page_df.fillna("").to_dict(orient="records"),
+    }
+
+
 # ========== 2. 确认收入 ==========
 
 @router.get("/revenue/summary/{month}")

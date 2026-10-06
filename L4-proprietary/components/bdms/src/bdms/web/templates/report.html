@@ -7,7 +7,7 @@
 {% block content %}
 {{ page_header(
     title='交付月报',
-    subtitle='生成 / 导出月度交付报表（5 个 Sheet）'
+    subtitle='生成 / 导出 / 浏览月度交付报表（15 Sheet）'
 ) }}
 
 {% call card(title="生成月报") %}
@@ -35,6 +35,29 @@
 <div id="months-list">加载中...</div>
 {% endcall %}
 
+{% call card(title="数据浏览") %}
+<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+  <div>
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
+    <select id="view-month" class="input" style="width:160px;"></select>
+  </div>
+  <div>
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">Sheet</label>
+    <select id="view-sheet" class="input" style="width:200px;">
+      <option value="签约">签约</option>
+      <option value="POC&提前实施">POC&提前实施</option>
+      <option value="异常项目">异常项目</option>
+      <option value="确收交接">确收交接</option>
+      <option value="验收交接">验收交接</option>
+    </select>
+  </div>
+</div>
+<div id="data-table-container">
+  <p style="color:var(--c-muted);">选择月份和 Sheet 查看数据</p>
+</div>
+<div id="pagination" style="display:flex;gap:0.5rem;align-items:center;margin-top:1rem;"></div>
+{% endcall %}
+
 {% call card(title="Sheet 明细") %}
 <div id="sheet-detail" style="color:var(--c-muted);">生成后显示</div>
 {% endcall %}
@@ -42,27 +65,121 @@
 
 {% block extra_scripts %}
 <script>
+let currentPage = 1;
+let totalPages = 1;
+
 async function loadMonths() {
   const r = await fetch('/api/report/months');
   const d = await r.json();
-  const months = d.months || [];
-  // 填充月份 datalist（可输入新月份 + 选择已有月份）
+  const raw = d.months || [];
+  const months = raw.map(m => {
+    const mm = (typeof m === 'string') ? m : (m.month || '');
+    return { month: mm, row_counts: m.row_counts, generated_at: m.generated_at };
+  }).filter(m => m.month && /^\d{6}$/.test(m.month));
+
+  // 填充月份列表
   const dl = document.getElementById('gen-month-list');
   if (dl) {
-    dl.innerHTML = months.map(m => {
-      const mm = m.month || m;
-      return `<option value="${mm}">${mm.slice(0,4)}年${mm.slice(4)}月</option>`;
-    }).join('');
+    dl.innerHTML = months.map(m =>
+      `<option value="${m.month}">${m.month.slice(0,4)}年${m.month.slice(4)}月</option>`
+    ).join('');
   }
+
+  // 填充浏览月份下拉
+  const viewMonth = document.getElementById('view-month');
+  if (viewMonth) {
+    viewMonth.innerHTML = months.map(m =>
+      `<option value="${m.month}">${m.month.slice(0,4)}年${m.month.slice(4)}月</option>`
+    ).join('');
+    if (months.length > 0) {
+      viewMonth.value = months[0].month;
+      viewMonth.addEventListener('change', loadTable);
+    }
+  }
+
   document.getElementById('months-list').innerHTML = months.length
     ? '<div class="table-wrapper"><table class="table"><thead><tr><th>月份</th><th>操作</th></tr></thead><tbody>'
-      + months.map(m => {
-          const mm = m.month || m;
-          return `<tr><td><strong>${mm.slice(0,4)}年${mm.slice(4)}月</strong></td>
-            <td><a class="btn btn-sm btn-success" href="/api/report/export/${mm}">下载 Excel</a></td></tr>`;
-        }).join('') + '</tbody></table></div>'
+      + months.map(m =>
+          `<tr><td><strong>${m.month.slice(0,4)}年${m.month.slice(4)}月</strong></td>`
+            + `<td><a class="btn btn-sm btn-success" href="/api/report/export/${m.month}">下载 Excel</a></td></tr>`
+        ).join('') + '</tbody></table></div>'
     : '<p style="color:var(--c-muted);">尚无已生成月份</p>';
+
+  // 自动加载第一个月的数据
+  if (months.length > 0) {
+    loadTable();
+  }
 }
+
+async function loadTable() {
+  const month = document.getElementById('view-month')?.value;
+  const sheet = document.getElementById('view-sheet')?.value || '签约';
+  if (!month) return;
+
+  const container = document.getElementById('data-table-container');
+  container.innerHTML = '<p style="color:var(--c-muted);">加载中...</p>';
+
+  currentPage = 1;
+  await fetchPage(month, sheet, currentPage);
+}
+
+async function fetchPage(month, sheet, page) {
+  const container = document.getElementById('data-table-container');
+  try {
+    const r = await fetch(`/api/report/data/${month}/${encodeURIComponent(sheet)}?page=${page}&page_size=50`);
+    if (!r.ok) {
+      const err = await r.json();
+      container.innerHTML = `<p style="color:var(--c-danger);">⚠️ ${err.detail || '加载失败'}</p>`;
+      return;
+    }
+    const d = await r.json();
+    currentPage = d.page;
+    totalPages = d.total_pages;
+
+    if (!d.rows || d.rows.length === 0) {
+      container.innerHTML = '<p style="color:var(--c-muted);">无数据</p>';
+      document.getElementById('pagination').innerHTML = '';
+      return;
+    }
+
+    const cols = d.columns;
+    let html = `<p style="margin-bottom:0.5rem;color:var(--c-muted);">共 <strong>${d.total}</strong> 行，第 ${d.page}/${d.total_pages} 页</p>`;
+    html += '<div class="table-wrapper"><table class="table"><thead><tr>';
+    cols.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr></thead><tbody>';
+    d.rows.forEach(row => {
+      html += '<tr>';
+      cols.forEach(c => {
+        const v = row[c];
+        html += `<td title="${v}">${String(v).substring(0,50)}${String(v).length > 50 ? '...' : ''}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    // 分页
+    renderPagination(month, sheet);
+  } catch (e) {
+    container.innerHTML = `<p style="color:var(--c-danger);">⚠️ ${e.message}</p>`;
+  }
+}
+
+function renderPagination(month, sheet) {
+  const pag = document.getElementById('pagination');
+  let html = '';
+  if (totalPages > 1) {
+    html += `<button class="btn btn-sm" ${currentPage <= 1 ? 'disabled' : ''} onclick="fetchPage('${month}','${sheet}',${currentPage - 1})">上一页</button>`;
+    for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+      html += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : ''}" onclick="fetchPage('${month}','${sheet}',${i})">${i}</button>`;
+    }
+    if (totalPages > 10) html += `<span>...</span>`;
+    html += `<button class="btn btn-sm" ${currentPage >= totalPages ? 'disabled' : ''} onclick="fetchPage('${month}','${sheet}',${currentPage + 1})">下一页</button>`;
+  }
+  pag.innerHTML = html;
+}
+
+document.getElementById('view-sheet').addEventListener('change', loadTable);
 
 async function doGenerate() {
   const month = document.getElementById('gen-month').value.trim();
@@ -75,7 +192,7 @@ async function doGenerate() {
       body: JSON.stringify({month, mode})
     });
     const d = await r.json();
-    if (!r.ok) { st.textContent = `⚠️ ${d.error}`; return; }
+    if (!r.ok) { st.textContent = `⚠️ ${d.detail || d.error}`; return; }
     st.innerHTML = `✅ <strong>${d.action}</strong> 完成，合计 <strong>${d.total_rows}</strong> 行`;
     let h = '<div class="table-wrapper"><table class="table"><thead><tr><th>Sheet</th><th>行数</th></tr></thead><tbody>';
     for (const [k, v] of Object.entries(d.sheets || {})) h += `<tr><td>${k}</td><td>${v}</td></tr>`;

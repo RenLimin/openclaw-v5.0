@@ -28,7 +28,9 @@
 {% endcall %}
 
 {% call card(title="月度汇总") %}
-{{ chart_container(id="chart-revenue", title="", height=320) }}
+<div style="height:320px;">
+  <canvas id="chart-revenue"></canvas>
+</div>
 <div id="rv-table" style="margin-top:1rem;"></div>
 {% endcall %}
 
@@ -46,38 +48,32 @@ const fmtWan = v => (v == null) ? '-' : (v/10000).toLocaleString('zh-CN',{maximu
 async function loadMonths() {
   const r = await fetch('/api/report/months');
   const d = await r.json();
-  const months = (d.months || []).map(m => {
-    const mm = m.month || m;
-    return `${mm.slice(0,4)}-${mm.slice(4)}-01`;
-  }).sort().reverse();
-  
-  // 初始化 flatpickr
-  window.rvMonthPicker = flatpickr('#rv-month', {
-    locale: flatpickr.l10ns.zh,
-    allowInput: true,
-    dateFormat: "Y年F月",
-    minDate: "2025-01-01",
-    maxDate: "2030-12-31",
-    defaultDate: months[0] || null,
-    onChange: function(selectedDates, dateStr) {
-      if (selectedDates.length) loadSummary();
-    }
-  });
-  
-  if (months.length && window.rvMonthPicker) {
-    window.rvMonthPicker.setDate(months[0], true);
+  const raw = d.months || [];
+
+  const months = raw
+    .map(m => {
+      const mm = (typeof m === 'string') ? m : (m.month || '');
+      return { month: mm, row_counts: m.row_counts, generated_at: m.generated_at };
+    })
+    .filter(m => m.month && /^\d{6}$/.test(m.month))
+    .sort((a, b) => b.month.localeCompare(a.month));
+
+  const sel = document.getElementById('rv-month');
+  sel.innerHTML = months.length
+    ? months.map(m => `<option value="${m.month}">${m.month.slice(0,4)}年${m.month.slice(4)}月</option>`).join('')
+    : '<option value="">无可用月份</option>';
+
+  sel.onchange = function() { loadSummary(); };
+
+  if (months.length) {
+    selectedMonth = months[0].month;
   }
 }
 
+let selectedMonth = '';
+
 async function loadSummary() {
-  const fp = window.rvMonthPicker;
-  let month = '';
-  if (fp && fp.selectedDates.length) {
-    const d = fp.selectedDates[0];
-    month = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-  } else {
-    month = document.getElementById('rv-month').value.trim();
-  }
+  const month = document.getElementById('rv-month').value.trim();
   if (!month) { alert('请先选择月份'); return; }
   const st = document.getElementById('rv-status');
   st.textContent = '加载中...';
