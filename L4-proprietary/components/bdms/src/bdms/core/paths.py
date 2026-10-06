@@ -40,38 +40,93 @@ def month_dir(month: str) -> Path:
 def find_ones_file(month: str, kind: str) -> Path | None:
     """查找 ONES 数据文件。
 
-    优先按月份精确匹配 `{month}周报-{kind}.csv`，
-    回退到默认文件名。
-
-    kind: "sign" | "poc" | "exception"
+    优先级：
+    1. 精确匹配 {YYYYMM}周报-{kind}.csv
+    2. 月份回退：搜索前N个月的正确文件（YYYYMM周报-xxx.csv）
+    3. 最后回退到通用文件名
     """
-    patterns = {
-        "sign": [f"{month}周报-签约项目统计.csv", "签约项目统计.csv"],
-        "poc": [f"{month}周报-POC&提前实施统计.csv", "poc_提前实施.csv", "POC&提前实施统计.csv"],
-        "exception": [f"{month}-签约项目异常处置.csv", "异常处置.csv"],
-    }
+    year_prefix = month[:4]
+    month_num = int(month[4:6])
     base = ones_dir()
-    for name in patterns.get(kind, []):
-        p = base / name
+
+    # 1. 精确匹配当月文件
+    month_patterns = {
+        "sign": f"{month}周报-签约项目统计.csv",
+        "poc": f"{month}周报-POC&提前实施统计.csv",
+        "exception": f"{month}-签约项目异常处置.csv",
+    }
+    p = base / month_patterns.get(kind, "")
+    if p.exists():
+        return p
+
+    # 2. 月份回退：搜索前N个月的正确文件
+    fb_templates = {
+        "sign": f"{year_prefix}" + "{mm}" + "周报-签约项目统计.csv",
+        "poc": f"{year_prefix}" + "{mm}" + "周报-POC&提前实施统计.csv",
+        "exception": f"{year_prefix}" + "{mm}" + "-签约项目异常处置.csv",
+    }
+    tmpl = fb_templates.get(kind)
+    if tmpl:
+        for offset in range(1, 12):
+            prev_num = month_num - offset
+            if prev_num <= 0:
+                break
+            prev_mm = str(prev_num).zfill(2)
+            candidate = base / tmpl.format(mm=prev_mm)
+            if candidate.exists():
+                return candidate
+
+    # 3. 最后回退到通用文件名
+    fallback_names = {
+        "sign": "签约项目统计.csv",
+        "poc": "poc_提前实施.csv",
+        "exception": "异常处置.csv",
+    }
+    fallback = fallback_names.get(kind)
+    if fallback:
+        p = base / fallback
         if p.exists():
             return p
+
     return None
 
 
 def find_revenue_source(month: str) -> Path | None:
-    """查找确收对比表（差异分析 xlsx）。"""
+    """查找确收对比表（差异分析 xlsx）。
+
+    优先查找当月目录，若不存在则回退到前一月份目录。
+    """
+    # 先尝试当月目录
     d = month_dir(month)
-    if not d.exists():
-        return None
-    # 匹配 *计划确收*对比表*.xlsx（排除临时文件）
-    for p in sorted(d.glob("*确收*对比表*.xlsx")):
-        if p.name.startswith("~$"):
-            continue
-        return p
-    for p in sorted(d.glob("*确收*.xlsx")):
-        if p.name.startswith("~$"):
-            continue
-        return p
+    if d.exists():
+        for p in sorted(d.glob("*确收*对比表*.xlsx")):
+            if p.name.startswith("~$"):
+                continue
+            return p
+        for p in sorted(d.glob("*确收*.xlsx")):
+            if p.name.startswith("~$"):
+                continue
+            return p
+
+    # 回退：按月份降序查找最近的确收源文件
+    try:
+        month_int = int(month)
+        for offset in range(1, 3):
+            prev_month = str(month_int - offset).zfill(6)
+            prev_dir = month_dir(prev_month)
+            if not prev_dir.exists():
+                continue
+            for p in sorted(prev_dir.glob("*确收*对比表*.xlsx")):
+                if p.name.startswith("~$"):
+                    continue
+                return p
+            for p in sorted(prev_dir.glob("*确收*.xlsx")):
+                if p.name.startswith("~$"):
+                    continue
+                return p
+    except ValueError:
+        pass
+
     return None
 
 

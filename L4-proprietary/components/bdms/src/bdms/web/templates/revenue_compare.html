@@ -14,8 +14,7 @@
 <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
   <div>
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <input id="cmp-month" class="input" list="cmp-month-list" placeholder="YYYYMM 或选择已有" style="width:160px;" onchange="loadCompare()">
-    <datalist id="cmp-month-list"></datalist>
+    <input id="cmp-month" class="input" placeholder="选择月份" style="width:180px;">
   </div>
   <div style="flex:1;min-width:280px;">
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">手工报表路径（留空自动查找）</label>
@@ -40,7 +39,15 @@
 const fmtWan = v => (v == null) ? '-' : (v/10000).toLocaleString('zh-CN',{maximumFractionDigits:2});
 
 async function runCompare() {
-  const month = document.getElementById('cmp-month').value.trim();
+  const fp = window.cmpMonthPicker;
+  let month = '';
+  if (fp && fp.selectedDates.length) {
+    const d = fp.selectedDates[0];
+    month = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+  } else {
+    month = document.getElementById('cmp-month').value.trim();
+  }
+  if (!month) { alert('请先选择月份'); return; }
   const manual = document.getElementById('cmp-manual').value.trim();
   const st = document.getElementById('cmp-status');
   st.textContent = '对比中...';
@@ -92,13 +99,29 @@ async function runCompare() {
 async function loadMonthOptions() {
   const r = await fetch('/api/report/months');
   const d = await r.json();
-  const months = (d.months || []).map(m => m.month || m);
-  const sel = document.getElementById('cmp-month');
-  if (sel && months.length) {
-    const dl = document.getElementById('cmp-month-list');
-    dl.innerHTML = months.map(m => `<option value="${m}">${m.slice(0,4)}年${m.slice(4)}月</option>`).join('');
+  const months = (d.months || []).map(m => {
+    const mm = m.month || m;
+    return `${mm.slice(0,4)}-${mm.slice(4)}-01`;
+  }).sort().reverse();
+  
+  // 初始化 flatpickr
+  window.cmpMonthPicker = flatpickr('#cmp-month', {
+    locale: flatpickr.l10ns.zh,
+    allowInput: true,
+    dateFormat: "Y年F月",
+    minDate: "2025-01-01",
+    maxDate: "2030-12-31",
+    defaultDate: months[0] || null,
+    onChange: function(selectedDates, dateStr) {
+      if (selectedDates.length) runCompare();
+    }
+  });
+  
+  // 默认选择第一个月份
+  if (months.length && window.cmpMonthPicker) {
+    window.cmpMonthPicker.setDate(months[0], true);
   }
 }
-document.addEventListener('DOMContentLoaded, runCompare);
+document.addEventListener('DOMContentLoaded', () => { loadMonthOptions(); });
 </script>
 {% endblock %}
