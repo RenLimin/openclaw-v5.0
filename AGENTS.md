@@ -188,6 +188,14 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py start \
 - **换路径**：失败后换 tool、换方案、问 Rex
 - **记录教训**：将死循环原因写入 AGENTS.md 或 skill
 
+### 上下文过大处理流程
+当提示 `⚠️ Context is too large and auto-compaction could not recover this turn`:
+- 第一步：尝试 `/compact` — 让 AI Agent 原生压缩上下文，保留必要对话
+- 第二步：如果 `/compact` 后仍然超出阈值，尝试 `/reset` — 清理会话内部状态，但保留 transcript 历史
+- 第三步：如果 `/reset` 后仍然超出，直接执行 `/new` 启动全新干净会话，工作进度不会丢失
+- 自动压缩失效的根本原因：大段注入的元数据被保留策略保留，累积后仍超过阈值
+- 新会话会重新加载必要上下文，token 回到安全水位
+
 ### 统一扫描入口
 - 脚本：`L2-infra/scripts/error_handler/scan_errors.sh`
 - 覆盖：cron 错误 + LLM 超时 + Provider 健康
