@@ -25,14 +25,18 @@ async function initMonthSelector() {
 
     select.innerHTML = '';
     (data.months || []).forEach(m => {
+        // 兼容 dict（{list_months: {month, row_counts}}）和 string 两种格式
+        const mm = (typeof m === 'string') ? m : (m.month || '');
+        if (!mm || !/^\d{6}$/.test(mm)) return;
         const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = `${m.slice(0, 4)}-${m.slice(4)}`;
+        opt.value = mm;
+        opt.textContent = `${mm.slice(0, 4)}年${mm.slice(4)}月`;
         select.appendChild(opt);
     });
 
     if (data.months && data.months.length > 0) {
-        currentMonth = data.months[data.months.length - 1];
+        const first = data.months[0];
+        currentMonth = (typeof first === 'string') ? first : (first.month || '');
         select.value = currentMonth;
     }
 }

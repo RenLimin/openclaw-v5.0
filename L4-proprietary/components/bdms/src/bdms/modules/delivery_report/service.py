@@ -207,12 +207,16 @@ class DeliveryReportService:
                 "SELECT id FROM dr_review_status WHERE month = ?", (month,)
             ).fetchone()
 
+            set_parts = ["status=?", "updated_at=datetime('now','localtime')"]
+            if status == "generating":
+                set_parts.append("generated_at=datetime('now','localtime')")
+            elif status == "validating":
+                set_parts.append("validated_at=datetime('now','localtime')")
+
             if existing:
+                set_clause = ", ".join(set_parts)
                 conn.execute(
-                    f"UPDATE dr_review_status SET status=?, updated_at=datetime('now','localtime')"
-                    f", {f"generated_at=datetime('now','localtime'), " if status == 'generating' else ""}"
-                    f"{f"validated_at=datetime('now','localtime'), " if status == 'validating' else ""}"
-                    f"WHERE month=?",
+                    f"UPDATE dr_review_status SET {set_clause} WHERE month=?",
                     (status, month)
                 )
             else:
