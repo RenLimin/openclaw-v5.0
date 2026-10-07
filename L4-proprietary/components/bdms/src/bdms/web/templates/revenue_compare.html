@@ -39,14 +39,7 @@
 const fmtWan = v => (v == null) ? '-' : (v/10000).toLocaleString('zh-CN',{maximumFractionDigits:2});
 
 async function runCompare() {
-  const fp = window.cmpMonthPicker;
-  let month = '';
-  if (fp && fp.selectedDates.length) {
-    const d = fp.selectedDates[0];
-    month = `${d.getFullYear()}${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-  } else {
-    month = document.getElementById('cmp-month').value.trim();
-  }
+  const month = document.getElementById('cmp-month').value.trim();
   if (!month) { alert('请先选择月份'); return; }
   const manual = document.getElementById('cmp-manual').value.trim();
   const st = document.getElementById('cmp-status');
@@ -126,6 +119,7 @@ async function loadMonthOptions() {
   selEl.onchange = function() { runCompare(); };
 
   if (months.length) {
+    selEl.value = months[0].month;
     runCompare();
   }
 }
