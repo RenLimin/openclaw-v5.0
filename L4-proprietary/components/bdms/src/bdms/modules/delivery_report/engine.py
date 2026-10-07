@@ -23,6 +23,8 @@ except ImportError as e:
     _LEGACY_IMPORT_ERROR = str(e)
 
 from bdms.modules.dashboard.delivery_report_connector import DeliveryReportConnector
+from bdms.modules.integration.adapters.pipeline import DeliveryReportPipeline, DataSourceError
+from bdms.modules.integration.adapters.ones_adapter import MissingSourceError
 
 SHEET_ORDER = [
     "签约", "POC&提前实施", "异常项目", "确收交接", "验收交接",
@@ -32,15 +34,22 @@ SHEET_ORDER = [
 ]
 
 
-def _resolve_csv(month: str, kind: str) -> Optional[Path]:
-    """解析 CSV 文件路径，支持月份回退。
+class MissingSourceError(Exception):
+    """当月数据源缺失且无法回退时抛出。"""
+    pass
+
+
+def _resolve_csv(month: str, kind: str) -> Path:
+    """解析 CSV 文件路径。
     
     优先级：
     1. {ONES_DIR}/{month}周报-{kind}.csv
-    2. {ONES_DIR}/{prev_month}周报-{kind}.csv（前一个月）
-    3. {ONES_DIR}/{fallback_name}
+    2. {ONES_DIR}/{fallback_name}（通用名）
     
     kind: sign | poc | exception | revenue | acceptance
+    
+    Raises:
+        MissingSourceError: 当月 CSV 不存在且无通用名回退
     """
     from bdms.core.paths import ones_dir, month_dir
     
@@ -124,6 +133,7 @@ class DeliveryReportEngine:
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path
         self.connector = DeliveryReportConnector(db_path)
+        self.pipeline = DeliveryReportPipeline(db_path)
 
     def compute(self, month: str) -> dict[str, pd.DataFrame]:
         if not _HAS_LEGACY:
@@ -131,18 +141,24 @@ class DeliveryReportEngine:
 
         result = {}
         
-        # ── 1. 加载当月 CSV（ONES 导出已是累积快照，带月份回退） ──
-        df_sign = _load_csv_resolved(month, 'sign')
-        df_poc = _load_csv_resolved(month, 'poc')
-        df_exc = _load_csv_resolved(month, 'exception')
+        # ── 1. 从数据源提取原始数据（缺失立即报错，不静默回退） ──
+        try:
+            raw_data = self.pipeline.extract_raw_data(month)
+        except DataSourceError as e:
+            raise RuntimeError(f"数据源缺失: {e}")
+
+        df_sign = pd.DataFrame(raw_data["sign"])
+        df_poc = pd.DataFrame(raw_data["poc"])
+        df_exc = pd.DataFrame(raw_data["exception"])
+        df_rev = pd.DataFrame(raw_data["revenue"])
+        df_acc = pd.DataFrame(raw_data["acceptance"])
 
         # ── 2. 核心数据 (Sheet 1-5) ──
         result["签约"] = _legacy.build_sign_sheet_df(df_sign, df_exc)
         result["POC&提前实施"] = _legacy.build_poc_sheet_df(df_poc, df_exc)
-        result["异常项目"] = _legacy.build_exception_df(df_exc, result["签约"])
+        result["异常项目"] = _legacy.build_exception_df(df_exc, result["签约"]) 
 
         # 确收交接 (4)
-        df_rev = _load_csv_resolved(month, 'revenue')
         if not df_rev.empty and hasattr(_legacy, "build_revenue_handover_df"):
             try:
                 result["确收交接"] = _legacy.build_revenue_handover_df(df_rev, month)
@@ -152,7 +168,6 @@ class DeliveryReportEngine:
             result["确收交接"] = pd.DataFrame()
 
         # 验收交接 (5)
-        df_acc = _load_csv_resolved(month, 'acceptance')
         if not df_acc.empty and hasattr(_legacy, "build_acceptance_handover_df"):
             try:
                 result["验收交接"] = _legacy.build_acceptance_handover_df(df_acc, month)
