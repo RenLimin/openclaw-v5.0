@@ -1,8 +1,8 @@
 # L2 上下文管理 — 设计文档
 
-> 版本：v2.0
+> 版本：v2.1
 > 创建日期：2026-09-01
-> 最近修订：2026-09-07
+> 最近修订：2026-10-07
 > 状态：✅ 已上线
 > 层级：L2 基础设施层
 
@@ -25,14 +25,15 @@
 
 ## 二、架构设计
 
-### 2.1 防护体系（两层压缩 + 生命周期治理）
+### 2.1 防护体系（三层压缩恢复 + 生命周期治理）
 
-> **注意**：原设计为"三层防线"，第 3 层 session pruning 因运行时 provider 白名单限制不生效，已由「会话生命周期管理」cron 替代。
+> **注意**：原设计为"两层防线"，2026-10-07 新增第三层阶梯式自动恢复。原第 3 层 session pruning 因运行时 provider 白名单限制不生效，已由「会话生命周期管理」cron 替代。
 
 | 层级 | 机制 | 作用域 | 触发条件 |
 |---|---|---|---|
 | **第 1 层** | Auto-compaction（safeguard 模式） | 主会话内 | 上下文达到 WARN 阈值 |
-| **第 2 层** | Mid-turn precheck | 主会话内 | 中途检查，中止并交给 recovery |
+| **第 2 层** | Mid-turn precheck | 主会话内 | 自动压缩失效，提示上下文溢出 |
+| **第 3 层** | 阶梯式自动恢复 | 主会话内 | 依次尝试 `/compact` → `/reset` → `/new` 直到回到安全水位 |
 | **治理层** | 会话生命周期管理 cron | 跨会话 | 每日 02:00 清理过期会话 + deleteAfterRun |
 | **保护规范** | Subagent 上下文保护 | subagent | 分段执行 + runTimeoutSeconds + 输出精简 |
 
@@ -148,3 +149,4 @@ OpenClaw 原生不支持 compaction fallbacks（schema 中 `compaction.model` �
 | 2026-08-24 | v0.2 | 升级：mid-turn precheck + 模型水位校准 |
 | 2026-09-01 | v1.0 | 正式发布：补充 DESIGN.md |
 | 2026-09-07 | v2.0 | 补齐覆盖缺口：生命周期治理替代 session pruning + subagent 保护 + compaction fallback 方案 |
+| 2026-10-07 | v2.1 | 新增第三层阶梯式自动恢复：解决保留元数据过多导致的自动压缩失效问题，按 `/compact` → `/reset` → `/new` 顺序尝试恢复 |
