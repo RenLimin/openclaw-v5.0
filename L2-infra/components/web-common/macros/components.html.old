@@ -10,8 +10,8 @@
          卡片内容
      {% endcall %}
    --------------------------------------------------------- #}
-{% macro card(title="", actions=None, class_="", id="") %}
-<div class="card {{ class_ }}" {% if id %}id="{{ id }}"{% endif %}>
+{% macro card(title="", actions=None, class_="") %}
+<div class="card {{ class_ }}">
     {% if title or actions %}
     <div class="card-title">
         <span>{{ title }}</span>
