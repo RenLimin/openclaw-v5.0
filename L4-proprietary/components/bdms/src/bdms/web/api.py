@@ -170,6 +170,7 @@ async def report_revalidate(month: str):
 
 
 @router.get("/report/data/{month}/{sheet}")
+async def report_data(month: str, sheet: str, page: int = 1, page_size: int = 50, search: str = ""):
     """获取某月某 Sheet 的数据（分页 + 搜索）。"""
     month = normalize_month(month)
     from bdms.modules.delivery_report.engine import DeliveryReportEngine
