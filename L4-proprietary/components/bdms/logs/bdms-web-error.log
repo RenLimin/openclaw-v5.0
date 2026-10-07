@@ -1,0 +1,268 @@
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 423, in main
+    run(
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 593, in run
+    server.run()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/_compat.py", line 60, in asyncio_run
+    return loop.run_until_complete(main)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py", line 642, in run_until_complete
+    return future.result()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms/src/bdms/web/main.py", line 26, in <module>
+    def _find_web_common() -> Path | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 423, in main
+    run(
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 593, in run
+    server.run()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/_compat.py", line 60, in asyncio_run
+    return loop.run_until_complete(main)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py", line 642, in run_until_complete
+    return future.result()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms/src/bdms/web/main.py", line 26, in <module>
+    def _find_web_common() -> Path | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 423, in main
+    run(
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 593, in run
+    server.run()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/_compat.py", line 60, in asyncio_run
+    return loop.run_until_complete(main)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py", line 642, in run_until_complete
+    return future.result()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms/src/bdms/web/main.py", line 26, in <module>
+    def _find_web_common() -> Path | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 423, in main
+    run(
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 593, in run
+    server.run()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/_compat.py", line 60, in asyncio_run
+    return loop.run_until_complete(main)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py", line 642, in run_until_complete
+    return future.result()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms/src/bdms/web/main.py", line 26, in <module>
+    def _find_web_common() -> Path | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 423, in main
+    run(
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 593, in run
+    server.run()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/_compat.py", line 60, in asyncio_run
+    return loop.run_until_complete(main)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py", line 642, in run_until_complete
+    return future.result()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms/src/bdms/web/main.py", line 26, in <module>
+    def _find_web_common() -> Path | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+Traceback (most recent call last):
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/__main__.py", line 4, in <module>
+    uvicorn.main()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/click/core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 423, in main
+    run(
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/main.py", line 593, in run
+    server.run()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 67, in run
+    return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/_compat.py", line 60, in asyncio_run
+    return loop.run_until_complete(main)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py", line 642, in run_until_complete
+    return future.result()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 71, in serve
+    await self._serve(sockets)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/server.py", line 78, in _serve
+    config.load()
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/config.py", line 439, in load
+    self.loaded_app = import_from_string(self.app)
+  File "/Users/bangcle/Library/Python/3.9/lib/python/site-packages/uvicorn/importer.py", line 19, in import_from_string
+    module = importlib.import_module(module_str)
+  File "/Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/importlib/__init__.py", line 127, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1030, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1007, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 986, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 680, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 850, in exec_module
+  File "<frozen importlib._bootstrap>", line 228, in _call_with_frames_removed
+  File "/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms/src/bdms/web/main.py", line 26, in <module>
+    def _find_web_common() -> Path | None:
+TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'
+INFO:     Started server process [2684]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8800 (Press CTRL+C to quit)
