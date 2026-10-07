@@ -36,7 +36,7 @@
 {% endcall %}
 
 {% call card(title="数据浏览") %}
-<div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
   <div>
     <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
     <select id="view-month" class="input" style="width:160px;"></select>
@@ -51,6 +51,12 @@
       <option value="验收交接">验收交接</option>
     </select>
   </div>
+  <div style="flex:1;min-width:200px;">
+    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">搜索</label>
+    <input id="view-search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="width:100%;">
+  </div>
+  <button class="btn btn-primary" onclick="loadTable()">查询</button>
+  <button class="btn" onclick="exportCurrent()">导出当前筛选</button>
 </div>
 <div id="data-table-container">
   <p style="color:var(--c-muted);">选择月份和 Sheet 查看数据</p>
@@ -67,6 +73,9 @@
 <script>
 let currentPage = 1;
 let totalPages = 1;
+let viewMonth = null;
+let viewSheet = null;
+let _urlParams = null;
 
 async function loadMonths() {
   const r = await fetch('/api/report/months');
@@ -85,18 +94,32 @@ async function loadMonths() {
     ).join('');
   }
 
-  // 填充浏览月份下拉
-  const viewMonth = document.getElementById('view-month');
+  // 填充浏览月份下拉（保存引用到全局变量）
+  viewMonth = document.getElementById('view-month');
   if (viewMonth) {
     viewMonth.innerHTML = months.map(m =>
       `<option value="${m.month}">${m.month.slice(0,4)}年${m.month.slice(4)}月</option>`
     ).join('');
     if (months.length > 0) {
       viewMonth.value = months[0].month;
-      viewMonth.addEventListener('change', loadTable);
     }
+    viewMonth.addEventListener('change', function() {
+      loadTable();
+      // 更新 URL 参数（不刷新页面）
+      updateUrlParams();
+    });
   }
 
+  // 保存 Sheet 引用
+  viewSheet = document.getElementById('view-sheet');
+  if (viewSheet) {
+    viewSheet.addEventListener('change', function() {
+      loadTable();
+      updateUrlParams();
+    });
+  }
+
+  // 填充月份列表
   document.getElementById('months-list').innerHTML = months.length
     ? '<div class="table-wrapper"><table class="table"><thead><tr><th>月份</th><th>操作</th></tr></thead><tbody>'
       + months.map(m =>
@@ -105,15 +128,55 @@ async function loadMonths() {
         ).join('') + '</tbody></table></div>'
     : '<p style="color:var(--c-muted);">尚无已生成月份</p>';
 
-  // 自动加载第一个月的数据
+  // 应用 URL 参数
+  applyUrlParams();
+
+  // 自动加载数据
   if (months.length > 0) {
     loadTable();
   }
 }
 
+// 从 URL 读取参数
+function parseUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    month: params.get('month'),
+    sheet: params.get('sheet'),
+    search: params.get('search'),
+  };
+}
+
+// 应用 URL 参数到表单
+function applyUrlParams() {
+  if (!_urlParams) _urlParams = parseUrlParams();
+  if (_urlParams.month && viewMonth) {
+    viewMonth.value = _urlParams.month;
+  }
+  if (_urlParams.sheet && viewSheet) {
+    viewSheet.value = _urlParams.sheet;
+  }
+  if (_urlParams.search) {
+    const searchInput = document.getElementById('view-search');
+    if (searchInput) searchInput.value = _urlParams.search;
+  }
+}
+
+// 更新 URL 参数（浏览器历史记录）
+function updateUrlParams() {
+  const params = new URLSearchParams();
+  if (viewMonth?.value) params.set('month', viewMonth.value);
+  if (viewSheet?.value) params.set('sheet', viewSheet.value);
+  const searchInput = document.getElementById('view-search');
+  if (searchInput?.value) params.set('search', searchInput.value);
+  const qs = params.toString();
+  const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  window.history.replaceState({}, '', newUrl);
+}
+
 async function loadTable() {
-  const month = document.getElementById('view-month')?.value;
-  const sheet = document.getElementById('view-sheet')?.value || '签约';
+  const month = viewMonth ? viewMonth.value : '';
+  const sheet = viewSheet ? viewSheet.value || '签约' : '签约';
   if (!month) return;
 
   const container = document.getElementById('data-table-container');
@@ -123,10 +186,17 @@ async function loadTable() {
   await fetchPage(month, sheet, currentPage);
 }
 
+function getSearchKeyword() {
+  return document.getElementById('view-search')?.value?.trim() || '';
+}
+
 async function fetchPage(month, sheet, page) {
   const container = document.getElementById('data-table-container');
+  const search = getSearchKeyword();
   try {
-    const r = await fetch(`/api/report/data/${month}/${encodeURIComponent(sheet)}?page=${page}&page_size=50`);
+    const params = new URLSearchParams({ page, page_size: 50 });
+    if (search) params.set('search', search);
+    const r = await fetch(`/api/report/data/${month}/${encodeURIComponent(sheet)}?${params.toString()}`);
     if (!r.ok) {
       const err = await r.json();
       container.innerHTML = `<p style="color:var(--c-danger);">⚠️ ${err.detail || '加载失败'}</p>`;
@@ -137,13 +207,13 @@ async function fetchPage(month, sheet, page) {
     totalPages = d.total_pages;
 
     if (!d.rows || d.rows.length === 0) {
-      container.innerHTML = '<p style="color:var(--c-muted);">无数据</p>';
+      container.innerHTML = `<p style="color:var(--c-muted);">无数据${search ? `（搜索: "${search}"）` : ''}</p>`;
       document.getElementById('pagination').innerHTML = '';
       return;
     }
 
     const cols = d.columns;
-    let html = `<p style="margin-bottom:0.5rem;color:var(--c-muted);">共 <strong>${d.total}</strong> 行，第 ${d.page}/${d.total_pages} 页</p>`;
+    let html = `<p style="margin-bottom:0.5rem;color:var(--c-muted);">共 <strong>${d.total}</strong> 行${search ? `（搜索: "${search}"）` : ''}，第 ${d.page}/${d.total_pages} 页</p>`;
     html += '<div class="table-wrapper"><table class="table"><thead><tr>';
     cols.forEach(c => html += `<th>${c}</th>`);
     html += '</tr></thead><tbody>';
@@ -165,6 +235,44 @@ async function fetchPage(month, sheet, page) {
   }
 }
 
+// 搜索框回车触发查询
+let searchTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('view-search');
+  if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        clearTimeout(searchTimer);
+        currentPage = 1;
+        loadTable();
+      }
+    });
+    // 防抖搜索
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentPage = 1;
+        loadTable();
+        updateUrlParams();
+      }, 400);
+    });
+  }
+  // 启动
+  loadMonths();
+});
+
+// 导出当前筛选结果
+function exportCurrent() {
+  const month = viewMonth ? viewMonth.value : '';
+  const sheet = viewSheet ? viewSheet.value || '签约' : '签约';
+  const search = getSearchKeyword();
+  if (!month) return;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  const qs = params.toString();
+  window.location.href = `/api/report/export-sheet/${month}/${encodeURIComponent(sheet)}${qs ? '?' + qs : ''}`;
+}
+
 function renderPagination(month, sheet) {
   const pag = document.getElementById('pagination');
   let html = '';
@@ -178,8 +286,6 @@ function renderPagination(month, sheet) {
   }
   pag.innerHTML = html;
 }
-
-document.getElementById('view-sheet').addEventListener('change', loadTable);
 
 async function doGenerate() {
   const month = document.getElementById('gen-month').value.trim();
@@ -206,7 +312,6 @@ function doExport() {
   const month = document.getElementById('gen-month').value.trim();
   window.location.href = `/api/report/export/${month}`;
 }
-
-document.addEventListener('DOMContentLoaded', loadMonths);
 </script>
 {% endblock %}
+

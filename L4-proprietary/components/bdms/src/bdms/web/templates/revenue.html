@@ -22,6 +22,7 @@
     </select>
   </div>
   <button class="btn btn-primary" onclick="loadSummary()">查询</button>
+  <button class="btn" onclick="exportRevenue()">导出 Excel</button>
   <button class="btn" onclick="doImport()">从源表导入</button>
 </div>
 <div id="rv-status" style="margin-top:0.8rem;color:var(--c-muted);"></div>
@@ -147,6 +148,12 @@ async function doImport() {
     const d = await r.json();
     st.textContent = r.ok ? `✅ 导入完成: ${JSON.stringify(d).slice(0, 200)}` : `⚠️ ${d.error}`;
   } catch (e) { st.textContent = `失败: ${e}`; }
+}
+
+function exportRevenue() {
+  const month = document.getElementById('rv-month').value.trim();
+  if (!month) { alert('请先选择月份'); return; }
+  window.location.href = `/api/revenue/export/${month}`;
 }
 
 document.addEventListener('DOMContentLoaded', async () => { await loadMonths(); loadSummary(); });

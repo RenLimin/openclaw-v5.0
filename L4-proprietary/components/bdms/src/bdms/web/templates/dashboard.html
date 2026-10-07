@@ -37,21 +37,21 @@
 {% endcall %}
 
 {% call card(title="月度趋势（计划 vs 实际）") %}
-{{ chart_container(id="chart-trend", title="", height=320) }}
+<div class="card chart-container"><div class="chart-body" style="height: 320px;"><canvas id="chart-trend"></canvas></div></div>
 <div id="trend-table" style="margin-top:1rem;"></div>
 {% endcall %}
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
 {% call card(title="交付状态分布（签约）") %}
-{{ chart_container(id="chart-status", title="", height=280) }}
+<div class="card chart-container"><div class="chart-body" style="height: 280px;"><canvas id="chart-status"></canvas></div></div>
 {% endcall %}
 {% call card(title="异常项目分布") %}
-{{ chart_container(id="chart-exception", title="", height=280) }}
+<div class="card chart-container"><div class="chart-body" style="height: 280px;"><canvas id="chart-exception"></canvas></div></div>
 {% endcall %}
 </div>
 
 {% call card(title="部门维度统计") %}
-{{ chart_container(id="chart-dept", title="", height=300) }}
+<div class="card chart-container"><div class="chart-body" style="height: 300px;"><canvas id="chart-dept"></canvas></div></div>
 {% endcall %}
 
 <div id="drill-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
@@ -86,6 +86,29 @@ function fmtMonth(mm, format) {
   return mm;
 }
 
+// KPI 下钻：跳转到对应数据页面
+function drillKpi(label) {
+  const month = currentMonth();
+  if (!month) return;
+  const map = {
+    "合同总额": { sheet: "签约", q: "" },
+    "计划确收": { page: "/revenue" },
+    "实际确收": { page: "/revenue" },
+    "完成率": { page: "/revenue" },
+    "交付项目数": { sheet: "签约", q: "" },
+    "履约项数": { sheet: "确收交接", q: "" },
+    "异常项目数": { sheet: "异常项目", q: "" },
+    "异常履约项": { sheet: "异常项目", q: "" },
+  };
+  const target = map[label];
+  if (!target) return;
+  if (target.page) {
+    window.location.href = target.page;
+  } else if (target.sheet) {
+    window.location.href = `/report?month=${month}&sheet=${encodeURIComponent(target.sheet)}`;
+  }
+}
+
 function currentFormat() {
   const el = document.getElementById("month-format");
   return el ? el.value : "YYYYMM";
@@ -118,6 +141,8 @@ async function loadMonths() {
 
   if (availableMonths.length) {
     selectedMonthValue = availableMonths[0].month;
+    sel.value = selectedMonthValue;
+    reloadDashboard(false);
   }
 }
 
@@ -172,7 +197,7 @@ function renderKpis(k) {
     ["异常履约项", k.abnormal_obligation_count ?? "-", "🚨", "danger"],
   ];
   host.innerHTML = cards.map(([label, val, icon, variant]) =>
-    `<div class="stat-card ${variant}">
+    `<div class="stat-card ${variant}" onclick="drillKpi('${label}')" style="cursor:pointer;transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
       <div style="font-size:1.4rem;">${icon}</div>
       <div style="font-size:0.8rem;color:var(--c-muted);">${label}</div>
       <div style="font-size:1.35rem;font-weight:700;">${val}</div>
