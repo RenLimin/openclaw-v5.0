@@ -104,7 +104,69 @@ async def report_export_sheet(month: str, sheet: str, search: str = ""):
     )
 
 
-@router.get("/report/data/{month}/{sheet}")
+
+
+# ========== 人机协作审核 API ==========
+
+class ReviewApproveRequest(BaseModel):
+    reviewer: str = ""
+
+class ReviewRejectRequest(BaseModel):
+    reason: str = ""
+    reviewer: str = ""
+
+
+@router.get("/report/review-status/{month}")
+async def report_review_status(month: str):
+    """获取某月审核状态。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    return DeliveryReportService().get_review_status(month)
+
+
+@router.get("/report/review-months")
+async def report_review_months():
+    """列出所有已生成月份的审核状态。"""
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    return {"months": DeliveryReportService().list_review_months()}
+
+
+@router.get("/report/review-issues/{month}")
+async def report_review_issues(month: str, status_filter: str = None):
+    """列出某月的校验问题。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    return DeliveryReportService().list_review_issues(month, status_filter)
+
+
+@router.post("/report/review-approve/{month}")
+async def report_review_approve(month: str, req: ReviewApproveRequest):
+    """人工审批通过。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    try:
+        return DeliveryReportService().approve_review(month, req.reviewer)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/report/review-reject/{month}")
+async def report_review_reject(month: str, req: ReviewRejectRequest):
+    """人工驳回。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    try:
+        return DeliveryReportService().reject_review(month, req.reason, req.reviewer)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/report/revalidate/{month}")
+async def report_revalidate(month: str):
+    """人工触发重新校验。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    return DeliveryReportService().revalidate(month)
 async def report_data(month: str, sheet: str, page: int = 1, page_size: int = 50, search: str = ""):
     """获取某月某 Sheet 的数据（分页 + 搜索）。"""
     month = normalize_month(month)

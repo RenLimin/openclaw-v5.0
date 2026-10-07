@@ -800,6 +800,26 @@ CREATE TABLE IF NOT EXISTS dr_import_validation (
     resolved_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_dr_val_month ON dr_import_validation(month, status);
+
+-- 人机协作审核状态表
+CREATE TABLE IF NOT EXISTS dr_review_status (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    month TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'generating',
+    generated_at TEXT,
+    validated_at TEXT,
+    reviewed_at TEXT,
+    approved_at TEXT,
+    exported_at TEXT,
+    reviewer TEXT,
+    total_errors INTEGER DEFAULT 0,
+    total_warnings INTEGER DEFAULT 0,
+    pending_fixes INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_dr_review_month ON dr_review_status(month);
+CREATE INDEX IF NOT EXISTS idx_dr_review_status ON dr_review_status(status);
 """
 
 # ===== 确收分析 v2.1 新增表 =====
