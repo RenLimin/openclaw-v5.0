@@ -14,7 +14,11 @@ If `BOOTSTRAP.md` exists, follow it, figure out who you are, then delete it.
 
 Use runtime-provided startup context first. Do not manually reread startup files unless explicitly asked or missing something needed.
 
-### 会话恢复自检（必做）
+### 任务启动/接收检查清单（必做）
+
+每次接收到新任务，必须按顺序执行以下检查：
+
+### 1. 会话恢复自检
 
 每次主会话启动后，先检查 `memory/current-task.md`：
 
@@ -24,14 +28,33 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --j
 
 | 条件 | 动作 |
 |---|---|
-| 无 current-task | 正常开始 |
+| 无 current-task | 继续下一步 |
 | failure_count = 0 | 等用户指令 |
-| 1 ≤ failure_count < 2 | 自动从断点恢复，说明从哪里恢复 |
+| 1 ≤ failure_count < 2 | 自动从断点恢复，说明从哪里恢复，然后继续 |
 | failure_count ≥ 2 | 停止重试，告知用户等你拍板 |
 
 恢复策略：从 `progress_entries` 最新一条确定进度，跳过已完成步骤，从当前 step_index 继续。
 
+### 2. 需求理解核对
+
+- **复述需求**：用 1-2 句话复述用户的请求，确认理解正确
+- **识别类型**：区分是新任务还是断点恢复、是查询还是开发、是文档修改还是代码变更
+- **核对已有规范**：如果是已有规范的领域（开发、测试、验收等），先读对应规范文档
+- 如果用户需求不清晰（不满足：明确类型 + 已有资产位置 + 期望结果），持续提问直至需求清晰，不要猜测着开始
+
+### 3. 记忆/文档检索
+
+- 如果涉及已有决策、偏好、历史记录：先调用 `memory_search` 检索相关记忆
+- 如果涉及已有文档规范：先读对应文档，确认规则
+- 如果涉及代码文件：先读文件内容，再开始修改
+
+### 4. 任务登记
+
 **重要任务必须登记：** 预计 > 5 步 exec / 批量文件操作 / 长构建的任务，开工前先 `task_tracker start`。
+
+### 完成检查后再开始
+
+只有完成以上 4 步检查，才能开始执行任务。
 
 ## Memory
 
@@ -67,7 +90,7 @@ Write It Down: "remember this" → update daily file; lesson learned → update 
 
 **旧代码迁移规范：** 迁移前必须先读 DESIGN-DETAIL 文档；旧代码与文档契约不一致时以文档为准；迁移完成后验证数据流、生命周期、接口签名。
 
-**测试规范：** Web/安全功能验收必须用真实 HTTP；禁止用 FastAPI TestClient 测试网络安全/Cookie/访问控制；E2E 测试必须覆盖真实用户操作路径；后端 API 应同时兼容多种输入格式。
+**测试规范：** Web/安全功能验收必须用真实 HTTP；禁止用 FastAPI TestClient 测试网络安全/Cookie/访问控制；所有 E2E 自测务必使用真实的模拟人工操作的方式进行；E2E 测试必须覆盖真实用户操作路径；后端 API 应同时兼容多种输入格式。 <!-- observed: 2026-10-07 | status: active -->
 
 **文档命名：** `DESIGN-OUTLINE-<topic>-<version>.md` / `DESIGN-DETAIL-<module>-<version>.md` / `IMPLEMENTATION-PLAN-<version>.md` / `VERIFICATION-<phase>-<version>.md`
 
