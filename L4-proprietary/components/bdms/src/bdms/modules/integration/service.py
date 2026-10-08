@@ -17,7 +17,6 @@ from .base import BaseConnector, ConnectorRegistry, SyncResult
 
 # 确保连接器注册
 from . import connectors as _connectors  # noqa: F401
-from . import local_import_connector as _lic  # noqa: F401
 
 
 class IntegrationService:

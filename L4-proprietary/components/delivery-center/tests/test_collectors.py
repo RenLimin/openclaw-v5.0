@@ -65,12 +65,14 @@ def test_oa_collector_structure():
     """测试 OA 采集器结构完整"""
     from delivery_center.v1.collectors.oa_collector import (
         collect_contract_ledger_xlsx,
-        CONTRACT_LEDGER_URL,
+        _CONTRACT_LEDGER_CUSTOMID,
         OA_BASE,
         DOWNLOAD_DIR,
     )
 
-    assert CONTRACT_LEDGER_URL == f"{OA_BASE}/spa/cube/index.html#/main/cube/search?customid=179"
+    # 2026-10-08 更新：禁止直接 URL 跳转，必须逐级点击菜单进入
+    # 保留 customid 常量仅用于页面识别，不用于导航
+    assert _CONTRACT_LEDGER_CUSTOMID == "179"
     assert DOWNLOAD_DIR.exists() or True  # 目录会在 _ensure_setup 中创建
 
 

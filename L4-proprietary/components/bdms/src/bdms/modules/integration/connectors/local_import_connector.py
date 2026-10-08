@@ -13,7 +13,7 @@ from typing import Any, Dict, List
 import pandas as pd
 
 from bdms.core.db import get_connection
-from .base import BaseConnector, ConnectorRegistry
+from ..base import BaseConnector, ConnectorRegistry
 
 
 @ConnectorRegistry.register

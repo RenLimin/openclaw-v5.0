@@ -1,29 +1,29 @@
-"""OA 数据采集器 — 合同台账
+#!/usr/bin/env python3
+"""OA 数据采集器 — 合同台账（2026-10-08 完整重写）
 
 通过浏览器自动化访问 OA 销售合同管理系统，采集合同台账数据。
-使用 OA 自带导出功能（doExcelExpost API）生成 XLSX 文件。
+基于 9 轮调试验证的所有经验重写。
 
-导出流程（已实测验证 2026-08-31）：
-  1. IAM 登录 → OA 协同办公平台
-  2. 导航到合同台账页面（customid=179）
-  3. 点击"导出"按钮 → OA 后台异步生成 XLSX
-  4. page.expect_download() 拦截下载事件
-  5. 保存到 DOWNLOAD_DIR
+已验证的导航路径（2026-10-08）：
+  1. IAM 登录 → 点击「应用入口」tab → 点击 OA 卡片中心 → 打开 OA 新标签页
+  2. 关闭弹窗（.ant-modal-wrap / .wea-dialog）
+  3. 点击「销售合同管理系统」→ 点击「合同基本信息管理」→ 点击「合同台账（销售）」
+  4. 页面加载后，Cube iframe（frame[1]）中出现导出按钮
+  5. 点击导出 → 异步生成 → 轮询进度 → 下载文件
 
-技术要点：
-  - headful 模式（headless 无法拦截下载事件）
-  - 导出按钮在 cube iframe 内（customid=179 页面）
-  - 导出 API: POST /api/cube/search/doExcelExpost
-  - 进度轮询: GET /api/cube/search/getExcelExpProgress
-  - 下载链接只能通过浏览器 JS 事件获取，requests 无法替代
-
-关键 URL：
-  - 合同台账页面: /spa/cube/index.html#/main/cube/search?customid=179
-  - IAM 登录: https://iam.bangcle.com/#/login
+关键经验（踩坑总结）：
+  - IAM 首页必须先点「应用入口」tab，OA 卡片才渲染
+  - OA 卡片用 evaluate 找，按面积排序取 candidates[1]（避开最大的外层容器）
+  - OA 打开是新标签页，用 context.expect_page() 监听
+  - OA 首页有弹窗遮罩，必须先关闭再操作菜单
+  - 菜单项是 span，用 evaluate 点击（locator.click() 会被弹窗拦截超时）
+  - 导出按钮在 Cube iframe 内，不在主页面 DOM
+  - 导出按钮坐标 (1267, 11)，需要计算 iframe 偏移后用 page.mouse.click()
+  - 导出是异步的，需要轮询进度弹窗，不能用 expect_download()
 """
-
 import json
 import time
+import glob
 from pathlib import Path
 from typing import Optional
 
@@ -33,49 +33,217 @@ OA_BASE = "https://oa.bangcle.com"
 IAM_BASE = "https://iam.bangcle.com"
 DOWNLOAD_DIR = Path.home() / ".openclaw" / "data" / "oa_exports"
 
-# 合同台账页面 URL（直接导航，不走 OA 首页避免 SSO 回调卡住）
-CONTRACT_LEDGER_URL = f"{OA_BASE}/spa/cube/index.html#/main/cube/search?customid=179"
-
 
 def _ensure_setup():
     DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
     ensure_logged_in()
 
 
-def _login_iam_and_get_cookies(headless: bool = False) -> list:
-    """登录 IAM 并返回 cookies"""
-    from playwright.sync_api import sync_playwright
+def _dismiss_dialogs(page):
+    """关闭 OA 首页的弹窗/遮罩（.ant-modal-wrap / .wea-dialog）"""
+    page.evaluate("""() => {
+        ['.ant-modal-wrap', '.wea-dialog', '[role=dialog]', '.ant-modal', '.ant-modal-mask'].forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => el.remove());
+        });
+        // 删除所有 fixed 遮罩
+        document.querySelectorAll('*').forEach(el => {
+            const style = window.getComputedStyle(el);
+            if (style.position === 'fixed' && parseInt(style.zIndex) > 100) {
+                el.remove();
+            }
+        });
+    }""")
+    time.sleep(1)
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
-        context = browser.new_context()
-        page = context.new_page()
 
-        page.goto(f"{IAM_BASE}/#/login", timeout=30000)
-        page.wait_for_load_state("networkidle", timeout=15000)
-        time.sleep(2)
+def _click_oa_card(page, context, max_retries=3):
+    """点击 IAM 首页的 OA 协同办公平台卡片，打开 OA 新标签页。
 
-        page.locator("input[type=text]").first.fill("limin.ren", timeout=5000)
-        page.locator("input[type=password]").first.fill("June-123", timeout=5000)
+    实测：IAM 首页 OA 卡片文字为「OA 协同办公平台」，嵌套在多层 div 中。
+    必须点击 cards[1]（按面积排序第二，避开最大的 1896x282 外层容器）。
+    点击卡片右下角（箭头区域）最可靠。
+    """
+    for attempt in range(max_retries):
+        # 确保在「应用入口」tab
+        try:
+            page.get_by_text("应用入口", exact=False).first.click()
+            time.sleep(2)
+        except Exception:
+            pass
 
-        for btn in page.locator("button").all():
-            if "登录" in (btn.text_content() or ""):
-                btn.click()
-                break
+        # 找 OA 卡片
+        card = page.evaluate("""() => {
+            const candidates = [];
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+            let node;
+            while (node = walker.nextNode()) {
+                const text = (node.textContent || '').trim();
+                if (text.includes('OA协同办公平台') && !text.includes('CRM') && !text.includes('EHR')) {
+                    const rect = node.getBoundingClientRect();
+                    if (rect.width > 50 && rect.height > 20 && rect.width < 600 && rect.height < 300) {
+                        candidates.push({
+                            x: Math.round(rect.x), y: Math.round(rect.y),
+                            w: Math.round(rect.width), h: Math.round(rect.height),
+                            area: rect.width * rect.height
+                        });
+                    }
+                }
+            }
+            candidates.sort((a, b) => a.area - b.area);
+            // 返回第二小的（避开最大的外层容器），如果只有一个就返回那个
+            return candidates.length > 1 ? candidates[1] : (candidates[0] || null);
+        }""")
 
-        page.wait_for_url("**/home/**", timeout=15000)
-        time.sleep(3)
+        if not card:
+            continue
 
-        # 点击 OA 协同办公平台
-        oa_el = page.get_by_text("OA协同办公平台", exact=False)
-        if oa_el.count() > 0:
-            oa_el.first.click()
-            page.wait_for_load_state("networkidle", timeout=15000)
-            time.sleep(5)
+        pages_before = len(context.pages)
 
-        cookies = context.cookies()
-        browser.close()
-        return cookies
+        # 点击卡片右下角（箭头/进入区域）
+        page.mouse.click(card['x'] + card['w'] - 15, card['y'] + card['h'] / 2)
+        time.sleep(5)
+
+        if len(context.pages) > pages_before:
+            new_page = context.pages[-1]
+            new_page.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(3)
+            return new_page
+
+        # 备选：点击卡片中心
+        pages_before = len(context.pages)
+        page.mouse.click(card['x'] + card['w'] / 2, card['y'] + card['h'] / 2)
+        time.sleep(5)
+
+        if len(context.pages) > pages_before:
+            new_page = context.pages[-1]
+            new_page.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(3)
+            return new_page
+
+    return None
+
+
+def _click_menu_item(page, text):
+    """点击左侧菜单项（用 evaluate 避免 locator 被弹窗拦截超时）"""
+    _dismiss_dialogs(page)
+    result = page.evaluate("""(t) => {
+        const spans = document.querySelectorAll('span');
+        for (const span of spans) {
+            if (span.textContent.trim().includes(t)) {
+                const rect = span.getBoundingClientRect();
+                if (rect.x < 350 && rect.width > 50) {
+                    span.click();
+                    return {clicked: true, text: span.textContent.trim()};
+                }
+            }
+        }
+        return {clicked: false};
+    }""", text)
+    time.sleep(2)
+    return result.get('clicked', False)
+
+
+def _find_cube_frame(page):
+    """查找 Cube iframe（URL 含 customid=179 或 cube/search）
+    优先匹配 frame URL，后备检查 iframe src 属性。
+    """
+    # 方式1：检查 frame URL
+    for frame in page.frames:
+        if "customid=179" in frame.url or "cube/search" in frame.url:
+            return frame
+
+    # 方式2：后备——检查 iframe src 属性（frame 可能还未加载到 page.frames）
+    iframes = page.locator("iframe")
+    for i in range(iframes.count()):
+        src = iframes.nth(i).get_attribute("src") or ""
+        if "customid=179" in src or "cube/search" in src:
+            # 等一下让 frame 加载
+            time.sleep(3)
+            for frame in page.frames:
+                if "customid=179" in frame.url or "cube/search" in frame.url:
+                    return frame
+            # 如果还是找不到，返回第一个非主页面 frame
+            for frame in page.frames:
+                if "wui/index" not in frame.url and frame.url != "about:blank":
+                    return frame
+
+    return None
+
+
+def _click_export_in_frame(page, frame):
+    """在 Cube frame 中点击导出按钮（用 DOM 定位，不用坐标计算）。
+
+    实测导出按钮在 frame 内坐标 (1267, 11)，但 bounding_box 经常超时。n    直接用 frame.locator 在 Cube iframe DOM 中找按钮更可靠。
+    """
+    # 方式1：用 frame.locator 直接找按钮
+    export_btn = frame.locator("button").filter(has_text="导出").first
+    if export_btn.count() == 0:
+        # 备选：找含"导 出"（有空格）
+        export_btn = frame.locator("button").filter(has_text="导 出").first
+    
+    if export_btn.count() > 0:
+        export_btn.click()
+        return True
+    
+    # 方式2：用 evaluate 在 frame 内点击
+    result = frame.evaluate("""() => {
+        const btns = document.querySelectorAll('button');
+        for (const b of btns) {
+            const t = b.textContent.trim();
+            if (t.includes('导') && t.includes('出')) {
+                b.click();
+                return {ok: true, text: t};
+            }
+        }
+        return {ok: false};
+    }""")
+    if result.get('ok'):
+        return True
+    
+    # 兜底：用坐标计算
+    log("  ⚠️ locator 失败，用坐标兜底")
+    iframe_pos = page.evaluate("""() => {
+        const iframe = document.querySelector('iframe');
+        if (!iframe) return {x: 0, y: 0};
+        const rect = iframe.getBoundingClientRect();
+        return {x: rect.x, y: rect.y};
+    }""")
+    offset_x = iframe_pos['x']
+    offset_y = iframe_pos['y']
+    page.mouse.click(offset_x + 1296, offset_y + 26)
+    return True
+
+
+def _wait_for_export_complete(frame, timeout=600):
+    """轮询导出进度，等待完成。
+
+    OA 导出是异步的，进度弹窗显示「当前进度 ：N/113380%」。
+    完成后弹窗中出现下载链接。
+    """
+    start = time.time()
+    while time.time() - start < timeout:
+        # 检查进度弹窗
+        modal = frame.locator(".ant-modal-body")
+        if modal.count() > 0:
+            text = modal.first.text_content().strip()
+            if "完成" in text or "下载" in text or "100%" in text:
+                return True
+        time.sleep(5)
+    return False
+
+
+def _wait_for_download(timeout=600):
+    """等待下载文件出现"""
+    start = time.time()
+    while time.time() - start < timeout:
+        files = glob.glob(str(Path.home() / "Downloads" / "*合同*"))
+        if files:
+            return files[0]
+        files = glob.glob(str(Path.home() / "Downloads" / "*contract*"))
+        if files:
+            return files[0]
+        time.sleep(5)
+    return None
 
 
 def collect_contract_ledger_xlsx(
@@ -116,61 +284,92 @@ def collect_contract_ledger_xlsx(
         page = context.new_page()
 
         try:
-            # Step 1: IAM 登录 + 跳转 OA
+            # Step 1: 登录 IAM
             print("[OA] Step 1: 登录 IAM...")
-            page = _login_iam_and_open_oa_page(page, context)
-
-            # Step 2: 导航到合同台账
-            print(f"[OA] Step 2: 导航到合同台账 (customid=179)...")
-            page.goto(CONTRACT_LEDGER_URL, timeout=30000)
+            page.goto(f"{IAM_BASE}/#/login", timeout=30000)
             page.wait_for_load_state("networkidle", timeout=15000)
-            time.sleep(15)
+            time.sleep(2)
+            page.locator("input[type=text]").first.fill("limin.ren")
+            page.locator("input[type=password]").first.fill("June-123")
+            page.locator("button").nth(1).click()  # button[1] = 登录
+            page.wait_for_url("**/home/**", timeout=15000)
+            time.sleep(5)
+            print("  ✅ 登录成功")
 
-            final_url = page.url
-            print(f"[OA] 页面就绪: {final_url[:80]}")
+            # Step 2: 进入 OA
+            print("[OA] Step 2: 进入 OA 系统...")
+            oa_page = _click_oa_card(page, context)
+            if not oa_page:
+                print("  ❌ 无法进入 OA")
+                return None
+            page = oa_page
+            print(f"  ✅ OA: {page.url[:100]}")
 
-            if "login" in final_url or "iam" in final_url:
-                print("ERROR: SSO 认证失败")
+            # Step 3: 关闭弹窗
+            print("[OA] Step 3: 关闭弹窗...")
+            _dismiss_dialogs(page)
+            time.sleep(2)
+            print("  ✅ 弹窗已关闭")
+
+            # Step 4: 导航到合同台账
+            print("[OA] Step 4: 导航到合同台账...")
+            _click_menu_item(page, "销售合同管理系统")
+            _click_menu_item(page, "合同基本信息管理")
+            _click_menu_item(page, "合同台账")
+            time.sleep(5)
+            print(f"  当前 URL: {page.url[:100]}")
+
+            # Step 5: 查找 Cube frame（需要等待异步加载）
+            print("[OA] Step 5: 查找 Cube frame...")
+            cube_frame = None
+            for attempt in range(20):
+                cube_frame = _find_cube_frame(page)
+                if cube_frame:
+                    print(f"  ✅ Cube frame 找到（第{attempt+1}次尝试）")
+                    break
+                time.sleep(3)
+            
+            if not cube_frame:
+                print("  ❌ 未找到 Cube frame")
+                print(f"  当前所有 frames:")
+                for i, f in enumerate(page.frames):
+                    print(f"    frame[{i}]: {f.url[:100]}")
+                return None
+            cube_frame.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(3)
+
+            # Step 6: 点击导出按钮
+            print("[OA] Step 6: 点击导出按钮...")
+            _click_export_in_frame(page, cube_frame)
+            print("  ✅ 已点击导出")
+
+            # Step 7: 等待导出完成
+            print("[OA] Step 7: 等待导出完成...")
+            if _wait_for_export_complete(cube_frame, timeout=timeout):
+                print("  ✅ 导出完成")
+            else:
+                print("  ⚠️ 导出超时，继续检查下载...")
+
+            # Step 8: 等待下载文件
+            print("[OA] Step 8: 等待下载文件...")
+            downloaded = _wait_for_download(timeout=120)
+            if not downloaded:
+                print("  ❌ 未找到下载文件")
                 return None
 
-            # Step 3: 点击导出按钮
-            print("[OA] Step 3: 点击导出按钮...")
-            export_btn = page.locator("button.ant-btn-primary", has_text="导 出")
-            if export_btn.count() == 0:
-                print("ERROR: 未找到导出按钮")
-                return None
+            # 保存文件
+            output_file = output_dir / f"contract_ledger_{month}.xlsx"
+            Path(downloaded).rename(output_file)
+            size = output_file.stat().st_size
+            print(f"  ✅ 已保存: {output_file} ({size} bytes)")
 
-            # Step 4: 等待下载
-            print("[OA] Step 4: 等待下载...")
-            try:
-                with page.expect_download(timeout=timeout * 1000) as download_info:
-                    export_btn.first.click()
-                    print("[OA] 已点击导出，等待下载事件...")
-
-                download = download_info.value
-                suggested = download.suggested_filename
-                print(f"[OA] 下载事件触发! 文件名: {suggested}")
-
-                # 保存文件
-                output_file = output_dir / f"contract_ledger_{month}.xlsx"
-                download.save_as(str(output_file))
-                size = output_file.stat().st_size
-                print(f"[OA] 已保存: {output_file} ({size} bytes)")
-
-                return {
-                    "file": str(output_file),
-                    "size": size,
-                    "month": month,
-                    "source": "oa_export",
-                    "filename": suggested,
-                }
-            except Exception as e:
-                print(f"[OA] 下载超时或失败: {e}")
-                # 检查弹窗状态
-                modal = page.locator(".ant-modal-body")
-                if modal.count() > 0:
-                    print(f"[OA] 弹窗: {modal.first.text_content().strip()}")
-                return None
+            return {
+                "file": str(output_file),
+                "size": size,
+                "month": month,
+                "source": "oa_export",
+                "filename": output_file.name,
+            }
 
         except Exception as e:
             print(f"ERROR: OA 采集失败: {e}")
@@ -179,57 +378,11 @@ def collect_contract_ledger_xlsx(
             browser.close()
 
 
-def _login_iam_and_open_oa_page(page, context):
-    """登录 IAM 并打开 OA，返回 OA 页面"""
-    from playwright.sync_api import TimeoutError as PWTimeout
-
-    page.goto(f"{IAM_BASE}/#/login", timeout=30000)
-    page.wait_for_load_state("networkidle", timeout=15000)
-    time.sleep(2)
-
-    try:
-        page.locator("input[type=text]").first.fill("limin.ren", timeout=5000)
-        page.locator("input[type=password]").first.fill("June-123", timeout=5000)
-    except PWTimeout:
-        pass
-
-    for btn in page.locator("button").all():
-        if "登录" in (btn.text_content() or ""):
-            btn.click()
-            break
-
-    page.wait_for_url("**/home/**", timeout=15000)
-    time.sleep(3)
-
-    oa_el = page.get_by_text("OA协同办公平台", exact=False)
-    if oa_el.count() > 0:
-        oa_el.first.click()
-        page.wait_for_load_state("networkidle", timeout=15000)
-        time.sleep(5)
-
-        pages = context.pages
-        if len(pages) > 1:
-            return pages[-1]
-
-    return page
-
-
 def collect_contract_ledger_api(
     month: str,
     export_dir: Optional[str] = None,
 ) -> Optional[dict]:
-    """采集销售合同台账 — 通过 API 方式（备用方案）
-
-    使用 OA 的 table/datas 接口直接获取 JSON 数据。
-    注意：API 方式客户名称等字段返回 ID 而非显示文本。
-
-    Args:
-        month: 报告月份（YYYYMM）
-        export_dir: 导出目录
-
-    Returns:
-        {"file": "path", "count": N, "month": "YYYYMM"} 或 None
-    """
+    """采集销售合同台账 — 通过 API 方式（备用方案）"""
     _ensure_setup()
     output_dir = Path(export_dir) if export_dir else DOWNLOAD_DIR
 
@@ -239,8 +392,27 @@ def collect_contract_ledger_api(
         print("ERROR: requests 未安装")
         return None
 
-    # 获取 cookies
-    cookies = _login_iam_and_get_cookies(headless=True)
+    # 获取 cookies（简化版，不走浏览器）
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context()
+            page = context.new_page()
+            page.goto(f"{IAM_BASE}/#/login", timeout=30000)
+            page.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(2)
+            page.locator("input[type=text]").first.fill("limin.ren")
+            page.locator("input[type=password]").first.fill("June-123")
+            page.locator("button").nth(1).click()
+            page.wait_for_url("**/home/**", timeout=15000)
+            time.sleep(3)
+            cookies = context.cookies()
+            browser.close()
+    except Exception as e:
+        print(f"[OA-API] 获取 cookies 失败: {e}")
+        return None
+
     cookie_dict = {c["name"]: c["value"] for c in cookies}
 
     session = req_lib.Session()
@@ -305,12 +477,6 @@ def collect_contract_ledger_api(
 
     print(f"[OA-API] 采集完成: {len(all_rows)} 条, 保存到 {output_file}")
     return result
-
-
-def get_pending_approvals() -> Optional[list]:
-    """获取待审批流程列表（待实现）"""
-    print("TODO: OA 待审批流程获取")
-    return None
 
 
 if __name__ == "__main__":

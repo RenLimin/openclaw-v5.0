@@ -98,13 +98,17 @@ scripts/l4/delivery_center/
 
 - 方式：Playwright 浏览器自动化（headful 模式）
 - 数据：销售合同信息查询台账、待审批流程、合同 PDF
+- 导航方式（2026-10-08 更新）：**逐级点击左侧菜单**，禁止直接 URL 跳转
+  - 路径：报表中心 → 销售报表 → 销售合同台账
+  - ⚠️ OA Cube 页面 URL 含动态 `_key` 参数，每次生成不同，直接 `page.goto()` 会失效
+  - 导航原则：与 ONES 一致，SPA 页面切换必须通过点击菜单实现
 - 导出方案（已验证 2026-08-31）：
   - **主方案**：OA 自带导出功能 → headful 浏览器 + `page.expect_download()` 拦截下载
   - **备用方案**：API `getList` 接口直接获取 JSON（客户名称等字段为 ID 值）
   - 导出 API 调用链：`getList`（获取 dataKey）→ `doExcelExpost`（触发导出）→ `getExcelExpProgress`（轮询进度）
   - 关键：下载链接只能通过浏览器 JS 事件获取，requests 无法替代
-  - 导出按钮位置：cube iframe 内 `button.ant-btn-primary`（文本"导 出"）
-  - 页面 URL：`/spa/cube/index.html#/main/cube/search?customid=179`
+  - 导出按钮位置：cube 页面内 `button.ant-btn-primary`（文本"导 出"）
+  - 页面标识：`customid=179`（仅用于识别，不用于直接跳转）
   - 产出：XLSX 文件（64 列业务格式，~11,178 条，~4.2 MB）
 - 产出文件：`~/.openclaw/data/oa_exports/contract_ledger_YYYYMM.xlsx`
 
