@@ -11,14 +11,16 @@
 """
 from .base import BaseConnector, ConnectorRegistry, SyncResult
 from .service import IntegrationService
-from .local_import_connector import LocalImportConnector
+from .scheduler import SyncScheduler
+from .error_handler import RetryHandler, DeadLetterQueue, AlertManager
 from .connectors import (
-    OnesConnector, OaConnector, TimesheetConnector, WecomDocConnector,
+    LocalImportConnector, OnesConnector, OaConnector, TimesheetConnector, WecomDocConnector,
 )
 
 __all__ = [
     "BaseConnector", "ConnectorRegistry", "SyncResult",
-    "IntegrationService",
+    "IntegrationService", "SyncScheduler",
+    "RetryHandler", "DeadLetterQueue", "AlertManager",
     "LocalImportConnector", "OnesConnector", "OaConnector",
     "TimesheetConnector", "WecomDocConnector",
 ]

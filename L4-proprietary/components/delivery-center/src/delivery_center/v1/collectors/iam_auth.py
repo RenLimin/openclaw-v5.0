@@ -84,23 +84,33 @@ def login_iam(username: str, password: str) -> bool:
         page = context.new_page()
 
         try:
-            page.goto("https://iam.bangcle.com/#/home/index", timeout=30000)
+            # 导航到登录页（不是首页）
+            page.goto("https://iam.bangcle.com/#/login", timeout=30000)
             page.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(2)
 
-            # 填写登录表单（具体选择器需根据实际页面调整）
+            # 填写登录表单
             page.locator("input[type=text]").first.fill(username)
             page.locator("input[type=password]").first.fill(password)
             # 点击登录按钮
-            buttons = page.locator("button").all()
-            for btn in buttons:
-                if "登录" in (btn.text_content() or ""):
-                    btn.click()
-                    break
+            login_btn = page.locator("button").filter(has_text="登录").first
+            if login_btn.count() == 0:
+                buttons = page.locator("button").all()
+                for btn in buttons:
+                    if "登录" in (btn.text_content() or ""):
+                        btn.click()
+                        break
+            else:
+                login_btn.click()
 
+            # 等待跳转到首页（确认登录成功）
+            page.wait_for_url("**/home/**", timeout=15000)
             page.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(3)
 
             # 获取所有 Cookie（包括所有域名）
             all_cookies = context.cookies()
+            print(f"  获取到 {len(all_cookies)} 个 Cookie")
             
             # 按域名分组保存
             domain_cookies = {}
@@ -112,13 +122,16 @@ def login_iam(username: str, password: str) -> bool:
             
             # 保存每个域名的 Cookie
             for d, pairs in domain_cookies.items():
-                set_cookie(d, "; ".join(pairs))
+                cookie_str = "; ".join(pairs)
+                set_cookie(d, cookie_str)
+                print(f"  {d}: {len(pairs)} 个 Cookie, 长度 {len(cookie_str)}")
             
             # 同时保存全量 Cookie 到所有目标域名
             full_cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
             for domain in DOMAINS:
                 set_cookie(domain, full_cookie_str)
-
+            
+            print(f"  全量 Cookie 长度: {len(full_cookie_str)}")
             print("IAM 登录成功，Cookie 已保存")
             return True
 
