@@ -38,6 +38,14 @@ SHEET_ORDER = [
 # 统计 Sheet（通过 DASHBOARD 实时聚合）
 STAT_SHEETS = {
     "异常台账", "交付效率统计", "签约统计", "交接统计",
+    "产品-授权&维保统计", "POC&提前实施统计", "提前实施分事业部统计",
+    "异常统计", "交付异常分事业部统计",
+}
+
+# SUBTOTAL 公式列（对齐黄金基准）
+SUBTOTAL_FORMULA_COLS = {
+    "签约": [51, 52, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],  # 0-based col indices
+    "POC&提前实施": [51, 52, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],
 }
 
 
@@ -85,16 +93,33 @@ class DeliveryReportExporter:
                 if sheet in STAT_SHEETS:
                     df = stats_cache.get(sheet)
                     if df is not None and not df.empty:
-                        self._write_sheet(wb, sheet, df)
+                        self._write_stats_sheet(wb, sheet, df)
                     continue
 
+                # 核心数据 Sheet
                 columns, rows = _db.load_sheet_rows(conn, month, sheet, prefix="dr")
                 if not rows:
                     continue
                 df = pd.DataFrame(rows, columns=columns)
+                # 去重列名（解决 pandas _dedupe_columns 产生的 .1 后缀）
+                seen = {}
+                clean_cols = []
+                for c in df.columns:
+                    s = str(c)
+                    if s in seen:
+                        seen[s] += 1
+                        clean_cols.append(f"{s}_{seen[s]}")
+                    else:
+                        seen[s] = 0
+                        clean_cols.append(s)
+                df.columns = clean_cols
+                
+                # SUBTOTAL 公式列配置
+                subtotal_cols = SUBTOTAL_FORMULA_COLS.get(sheet)
                 self._write_sheet(
                     wb, sheet, df,
                     title=title_dt if sheet in titled else None,
+                    subtotal_cols=subtotal_cols,
                 )
         finally:
             conn.close()
@@ -105,12 +130,49 @@ class DeliveryReportExporter:
         return target
 
     @staticmethod
+    def _write_stats_sheet(wb: Workbook, sheet_name: str, df: pd.DataFrame) -> None:
+        """写入统计 Sheet（第一行是表头，不是列名）。"""
+        ws = wb.create_sheet(sheet_name[:31])
+        
+        # DataFrame 的第一行是实际表头内容
+        header_row = df.iloc[0].tolist() if len(df) > 0 else df.columns.tolist()
+        
+        # 写表头
+        for col_idx, col_name in enumerate(header_row, start=1):
+            cell = ws.cell(row=1, column=col_idx, value=str(col_name) if col_name else '')
+            cell.font = HEADER_FONT
+            cell.fill = HEADER_FILL
+            cell.alignment = HEADER_ALIGN
+            cell.border = BORDER
+        
+        # 写数据（从第二行开始）
+        for row_idx, record in enumerate(df.iloc[1:].itertuples(index=False), start=2):
+            for col_idx, value in enumerate(record, start=1):
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell.font = DATA_FONT
+                cell.alignment = DATA_ALIGN
+        
+        # 冻结首行
+        ws.freeze_panes = "A2"
+        
+        # 自动列宽
+        for col_idx, col_name in enumerate(header_row, start=1):
+            max_len = len(str(col_name)) if col_name else 0
+            for row_idx in range(2, min(len(df) + 2, 202)):
+                val = ws.cell(row=row_idx, column=col_idx).value
+                if val:
+                    max_len = max(max_len, len(str(val)))
+            from openpyxl.utils import get_column_letter
+            ws.column_dimensions[get_column_letter(col_idx)].width = min(max_len + 2, 40)
+
+    @staticmethod
     def _write_sheet(wb: Workbook, sheet_name: str, df: pd.DataFrame,
-                     title=None) -> None:
+                     title=None, subtotal_cols=None) -> None:
         """写入单个 Sheet（带表头样式 + 冻结首行 + 自动列宽）。
 
         title 不为空时先在 r1 写入日期标题，表头下移到 r2
         （对齐手工交付月报的版式）。
+        subtotal_cols: 需要写入 SUBTOTAL 公式的列索引列表（0-based）。
         """
         ws = wb.create_sheet(sheet_name[:31])  # Excel sheet 名上限 31 字符
         header_row = 2 if title is not None else 1
@@ -118,21 +180,46 @@ class DeliveryReportExporter:
         if title is not None:
             ws.cell(row=1, column=1, value=title)
 
+        # 去重列名（解决 pandas _dedupe_columns 产生的 .1 后缀）
+        seen = {}
+        clean_cols = []
+        for c in df.columns:
+            s = str(c)
+            if s in seen:
+                seen[s] += 1
+                clean_cols.append(f"{s}_{seen[s]}")
+            else:
+                seen[s] = 0
+                clean_cols.append(s)
+
         # 表头
-        for col_idx, col_name in enumerate(df.columns, start=1):
-            cell = ws.cell(row=header_row, column=col_idx, value=str(col_name))
+        for col_idx, col_name in enumerate(clean_cols, start=1):
+            cell = ws.cell(row=header_row, column=col_idx, value=col_name)
             cell.font = HEADER_FONT
             cell.fill = HEADER_FILL
             cell.alignment = HEADER_ALIGN
             cell.border = BORDER
 
         # 数据
+        n_data_rows = len(df)
         for row_idx, record in enumerate(df.itertuples(index=False),
                                         start=header_row + 1):
             for col_idx, value in enumerate(record, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.font = DATA_FONT
                 cell.alignment = DATA_ALIGN
+
+        # SUBTOTAL 公式列（对齐黄金基准）
+        if subtotal_cols and n_data_rows > 0:
+            from openpyxl.utils import get_column_letter
+            for col_idx_0based in subtotal_cols:
+                col_idx_1based = col_idx_0based + 1
+                col_letter = get_column_letter(col_idx_1based)
+                first_data_row = header_row + 1
+                last_data_row = header_row + n_data_rows
+                cell_ref = f"{col_letter}{last_data_row + 1}"
+                ws[cell_ref] = f"=SUBTOTAL(9,{col_letter}{first_data_row}:{col_letter}{last_data_row})"
+                ws[cell_ref].font = Font(bold=True)
 
         # 冻结表头行
         ws.freeze_panes = f"A{header_row + 1}"

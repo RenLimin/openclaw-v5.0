@@ -176,32 +176,15 @@ class DeliveryReportEngine:
         else:
             result["验收交接"] = pd.DataFrame()
 
-        # ── 3. 统计 (Sheet 6-14) ──
+        # ── 3. 统计 (Sheet 6-14) 通过 connector ──
         stats = self.connector.build_stats_sheets(month)
         for name, df in stats.items():
             if df is not None and not df.empty:
                 result[name] = df
 
-        # 补充 connector 未覆盖的统计
-        legacy_ws_map = {
-            "产品-授权&维保统计": "build_product_stats",
-            "POC&提前实施统计": "build_poc_stats",
-            "提前实施分事业部统计": "build_poc_dept_stats",
-            "异常统计": "build_abnormal_stats",
-            "交付异常分事业部统计": "build_abnormal_dept_stats",
-            "交接统计": "build_handover_stats",
-        }
-        for name, fn_name in legacy_ws_map.items():
-            if name not in result or result.get(name, pd.DataFrame()).empty:
-                fn = getattr(_legacy, fn_name, None)
-                if fn:
-                    try:
-                        wb = Workbook()
-                        ws = wb.create_sheet("tmp")
-                        fn(ws)
-                        result[name] = _wb_to_df(wb, "tmp")
-                    except Exception:
-                        pass
+        # 交付效率统计单独构建（不在 connector 中）
+        if "交付效率统计" not in result or result.get("交付效率统计", pd.DataFrame()).empty:
+            result["交付效率统计"] = self._build_efficiency_stats_from_db(month)
 
         # ── 4. 图例 (Sheet 15) ──
         legend_df = self.connector.get_legend_config()
@@ -212,6 +195,11 @@ class DeliveryReportEngine:
 
     def persist(self, month: str, data: dict[str, pd.DataFrame],
                 overwrite: bool = True) -> dict:
+        """持久化数据到 DB。
+        
+        事务保护：所有 Sheet 写入 + report_month 注册在同一事务中，
+        任一失败则全部回滚，避免幽灵记录（注册了月份但数据不全）。
+        """
         conn = _db.get_connection(self.db_path)
         try:
             counts = {}
@@ -227,6 +215,9 @@ class DeliveryReportEngine:
             _db.register_month(conn, "delivery_report", month, row_counts=counts)
             conn.commit()
             return counts
+        except Exception:
+            conn.rollback()
+            raise
         finally:
             conn.close()
 
@@ -266,3 +257,7 @@ class DeliveryReportEngine:
         out = df.copy()
         out.columns = new_cols
         return out
+
+    def _build_efficiency_stats_from_db(self, month: str) -> pd.DataFrame:
+        """交付效率统计委托 connector。"""
+        return self.connector.build_efficiency_stats(month)
