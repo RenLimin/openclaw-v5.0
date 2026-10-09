@@ -32,6 +32,8 @@
 |---|---|---|
 | v2.1 Detail r1 | 2026-09-22 | 初版：5 连接器 + OS 适配矩阵 |
 | v2.1 Detail r2 | 2026-09-22 | Rex 审核反馈 2 条：浏览器自动化统一 + OS 依赖标注 + 业界最佳实践 |
+| v2.1 Detail r3 | 2026-10-09 | ONES 页面结构变化更新：独立登录页、子 tab CSS 选择器、还原按钮前置、Playwright expect_download API |
+| v2.1 Detail r4 | 2026-10-09 | §11 浏览器自动化章节重写：统一为 Playwright CDP + IAM Cookie Pool 方案，删除 OS 分支适配，补充 OA iframe 异步轮询、12 条经验教训 |
 
 ---
 
@@ -1915,278 +1917,340 @@ class FileParser:
 
 ## 11. 浏览器自动化集成
 
-> **⚠️ OS 依赖声明**：浏览器自动化方案与操作系统强相关。当前开发环境为 **macOS**，以下方案按 OS 分类。
+> **⚠️ 统一方案声明**：BDMS 浏览器自动化已统一为 **Playwright CDP + IAM Cookie Pool** 方案（详见 `docs/DESIGN-OUTLINE-BROWSER-AUTOMATION-TECH-SELECTION-v1.0.md`）。本章节聚焦 integration 模块的具体实现。
 
-### 11.0 OS 适配矩阵
+### 11.0 统一技术选型
 
-| OS | 推荐方案 | 状态 | 依赖 |
-|---|---|---|---|
-| **macOS** | osascript + Chrome | ✅ 已验证 | AppleScript + Chrome Apple Events |
-| **macOS** | Playwright Headless | 🔶 待验证 | playwright 包 + Chromium 二进制 |
-| **Linux** | Playwright Headless | 🔶 待验证 | playwright 包 + Chromium + 系统依赖库 |
-| **Linux** | Selenium + ChromeDriver | 📋 待开发 | chromedriver + chrome-headless-shell |
-| **Windows** | Playwright Headless | 📋 待开发 | playwright 包 + Chromium |
-| **Windows** | pywinauto + Chrome COM | 📋 待开发 | pywinauto + Chrome COM 接口 |
+| 决策 | 选择 | 原因 |
+|---|---|---|
+| **浏览器自动化引擎** | Playwright | 统一 API、iframe 支持、下载事件、异步轮询 |
+| **登录态管理** | IAM Cookie 池 + CDP 复用 | 一次登录，多系统共享（12h TTL，自动刷新） |
+| **进程管理** | `background: true` 长存活 | 避免 exec 5 分钟超时（OA 导出需 5-10 分钟） |
+| **网络代理** | `NO_PROXY=* no_proxy=*` | 避免本地 HTTPS 被代理干扰 |
+| **经验沉淀** | SKILL.md + ADR + 技术选型文档 | 避免每次从头踩坑 |
 
-**OS 检测与自动选择**：
-```python
-import platform
+### 11.1 分层架构
 
-def create_browser_adapter(domain: str) -> BaseBrowserAdapter:
-    """根据 OS 自动选择合适的浏览器适配器。"""
-    system = platform.system()
-    if system == "Darwin":
-        return OsascriptBrowserAdapter(domain)  # macOS 原生
-    elif system == "Linux":
-        return PlaywrightBrowserAdapter(domain)  # Linux Headless
-    elif system == "Windows":
-        return PlaywrightBrowserAdapter(domain)  # Windows Headless
-    else:
-        raise OSError(f"不支持的操作系统: {system}")
+```
+┌─────────────────────────────────────────────────────────┐
+│                 统一浏览器自动化层                         │
+├─────────────────────────────────────────────────────────┤
+│   IAM 认证基础设施                                        │
+│   login_iam() → cookie pool → inject_cookies()           n│
+│   (12h TTL, 自动刷新)                                    │
+├─────────────────────────────────────────────────────────┤
+│   浏览器连接层                                            │
+│   ├── CDP 复用（已有 Chrome，保留登录态）                 │
+│   └── Playwright 自启动（全新 profile，兜底）             │
+├─────────────────────────────────────────────────────────┤
+│   系统特定导航层                                          │
+│   ├── ONES: 筛选器切换 → 菜单 → 导出 → 下载              │
+│   ├── OA: IAM→面板→菜单→Cube iframe→导出→轮询→下载       │
+│   ├── 工时: IAM→面板→DOM 提取                            │
+│   └── 企微: MCP API（不走浏览器）                         │
+├─────────────────────────────────────────────────────────┤
+│   数据标准化层                                            │
+│   原始数据 → normalize → 暂存表 → 业务表                  │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### 11.1 macOS 方案：osascript + Chrome（已验证）
+### 11.2 IAM 认证基础设施
 
-> **适用环境**：macOS 10.15+，Google Chrome 已安装并登录。
+> **核心组件**：`delivery-center/src/.../collectors/iam_auth.py`
 
-复用 `L4-proprietary/skills/ones-browser-export/` 的成熟方案：
+| 资产 | 位置 | 状态 |
+|---|---|---|
+| `iam_auth.py` | `delivery-center/src/.../collectors/` | ✅ 成熟，12h TTL + 自动刷新 |
+| `iam_cookies.json` | `~/.openclaw/data/` | ✅ 已验证（JSESSIONID + x-access-token，长度 283） |
+| `login_iam()` | `iam_auth.py` | ✅ 可用 |
+| `inject_cookies_to_context()` | `iam_auth.py` | ✅ 可用 |
+
+**认证流程**：
+1. 导航到 `https://iam.bangcle.com/#/login`（**禁止**直接访问 `#/home/index`，会跳过登录页导致 cookie 为空）
+2. 填写表单（账号 + 密码）→ 等待跳转 `#/home`
+3. 获取 cookie → 按域名分组保存到 `iam_cookies.json`
+4. 通过 `inject_cookies_to_context()` 注入到 Playwright context
+
+### 11.3 Playwright CDP 连接层
 
 ```python
 # adapters/browser_adapter.py
-import subprocess
-import time
-from pathlib import Path
-
-class OsascriptBrowserAdapter(BaseBrowserAdapter):
-    """macOS 浏览器自动化 — 封装 osascript 操作 Chrome。
-
-    ⚠️ 仅限 macOS。通过 Apple Events 控制 Chrome。
-    """
-
-    def __init__(self, domain: str):
-        """
-        Args:
-            domain: 目标域名（如 ones.bangcle.com / oa.bangcle.com）
-        """
-        self.domain = domain
-
-    def execute_js(self, js: str) -> str:
-        """在目标标签页执行 JavaScript。
-
-        ⚠️ 必须遵守：
-        1. JS 中不能包含中文字符（osascript 限制）
-        2. 复杂 JS 需要先转义引号
-        """
-        # 转义特殊字符
-        js_escaped = js.replace('"', '\\"').replace("\n", " ")
-
-        cmd = [
-            "osascript", "-e",
-            f'tell application "Google Chrome" to execute '
-            f'(first tab of first window whose URL contains "{self.domain}") '
-            f'javascript "{js_escaped}"'
-        ]
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
-        return r.stdout.strip()
-
-    def export_filter(self, filter_index: int, wait_seconds: int = 15) -> Path:
-        """导出 ONES 筛选器数据。
-
-        Args:
-            filter_index: 筛选器在左侧导航中的索引
-            wait_seconds: 等待下载完成的时间
-
-        Returns:
-            下载的 CSV 文件路径
-        """
-
-        Args:
-            filter_index: 筛选器在左侧导航中的索引
-            wait_seconds: 等待下载完成的时间
-
-        Returns:
-            下载的 CSV 文件路径
-        """
-        # 1. 点击筛选器链接
-        self.execute_js(
-            f"document.querySelectorAll('a')[{filter_index}].click();'clicked'"
-        )
-        time.sleep(10)  # ONES SPA 加载数据
-
-        # 2. 点击"更多操作"
-        self.execute_js(
-            "document.querySelectorAll('[class*=more-menu-icon]')[0].click();'clicked'"
-        )
-        time.sleep(3)
-
-        # 3. 点击"导出工作项"
-        self.execute_js(
-            "document.querySelectorAll('[class*=dropdown-menu-item-label]')[10].click();'clicked'"
-        )
-        time.sleep(5)
-
-        # 4. 点击"确定"
-        self.execute_js(
-            "document.querySelectorAll('button')[7].click();'clicked'"
-        )
-        time.sleep(wait_seconds)  # 等待下载完成
-
-        # 5. 检查下载文件
-        return self._find_latest_download()
-
-    def _find_latest_download(self) -> Path:
-        """查找最新下载的文件。"""
-        downloads = Path("/Users/bangcle/Downloads")
-        csv_files = list(downloads.glob("*.csv"))
-        if not csv_files:
-            raise FileNotFoundError("未找到下载的 CSV 文件")
-        return max(csv_files, key=lambda p: p.stat().st_mtime)
-```
-
-### 11.2 Linux 方案：Playwright Headless（待验证）
-
-> **适用环境**：Linux（Ubuntu 20.04+ / CentOS 8+），无 GUI 或 X11 环境。
-
-```python
-# adapters/playwright_adapter.py
+import os
 from playwright.sync_api import sync_playwright, Browser, Page
 
-class PlaywrightBrowserAdapter(BaseBrowserAdapter):
-    """跨平台浏览器自动化 — Playwright Headless。
+class CdpBrowserAdapter(BaseBrowserAdapter):
+    """统一 CDP 浏览器适配器 — 复用已登录 Chrome。
 
-    ✅ Linux（推荐）/ macOS / Windows 通用。
-    依赖：pip install playwright && playwright install chromium
+    ✅ macOS / Linux / Windows 通用（通过 CDP 端口连接）。
+    ⚠️ 必须设置 NO_PROXY=* 避免代理干扰本地 HTTPS。
     """
 
-    def __init__(self, domain: str, headless: bool = True):
+    def __init__(self, domain: str, cdp_port: int = 9222):
         self.domain = domain
-        self.headless = headless
+        self.cdp_port = cdp_port
         self._playwright = None
         self._browser: Browser | None = None
         self._page: Page | None = None
 
-    def start(self) -> None:
-        """启动浏览器（Headless 模式）。"""
-        self._playwright = sync_playwright().start()
-        self._browser = self._playwright.chromium.launch(headless=self.headless)
-        self._page = self._browser.new_page()
-        # 加载已保存的 Cookie（如有）
-        cookies = self._load_cookies()
-        if cookies:
-            self._page.context.add_cookies(cookies)
+    def connect(self) -> None:
+        """连接到已打开的 Chrome（通过 CDP 端口）。"""
+        # 绕过代理（关键！否则 SSL handshake 失败）
+        os.environ["NO_PROXY"] = "*"
+        os.environ["no_proxy"] = "*"
 
-    def navigate(self, path: str = "") -> None:
-        """导航到目标页面。"""
-        self._page.goto(f"https://{self.domain}{path}")
+        self._playwright = sync_playwright().start()
+        self._browser = self._playwright.chromium.connect_over_cdp(
+            f"http://127.0.0.1:{self.cdp_port}"  # 必须用 127.0.0.1，避免 IPv6 ::1 解析问题
+        )
+        # 获取或创建目标域名的 page
+        context = self._browser.contexts[0]
+        for page in context.pages:
+            if self.domain in page.url:
+                self._page = page
+                break
+        if not self._page:
+            self._page = context.new_page()
+
+    def navigate_via_iam(self, target_domain: str, iam_card_title: str) -> None:
+        """通过 IAM 面板跳转（不直接 goto，触发 SSO 换票）。
+
+        Args:
+            target_domain: 目标系统域名（如 ones.bangcle.com）
+            iam_card_title: IAM 面板中的卡片标题（如「ONES 协同办公平台」）
+        """
+        # 1. 确保在 IAM 首页
+        self._page.goto("https://iam.bangcle.com/#/home/index")
         self._page.wait_for_load_state("networkidle")
+
+        # 2. 点击目标系统卡片
+        self._page.click(f'text={iam_card_title}')
+        self._page.wait_for_load_state("networkidle")
+
+        # 3. 等待新标签页或当前页跳转
+        # ...
 
     def execute_js(self, js: str) -> str:
         """执行 JavaScript。"""
         return str(self._page.evaluate(js))
 
-    def export_data(self, **params) -> Path:
-        """导出数据（点击下载按钮 + 等待下载完成）。"""
-        with self._page.expect_download() as download_info:
-            self._page.click(".export-button")
+    def export_with_download(self, click_selector: str, timeout: int = 300) -> Path:
+        """点击导出按钮 + 等待下载完成。
+
+        Args:
+            click_selector: 导出按钮的 CSS 选择器
+            timeout: 超时时间（秒）
+
+        Returns:
+            下载文件路径
+        """
+        with self._page.expect_download(timeout=timeout * 1000) as download_info:
+            self._page.click(click_selector)
         download = download_info.value
         path = Path(download.suggested_filename)
         download.save_as(path)
         return path
 
+    def poll_async_export(self, progress_selector: str, complete_text: str,
+                          poll_interval: int = 5, timeout: int = 600) -> bool:
+        """轮询异步导出进度。
+
+        Args:
+            progress_selector: 进度文本的 CSS 选择器
+            complete_text: 完成时包含的文本（如「100%」）
+            poll_interval: 轮询间隔（秒）
+            timeout: 超时时间（秒）
+
+        Returns:
+            是否成功完成
+        """
+        import time
+        start = time.time()
+        while time.time() - start < timeout:
+            text = self._page.inner_text(progress_selector)
+            if complete_text in text:
+                return True
+            time.sleep(poll_interval)
+        raise TimeoutError(f"异步导出超时（{timeout}s）")
+
     def close(self) -> None:
         if self._browser:
-            # 保存 Cookie 供下次使用
-            self._save_cookies(self._page.context.cookies())
             self._browser.close()
         if self._playwright:
             self._playwright.stop()
 ```
 
-**Linux 系统依赖**：
-```bash
-# Ubuntu/Debian
-sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
-  libxcomposite1 libxdamage1 libxrandr1 libgbm1 libpango-1.0-0 libcairo2 \
-  libasound2 libatspi2.0-0 libxshmfence1
+### 11.4 ONES 数据采集（已验证）
 
-# CentOS/RHEL
-sudo yum install -y nss atk atk-bridge gtk3 cups-libs libdrm libxkbcommon \
-  libXcomposite libXdamage libXrandr libGbm pango cairo alsa-lib
+> **方案**：Playwright CDP + IAM Cookie 注入
+
+**ONES 页面结构**（2026-10 实测）：
+- 主 tab：概览、仪表盘、筛选器、工时、工时审批
+- 筛选器子 tab：项目交付管理、项目售后管理、2026周报-签约项目统计、2026周报-POC&提前实施统计、2026-递延合同履约项-签约项目
+- 子 tab CSS 选择器：`.url-foldable-tabs-new-link`
+- 导出前**必须**先点击「还原」按钮恢复全量数据，否则导出的是筛选后的子集
+
+**关键操作顺序**：
+1. 通过 IAM 面板跳转（`navigate_via_iam`）
+2. 点击子 tab（如「2026周报-签约项目统计」）
+3. 点击「还原」按钮（恢复所有数据显示）
+4. 等待 10 秒数据重新加载
+5. 点击「更多」菜单（`.more-menu-icon`）
+6. 点击「导出工作项」
+7. 点击「确定」
+8. 使用 `export_with_download` 捕获下载（文件名固定会覆盖，不能用文件系统扫描）
+
+**技术细节**：
+- 必须用 `http://127.0.0.1:PORT` 而非 `http://localhost:PORT`（避免 IPv6 `::1` 解析问题）
+- 建议用独立 CDP 端口（如 9229）避免和 OA 导出（9222）冲突
+- `expect_download` 必须在点击「确定」**之前**注册
+- ONES 独立登录凭证：`limin.ren@bangcle.com` / `March-123`（备用，优先用 IAM 登录）
+
+### 11.5 OA 合同台账导出（已验证）
+
+> **方案**：Playwright CDP + Cube iframe + 异步进度轮询
+
+**操作步骤**（基于 Rex 手动操作截图，2026-10-08 更新）：
+1. **IAM 登录** → `https://iam.bangcle.com/#/login`（账号 + 密码）
+2. **点击 OA 协同办公平台** 面板 → 打开 OA 新标签页
+3. **逐级点击左侧菜单进入销售合同台账**：
+   - 3.1 点击左侧导航「门户」→ 展开子菜单
+   - 3.2 点击「销售合同管理系统」→ 展开子菜单
+   - 3.3 点击「合同基本信息管理」→ 展开子菜单
+   - 3.4 点击「合同台账（销售）」→ 进入目标页面
+   - ⚠️ **禁止直接用 URL 跳转**：OA Cube 页面 URL 含动态 `_key` 参数，每次生成不同，直接 `page.goto()` 会失效，必须逐级点击菜单进入
+4. **点击"导 出"按钮** → 位置：`button.ant-btn-primary`（页面顶部工具栏，与"搜 索""显示列定制"并列）
+5. **弹出进度弹窗** → 标题：`导出进度`，显示：`当前进度 ：N/113380%`
+6. **等待进度完成** → 按钮：`取 消`（取消导出）、`关 闭`（关闭弹窗，后台继续生成）
+7. **下载文件** → 进度完成后弹窗内出现下载链接，或文件出现在下载中心
+
+**关键信息**：
+- 表格 CSS 选择器：`.ant-table.ant-table-large.ant-table-fixed-header`
+- 页面标识：`customid=179`（出现在 URL hash 中，但 URL 整体是动态的）
+- 数据量：约 11.3 万条
+- 导出方式：**服务端异步生成**（非直接下载）
+- 进度弹窗可关闭，后台继续生成
+- ⚠️ 导航原则：与 ONES 一致，所有 SPA 页面切换必须通过点击菜单实现，禁止 `window.location.href` 或 `page.goto()` 直接跳转
+
+**iframe 处理**：
+- OA 导出按钮在 Cube iframe 内（`frame[1]` 是 Cube 搜索页）
+- 必须用 `frame.locator()` 跨 frame 定位元素
+
+**异步轮询实现**：
+```python
+# OA 导出需要轮询进度弹窗，不能用 expect_download()
+def export_oa_contract(self, date_range: str = None) -> Path:
+    """导出 OA 合同台账（异步轮询方案）。"""
+    # 1. 通过 IAM 面板跳转
+    self.navigate_via_iam("oa.bangcle.com", "OA 协同办公平台")
+
+    # 2. 逐级点击菜单进入合同台账
+    self._click_menu_hierarchy(["门户", "销售合同管理系统", "合同基本信息管理", "合同台账（销售）"])
+
+    # 3. 在 Cube iframe 中点击导出按钮
+    frame = self._page.frames[1]  # Cube iframe
+    frame.locator("button.ant-btn-primary").click()
+
+    # 4. 轮询进度弹窗
+    self._page.locator(".ant-modal-body").wait_for(state="visible")
+    self.poll_async_export(
+        progress_selector=".ant-modal-body",
+        complete_text="100%",
+        poll_interval=5,
+        timeout=600,
+    )
+
+    # 5. 关闭弹窗，等待下载链接
+    self._page.click("text=关 闭")
+    # ... 等待下载链接出现并点击下载
 ```
 
-### 11.3 Windows 方案：Playwright/pywinauto（待开发）
+### 11.6 工时门户（已验证）
 
-> **适用环境**：Windows 10/11，Google Chrome 已安装。
+> **方案**：Playwright CDP + DOM 提取（已验证稳定）
 
 ```python
-# Windows 方案 A：Playwright Headless（推荐，跨平台一致）
-class WindowsPlaywrightAdapter(PlaywrightBrowserAdapter):
-    """Windows Playwright 适配器 — 继承 Linux 方案，路径适配。"""
+class WorkhourCollector:
+    """工时门户数据采集器。"""
 
-    CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+    def collect(self, month: str) -> list[dict]:
+        """通过 Playwright DOM 提取工时数据。"""
+        # 1. 通过 IAM 面板跳转
+        self._browser.navigate_via_iam("timesheet.bangcle.com", "工时门户")
 
-    def start(self) -> None:
-        self._playwright = sync_playwright().start()
-        self._browser = self._playwright.chromium.launch(
-            headless=True,
-            executable_path=self.CHROME_PATH,  # 指定 Chrome 路径
-        )
-        self._page = self._browser.new_page()
+        # 2. 设置筛选条件
+        self._page.fill('input[name="month"]', month)
+        self._page.click("button[type=submit]")
 
-# Windows 方案 B：pywinauto + Chrome COM（备选）
-class WindowsComBrowserAdapter(BaseBrowserAdapter):
-    """Windows COM 接口控制 Chrome。
+        # 3. 等待数据加载
+        self._page.wait_for_load_state("networkidle")
 
-    ⚠️ 依赖 pywinauto，仅 Windows 可用。
-    """
-
-    def __init__(self, domain: str):
-        self.domain = domain
-        self._app = None
-
-    def connect(self) -> None:
-        """连接到已打开的 Chrome 窗口。"""
-        from pywinauto import Application
-        self._app = Application(backend="uia").connect(title_re=f".*{self.domain}.*")
+        # 4. DOM 提取表格数据
+        rows = self._page.query_selector_all("table tbody tr")
+        data = []
+        for row in rows:
+            cells = row.query_selector_all("td")
+            data.append({
+                "person_id": cells[0].inner_text(),
+                "work_date": cells[1].inner_text(),
+                "hours": float(cells[2].inner_text()),
+            })
+        return data
 ```
 
-### 11.4 OA 自动化导出
+### 11.7 企微文档（已验证）
 
-OA 的浏览器自动化方案与 ONES 类似，但需要适配 OA 的页面结构：
+> **方案**：wecom_mcp API（不走浏览器，已验证稳定）
 
 ```python
-class OaBrowserAdapter(BaseBrowserAdapter):
-    """OA 浏览器自动化适配器（OS 无关，由工厂方法选择底层实现）。"""
+class WecomCollector:
+    """企微文档采集器 — 使用 MCP API。"""
 
-    def __init__(self):
-        super().__init__("oa.bangcle.com")
+    def collect(self, doc_type: str, date_range: str) -> list[dict]:
+        """通过企微 MCP API 获取文档内容。"""
+        # 1. 获取文档列表
+        docs = self._wecom.list_documents(doc_type, date_range)
 
-    def export_contract_list(self, date_range: str = None) -> Path:
-        """导出合同列表。"""
-        # 1. 导航到合同列表页
-        self.navigate("/contract/list")
-        # 2. 设置日期范围
-        if date_range:
-            start, end = date_range.split(",")
-            self._page.fill('input[placeholder*="开始"]', start)
-            self._page.fill('input[placeholder*="结束"]', end)
-        # 3. 点击导出
-        return self._click_export()
+        # 2. 拉取每个文档内容
+        results = []
+        for doc in docs:
+            content = self._wecom.get_document_content(doc["doc_id"])
+            results.append({
+                "doc_id": doc["doc_id"],
+                "doc_name": doc["doc_name"],
+                "content": content,
+            })
+        return results
 ```
 
-### 11.5 已知限制与规避
+### 11.8 关键经验教训（不再踩坑）
+
+| # | 教训 | 根因 | 解决 |
+|---|---|---|---|
+| 1 | OA 导出不能 `goto(oa.bangcle.com)` 直接访问 | IAM SSO 必须通过面板跳转触发换票 | 从 IAM 首页点击 OA 卡片 |
+| 2 | OA 导出按钮在 Cube iframe 内 | frame[1] 是 Cube 搜索页 | 用 `frame.locator()` 跨 frame |
+| 3 | OA 导出是异步的，不能 `expect_download()` | 服务端生成文件，进度弹窗轮询 | 轮询 `.ant-modal-body` 进度文本 |
+| 4 | exec 5 分钟超时杀进程 | OA 导出需 5-10 分钟 | `background: true` 长存活 |
+| 5 | Playwright 连 CDP 被代理干扰 | `http_proxy` 环境变量 | `NO_PROXY=*` 绕过 |
+| 6 | osascript 处理不了 OA 异步弹窗 | osascript 是单次执行，无法轮询 | 用 Playwright 替代 |
+| 7 | 全新 Chrome profile 没有 SSO cookie | IAM 换票只在已登录浏览器中有效 | CDP 复用已登录 Chrome |
+| 8 | `iam_cookies.json` cookie 值为空 | 之前没真正保存 | 重新登录并验证 cookie 保存 |
+| 9 | headless 浏览器被 OA IAM 反爬拦截 | headless 特征明显 | CDP + headful Chrome |
+| 10 | `http://localhost:PORT` 解析到 IPv6 `::1` | macOS localhost 默认 IPv6 | 用 `http://127.0.0.1:PORT` |
+| 11 | ONES 导出文件名固定会覆盖 | 不用时间戳命名 | 用 `expect_download` API 捕获 |
+| 12 | ONES 导出前必须点击「还原」按钮 | 否则导出筛选后子集 | 操作顺序：还原 → 等待 10s → 导出 |
+
+### 11.9 已知限制与规避
 
 | 限制 | 影响 | 规避方案 |
 |---|---|---|
-| JS 不能包含中文（osascript） | 无法用中文文字匹配元素 | 使用索引定位（已验证的索引） |
 | SPA 加载慢 | 数据未就绪时操作失败 | 固定等待 10-15 秒 |
 | 菜单索引可能变化 | 页面更新后索引失效 | 每次同步前重新探测索引 |
-| 大文件下载慢 | 超时 | 等待 15 秒以上 |
-| 需要 Chrome 已打开（macOS） | 未打开时失败 | 同步前检查并提示 |
-| Linux 无 GUI | 无法使用 osascript | 使用 Playwright Headless |
-| Windows COM 不稳定 | pywinauto 连接失败 | 降级到 Playwright Headless |
+| 大文件下载慢 | 超时 | `background: true` 长存活 + 600s 超时 |
+| 需要 Chrome 已打开 | 未打开时失败 | 同步前检查并提示 |
 | Playwright 浏览器下载慢 | 首次使用需下载 Chromium | 预装或指定系统 Chrome 路径 |
-| Linux 缺少系统库 | Playwright 启动失败 | 安装依赖库（见 §10.2） |
+| OA 异步导出不能 `expect_download()` | 服务端生成文件 | 用 `poll_async_export()` 轮询进度 |
+| OA iframe 内元素定位 | 跨 frame 无法直接访问 | 用 `frame.locator()` |
+| IAM Cookie 过期 | 12h TTL 后失效 | 自动刷新 + 重新登录 |
 
 ---
 
