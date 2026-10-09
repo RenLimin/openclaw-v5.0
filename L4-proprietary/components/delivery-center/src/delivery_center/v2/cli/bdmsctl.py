@@ -163,6 +163,47 @@ def cmd_serve(args):
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
+def cmd_ones_export(args):
+    """ONES 导出"""
+    from ones_exporter import export_filter, list_available_filters
+
+    if args.list:
+        list_available_filters()
+        return 0
+
+    if not args.menu_text:
+        print("❌ 请提供菜单文本名称")
+        return 1
+
+    result = export_filter(args.menu_text)
+    if result:
+        print(f"✅ 导出成功: {result}")
+        return 0
+    else:
+        return 1
+
+
+def cmd_oa_export(args):
+    """OA 合同清单CSV导出"""
+    from oa_csv_exporter import export_contract_list, list_current_menu_items
+
+    if args.command == 'list':
+        list_current_menu_items()
+        return 0
+
+    output_dir = Path(args.output_dir) if args.output_dir else None
+    result = export_contract_list(
+        menu_text=args.menu_text,
+        output_dir=output_dir,
+        timeout_minutes=args.timeout
+    )
+    if result:
+        print(f"✅ 导出成功: {result.resolve()}")
+        return 0
+    else:
+        return 1
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="bdmsctl",
@@ -203,6 +244,27 @@ def main():
     p_serve.add_argument("--host", default="127.0.0.1", help="监听地址")
     p_serve.add_argument("--port", type=int, default=8787, help="端口（默认 8787，统一端口）")
     p_serve.set_defaults(func=cmd_serve)
+
+    # ones 导出
+    p_ones_export = sub.add_parser("ones-export", help="ONES 筛选器数据导出")
+    p_ones_export.add_argument("--list", action="store_true", help="列出当前页面所有筛选器")
+    p_ones_export.add_argument("menu_text", nargs="?", help="菜单文本（部分匹配即可）")
+    p_ones_export.set_defaults(func=cmd_ones_export)
+
+    # OA 合同导出
+    p_oa_export = sub.add_parser("oa-export", help="OA 合同清单CSV导出")
+    p_oa_export_sub = p_oa_export.add_subparsers(dest="command", help="子命令")
+    
+    # list 子命令
+    p_oa_list = p_oa_export_sub.add_parser("list", help="列出当前页面所有可点击菜单项")
+    p_oa_list.set_defaults(func=cmd_oa_export)
+    
+    # export 子命令
+    p_oa_export_cmd = p_oa_export_sub.add_parser("export", help="导出合同清单CSV")
+    p_oa_export_cmd.add_argument("menu_text", help="左侧菜单文本（部分匹配即可，例如：合同清单）")
+    p_oa_export_cmd.add_argument("--output-dir", "-o", type=str, help="输出目录")
+    p_oa_export_cmd.add_argument("--timeout", "-t", type=int, default=10, help="导出超时时间（分钟，默认10）")
+    p_oa_export_cmd.set_defaults(func=cmd_oa_export)
 
     args = parser.parse_args()
     if not args.command:

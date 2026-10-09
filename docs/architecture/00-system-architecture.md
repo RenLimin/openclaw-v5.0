@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 4.8 (2026-10-04 — 全量资产文档补齐 + 架构文档与实际对齐 + 系统升级 2026.9.8) |
+| 文档版本 | 4.9 (2026-10-09 — 浏览器自动化体系化：ONES/OA/工时/企微 4份详细设计 + 设计规范 + 方法论) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
 | 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
@@ -422,6 +422,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | **dag-orchestrator** | `L2-infra/skills/dag-orchestrator/` | DAG 工作流编排器：将复杂任务分解为有向无环图，按依赖排序执行 | ✅ 已上线 |
 | **role-library** | `L2-infra/skills/role-library/` | 标准化 Agent 角色库：按角色定义执行任务，支持角色切换 | ✅ 已上线 |
 | **ocr-digitalization** | `L2-infra/skills/ocr-digitalization/` | OCR 技能层：封装底层 OCREngine 为可调用技能，含检查清单 | ✅ 已上线 |
+| **browser-automation** | `docs/architecture/components/browser-automation-design-specification.md` | 浏览器自动化设计规范 + 方法论 + 4份系统详细设计(ONES/OA/工时/企微) | ✅ 已上线 |
 
 > **状态取值口径**: `已上线` 要求 **ADR + DESIGN.md + 实现** 三件齐备。
 
@@ -1221,6 +1222,7 @@ L4 专有业务
 | 2026-09-12 | **4.4** | **L2 logs 组件补录**: 补录 `L2-infra/components/logs/` 到 L2 组件表（骨架阶段，有 README + DESIGN.md 但未在文档声明）。 |
 | 2026-09-11 | **4.3** | **L2 路径补全 + fin-l4 纳入**: ① L2 组件表 19 处路径加 `L2-infra/` 前缀（消除旧格式 `components/xxx/`）；② L4 新增 fin-l4 组件（家庭理财实例引擎，ADR-027）；③ L4 新增 fin-l4 技能（FIN-L4 6 大模块）；④ session-orchestrator 标记为 ❌ 已废弃（已并入 session-isolation 子模块）。 |
 | 2026-09-11 | **4.2** | **路径精确化 + 技能体系文档化**: ① L3 组件表 9 处路径加 `L3-business/components/` 前缀；② L4 组件表 3 处路径加 `L4-proprietary/components/` 前缀 + bangcle-ppt-template→bangcle-ppt 修正；③ L2-infra/skills 机制说明（dag-orchestrator/role-library/ocr-digitalization 三个技能）；④ L4 ones-browser-export 技能纳入；⑤ mcp-server 标记为 📋 预留；⑥ session-lifecycle/error-handling DESIGN.md 引用修正（功能已集成至其他组件）。 |
+| 2026-10-09 | **4.9** | **浏览器自动化体系化**: ①新增 L2 浏览器自动化设计规范 + 方法论; ②ONES/OA/工时门户/企微文档 4份详细设计; ③OA异步导出+iframe方案验证通过; ④设计文档编制规范制度化(7大必备要素)。 |
 | 2026-09-11 | **4.0** | **L3/L4 全量对齐 + L2 路径修复**: ① L3 纳入 6 个未声明组件（DMS 核心框架/CISSP 学习/健康管理/办公业务/家庭理财引擎 + finance_engine symlink 说明）；② L4 纳入 2 个未声明组件（CISSP 训练/Office 合同）+ 已废弃组件声明；③ L1 纳入 error-handler 为第 5 个自建组件；④ L2 修复 6 处过时路径（`scripts/` → `components/<name>/`）；⑤ L2 组件计数修正 17→18（补入 session-isolation-sharing/knowledge-base/model-scheduling/OCR/Office 生成）；⑥ L2 DESIGN.md 全部标记为 ✅。 |
 | 2026-09-07 | **3.4** | **文档对齐实际状态 + L3 分层落地**: ① 会话生命周期管理 cron + 错误自动处理 cron 已重建上线（之前 08-26 清除的状态过时）；② L4 Bangcle PPT 模板系统已上线；③ L3 家庭理财 FIN 通用引擎从 L4 迁到 L3，对齐 ADR-026 分层决策；④ 上下文管理全覆盖（补全 subagent 保护规范 + subagent_ctx_guard.py 辅助脚本 + compaction fallback 方案）；⑤ 新增 OCR 文档数字化组件（023）；⑥ 资产清单对齐实际状态。 |
 
