@@ -1,0 +1,226 @@
+# 模型注册表 — model-scheduling
+# 此文件由 sync_models.py 从 openclaw.json 自动同步,也可手动编辑
+# 修改此文件不会影响 openclaw.json(只用于 model-scheduling 路由决策)
+#
+# status: active | disabled | exhausted
+# tags: coding | reasoning | cheap | fast | image | embedding
+#
+# 生成时间: 2026-09-15T11:04:07+0800
+# 模型总数: 16
+
+models:
+  # Provider: coding-plan
+  - id: "coding-plan/doubao-seed-2-1-turbo"
+    priority: 30
+    provider: "coding-plan"
+    model_id: "doubao-seed-2-1-turbo"
+    name: "doubao-seed-2-1-turbo"
+    context_window: 262144
+    max_tokens: 262144
+    input_types: ["text", "image", "video"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-2-0-lite-260215"
+    priority: 20
+    provider: "coding-plan"
+    model_id: "doubao-seed-2-0-lite-260215"
+    name: "doubao-seed-2-0-lite"
+    context_window: 262144
+    max_tokens: 131072
+    input_types: ["text", "image", "video"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-code-preview-251028"
+    priority: 10
+    provider: "coding-plan"
+    model_id: "doubao-seed-code-preview-251028"
+    name: "doubao-seed-code"
+    context_window: 262144
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-2-0-pro-260215"
+    provider: "coding-plan"
+    model_id: "doubao-seed-2-0-pro-260215"
+    name: "doubao-seed-2-0-pro"
+    context_window: 262144
+    max_tokens: 131072
+    input_types: ["text", "image", "video"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/doubao-seed-2-1-pro-260628"
+    provider: "coding-plan"
+    model_id: "doubao-seed-2-1-pro-260628"
+    name: "doubao-seed-2-1-pro"
+    context_window: 262144
+    max_tokens: 262144
+    input_types: ["text", "image", "video"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/deepseek-v4-1-flash-260910"
+    provider: "coding-plan"
+    model_id: "deepseek-v4-1-flash-260910"
+    name: "deepseek-v4-1-flash"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/deepseek-v4-flash-ga-260731"
+    provider: "coding-plan"
+    model_id: "deepseek-v4-flash-ga-260731"
+    name: "deepseek-v4-flash-ga"
+    context_window: 1048576
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/glm-5-3-flash-260828"
+    provider: "coding-plan"
+    model_id: "glm-5-3-flash-260828"
+    name: "glm-5-3-flash"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/qwen3-8b-20250429"
+    provider: "coding-plan"
+    model_id: "qwen3-8b-20250429"
+    name: "qwen3-8b"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "coding-plan/qwen3-32b-20250429"
+    provider: "coding-plan"
+    model_id: "qwen3-32b-20250429"
+    name: "qwen3-32b"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  # Provider: longCat
+  - id: "longCat/LongCat-2.0"
+    provider: "longCat"
+    model_id: "LongCat-2.0"
+    name: "LongCat-2.0"
+    context_window: 1048576
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0.75
+    cost_output: 2.95
+    status: "active"
+    tags: []
+
+  # Provider: model-scheduling
+  - id: "model-scheduling/auto"
+    provider: "model-scheduling"
+    model_id: "auto"
+    name: "Auto (智能调度)"
+    context_window: 229376
+    max_tokens: 131072
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  # Provider: llama-cpp
+  - id: "llama-cpp/gemma-4-e4b-it-q4_k_m"
+    provider: "llama-cpp"
+    model_id: "gemma-4-e4b-it-q4_k_m"
+    name: "Gemma 4 E4B (Q4_K_M)"
+    context_window: 512
+    max_tokens: 1
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "llama-cpp/embeddinggemma-300m-qat-q8_0"
+    provider: "llama-cpp"
+    model_id: "embeddinggemma-300m-qat-q8_0"
+    name: "Gemma Embedding 300M (Q8_0)"
+    context_window: 512
+    max_tokens: 1
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  # Provider: deepseek
+  - id: "deepseek/deepseek-chat"
+    provider: "deepseek"
+    model_id: "deepseek-chat"
+    name: "DeepSeek V3 (chat)"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: false
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []
+
+  - id: "deepseek/deepseek-reasoner"
+    provider: "deepseek"
+    model_id: "deepseek-reasoner"
+    name: "DeepSeek R1 (reasoning)"
+    context_window: 131072
+    max_tokens: 8192
+    input_types: ["text"]
+    reasoning: true
+    cost_input: 0
+    cost_output: 0
+    status: "active"
+    tags: []

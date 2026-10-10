@@ -1,11 +1,11 @@
 # L2 上下文管理 — 设计文档
 
-> 版本：v3.0
+> 版本：v4.0
 > 创建日期：2026-09-01
 > 最近修订：2026-10-10
-> 状态：✅ 已上线（四层防护体系）
+> 状态：✅ 已上线（五道防线 + token 感知路由升级）
 > 层级：L2 基础设施层
-> ADR：ADR-032 上下文溢出自动恢复四层防护
+> ADR：ADR-032 上下文溢出自动恢复
 
 ---
 
@@ -27,32 +27,54 @@
 
 ## 二、架构设计
 
-### 2.1 防护体系（四层防护 + 生命周期治理 + Subagent 保护）
+### 2.1 防护体系（五道防线 + 生命周期治理 + Subagent 保护）
 
 > **演进历史**：
 > - v1.x：两层防线（auto-compaction + mid-turn precheck）
 > - v2.x：三层阶梯式自动恢复（/compact → /reset → /new）
 > - v3.x：四层防护体系（配置优化 + 插件实时拦截 + cron 兜底 + 用户规范）
+> - v4.0：五道防线 — 增加**路由层 token 感知兜底** + 压缩器调参 + 注入瘦身
 
 | 层级 | 机制 | 作用域 | 触发条件 | 响应速度 |
 |---|---|---|---|---|
-| **第 1 层：配置优化** | Auto-compaction safeguard + contextPruning cache-ttl + midTurnPrecheck + notifyUser | 运行时原生 | 上下文达到阈值 | 实时（运行时内置） |
+| **第 0 层：路由层兜底** ★新增 | Model-scheduling 根据请求 token 量自动升级到大窗口模型 | 路由决策 | 请求 token > 200k 自动升级到 1M 窗口模型 | 实时（路由时决策） |
+| **第 1 层：配置优化** | Auto-compaction（keepRecentTokens=80k）+ contextPruning cache-ttl + midTurnPrecheck + 注入参数瘦身 | 运行时原生 | 上下文达到阈值 | 实时（运行时内置） |
 | **第 2 层：实时拦截** | Context Guardian 插件 — 主动监控 + 大 tool result 裁剪 + 提前压缩 | 运行时插件 | token 压力 / 大输出 | 实时（插件 hook） |
 | **第 3 层：cron 巡检兜底** | 三层自动恢复：`/compact` → `/reset soft` → `/new` + 任务持久化 | 外部巡检 | 每 2h 扫描检测 | 准实时（2h 周期） |
 | **第 4 层：治理规范** | 长任务 subagent 化 + 大内容落盘 + MEMORY/AGENTS 瘦身 | 开发规范 | 人为遵守 | 预防型 |
 | **治理层** | 会话生命周期管理 cron | 跨会话 | 每日 02:00 | 天级 |
 
-#### 第 1 层关键配置项
+> **v4.0 核心突破**：第 0 层从根本上解决了 "会话超限 → 压缩也救不了" 的死局。
+> 之前的所有防线都是"在小窗口里挤空间"，而路由层兜底的思路是：
+> **会话大了就换大窗口，别在小窗口里硬挤。**
+
+#### 第 0 层：路由层 token 感知兜底（v4.0 新增）
+
+**解决的核心问题**：会话膨胀到 250k 时，model-scheduling 还在给 262k 窗口的小模型，
+结果 413 超限 → 压缩器说"没东西可压" → 死局。
+
+**机制**：router.py 在路由决策前，先估算/传入请求 token 量：
+
+| 请求 token 估算 | 路由策略 | 目标窗口 |
+|---|---|---|
+| < 180k | 正常按任务类型路由 | 262k / 128k |
+| 180k ~ 500k | 强制升级到 deepseek-v4-flash-ga | 1024k |
+| > 500k | 强制升级到 LongCat-2.0 | 1049k |
+
+**实现位置**：`L2-infra/components/model-scheduling/scripts/router.py` 新增 `--tokens` 参数，
+proxy.py 在转发请求时从 payload 中提取 token 数传给 router。
+
+#### 第 1 层关键配置项（v4.0 调优）
 
 ```json5
 {
   "compaction": {
     "mode": "safeguard",
     "notifyUser": true,           // 压缩时通知用户
-    "keepRecentTokens": 30000,
-    "maxActiveTranscriptBytes": "6mb",
+    "keepRecentTokens": 80000,    // v4.0: 从 120k 降到 80k，让压缩器更早触发
+    "maxActiveTranscriptBytes": "2mb",
     "midTurnPrecheck": { "enabled": true },
-    "model": "longcat/LongCat-2.0",
+    "model": "coding-plan/deepseek-v4-flash-ga-260731", // 稳定大窗口模型
     "qualityGuard": { "maxRetries": 3 },
     "memoryFlush": {
       "model": "longcat/LongCat-2.0",
@@ -62,9 +84,12 @@
   },
   "contextPruning": {
     "mode": "cache-ttl",          // 从 off 改为 cache-ttl，裁剪过期 tool result
-    "ttl": "15m"                   // 从 5m 延长到 15m
+    "ttl": "15m"                   // 从 5m 延长到 15m，平衡上下文和保留率
   },
-  "bootstrapMaxChars": 15000      // 限制 bootstrap 注入字符数，防止小窗口模型溢出
+  "bootstrapMaxChars": 12000,     // v4.0: 15k → 12k，每个文件更小
+  "bootstrapTotalMaxChars": 40000,// v4.0 新增：项目上下文总字符数限制
+  "postCompactionMaxChars": 30000,// v4.0 新增：压缩后重新注入 AGENTS.md 最大字符数
+  "contextInjection": "continuation-skip" // v4.0 新增：连续 turn 跳过重复注入
 }
 ```
 
@@ -200,3 +225,4 @@ OpenClaw 原生不支持 compaction fallbacks（schema 中 `compaction.model` �
 | 2026-09-07 | v2.0 | 补齐覆盖缺口：生命周期治理替代 session pruning + subagent 保护 + compaction fallback 方案 |
 | 2026-10-07 | v2.1 | 新增第三层阶梯式自动恢复：解决保留元数据过多导致的自动压缩失效问题，按 `/compact` → `/reset` → `/new` 顺序尝试恢复 |
 | 2026-10-10 | v3.0 | **四层防护体系升级**：配置优化（contextPruning cache-ttl + notifyUser + bootstrapMaxChars）+ Context Guardian 插件 + cron 三层兜底 + 用户规范；状态机简化为 WARN/ERROR 两级；统一阈值为 80%/95% |
+| 2026-10-10 | v4.0 | **五道防线最终升级**：第 0 层路由层 token 感知兜底（model-scheduling 联动）；keepRecentTokens 从 120k→80k；注入参数优化（bootstrapTotalMaxChars + contextInjection + postCompactionMaxChars）；从根本上解决"压缩器说没东西可压"的死局 |
