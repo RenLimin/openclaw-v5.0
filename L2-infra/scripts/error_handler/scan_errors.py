@@ -471,6 +471,58 @@ def scan_zombie_processes():
     return errors
 
 
+def scan_context_overflow():
+    """检测当前主会话上下文溢出风险，检测 token 占用是否接近/超过阈值"""
+    errors = []
+    
+    # 读取 openclaw.json 获取当前模型上下文窗口配置
+    try:
+        output, rc = run_cmd("openclaw config get agents.defaults.model --output json 2>/dev/null")
+        if rc != 0:
+            return errors
+        
+        model_config = json.loads(output)
+        context_window = model_config.get("contextWindow", 262144)  # 默认 256k
+        
+        # 获取当前会话 token 使用情况
+        output, rc = run_cmd("openclaw session status --output json 2>/dev/null")
+        if rc != 0:
+            # 获取失败，不检测
+            return errors
+        
+        session_status = json.loads(output)
+        estimated_tokens = session_status.get("estimatedPromptTokens", 0)
+        
+        # 计算阈值：80% 预警，95% 报错
+        warn_threshold = int(context_window * 0.8)
+        error_threshold = int(context_window * 0.95)
+        
+        if estimated_tokens >= error_threshold:
+            errors.append({
+                "type": "context_overflow",
+                "detail": f"Context overflow imminent: {estimated_tokens}/{context_window} tokens (>= 95%)",
+                "estimated_tokens": estimated_tokens,
+                "context_window": context_window,
+                "threshold": "error"
+            })
+        elif estimated_tokens >= warn_threshold:
+            errors.append({
+                "type": "context_warning",
+                "detail": f"Context pressure high: {estimated_tokens}/{context_window} tokens (>= 80%)",
+                "estimated_tokens": estimated_tokens,
+                "context_window": context_window,
+                "threshold": "warn"
+            })
+    except Exception as e:
+        # 出错不中断扫描，仅记录
+        errors.append({
+            "type": "context_scan_failed",
+            "detail": f"Failed to scan context: {str(e)[:100]}"
+        })
+    
+    return errors
+
+
 def scan_temp_files_cleanup():
     """检测临时文件、备份文件，建议清理或备份"""
     errors = []
@@ -540,8 +592,77 @@ def auto_fix(errors):
     fixes = []
 
     timeout_errors = [e for e in errors if e.get("type") == "llm_timeout"]
+    context_errors = [e for e in errors if "context_" in e.get("type")]
     provider_errors = [e for e in errors if "provider" in e.get("type") or "api_key" in e.get("type") or "asset" in e.get("type")]
     cron_errors = [e for e in errors if e.get("type") == "cron_error"]
+    
+    # 处置 0: 上下文溢出/高压力 → 三层自动恢复
+    if context_errors:
+        # 按严重程度排序：error > warn
+        has_overflow = any(e.get("type") == "context_overflow" for e in context_errors)
+        has_warn = any(e.get("type") == "context_warning" for e in context_errors)
+        
+        if has_overflow:
+            # Layer 1: 先尝试 /compact
+            fixes.append({
+                "action": "context_auto_recovery",
+                "reason": "Context overflow detected, starting 3-layer recovery",
+                "layer": "layer1_compact"
+            })
+            
+            rc = run_cmd("openclaw chat command /compact 2>/dev/null")[1]
+            fixes[-1]["executed"] = True
+            fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
+            
+            # 重新检测 token 数，还是高就下一层
+            try:
+                output, rc_new = run_cmd("openclaw session status --output json 2>/dev/null")
+                if rc_new == 0:
+                    status = json.loads(output)
+                    tokens = status.get("estimatedPromptTokens", 0)
+                    window = next(e["context_window"] for e in context_errors if "context_window" in e)
+                    if tokens >= int(window * 0.95):
+                        # Layer 2: /reset soft
+                        fixes.append({
+                            "action": "context_auto_recovery",
+                            "reason": "/compact did not free enough space",
+                            "layer": "layer2_reset_soft"
+                        })
+                        rc = run_cmd("openclaw chat command /reset soft 2>/dev/null")[1]
+                        fixes[-1]["executed"] = True
+                        fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
+                        
+                        # 再次检测，还是高就下一层
+                        output, rc_new2 = run_cmd("openclaw session status --output json 2>/dev/null")
+                        if rc_new2 == 0:
+                            status = json.loads(output)
+                            tokens = status.get("estimatedPromptTokens", 0)
+                            window = next(e["context_window"] for e in context_errors if "context_window" in e)
+                            if tokens >= int(window * 0.95):
+                                # Layer 3: /new
+                                fixes.append({
+                                    "action": "context_auto_recovery",
+                                    "reason": "/reset soft did not free enough space",
+                                    "layer": "layer3_new_session"
+                                })
+                                # 保存当前任务到 memory 供恢复
+                                run_cmd("python3 L2-infra/components/session-recovery/scripts/task_tracker.py save --current 2>/dev/null")
+                                rc = run_cmd("openclaw chat command /new 2>/dev/null")[1]
+                                fixes[-1]["executed"] = True
+                                fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
+            except Exception:
+                pass
+        elif has_warn:
+            # 只是预警，提前 compact
+            fixes.append({
+                "action": "context_preemptive_compact",
+                "reason": "High context pressure detected, preemptive compaction",
+                "executed": False
+            })
+            rc = run_cmd("openclaw chat command /compact 2>/dev/null")[1]
+            fixes[-1]["executed"] = True
+            fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
+    
 
     # 处置 1: LLM 超时 → 重启 Gateway
     if timeout_errors:
@@ -635,6 +756,7 @@ def main():
     all_errors.extend(scan_cron_errors())
     all_errors.extend(scan_llm_timeouts())
     all_errors.extend(scan_provider_health())
+    all_errors.extend(scan_context_overflow())
 
     # 输出结果
     if all_errors:
