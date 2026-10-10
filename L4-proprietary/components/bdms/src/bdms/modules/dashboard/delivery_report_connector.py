@@ -128,6 +128,13 @@ class DeliveryReportConnector:
         year = int(month[:4])
         df = df.copy()
 
+        # 确保所有需要的列存在，缺失列填充 None
+        required_cols = ['合同归档日期', '异常报备日期', '异常归档日期', 
+                        '异常影响情况', '状态']
+        for col in required_cols:
+            if col not in df.columns:
+                df[col] = None
+
         # 解析日期列
         df['合同归档日期'] = pd.to_datetime(df['合同归档日期'], errors='coerce')
         df['异常报备日期'] = pd.to_datetime(df['异常报备日期'], errors='coerce')

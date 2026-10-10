@@ -23,9 +23,21 @@ logger = logging.getLogger(__name__)
 DOWNLOAD_DIR = Path.home() / ".openclaw" / "data" / "ones_exports"
 
 FILTERS = {
-    "sign": {"label": "签约项目统计", "tab_index": 7, "output_csv": "签约项目统计.csv"},
-    "poc": {"label": "POC&提前实施统计", "tab_index": 8, "output_csv": "poc_提前实施.csv"},
-    "abnormal": {"label": "异常处置", "tab_index": 10, "output_csv": "异常处置.csv"},
+    "sign": {
+        "label": "2026周报-签约项目统计",
+        "tab_index": 7,  # fallback，优先用 label 匹配
+        "output_csv": "2026周报-签约项目统计.csv",
+    },
+    "poc": {
+        "label": "2026周报-POC&提前实施统计",
+        "tab_index": 8,  # fallback
+        "output_csv": "2026周报-POC&提前实施统计.csv",
+    },
+    "abnormal": {
+        "label": "2026-签约项目异常处置",
+        "tab_index": 9,  # fallback
+        "output_csv": "2026-签约项目异常处置.csv",
+    },
 }
 
 
@@ -75,18 +87,18 @@ class OnesConnector(BaseConnector):
         """ONES CSV → 标准字段格式"""
         normalized = []
         for row in raw:
+            # 提取标准字段，但是保留所有原始数据
+            normalized_data = {}
+            for key in [
+                "BI履约ID", "销售合同编号", "合同名称", "所属产线", 
+                "状态", "负责人", "事业部（区域）"
+            ]:
+                if key in row:
+                    normalized_data[key.replace('BI-', '')] = row.get(key)
             record = {
-                "source_id": str(row.get("BI履约ID", "")),
+                "source_id": str(row.get("BI履约ID", row.get("BI-履约ID", ""))),
                 "source_data": row,
-                "normalized_data": {
-                    "perf_id": row.get("BI履约ID"),
-                    "sales_contract_no": row.get("销售合同编号"),
-                    "contract_name": row.get("合同名称"),
-                    "prod_line": row.get("所属产线"),
-                    "status": row.get("状态"),
-                    "owner": row.get("负责人"),
-                    "dept": row.get("事业部（区域）"),
-                },
+                "normalized_data": normalized_data,
                 "target_module": "delivery_report",
                 "target_table": "dr_sheet_row",
             }
@@ -100,14 +112,44 @@ class OnesConnector(BaseConnector):
         if filter_name not in FILTERS:
             return None
         base = DOWNLOAD_DIR
-        output_csv = FILTERS[filter_name]["output_csv"]
+        filter_config = FILTERS[filter_name]
+        output_csv = filter_config["output_csv"]
+        
         # 优先匹配带月份前缀的文件
-        month_file = base / f"{month}周报-{output_csv}"
+        month_prefix = filter_config.get("month_prefix", True)
+        if month_prefix:
+            # 如果 output_csv 已经包含月份相关前缀，只需要补月份到最前面
+            if output_csv.startswith("2026"):
+                # output_csv 已经有 2026，替换年份月份
+                # e.g. "2026周报-签约项目统计.csv" → "{month}周报-签约项目统计.csv"
+                output_csv = f"{month}{output_csv[4:]}"
+            else:
+                # 正常添加月份前缀
+                if filter_name == 'abnormal':
+                    output_csv = f"{month}-{output_csv}"
+                else:
+                    output_csv = f"{month}{output_csv}"
+        
+        month_file = base / output_csv
         if month_file.exists():
             return month_file
-        generic = base / output_csv
+        
+        # 通用名回退：找不带月份的
+        if filter_name == 'abnormal' and (output_csv.endswith('-异常处置.csv')):
+            generic = base / '异常处置.csv'
+            if generic.exists():
+                return generic
+        
+        generic = base / FILTERS[filter_name]['output_csv']
         if generic.exists():
             return generic
+        
+        # 回退到简化文件名
+        if filter_name == 'abnormal':
+            simple_generic = base / '异常处置.csv'
+            if simple_generic.exists():
+                return simple_generic
+        
         return None
 
     def _read_csv(self, path: Path) -> List[Dict[str, Any]]:
@@ -128,39 +170,47 @@ class OnesConnector(BaseConnector):
 
         try:
             adapter = BrowserAdapter(headless=False)
-            adapter.launch()
+            # Try to reuse existing Chrome CDP instance (started by OA export)
+            # This is the already logged-in instance, reuse it to avoid slow startup
             try:
+                adapter.launch(cdp_url="http://127.0.0.1:9222")
                 # Step 1: 确保 ONES 标签页
                 adapter.ones_ensure_tab()
                 time.sleep(3)
 
-                # Step 2: 点击筛选器子 tab
-                adapter.ones_click_filter_tab(tab_index)
+                # Step 2: 点击筛选器子 tab（优先文本匹配，失败再用索引）
+                adapter.ones_click_filter_tab(
+                    label=filter_config["label"],
+                    tab_index=filter_config.get("tab_index", -1),
+                )
+                time.sleep(3)
 
-                # Step 3: 点击更多菜单
+                # Step 3: 先点击"还原"按钮，恢复所有数据显示
+                adapter.ones_click_reset()
+                time.sleep(10)  # Wait for data reload
+
+                # Step 4: 点击更多菜单
                 adapter.ones_click_more_menu()
 
-                # Step 4: 点击导出工作项
+                # Step 5: 点击导出工作项
                 adapter.ones_click_export_item()
 
-                # Step 5: 点击确认
-                adapter.ones_click_confirm()
-                time.sleep(1)
-
-                # Step 6: 等待下载完成
-                downloaded = adapter.expect_download(timeout=180)
-                if not downloaded:
-                    logger.error("下载超时")
-                    return None
-
-                # 保存到缓存目录
+                # Step 6: 点击确认，同时捕获下载
+                # Use Playwright native expect_download to capture download
+                # Must register expect_download BEFORE clicking confirm!
+                with adapter._page.expect_download(timeout=600000) as download_info:
+                    adapter.ones_click_confirm()
+                download = download_info.value
                 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
                 cached = DOWNLOAD_DIR / output_csv
-                shutil.move(str(downloaded), str(cached))
+                # Delete existing if any
+                cached.unlink(missing_ok=True)
+                download.save_as(cached)
                 logger.info(f"导出成功: {cached} ({cached.stat().st_size:,} bytes)")
                 return self._read_csv(cached)
             finally:
-                adapter.close()
+                # Don't close the shared CDP browser - keep it open for reuse
+                pass
         except Exception as e:
             logger.error(f"浏览器自动化导出失败: {e}")
             return None

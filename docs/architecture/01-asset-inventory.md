@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-09 16:53 UTC+08:00
+最后生成：2026-10-10 14:06 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -53,7 +53,7 @@
 |---|---|---|---|
 | L4 专有业务 | `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `L4-proprietary/skills/bangcle-ppt` |
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
-| L4 专有业务 | `ones-browser-export` | ONES 浏览器自动化数据导出：通过 osascript 控制 Chrome 从 ONES 筛选器导出 CSV 数据，用于月报/签约统... | `L4-proprietary/skills/ones-browser-export` |
+| L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
 | L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
 | L2 基础设施 | `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 | `L2-infra/skills/ocr-digitalization` |
@@ -88,7 +88,10 @@ _自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
 |---|---|---|
 | `CODING_PLAN_API_KEY` | secret | team |
 | `DEEPSEEK_API_KEY` | secret | team |
+| `IAM_BASIC` | env | team |
 | `LONGCAT_API_KEY` | secret | team |
+| `OA_BASIC` | env | team |
+| `ONES_BASIC` | env | team |
 | `TAVILY_API_KEY` | secret | team |
 
 ### 文件式 SecretRef Providers（辅助）
@@ -102,10 +105,15 @@ _自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
 
 | 文件 | 权限 | 大小 |
 |---|---|---|
-| `~/.openclaw/secrets/INDEX.md` | `600` | 2784 B |
+| `~/.openclaw/secrets/INDEX.md` | `600` | 3003 B |
 | `~/.openclaw/secrets/backup.key` | `600` | 65 B |
 | `~/.openclaw/secrets/gateway.auth.token` | `600` | 48 B |
+| `~/.openclaw/secrets/iam.basic` | `600` | 18 B |
+| `~/.openclaw/secrets/iam.password` | `600` | 8 B |
+| `~/.openclaw/secrets/iam.username` | `600` | 9 B |
 | `~/.openclaw/secrets/memory.search.remote.apiKey` | `600` | 9 B |
+| `~/.openclaw/secrets/oa.basic` | `600` | 19 B |
+| `~/.openclaw/secrets/ones.basic` | `600` | 31 B |
 
 > ⚠️ 标记表示权限不是 600，应执行 `chmod 600` 收紧。
 
@@ -200,8 +208,8 @@ _自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `7f8c005c` |
-| Commit 数 | 430 |
+| HEAD | `5cb7ef12` |
+| Commit 数 | 431 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
