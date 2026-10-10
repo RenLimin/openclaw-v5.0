@@ -33,11 +33,12 @@
         "qualityGuard": {
           "maxRetries": 3
         },
-        "model": "longcat/LongCat-2.0"
+        "model": "longcat/LongCat-2.0",
+        "notifyUser": true
       },
       "contextPruning": {
-        "mode": "off",
-        "ttl": "5m"
+        "mode": "cache-ttl",
+        "ttl": "15m"
       },
       "sandbox": {
         "mode": "non-main",
@@ -612,6 +613,9 @@
       },
       "openclaw-weixin": {
         "enabled": true
+      },
+      "context-guardian": {
+        "enabled": true
       }
     },
     "enabled": true,
@@ -624,7 +628,8 @@
       "tavily",
       "wecom-openclaw-plugin",
       "memory-core",
-      "openclaw-weixin"
+      "openclaw-weixin",
+      "context-guardian"
     ]
   },
   "secrets": {
