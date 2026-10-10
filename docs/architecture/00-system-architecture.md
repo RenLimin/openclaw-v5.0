@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 4.9 (2026-10-09 — 浏览器自动化体系化：ONES/OA/工时/企微 4份详细设计 + 设计规范 + 方法论) |
+| 文档版本 | 5.0 (2026-10-10 — 上下文溢出自动恢复升级：四层防护体系 + Context Guardian 插件 + cron 三层兜底) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
 | 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
@@ -442,24 +442,29 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 
 **已建设组件清单**(详细):
 
-1. **上下文管理** (2026-08-21, 08-24 升级)
-   - 组件 ID: 上下文管理配置 + 溢出防护状态机
-   - 功能: 两层压缩防线 + 生命周期治理，全覆盖
-     - 第 1 层: Auto-compaction — 阈值维护 + 溢出恢复;摘要委托给**同 provider 的大 ctx 模型**
-     - 第 2 层: Mid-turn precheck — 中途检查,中止并交给 recovery
-     - 生命周期治理: 会话生命周期管理 cron(每日 02:00)替代原 session pruning，分级清理过期会话 + deleteAfterRun
-     - Subagent 保护: 分段执行 + runTimeoutSeconds + 输出精简(见 AGENTS.md 规范)
-     - Compaction fallback: 同 provider 模型复用 + memoryFlush 独立模型兜底
-   - 溢出防护状态机: NORMAL → WARN → DIVERT → HARD_LIMIT → RECOVERED
-     - 各模型水位阈值(基于实测 contextWindow):
-       - ark-code-latest(224k): WARN 134k / DIVERT 179k / HARD_LIMIT 201k
-       - deepseek-v4-flash(1024k): WARN 614k / DIVERT 819k / HARD_LIMIT 921k
-   - 关键配置:
-     - `mode: "safeguard"` / `keepRecentTokens: 30000` / `maxActiveTranscriptBytes: "20mb"`
-     - `midTurnPrecheck.enabled: true`
+1. **上下文管理** (2026-08-21 初始化, 10-10 升级为四层防护)
+   - 组件 ID: 上下文管理配置 + 溢出防护状态机 + 四层自动恢复体系
+   - 功能: **四层防护** + 生命周期治理，全覆盖
+     - **第 1 层（配置优化）**: Auto-compaction safeguard 模式 + contextPruning cache-ttl + maxHistoryShare 0.7 + reserveTokensFloor 10000 + bootstrapMaxChars 15000
+     - **第 2 层（实时拦截）**: Context Guardian 插件 — 主动监控 context 压力 + 动态裁剪大 tool result + 提前触发压缩
+     - **第 3 层（cron 巡检兜底）**: 三层自动恢复 — `/compact` 预警 → `/reset soft` 恢复 → `/new` 终极兜底 + 任务持久化恢复
+     - **第 4 层（治理规范）**: 长任务 subagent 化 + 大内容落盘 + MEMORY/AGENTS 定期归档瘦身
+   - 生命周期治理: 会话生命周期管理 cron(每日 02:00)替代原 session pruning，分级清理过期会话 + deleteAfterRun
+   - Subagent 保护: 分段执行 + runTimeoutSeconds + 输出精简(见 AGENTS.md 规范)
+   - Compaction fallback: 同 provider 模型复用 + memoryFlush 独立模型兜底
+   - 溢出防护状态机: NORMAL → WARN(80%) → ERROR(95%) → RECOVERED
+     - 预警（80%）: 自动 `/compact` 预压缩
+     - 危险（95%）: `/reset soft`（保留 transcript，清会话状态）
+     - 终极: 保存任务到 `memory/current-task.md` + `/new` 开新会话
+   - 关键配置(2026-10-10 升级):
+     - `compaction.mode: "safeguard"` / `keepRecentTokens: 30000` / `maxActiveTranscriptBytes: "6mb"`
+     - `compaction.maxHistoryShare: 0.7` / `compaction.reserveTokensFloor: 10000`
+     - `compaction.midTurnPrecheck.enabled: true` / `compaction.notifyUser: true`
+     - `contextPruning.mode: "cache-ttl"` / `contextPruning.ttl: "15m"`
+     - `bootstrapMaxChars: 15000`
    - contextWindow 校准(实测二分探边界):
      - ark-code-latest: 229376(224k) / deepseek-v4-flash: 1048576 / glm-5.3: 1M / minimax-m3: 1M
-   - 文档: `../knowledge-base/by-category/project-experience/correct/EXP-20260821-003-compaction-model-delegation.md`
+   - 文档: `components/context-management/DESIGN.md` / ADR-032
 
 2. **配置管理** (2026-08-22)
    - 组件 ID: `L2-infra/components/config/config.sh` + `config-snapshots/`
