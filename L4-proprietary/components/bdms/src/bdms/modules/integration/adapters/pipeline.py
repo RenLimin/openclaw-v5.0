@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Dict, List, Optional
 from datetime import datetime
 
-from bdms.modules.integration.adapters.ones_adapter import OnesAdapter, MissingSourceError
+from bdms.modules.integration.adapters.ones_adapter import MissingSourceError
 from bdms.modules.integration.adapters.oa_adapter import OaAdapter
 from bdms.modules.integration.adapters.timesheet_adapter import TimesheetAdapter
 
@@ -32,7 +32,8 @@ class DeliveryReportPipeline:
     
     def __init__(self, db_path=None):
         self.db_path = db_path
-        self._ones = OnesAdapter()
+        from bdms.modules.integration.connectors.ones_connector import OnesConnector
+        self._ones = OnesConnector()
         self._oa = OaAdapter()
         self._timesheet = TimesheetAdapter()
     
@@ -56,40 +57,66 @@ class DeliveryReportPipeline:
         
         # 签约数据
         try:
-            result["sign"] = self._ones.fetch("sign", month, file_path=file_paths.get("sign"))
-        except MissingSourceError as e:
+            raw = self._ones.fetch("sign", month, use_cache=True, file_path=file_paths.get("sign"))
+            result["sign"] = self._ones.normalize(raw)
+        except Exception as e:
             errors.append(("ONES签约", str(e)))
         
         # POC 数据
         try:
-            result["poc"] = self._ones.fetch("poc", month, file_path=file_paths.get("poc"))
-        except MissingSourceError as e:
+            raw = self._ones.fetch("poc", month, use_cache=True, file_path=file_paths.get("poc"))
+            result["poc"] = self._ones.normalize(raw)
+        except Exception as e:
             errors.append(("ONESPOC", str(e)))
         
         # 异常数据
         try:
-            result["exception"] = self._ones.fetch("exception", month, file_path=file_paths.get("exception"))
-        except MissingSourceError as e:
+            raw = self._ones.fetch("abnormal", month, use_cache=True, file_path=file_paths.get("exception"))
+            result["exception"] = self._ones.normalize(raw)
+        except Exception as e:
             errors.append(("ONES异常", str(e)))
         
         # 确收交接
+        # 暂不修改，后续企微连接器接入后替换
+        from bdms.modules.integration.connectors.wecom_doc_connector import WecomDocConnector
         try:
-            result["revenue"] = self._ones.fetch("revenue", month, file_path=file_paths.get("revenue"))
-        except MissingSourceError as e:
-            errors.append(("ONES确收", str(e)))
+            wc = WecomDocConnector(db_path=self.db_path)
+            raw = wc.fetch("确收交接", month)
+            result["revenue"] = raw
+        except Exception as e:
+            # fallback to old ones adapter lookup
+            try:
+                from bdms.modules.integration.adapters.ones_adapter import OnesAdapter
+                oa = OnesAdapter()
+                result["revenue"] = oa.fetch("revenue", month, use_cache=True)
+            except MissingSourceError as e:
+                errors.append(("确收交接", str(e)))
         
         # 验收交接
+        # 暂不修改，后续企微连接器接入后替换
         try:
-            result["acceptance"] = self._ones.fetch("acceptance", month, file_path=file_paths.get("acceptance"))
-        except MissingSourceError as e:
-            errors.append(("ONES验收", str(e)))
+            wc = WecomDocConnector(db_path=self.db_path)
+            raw = wc.fetch("验收交接", month)
+            result["acceptance"] = raw
+        except Exception as e:
+            # fallback to old ones adapter lookup
+            try:
+                from bdms.modules.integration.adapters.ones_adapter import OnesAdapter
+                oa = OnesAdapter()
+                result["acceptance"] = oa.fetch("acceptance", month, use_cache=True)
+            except MissingSourceError as e:
+                errors.append(("验收交接", str(e)))
         
         if errors:
             # 汇总所有错误，一次性报告
             msg = "; ".join(f"{src}: {reason}" for src, reason in errors)
             raise DataSourceError(
                 source="multi", month=month, reason=msg,
-                actionable=f"请手动导出 {month} 的原始数据到数据目录"
+                actionable=f"请检查数据源配置或手动导出 {month} 的原始数据"
             )
+        
+        # 提取 raw_data 部分
+        for key in result:
+            result[key] = [row["source_data"] for row in result[key]]
         
         return result
