@@ -34,6 +34,9 @@
 | v2.1 Detail r2 | 2026-09-22 | Rex 审核反馈 2 条：浏览器自动化统一 + OS 依赖标注 + 业界最佳实践 |
 | v2.1 Detail r3 | 2026-10-09 | ONES 页面结构变化更新：独立登录页、子 tab CSS 选择器、还原按钮前置、Playwright expect_download API |
 | v2.1 Detail r4 | 2026-10-09 | §11 浏览器自动化章节重写：统一为 Playwright CDP + IAM Cookie Pool 方案，删除 OS 分支适配，补充 OA iframe 异步轮询、12 条经验教训 |
+| v2.1 Detail r5 | 2026-10-10 | ONES 三大视图名称修正（2026周报-签约项目统计 / 2026周报-POC&提前实施统计 / 2026-签约项目异常处置），tab 定位从硬编码索引改为文本匹配优先 + 索引 fallback |
+| v2.1 Detail r6 | 2026-10-10 | §6.4 企微文档连接器重写：确收凭证交接双 Sheet CSV 下载完整方案；ONES/OA/工时门户三大连接器补齐输出文件规范 + 4 级准确性验证（条数/汇总/黄金基准/业务校验），保持设计一致性 |
+| v2.1 Detail r7 | 2026-10-10 | §6.4 wecom-cli 接口链修正为真实可用命令（doc search + sheet get + sheet ranges get mode=csv），删除不存在的 sheet export/doc get 命令；§6.4.4~6.4.6 代码与命令全部对齐实际技能能力 |
 
 ---
 
@@ -873,7 +876,90 @@ def normalize(self, raw: list[dict]) -> list[dict]:
 | 负责人 | data->owner | dr_sheet_row | 负责人 |
 | 事业部（区域） | data->dept | dr_sheet_row | 部门 |
 
-#### 5.1.6 复用资产
+#### 6.1.6 输出文件规范
+
+**文件命名**：`{YYYYMM}_{视图英文名}.csv`
+
+| 视图中文名称 | 视图英文名 | 输出文件名示例 |
+|---|---|---|
+| 2026周报-签约项目统计 | signing | `202606_signing.csv` |
+| 2026周报-POC&提前实施统计 | poc | `202606_poc.csv` |
+| 2026-签约项目异常处置 | exception | `202606_exception.csv` |
+
+**存储目录**：`data/raw/ones/{YYYYMM}/`
+
+**文件格式**：UTF-8 with BOM（Excel 兼容），CSV 逗号分隔
+
+**获取方式**：Playwright `expect_download` API 捕获下载流，保存到指定路径，**禁止**依赖文件系统扫描（ONES 导出文件名固定会覆盖）
+
+#### 6.1.7 准确性验证方法
+
+| 验证层级 | 方法 | 通过标准 |
+|---|---|---|
+| **L1 条数校验** | CSV 数据行数（不含表头） vs ONES 页面显示的总数（页面底部「共 N 条」） | 完全一致 |
+| **L2 汇总校验** | 关键数值列求和 vs 手工报表对应 Sheet 合计行 | 差异 < 0.01 元 |
+| **L3 黄金基准** | 自动导出 CSV vs 手工导出同月 CSV 逐行对比（按 BI履约ID 主键匹配） | 100% 记录匹配，关键字段一致 |
+| **L4 业务校验** | 签约/POC/异常项目数 vs 交付月报 Sheet-1/2/4 对应统计值 | 完全一致 |
+
+**验证实现**：
+```python
+def validate_fetch_result(self, raw_data: list[dict], view_type: str, month: str) -> dict:
+    """校验拉取数据的准确性。
+
+    Args:
+        raw_data: 解析后的 CSV 数据
+        view_type: signing | poc | exception
+        month: YYYYMM
+
+    Returns:
+        {
+            "row_count": N,
+            "key_sum": 123456.78,
+            "golden_match": True/False,
+            "errors": [...]
+        }
+    """
+    row_count = len(raw_data)
+
+    # L2: 关键金额列求和（视图不同，列名不同）
+    amount_col_map = {
+        "signing": "合同金额",
+        "poc": "POC金额",
+        "exception": "异常金额",
+    }
+    amount_col = amount_col_map.get(view_type, "合同金额")
+    amount_sum = sum(
+        self._parse_amount(r.get(amount_col, 0))
+        for r in raw_data if r.get(amount_col)
+    )
+
+    # L3: 黄金基准对比
+    golden_path = self._paths.golden_dir / f"{month}_{view_type}.csv"
+    golden_match = None
+    if golden_path.exists():
+        golden_rows = self._parse_csv(golden_path)
+        golden_match = len(raw_data) == len(golden_rows)
+        if golden_match:
+            # 按 BI履约ID 主键逐行匹配
+            raw_map = {r.get("BI履约ID"): r for r in raw_data}
+            golden_map = {r.get("BI履约ID"): r for r in golden_rows}
+            for key in raw_map:
+                if key not in golden_map:
+                    golden_match = False
+                    break
+                if raw_map[key].get("销售合同编号") != golden_map[key].get("销售合同编号"):
+                    golden_match = False
+                    break
+
+    return {
+        "row_count": row_count,
+        "amount_sum": float(amount_sum),
+        "golden_match": golden_match,
+        "golden_file": str(golden_path) if golden_path.exists() else None,
+    }
+```
+
+#### 6.1.8 复用资产
 
 - ✅ `L4-proprietary/skills/ones-browser-export/` — ONES 浏览器自动化导出逻辑
 - ✅ `modules/revenue/weekly_importer.py` — 已有 ONES CSV 导入器（重构为连接器的一部分）
@@ -1004,7 +1090,63 @@ def normalize(self, raw: list[dict]) -> list[dict]:
     return normalized
 ```
 
-#### 5.2.5 落地映射
+#### 6.2.5 输出文件规范
+
+**文件命名**：`{YYYYMM}_{数据类型}.xlsx`（OA 导出为 Excel 格式）
+
+| 数据类型 | 类型标识 | 输出文件名示例 |
+|---|---|---|
+| 合同台账（销售） | contract | `202606_contract.xlsx` |
+| 立项审批 | project_init | `202606_project_init.xlsx` |
+| 结项审批 | project_close | `202606_project_close.xlsx` |
+
+**存储目录**：`data/raw/oa/{YYYYMM}/`
+
+**文件格式**：Excel (.xlsx)，由 OA 服务端异步生成后下载
+
+**获取方式**：Playwright 轮询进度弹窗 → 完成后点击下载链接 → `expect_download` 捕获，**禁止**关闭弹窗后去下载中心找（链接可能失效或位置不确定）
+
+#### 6.2.6 准确性验证方法
+
+| 验证层级 | 方法 | 通过标准 |
+|---|---|---|
+| **L1 条数校验** | Excel 数据行数 vs OA 页面显示的总条数（导出进度弹窗的「N/总数」） | 完全一致 |
+| **L2 汇总校验** | 合同金额求和 vs 手工台账合计金额 | 差异 < 0.01 元 |
+| **L3 黄金基准** | 自动导出 Excel vs 手工导出同月文件按合同编号逐行匹配 | 100% 记录匹配，关键字段一致 |
+| **L4 业务校验** | 合同数量/总金额 vs contract_management 模块汇总查询结果 | 完全一致 |
+
+**验证实现**：
+```python
+def validate_fetch_result(self, raw_data: list[dict], data_type: str, month: str) -> dict:
+    """校验 OA 拉取数据的准确性。"""
+    row_count = len(raw_data)
+    amount_sum = sum(
+        self._parse_amount(r.get("合同金额", 0))
+        for r in raw_data if r.get("合同金额")
+    )
+
+    # 黄金基准对比
+    golden_path = self._paths.golden_dir / f"{month}_{data_type}.xlsx"
+    golden_match = None
+    if golden_path.exists():
+        golden_rows = self._parse_excel(golden_path)
+        golden_match = len(raw_data) == len(golden_rows)
+        if golden_match:
+            raw_map = {r.get("合同编号"): r for r in raw_data}
+            golden_map = {r.get("合同编号"): r for r in golden_rows}
+            for key in raw_map:
+                if key not in golden_map:
+                    golden_match = False
+                    break
+    return {
+        "row_count": row_count,
+        "amount_sum": float(amount_sum),
+        "golden_match": golden_match,
+        "golden_file": str(golden_path) if golden_path.exists() else None,
+    }
+```
+
+#### 6.2.7 落地映射
 
 | OA 字段 | 目标表字段 | 目标表 | 说明 |
 |---|---|---|---|
@@ -1111,7 +1253,60 @@ def normalize(self, raw: list[dict]) -> list[dict]:
     return normalized
 ```
 
-#### 5.3.5 落地映射
+#### 6.3.5 输出文件规范
+
+**文件命名**：`{YYYYMM}_timesheet.csv`
+
+**存储目录**：`data/raw/timesheet/{YYYYMM}/`
+
+**文件格式**：UTF-8 CSV，由 DOM 提取后生成（非导出下载）
+
+**获取方式**：Playwright DOM 提取表格数据 → 程序生成 CSV 文件（工时门户无直接导出按钮，DOM 抓取是唯一自动化方式）
+
+#### 6.3.6 准确性验证方法
+
+| 验证层级 | 方法 | 通过标准 |
+|---|---|---|
+| **L1 条数校验** | CSV 数据行数 vs 工时门户页面表格总行数 | 完全一致 |
+| **L2 汇总校验** | 总工时求和 vs 页面底部合计值 | 差异 < 0.5 小时 |
+| **L3 黄金基准** | 自动生成 CSV vs 手工导出同月工时表逐行对比（人员+日期主键） | 100% 记录匹配，工时值一致 |
+| **L4 业务校验** | 各项目工时汇总 vs profit_management 模块项目工时统计 | 完全一致 |
+
+**验证实现**：
+```python
+def validate_fetch_result(self, raw_data: list[dict], month: str) -> dict:
+    """校验工时门户拉取数据的准确性。"""
+    row_count = len(raw_data)
+    total_hours = sum(
+        float(r.get("hours", 0)) for r in raw_data if r.get("hours")
+    )
+
+    # 黄金基准对比
+    golden_path = self._paths.golden_dir / f"{month}_timesheet.csv"
+    golden_match = None
+    if golden_path.exists():
+        golden_rows = self._parse_csv(golden_path)
+        golden_match = len(raw_data) == len(golden_rows)
+        if golden_match:
+            # 按 人员ID+日期 主键匹配
+            raw_map = {f"{r.get('person_id')}_{r.get('work_date')}": r for r in raw_data}
+            golden_map = {f"{r.get('person_id')}_{r.get('work_date')}": r for r in golden_rows}
+            for key in raw_map:
+                if key not in golden_map:
+                    golden_match = False
+                    break
+                if abs(float(raw_map[key].get("hours", 0)) - float(golden_map[key].get("hours", 0))) > 0.01:
+                    golden_match = False
+                    break
+    return {
+        "row_count": row_count,
+        "total_hours": float(total_hours),
+        "golden_match": golden_match,
+        "golden_file": str(golden_path) if golden_path.exists() else None,
+    }
+```
+
+#### 6.3.7 落地映射
 
 | 工时门户字段 | 目标表字段 | 目标表 | 说明 |
 |---|---|---|---|
@@ -1123,123 +1318,360 @@ def normalize(self, raw: list[dict]) -> list[dict]:
 
 ### 6.4 I-04: 企微文档连接器（`wecom_doc_connector.py`）
 
-#### 5.4.1 概述
+#### 6.4.1 概述
 
 | 属性 | 值 |
 |---|---|
 | 连接器名称 | `wecom_doc` |
-| 数据源 | 企业微信文档 |
-| 落地目标 | `revenue` / `project_management` |
-| **拉取方式** | **预留多种技术实现**（详见 §5.4.6） |
-| 认证方式 | 企微 API / 浏览器自动化 / 本机导入（按优先级降级） |
-| 默认频率 | 人工触发 |
-| 适配器 | WeComApiAdapter / BrowserAdapter / FileParser |
+| 数据源 | 企业微信文档 · 共享空间 |
+| 落地目标 | `delivery_report`（确收/验收交接） / `revenue` |
+| **拉取方式** | **wecom-cli API**（优先，已验证可用） / 浏览器自动化（备选） / 本机导入（兜底） |
+| 认证方式 | 企微应用凭据（corpId + corpSecret），复用 wecom-openclaw-plugin 插件的会话凭据 |
+| 默认频率 | 人工触发（生成月报前） |
+| 适配器 | WecomCliAdapter（封装 wecom-cli 命令） |
 
-> **技术选型说明**：企微文档 API 未经之前开发验证，预留多种技术实现方式，按优先级降级：
-> 1. **企微 API**（优先）：通过企微开放平台 API 获取文档内容
-> 2. **浏览器自动化**（备选）：通过浏览器访问企微 Web 端导出文档
-> 3. **本机导入**（兜底）：用户手动下载后通过系统通用导入功能上传
+> **技术选型说明**：按优先级降级：
+> 1. **wecom-cli API**（优先）：复用企业微信插件已有凭据，通过 `wecom-cli` 命令行操作企微文档/智能表格
+> 2. **浏览器自动化**（备选）：Playwright CDP 访问企微 Web 端，模拟点击导出
+> 3. **本机导入**（兜底）：用户手动下载 CSV 后通过 local_import 连接器导入
 >
-> **当前限制**：
-> - 企微 API 需要 corpId + corpSecret + agentId（需管理员开通权限）
-> - 企微文档 API 可能不支持直接导出结构化数据（需调研）
-> - 无管理员权限时，优先使用浏览器自动化方案
+> **当前验证状态**：wecom-cli 已配置并可用，支持文档列表、文档内容、智能表格操作
 
-#### 5.4.2 认证方式
+#### 6.4.2 业务场景：确收凭证交接文档（核心场景）
+
+**文档位置**：
+```
+企微文档 → 共享空间 → 交付中心 / 财务数据交接记录 / {统计年月}确收凭证交接
+```
+
+**文档命名规则**：`{YYYY年MM月}确收凭证交接`，如 `2026年06月确收凭证交接`
+
+**文档结构**：每个文档包含 2 个 Sheet：
+
+| Sheet 序号 | Sheet 名称 | 内容说明 | 输出文件名 | 目标模块 |
+|---|---|---|---|---|
+| Sheet 1 | 确收交接 | 当月确收凭证明细 | `{YYYYMM}_确收交接.csv` | delivery_report |
+| Sheet 2 | 验收交接 | 当月验收交接明细 | `{YYYYMM}_验收交接.csv` | delivery_report |
+
+**输出文件命名规范**：
+- 格式：`{YYYYMM}_{sheet类型}.csv`
+- 示例：`202606_确收交接.csv`、`202606_验收交接.csv`
+- 存储目录：`data/raw/wecom/{YYYYMM}/`
+
+#### 6.4.3 获取流程（wecom-cli 方案）
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Step 1: 定位文档                                            │
+│  进入共享空间 → 交付中心 → 财务数据交接记录                    │
+│  按文件名前缀匹配 {年月}确收凭证交接 → 获取 doc_id             │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Step 2: 获取 Sheet 列表                                     │
+│  通过 doc_id 获取文档子 sheet 列表                            │
+│  匹配「确收交接」和「验收交接」两个 sheet → 获取 sheet_id       │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Step 3: 分别导出 CSV                                        │
+│  对每个 sheet 调用导出 CSV 接口                                │
+│  保存为 {YYYYMM}_确收交接.csv 和 {YYYYMM}_验收交接.csv        │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Step 4: 数据校验（准确性验证）                               │
+│  4.1 条数校验：CSV 行数 = 文档内数据行数（不含表头）            │
+│  4.2 汇总校验：金额列求和 vs 文档合计行对比                    │
+│  4.3 黄金基准：与手工导出同月 CSV 逐行 diff                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 6.4.4 wecom-cli 调用方式（真实接口对齐）
+
+> ⚠️ **调用约束**：企微文档操作必须通过 `wecom-cli` tool 执行，**禁止**使用 exec/bash 直接运行 wecom-cli（绕过凭据隔离）。
+> ⚠️ **技能约束**：首次调用前必须按 wecomcli-preflight 技能执行前置检查；命令构造以 wecomcli-doc-manage / wecomcli-sheet 技能的 SKILL.md 为准。
+
+**真实可用的接口链**（已核实 2026-10-10）：
+
+| 步骤 | wecom-cli 命令 | 参数 | 返回 | 说明 |
+|---|---|---|---|---|
+| 1. 定位文档 | `doc search --json '{"keywords":["{年月}确收凭证交接"],"search_scope":"title","doc_types":["sheet"],"limit":10}'` | keywords 必填；search_scope 限定标题 | `docs[]`：docid / doc_name / doc_type / url | 确收凭证交接是**在线表格**（sheet 类型），按标题精确匹配 `{YYYY年MM月}确收凭证交接` |
+| 2. 获取 Sheet 列表 | `sheet get --json '{"docid":"{doc_id}"}'` | docid 必填 | `sheets[]`：sheet_id / title / row_count / column_count / data_range；name / url | 匹配「确收交接」「验收交接」两个子表 |
+| 3. 导出 Sheet 数据 | `sheet ranges get --json '{"docid":"{doc_id}","sheet_id":"{sheet_id}","mode":"csv"}'` | docid + sheet_id 必填；mode="csv" 返回 CSV | `content`（CSV 字符串直接返回）或 `file_path`（CSV 落盘路径） | 两个 Sheet 各调一次 |
+
+**注意事项**：
+- `doc search` 的 `keywords` 是数组（OR 关系），必须传完整文档名前缀（如 `2026年06月确收凭证交接`），`search_scope` 用 `title` 避免命中同名内容
+- `doc_types` 限定 `sheet`，排除同名 doc/smartsheet 干扰
+- `sheet get` 返回的 `sheets[].title` 用于匹配「确收交接」/「验收交接」子表名，`data_range` 可校验数据区域
+- `sheet ranges get` 的 `mode="csv"` 返回 `content` 时直接写入本地文件；返回 `file_path` 时读取后转存到规范目录
+- **不存在** `sheet export --format csv` / `doc get --doc-id` 等命令（早期草稿错误，已修正）
+
+#### 6.4.5 认证方式
 
 ```python
 class WecomDocConnector(BaseConnector):
     name = "wecom_doc"
-    data_source = "企微文档"
-    target_modules = ["revenue", "project_management"]
-    auth_type = "wecom_api"
+    data_source = "企微文档（共享空间）"
+    target_modules = ["delivery_report", "revenue"]
+    auth_type = "wecom_plugin"      # 复用 wecom-openclaw-plugin 会话凭据
     default_frequency = "manual"
 
     def authenticate(self) -> bool:
-        """验证企微 API 凭据是否有效。"""
-        corpid = self._get_credential("wecom_corpid")
-        corpsecret = self._get_credential("wecom_corpsecret")
-        if not corpid or not corpsecret:
-            return False
+        """验证企微插件凭据是否有效。
+
+        通过调用 doc search 测试接口是否可用（搜索任意关键词验证连通性）。
+        """
         try:
-            # 获取 access_token 验证凭据
-            token = self._wecom.get_access_token(corpid, corpsecret)
-            return token is not None
+            # 调用 wecom-cli doc search 测试连通性
+            result = self._wecom_cli.call(["doc", "search", "--json",
+                '{"keywords":["确收凭证交接"],"search_scope":"title","doc_types":["sheet"],"limit":1}'])
+            return result is not None and "docs" in result
         except Exception:
             return False
 ```
 
-#### 5.4.3 数据拉取
+#### 6.4.6 数据拉取（确收凭证交接场景）
 
 ```python
-def fetch(self, **params) -> list[dict]:
-    """从企微文档拉取确收凭证数据。
+def fetch(self, **params) -> dict[str, list[dict]]:
+    """从企微文档拉取确收凭证交接数据。
 
     Args:
-        doc_type: 文档类型（revenue_voucher / project_doc）
-        date_range: 日期范围
+        month: 目标月份（YYYYMM），如 "202606"
+        doc_name_prefix: 文档名前缀，默认 "确收凭证交接"
+
+    Returns:
+        {
+            "确认交接": [{...}, ...],    # 确收交接 Sheet 数据
+            "验收交接": [{...}, ...],    # 验收交接 Sheet 数据
+            "meta": {
+                "doc_id": "xxx",
+                "doc_name": "2026年06月确收凭证交接",
+                "files": {
+                    "确收交接": "data/raw/wecom/202606/202606_确收交接.csv",
+                    "验收交接": "data/raw/wecom/202606/202606_验收交接.csv",
+                }
+            }
+        }
     """
-    doc_type = params.get("doc_type", "revenue_voucher")
-    date_range = params.get("date_range")
+    month = params.get("month")
+    if not month:
+        raise ValueError("必须指定 month 参数（YYYYMM）")
 
-    # 获取文档列表
-    docs = self._wecom.list_documents(doc_type, date_range)
+    # 1. 年月格式转换：202606 → "2026年06月"
+    year = month[:4]
+    mon = month[4:]
+    doc_keyword = f"{year}年{mon}月确收凭证交接"
 
-    # 拉取每个文档的内容
-    results = []
-    for doc in docs:
-        content = self._wecom.get_document_content(doc["doc_id"])
-        results.append({
-            "doc_id": doc["doc_id"],
-            "doc_name": doc["doc_name"],
-            "content": content,
-            "created_at": doc.get("created_at"),
-        })
+    # 2. 搜索定位文档（在线表格类型）
+    search_result = self._wecom_cli.call(["doc", "search", "--json", json.dumps({
+        "keywords": [doc_keyword],
+        "search_scope": "title",
+        "doc_types": ["sheet"],
+        "limit": 10,
+    }, ensure_ascii=False)])
+    doc_id = self._extract_doc_id(search_result, doc_keyword)
+    if not doc_id:
+        raise FileNotFoundError(f"未找到文档: {doc_keyword}")
+
+    # 3. 获取文档 Sheet 列表
+    doc_info = self._wecom_cli.call(["sheet", "get", "--json", json.dumps({
+        "docid": doc_id,
+    })])
+    sheets = self._extract_sheets(doc_info)
+
+    # 4. 匹配两个 Sheet
+    sheet_map = {}
+    for sheet in sheets:
+        if "确收交接" in sheet["name"]:
+            sheet_map["确收交接"] = sheet["sheet_id"]
+        elif "验收交接" in sheet["name"]:
+            sheet_map["验收交接"] = sheet["sheet_id"]
+
+    if "确收交接" not in sheet_map or "验收交接" not in sheet_map:
+        raise ValueError(f"文档缺少确收交接或验收交接 Sheet: {list(sheet_map.keys())}")
+
+    # 5. 分别导出 CSV 并保存
+    output_dir = self._paths.raw_dir / "wecom" / month
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    results = {}
+    files = {}
+    for sheet_name, sheet_id in sheet_map.items():
+        csv_path = output_dir / f"{month}_{sheet_name}.csv"
+        # 导出 Sheet CSV（mode=csv 返回 content 或 file_path）
+        csv_result = self._wecom_cli.call(["sheet", "ranges", "get", "--json", json.dumps({
+            "docid": doc_id,
+            "sheet_id": sheet_id,
+            "mode": "csv",
+        })])
+        if "content" in csv_result:
+            csv_path.write_text(csv_result["content"], encoding="utf-8-sig")
+        elif "file_path" in csv_result:
+            src = Path(csv_result["file_path"])
+            csv_path.write_text(src.read_text(encoding="utf-8-sig"), encoding="utf-8-sig")
+        else:
+            raise RuntimeError(f"CSV 导出失败: sheet={sheet_name}, result={csv_result}")
+        files[sheet_name] = str(csv_path)
+        # 解析为 dict 列表
+        results[sheet_name] = self._parse_csv(csv_path)
+
+    return {
+        **results,
+        "meta": {
+            "doc_id": doc_id,
+            "doc_name": doc_keyword,
+            "month": month,
+            "files": files,
+        }
+    }
+```
+
+#### 6.4.7 标准化逻辑
+
+```python
+def normalize(self, raw: dict) -> list[dict]:
+    """将企微文档确收/验收交接数据标准化。
+
+    确收交接 → delivery_report.dr_sheet_row (sheet_type=confirm)
+    验收交接 → delivery_report.dr_sheet_row (sheet_type=accept)
+
+    字段映射（确收交接）：
+        合同编号 → contract_no
+        项目名称 → project_name
+        确收金额 → confirm_amount
+        确收日期 → confirm_date
+        项目经理 → pm_name
+        事业部 → dept
+
+    字段映射（验收交接）：
+        合同编号 → contract_no
+        项目名称 → project_name
+        验收金额 → accept_amount
+        验收日期 → accept_date
+        项目经理 → pm_name
+        事业部 → dept
+    """
+    normalized = []
+
+    # 确收交接
+    for row in raw.get("确收交接", []):
+        record = {
+            "source_id": f"confirm_{row.get('合同编号', '')}_{row.get('行号', '')}",
+            "source_data": row,
+            "normalized_data": {
+                "sheet_type": "confirm",
+                "contract_no": row.get("合同编号"),
+                "project_name": row.get("项目名称"),
+                "confirm_amount": self._parse_amount(row.get("确收金额")),
+                "confirm_date": row.get("确收日期"),
+                "pm_name": row.get("项目经理"),
+                "dept": row.get("事业部"),
+            },
+            "target_module": "delivery_report",
+            "target_table": "dr_sheet_row",
+        }
+        normalized.append(record)
+
+    # 验收交接
+    for row in raw.get("验收交接", []):
+        record = {
+            "source_id": f"accept_{row.get('合同编号', '')}_{row.get('行号', '')}",
+            "source_data": row,
+            "normalized_data": {
+                "sheet_type": "accept",
+                "contract_no": row.get("合同编号"),
+                "project_name": row.get("项目名称"),
+                "accept_amount": self._parse_amount(row.get("验收金额")),
+                "accept_date": row.get("验收日期"),
+                "pm_name": row.get("项目经理"),
+                "dept": row.get("事业部"),
+            },
+            "target_module": "delivery_report",
+            "target_table": "dr_sheet_row",
+        }
+        normalized.append(record)
+
+    return normalized
+```
+
+#### 6.4.8 准确性验证方法
+
+| 验证层级 | 方法 | 通过标准 |
+|---|---|---|
+| **L1 条数校验** | CSV 数据行数（不含表头） vs 文档内数据行数 | 完全一致 |
+| **L2 汇总校验** | 金额列求和 vs 文档合计行 / 手工报表合计值 | 差异 < 0.01 元 |
+| **L3 黄金基准** | 自动导出 CSV vs 手工导出同月 CSV 逐行对比 | 关键字段 100% 一致 |
+| **L4 业务校验** | 确收总金额 vs 交付月报 Sheet-3 确收合计 | 完全一致 |
+
+**验证实现**：
+```python
+def validate_fetch_result(self, raw_data: dict, month: str) -> dict:
+    """校验拉取数据的准确性。
+
+    Returns:
+        {
+            "确收交接": {
+                "row_count": N,
+                "amount_sum": 123456.78,
+                "golden_match": True/False,
+                "errors": [...]
+            },
+            "验收交接": { ... }
+        }
+    """
+    results = {}
+    for sheet_name in ["确收交接", "验收交接"]:
+        rows = raw_data.get(sheet_name, [])
+        amount_col = "确收金额" if sheet_name == "确收交接" else "验收金额"
+
+        # L1: 条数校验
+        row_count = len(rows)
+
+        # L2: 金额汇总
+        amount_sum = sum(
+            self._parse_amount(r.get(amount_col, 0)) for r in rows
+            if r.get(amount_col)
+        )
+
+        # L3: 黄金基准对比（如果存在手工导出文件）
+        golden_path = self._paths.golden_dir / f"{month}_{sheet_name}.csv"
+        golden_match = None
+        if golden_path.exists():
+            golden_rows = self._parse_csv(golden_path)
+            golden_match = len(rows) == len(golden_rows)
+            # 关键字段逐行对比
+            if golden_match:
+                for i, (a, b) in enumerate(zip(rows, golden_rows)):
+                    if a.get("合同编号") != b.get("合同编号"):
+                        golden_match = False
+                        break
+
+        results[sheet_name] = {
+            "row_count": row_count,
+            "amount_sum": float(amount_sum),
+            "golden_match": golden_match,
+            "golden_file": str(golden_path) if golden_path.exists() else None,
+        }
 
     return results
 ```
 
-#### 5.4.4 标准化逻辑
-
-```python
-def normalize(self, raw: list[dict]) -> list[dict]:
-    """将企微文档数据标准化。
-
-    确收凭证 → revenue.rr_sheet_row
-    字段映射（从文档内容中提取）：
-        合同编号 → contract_no
-        确收金额 → actual_amount
-        确收日期 → confirm_date
-        项目经理 → pm_name
-    """
-    normalized = []
-    for row in raw:
-        content = row.get("content", {})
-        record = {
-            "source_id": row.get("doc_id", ""),
-            "source_data": row,
-            "normalized_data": {
-                "contract_no": content.get("合同编号"),
-                "actual_amount": self._parse_amount(content.get("确收金额")),
-                "confirm_date": content.get("确收日期"),
-                "pm_name": content.get("项目经理"),
-                "doc_id": row.get("doc_id"),
-            },
-            "target_module": "revenue",
-            "target_table": "rr_sheet_row",
-        }
-        normalized.append(record)
-    return normalized
-```
-
-#### 5.4.5 落地映射
+#### 6.4.9 落地映射
 
 | 企微文档字段 | 目标表字段 | 目标表 | 说明 |
 |---|---|---|---|
-| 合同编号 | data->contract_no | rr_sheet_row | 合同编号 |
-| 确收金额 | data->actual_amount | rr_sheet_row | 确收金额 |
-| 确收日期 | data->confirm_date | rr_sheet_row | 确收日期 |
-| 项目经理 | data->pm_name | rr_sheet_row | 项目经理 |
+| 合同编号 | data->contract_no | dr_sheet_row | 合同编号 |
+| 项目名称 | data->project_name | dr_sheet_row | 项目名称 |
+| 确收金额 / 验收金额 | data->confirm_amount / accept_amount | dr_sheet_row | 金额 |
+| 确收日期 / 验收日期 | data->confirm_date / accept_date | dr_sheet_row | 日期 |
+| 项目经理 | data->pm_name | dr_sheet_row | 项目经理 |
+| 事业部 | data->dept | dr_sheet_row | 部门 |
+| sheet_type | data->sheet_type | dr_sheet_row | confirm / accept 区分 |
 
 ### 6.5 I-05: 本机导入连接器（`local_import_connector.py`）
 
