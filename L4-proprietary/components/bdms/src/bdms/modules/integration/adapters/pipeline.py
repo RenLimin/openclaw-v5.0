@@ -77,12 +77,13 @@ class DeliveryReportPipeline:
             errors.append(("ONES异常", str(e)))
         
         # 确收交接
-        # 暂不修改，后续企微连接器接入后替换
+        # 契约：fetch 返回原始行 → normalize 包装成 {source_id, source_data, ...}
+        # （与 OnesConnector 一致，否则 pipeline 末尾统一提取 source_data 会 KeyError）
         from bdms.modules.integration.connectors.wecom_doc_connector import WecomDocConnector
         try:
             wc = WecomDocConnector(db_path=self.db_path)
-            raw = wc.fetch("确收交接", month)
-            result["revenue"] = raw
+            raw = wc.fetch("确收交接", month, file_path=file_paths.get("revenue", ""))
+            result["revenue"] = wc.normalize(raw)
         except Exception as e:
             # fallback to old ones adapter lookup
             try:
@@ -91,13 +92,12 @@ class DeliveryReportPipeline:
                 result["revenue"] = oa.fetch("revenue", month, use_cache=True)
             except MissingSourceError as e:
                 errors.append(("确收交接", str(e)))
-        
+
         # 验收交接
-        # 暂不修改，后续企微连接器接入后替换
         try:
             wc = WecomDocConnector(db_path=self.db_path)
-            raw = wc.fetch("验收交接", month)
-            result["acceptance"] = raw
+            raw = wc.fetch("验收交接", month, file_path=file_paths.get("acceptance", ""))
+            result["acceptance"] = wc.normalize(raw)
         except Exception as e:
             # fallback to old ones adapter lookup
             try:
