@@ -78,52 +78,29 @@ def increment_fail(reason):
 
 
 def check_session_failed(session_key, lookback_minutes=30):
-    """检查指定会话最近是否失败。返回 (is_failed, last_error, last_run_at)"""
-    # 用 sessions_history 查最近几条消息
-    cmd = f"openclaw sessions history --session {session_key} --limit 10 --json 2>/dev/null"
+    """检查指定会话最近是否失败。返回 (is_failed, last_error, last_run_at)
+
+    新版 CLI: openclaw sessions send/history 已移除,改用 sessions --json 查状态。
+    注意: 状态为 running 表示正在执行(不视为失败); failed/error 视为失败。
+    """
+    cmd = f"openclaw sessions --agent main --json 2>/dev/null"
     out, rc = _run(cmd)
     if rc != 0 or not out:
-        # 备用：用 sessions list 查 status
-        cmd2 = f"openclaw sessions --agent main --json 2>/dev/null"
-        out2, rc2 = _run(cmd2)
-        if rc2 != 0:
-            return False, None, None
-        try:
-            data = json.loads(out2)
-            sessions = data.get("sessions", []) if isinstance(data, dict) else []
-            for s in sessions:
-                if s.get("key") == session_key:
-                    status = s.get("status", "")
-                    is_failed = status == "failed" or status == "error"
-                    updated_at = s.get("updatedAt", 0) / 1000 if s.get("updatedAt") else None
-                    return is_failed, status, updated_at
-        except:
-            pass
         return False, None, None
-
-    # 解析 sessions_history 输出
     try:
         data = json.loads(out)
-        messages = data.get("messages", [])
-        cutoff = datetime.now() - timedelta(minutes=lookback_minutes)
-        for msg in messages:
-            ts = msg.get("timestamp", 0)
-            if isinstance(ts, (int, float)) and ts > 0:
-                msg_time = datetime.fromtimestamp(ts / 1000 if ts > 1e12 else ts)
-                if msg_time < cutoff:
-                    continue
-            # 检查 stopReason
-            openclaw = msg.get("__openclaw", {})
-            stop_reason = msg.get("stopReason", "")
-            # 检查是否是错误消息
-            content = msg.get("content", "")
-            if isinstance(content, list):
-                for c in content:
-                    if c.get("type") == "text" and "The agent run failed" in c.get("text", ""):
-                        return True, c["text"][:200], ts / 1000 if ts > 1e12 else ts
-            if stop_reason == "error" and msg.get("role") == "assistant":
-                return True, f"stopReason=error", ts / 1000 if ts > 1e12 else ts
-    except:
+        sessions = data.get("sessions", []) if isinstance(data, dict) else []
+        for s in sessions:
+            if s.get("key") == session_key:
+                status = s.get("status", "")
+                # 失败判定: failed/error; running/active 不算失败
+                is_failed = status in ("failed", "error")
+                updated_at = s.get("updatedAt", 0) / 1000 if s.get("updatedAt") else None
+                # 会话有活跃 run 时 status=running,不做失败处理
+                if status == "running":
+                    return False, "session running", updated_at
+                return is_failed, f"status={status}", updated_at
+    except Exception:
         pass
     return False, None, None
 
@@ -188,15 +165,28 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current
 
 继续干活。"""
 
-    cmd = f"openclaw sessions send --session {session_key} --message {json.dumps(message)} 2>/dev/null"
-    # 用 sessions_send 工具的等价 CLI 方式
+    cmd = f"openclaw agent --agent main --session-key {session_key} --message {json.dumps(message)} --json 2>/dev/null"
+    # 新版 CLI: openclaw agent --session-key 唤醒(旧的 sessions send 已移除)
     _log(f"  → 唤醒会话 {session_key} (retry #{retry_count})")
-    out, rc = _run(cmd, timeout=15)
+    out, rc = _run(cmd, timeout=30)
     if rc != 0:
         _log(f"  ⚠️ 唤醒失败: {out[:200]}")
         return False
-    _log(f"  ✅ 唤醒成功")
-    return True
+    try:
+        result = json.loads(out)
+        if result.get("ok"):
+            _log(f"  ✅ 唤醒成功")
+            return True
+        err = result.get("error", {}).get("message", str(result)[:200])
+        # 会话忙/排队不算失败
+        if "busy" in str(err).lower() or "queue" in str(err).lower():
+            _log(f"  ⏳ 会话忙,唤醒已入队: {err[:150]}")
+            return True
+        _log(f"  ⚠️ 唤醒返回错误: {err[:200]}")
+        return False
+    except Exception:
+        _log(f"  ⚠️ 无法解析唤醒结果: {out[:200]}")
+        return False
 
 
 def check_and_retry(apply=False):
