@@ -106,8 +106,21 @@ def _get_provider_health(provider_id: str) -> str:
             health = pdata.get("health", {})
             status = health.get("status", "")
             last_checked = health.get("last_checked", "")
-            # exhausted(余额不足) → degraded(路由排到末尾)
+            # exhausted(余额不足) → degraded(路由排到末尾),带 TTL 自愈
+            # 超时后降级 unknown,让请求实际试探(配额可能已恢复)
             if status == "exhausted":
+                if last_checked:
+                    try:
+                        from datetime import datetime, timezone
+                        checked_time = datetime.fromisoformat(last_checked)
+                        if checked_time.tzinfo is None:
+                            checked_time = checked_time.replace(tzinfo=timezone.utc)
+                        age_seconds = now - checked_time.timestamp()
+                        if age_seconds > 3600:  # 1 hour TTL
+                            logger.info(f"Provider {provider_id} exhausted 已超 1h TTL，自动降级为 unknown 重新试探")
+                            return "unknown"
+                    except (ValueError, TypeError):
+                        pass
                 return "degraded"
             # unreachable TTL 自动降级
             if status == "unreachable" and last_checked:
@@ -569,6 +582,7 @@ class ProxyHandler:
                         for pid, pdata in providers.items():
                             if pid.lower() == provider_id.lower():
                                 pdata.setdefault("health", {})["status"] = "exhausted"
+                                pdata["health"]["detail"] = "402 余额不足 (proxy 运行时标记)"
                                 pdata["health"]["last_checked"] = _time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
                         usage_path.write_text(_json.dumps(usage, indent=2, ensure_ascii=False))
                         logger.info(f"Provider {provider_id} 余额不足(402), 标记 exhausted")
@@ -581,6 +595,13 @@ class ProxyHandler:
         
         # 所有模型都失败 — 返回聚合诊断而非最后一个错误(避免 Gateway 误判 billing)
         self.error_count += 1
+        # 413 只在"上下文确实超限"时返回(链末失败是 400/404/413 等模型拒收)。
+        # 网络(502/504)、配额(402)、限流(429)故障必须如实上报,
+        # 让 OpenClaw 走自己的 fallback 链 —— 否则 DNS 故障会把 341k 请求误报为"超限"。
+        # 背景: 2026-10-12 09:44 事故 — 双域名 DNS 挂 → 全链 502 → 误报 413。
+        if last_status in (502, 504, 402, 429, 500):
+            await self._send_error(last_status, str(last_error)[:500], writer)
+            return
         if est > 200000:
             await self._send_error(413, f"Request context (~{est} tokens) exceeds all available models. Tip: compact the session or switch to a large-context model (longCat/LongCat-2.0).", writer)
             return
@@ -748,27 +769,54 @@ async def startup_probe():
         except Exception as e:
             return provider_id, "unreachable", f"TCP 异常: {e}"
 
-        # 3. /models 端点
+        # 3. 最小 chat 请求（配额判断: /models 200 不代表配额可用）
+        # 背景: 2026-10-12 — startup_probe 用 /models 探活,把 402 配额耗尽的
+        #       provider 误标 healthy;真实请求 402 又标回 exhausted,状态反复横跳。
         api_key = get_api_key(provider_id)
         if not api_key:
             return provider_id, "degraded", "API key 未配置（TCP 可达但无法认证）"
+        # 找该 provider 一个可用的探测模型（providers.yaml probe_model 优先）
+        probe_model = pconf.get("probe_model", "")
+        if not probe_model:
+            try:
+                models_config = watcher.get("models.yaml")
+                for m in models_config.get("models", []):
+                    if m.get("provider", "").lower() == provider_id.lower() and m.get("status") == "active":
+                        probe_model = m.get("model_id", m.get("id", ""))
+                        break
+            except Exception:
+                pass
+        if not probe_model:
+            return provider_id, "degraded", "无探测模型"
         try:
-            timeout = aiohttp.ClientTimeout(total=10)
+            timeout = aiohttp.ClientTimeout(total=15)
+            payload = json.dumps({
+                "model": probe_model,
+                "messages": [{"role": "user", "content": "hi"}],
+                "max_tokens": 1,
+            }).encode()
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                headers = {"Authorization": f"Bearer {api_key}"}
-                async with session.get(f"{base_url}/models", headers=headers) as resp:
+                headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                }
+                async with session.post(f"{base_url}/chat/completions", headers=headers, data=payload) as resp:
                     if resp.status == 200:
                         return provider_id, "healthy", f"healthy ({resp.status})"
+                    elif resp.status == 402:
+                        return provider_id, "exhausted", "402 余额不足（配额探测）"
                     elif resp.status in (401, 403):
                         return provider_id, "degraded", f"认证失败 ({resp.status})"
+                    elif resp.status == 429:
+                        return provider_id, "degraded", f"限流 ({resp.status})"
                     else:
                         return provider_id, "degraded", f"HTTP {resp.status}"
         except asyncio.TimeoutError:
-            return provider_id, "degraded", "/models 超时（TCP 可达）"
+            return provider_id, "degraded", "chat 探测超时（TCP 可达）"
         except aiohttp.ClientError as e:
-            return provider_id, "degraded", f"/models 错误: {type(e).__name__}"
+            return provider_id, "degraded", f"chat 探测错误: {type(e).__name__}"
         except Exception as e:
-            return provider_id, "degraded", f"/models 异常: {e}"
+            return provider_id, "degraded", f"chat 探测异常: {e}"
 
     # 并发探活
     tasks = [probe_one(pid, pconf) for pid, pconf in providers.items()]
