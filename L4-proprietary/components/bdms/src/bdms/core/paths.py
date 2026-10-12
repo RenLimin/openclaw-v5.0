@@ -130,6 +130,12 @@ def find_revenue_source(month: str) -> Path | None:
     return None
 
 
+def output_dir() -> Path:
+    """输出目录（wecom 导出等中间产物）。"""
+    ensure_dirs()
+    return OUTPUT_DIR
+
+
 def output_path(filename: str) -> Path:
     """输出文件路径。"""
     ensure_dirs()

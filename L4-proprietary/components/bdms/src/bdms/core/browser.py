@@ -8,13 +8,12 @@ from typing import Any, Dict, Optional
 
 from playwright.sync_api import sync_playwright, Browser, BrowserContext
 
-from bdms.core.paths import get_data_path
+from bdms.core.paths import DATA_DIR
 
 _browser_contexts: Dict[str, BrowserContext] = {}
 
 def _get_cookie_path(context_name: str) -> Path:
-    data_dir = get_data_path()
-    return data_dir / "browser" / f"{context_name}_cookies.json"
+    return DATA_DIR / "browser" / f"{context_name}_cookies.json"
 
 def save_browser_cookies(context_name: str, cookies: list) -> None:
     """保存浏览器 Cookie 到本地，供后续连接使用。"""
@@ -51,3 +50,61 @@ def connect_local_chrome(context_name: str, port: int = 9222) -> BrowserContext:
         # 缓存上下文
         _browser_contexts[context_name] = context
         return context
+
+
+def import_wecom_mac_cookies(context_name: str = "wecom") -> bool:
+    """从企微 Mac 客户端 CEF 缓存中提取企微文档 Cookie，注入到浏览器上下文。
+
+    利用企微 Mac 客户端的登录态，无需额外登录企业账号。
+    返回是否成功提取到有效 Cookie。
+    """
+    import sqlite3
+    import glob
+
+    # 企微 CEF Cookie 候选路径（按企业主账号优先）
+    cef_cookie_pattern = "/Users/bangcle/Library/Containers/com.tencent.WeWorkMac/Data/Documents/cefcache/wew_*/Cookies"
+    cookie_files = sorted(glob.glob(cef_cookie_pattern), reverse=True)
+
+    all_cookies = []
+    for cf in cookie_files:
+        try:
+            conn = sqlite3.connect(cf)
+            cur = conn.cursor()
+            cur.execute(
+                """SELECT name, value, host_key, path, expires_utc, is_secure, is_httponly
+                   FROM cookies
+                   WHERE host_key LIKE '%.doc.weixin.qq.com%'
+                      OR host_key LIKE '%.drive.weixin.qq.com%'
+                      OR host_key LIKE '%.weixin.qq.com%'"""
+            )
+            rows = cur.fetchall()
+            conn.close()
+            for r in rows:
+                cookie = {
+                    "name": r[0],
+                    "value": r[1],
+                    "domain": r[2],
+                    "path": r[3],
+                    "expires": r[4] / 1000000 - 11644473600 if r[4] else -1,
+                    "secure": bool(r[5]),
+                    "httpOnly": bool(r[6]),
+                }
+                all_cookies.append(cookie)
+        except Exception:
+            continue
+
+    if not all_cookies:
+        return False
+
+    # 去重（同名同域取第一个）
+    seen = set()
+    unique = []
+    for c in all_cookies:
+        key = (c["name"], c["domain"])
+        if key not in seen:
+            seen.add(key)
+            unique.append(c)
+
+    # 保存到本地 Cookie 文件
+    save_browser_cookies(context_name, unique)
+    return True
