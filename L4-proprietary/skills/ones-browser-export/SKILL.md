@@ -1,6 +1,6 @@
 ---
 name: ones-browser-export
-description: "ONES 浏览器自动化数据导出：通过 osascript 控制 Chrome 从 ONES 筛选器导出 CSV 数据，用于月报/签约统计/POC 统计等场景。"
+description: "ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及工作项/用户/字段等结构化查询。"
 ---
 # ONES 浏览器自动化数据导出
 
@@ -35,10 +35,15 @@ run_js("document.querySelectorAll('a')[INDEX].click();'clicked'")
 # ⚠️ 必须等待 10 秒（ONES SPA 加载数据）
 ```
 
-**已知筛选器链接索引**（可能随页面变化）：
-- 签约项目统计：索引 20（URL: `/filter/view/5wY9X4m8`）
-- POC&提前实施统计：索引 21（URL: `/filter/view/KxnjPRY7`）
-- 异常处置：索引 23（URL: `/filter/view/NWPaa48w`）
+**已知筛选器（2026-10-10 更新）**：
+
+| 视图全称 | 索引（参考） | filter/view ID |
+|---|---|---|
+| 2026周报-签约项目统计 | 20 | `5wY9X4m8` |
+| 2026周报-POC&提前实施统计 | 21 | `KxnjPRY7` |
+| 2026-签约项目异常处置 | 23 | `NWPaa48w` |
+
+> ⚠️ 索引可能随页面加载变化，优先用**文本匹配**找链接，不要硬编码索引。
 
 ### 3. 点击"更多操作"→"导出工作项"→"确定"
 ```python
@@ -88,11 +93,64 @@ newest = max(downloads.glob('*.csv'), key=os.path.getmtime)
 
 | 筛选器 | 参考行数 | 导出列数 | 文件名 |
 |---|---|---|---|
-| 签约项目统计 | ~16,600 | 40 | `2026周报-签约项目统计.csv` |
-| POC&提前实施 | ~5,030 | 40 | `全部工作项.csv` |
-| 异常处置 | ~362 | 40 | `2026-签约项目异常处置.csv` |
+| 2026周报-签约项目统计 | ~16,600 | 40 | `2026周报-签约项目统计.csv` |
+| 2026周报-POC&提前实施统计 | ~5,030 | 40 | `全部工作项.csv` |
+| 2026-签约项目异常处置 | ~362 | 40 | `2026-签约项目异常处置.csv` |
+
+---
+
+## GraphQL API 能力（备用方案）
+
+当浏览器导出不稳定或需要结构化查询时，用 ONES GraphQL API。
+
+### 端点
+```
+POST https://ones.bangcle.com/project/api/project/team/RZxvwUZ8/items/graphql
+Headers:
+  Content-Type: application/json
+  Ones-Auth-Token: <token>
+  Ones-User-Id: REccSDPA
+```
+
+### 登录获取 token
+```bash
+curl -X POST "https://ones.bangcle.com/project/api/project/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"limin.ren@bangcle.com","password":"<密码>","captcha":""}'
+```
+
+### 常用查询
+
+**查用户 UUID：**
+```graphql
+{ users(filter: { name_equal: "姓名" }) { uuid name email } }
+```
+
+**查项目 UUID：**
+```graphql
+{ projects(filter: {name_equal: "项目名"}) { uuid name } }
+```
+
+**查工作项类型：**
+```graphql
+{ issueTypes { uuid name key } }
+```
+
+**查字段定义：**
+```graphql
+{ fields(projectUuid: "<project_uuid>") { uuid name type required options { uuid value color } } }
+```
+
+**查 schema（探索可用字段）：**
+```graphql
+{ __schema { queryType { fields { name } } } }
+```
 
 ## 相关文件
 - 导出脚本：`scripts/l4/delivery_center/generators/generate_report_202606.py`
 - 数据目录：`~/.openclaw/data/ones_exports/`
 - 月报生成器：`scripts/l4/delivery_center/generators/delivery_report.py`
+- ONES 官方文档：`~/Downloads/ones/`（数据字典、私有部署手册、SQL说明）
+
+## 知识库引用
+- 工作前先搜知识库：`python3 L2-infra/components/knowledge-base/kb_index.py --query ...`
