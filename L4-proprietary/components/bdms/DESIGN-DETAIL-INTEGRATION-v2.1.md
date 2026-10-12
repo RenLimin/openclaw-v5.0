@@ -1335,7 +1335,9 @@ def validate_fetch_result(self, raw_data: list[dict], month: str) -> dict:
 > 2. **浏览器自动化**（备选）：Playwright CDP 访问企微 Web 端，模拟点击导出
 > 3. **本机导入**（兜底）：用户手动下载 CSV 后通过 local_import 连接器导入
 >
-> **当前验证状态**：wecom-cli 已配置并可用，支持文档列表、文档内容、智能表格操作
+> **当前验证状态**：
+> - wecom-cli 已配置并可用，支持文档列表、文档内容、智能表格操作（⚠️ 853007 文档权限需重新授权时自动降级）
+> - **浏览器自动化已完整实现并验证**（2026-10-12）：CDP 连接已登录 Chrome（9222）+ `.tab-bar-item` 切 Sheet + Cmd+A/Cmd+C 剪贴板全选复制 + 表头定位/脏行过滤；确收 527 行 / 验收 530 行，与黄金数据 ID 100% 对齐。详见 `docs/architecture/components/browser-automation-wecom-doc.md` v1.1
 
 #### 6.4.2 业务场景：确收凭证交接文档（核心场景）
 

@@ -35,7 +35,7 @@ def _normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
         "是否接收": ["是否接收", "财务是否接收"],
         "是否修改ones状态": ["是否修改ones状态", "是否修改ONES状态"],
         "交付邮件是否跨月": ["交付邮件是否跨月", "是否跨月"],
-        "财务反馈": ["财务反馈", "财务二次反馈"],
+        "财务反馈": ["财务反馈"],
     }
     
     # 构建反向映射（变体 → 标准名）
@@ -245,7 +245,7 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
         "是否接收",          # ← 财务是否接收
         "实际验收方式",
         "财务反馈",
-        "截至目前全部/部分验收",  # 第22列，同样的列名第二个（参考表里两列同名，不加.1后缀）
+        "__part2__",  # 第22列：截至目前全部/部分验收（第二个，源 CSV 带 .1 后缀）
         "PMO提交人",         # ← PMO
         "PMO反馈",           # ← PMO备注
         "是否修改ones及OA状态",
@@ -330,11 +330,11 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
     if "是否接收" not in df.columns:
         df["是否接收"] = ""
     
-    # 14. 截至目前全部/部分验收.1（第二个）
+    # 14. 截至目前全部/部分验收.1（第二个）→ 临时列 __part2__，末尾 rename 回标准名
     if "截至目前全部/部分验收.1" in df.columns:
-        df["截至目前全部/部分验收.1"] = df["截至目前全部/部分验收.1"]
+        df["__part2__"] = df["截至目前全部/部分验收.1"]
     else:
-        df["截至目前全部/部分验收.1"] = ""
+        df["__part2__"] = ""
     
     # 15. PMO提交人 ← PMO
     if "PMO" in df.columns:
@@ -366,5 +366,5 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
     if "交接日期" in df.columns and df["交接日期"].dtype == "datetime64[ns]":
         df = df[df["交接日期"].fillna(pd.Timestamp("2099-12-31")) <= end_date]
     
-    # 按预期列顺序返回
-    return df[expected_cols]
+    # 按预期列顺序返回（__part2__ → 截至目前全部/部分验收，保持两列同名）
+    return df[expected_cols].rename(columns={"__part2__": "截至目前全部/部分验收"})
