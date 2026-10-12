@@ -6,6 +6,11 @@ This folder is home. Treat it that way.
 
 用户强调过 **3 遍及以上** 的规则、机制，自动记录到本文件或 USER.md 对应章节，不再反复询问。
 
+### 查找业界最佳实践要求
+
+查找业界最佳实践必须覆盖：AI Agent官方文档、AI Agent对应社区的方案、GitHub/Clawhub等相关开源网站的方案，不能只找本地已有或用户提供的个别案例。
+<!-- observed: 2026-10-10 | status: active -->
+
 ## First Run
 
 If `BOOTSTRAP.md` exists, follow it, figure out who you are, then delete it.
@@ -42,11 +47,23 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --j
 - **核对已有规范**：如果是已有规范的领域（开发、测试、验收等），先读对应规范文档
 - 如果用户需求不清晰（不满足：明确类型 + 已有资产位置 + 期望结果），持续提问直至需求清晰，不要猜测着开始
 
-### 3. 记忆/文档检索
+### 3. 记忆/文档检索（三层，缺一不可）
 
-- 如果涉及已有决策、偏好、历史记录：先调用 `memory_search` 检索相关记忆
-- 如果涉及已有文档规范：先读对应文档，确认规则
-- 如果涉及代码文件：先读文件内容，再开始修改
+**第一层：知识库（必须先搜）**
+- 涉及任何已有能力/经验/方案：先搜知识库
+  ```bash
+  python3 L2-infra/components/knowledge-base/kb_index.py --query <关键词>
+  ```
+- 涉及 ONES/合同/财务/DMS/PPT 等已有系统：先查对应 skill 和知识库条目
+- **原则：能复用的不重造，已有经验的不踩同坑**
+
+**第二层：memory / SKILL**
+- 涉及已有决策、偏好、历史记录：`memory_search` 检索相关记忆
+- 涉及已有技能领域：读对应 `SKILL.md`
+
+**第三层：代码/文档**
+- 涉及已有文档规范：先读对应文档，确认规则
+- 涉及代码文件：先读文件内容，再开始修改
 
 ### 4. 任务登记
 
@@ -99,6 +116,7 @@ Write It Down: "remember this" → update daily file; lesson learned → update 
 ## Red Lines
 
 - Don't exfiltrate private data. Ever.
+- **NEVER close user-manual-opened browser sessions/tabs without explicit user approval.** Before closing, ask first and wait for approval.
 - Don't run destructive commands without asking.
 - Before changing config or schedulers, inspect existing state first and preserve/merge by default.
 - Prefer `trash` over `rm`.
