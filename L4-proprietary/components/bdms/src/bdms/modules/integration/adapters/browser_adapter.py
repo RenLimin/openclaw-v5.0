@@ -466,19 +466,49 @@ class BrowserAdapter:
         self.navigate(ONES_BASE + "/project/#/workspace/home")
         return True
 
-    def ones_click_filter_tab(self, tab_index: int) -> bool:
-        """Click ONES filter sub-tab"""
-        js = "(function() {"
-        js += "  var tabs = document.querySelectorAll('.url-foldable-tabs-new-link');"
-        js += "  if (tabs.length > " + str(tab_index) + ") {"
-        js += "    tabs[" + str(tab_index) + "].click();"
-        js += "    return 'clicked index " + str(tab_index) + "';"
-        js += "  }"
-        js += "  return 'not found, count=' + tabs.length;"
-        js += "})()"
-        result = self.evaluate(js)
-        time.sleep(5)
-        return "clicked" in str(result).lower()
+    def ones_click_filter_tab(self, label: str = "", tab_index: int = -1) -> bool:
+        """Click ONES filter sub-tab by label (preferred) or index (fallback).
+
+        优先用文本匹配（label 包含匹配），匹配失败时用 tab_index 作为 fallback。文本匹配更可靠，
+        因为 tab 顺序会随 ONES 版本或权限变化。在整个页面找所有 a 标签，支持不同页面结构（列表页和详情页）。
+        """
+        # 优先：文本匹配
+        if label:
+            js = "(function() {"
+            # 在整个页面找所有 a 标签：既支持筛选器列表页，也支持单个筛选器详情页
+            js += "  var tabs = document.querySelectorAll('a');"
+            js += "  var target = '" + label.replace("'", "\\'") + "';"
+            js += "  for (var i = 0; i < tabs.length; i++) {"
+            js += "    var text = (tabs[i].innerText || '').trim();\n"
+            js += "    if (!text) continue;"
+            js += "    if (text.indexOf(target) >= 0) {"
+            js += "      tabs[i].click();"
+            js += "      return 'clicked: ' + text + ' (index=' + i + ')';"
+            js += "    }"
+            js += "  }"
+            js += "  return 'label not found, count=' + tabs.length;"
+            js += "})()"
+            result = self.evaluate(js)
+            if "clicked" in str(result).lower():
+                time.sleep(5)
+                return True
+            logger.warning("按标签匹配失败: %s, 结果: %s", label, result)
+
+        # fallback：按索引
+        if tab_index >= 0:
+            js = "(function() {"
+            js += "  var tabs = document.querySelectorAll('.url-foldable-tabs-new-link');"
+            js += "  if (tabs.length > " + str(tab_index) + ") {"
+            js += "    tabs[" + str(tab_index) + "].click();"
+            js += "    return 'clicked index " + str(tab_index) + "';"
+            js += "  }"
+            js += "  return 'not found, count=' + tabs.length;"
+            js += "})()"
+            result = self.evaluate(js)
+            time.sleep(5)
+            return "clicked" in str(result).lower()
+
+        return False
 
     def ones_click_more_menu(self) -> bool:
         """Click ONES more menu"""
@@ -506,6 +536,23 @@ class BrowserAdapter:
         })()"""
         result = self.evaluate(js)
         time.sleep(3)
+        return "clicked" in str(result).lower()
+
+    def ones_click_reset(self) -> bool:
+        """Click ONES reset button to restore all data (before export)"""
+        js = """(function() {
+            var buttons = document.querySelectorAll('button, a');
+            for (var i = 0; i < buttons.length; i++) {
+                var text = (buttons[i].innerText || '').trim().toLowerCase();
+                if (text.indexOf('还原') >= 0 || text.indexOf('重置') >= 0) {
+                    buttons[i].click();
+                    return 'clicked: ' + text;
+                }
+            }
+            return 'not found';
+        })()"""
+        result = self.evaluate(js)
+        time.sleep(2)
         return "clicked" in str(result).lower()
 
     def ones_click_confirm(self) -> bool:

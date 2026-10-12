@@ -1,229 +1,193 @@
-"""同步调度器 — 管理 cron 和 event 两种模式的同步触发。
+"""BDMS 集成模块同步调度器 — cron 定时 + event 事件驱动.
 
-对齐 DESIGN-DETAIL-INTEGRATION-v2.1.md §7 频率配置设计。
+Aligns with DESIGN-DETAIL-INTEGRATION-v2.1.md §7.
 """
 from __future__ import annotations
 
-import json
 import logging
-import threading
-import time
-from datetime import datetime
-from typing import Optional
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
-from bdms.core.db import get_connection
+from .error_handler import DeadLetterQueue, SyncStatus
 
 logger = logging.getLogger(__name__)
 
 
+class FrequencyType(str, Enum):
+    """同步频率类型"""
+    MANUAL = "manual"
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    EVENT = "event"  # 事件驱动（比如合同创建后触发项目同步）
+
+
+@dataclass
+class SyncConfig:
+    """单个连接器同步配置"""
+    connector_name: str
+    frequency_type: FrequencyType
+    cron_expression: Optional[str] = None  # 标准 cron 表达式
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    enabled: bool = True
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class SyncTask:
+    """待执行的同步任务"""
+    config: SyncConfig
+    scheduled_at: datetime
+    status: SyncStatus = SyncStatus.PENDING
+    started_at: Optional[datetime] = None
+    finished_at: Optional[datetime] = None
+    error: Optional[str] = None
+
+
 class SyncScheduler:
-    """同步调度器。
+    """同步任务调度器.
 
-    支持两种调度模式：
-    1. cron — 定时任务，按 cron 表达式周期执行
-    2. event — 事件驱动，监听业务事件触发同步
-
-    使用 threading 实现后台调度，不依赖外部调度框架。
+    负责：
+    1. 存储所有连接器同步配置
+    2. 计算下一次执行时间
+    3. 取出到期任务执行
+    4. 记录任务执行状态
     """
 
-    def __init__(self, service=None):
-        """
-        Args:
-            service: IntegrationService 实例（可选，延迟注入）
-        """
-        self._service = service
-        self._running = False
-        self._thread: Optional[threading.Thread] = None
-        self._event_handlers: dict[str, list[str]] = {}  # event_name -> [connector_name]
-        self._cron_configs: dict[str, dict] = {}  # connector_name -> cron_config
+    def __init__(self, dlq: DeadLetterQueue):
+        self.dlq = dlq
+        self._configs: Dict[str, SyncConfig] = {}  # key: connector_name
+        self._queue: List[SyncTask] = []
 
-    def set_service(self, service) -> None:
-        """设置集成服务实例。"""
-        self._service = service
+    def add_config(self, config: SyncConfig) -> None:
+        """Add or update sync configuration"""
+        if config.connector_name in self._configs:
+            logger.info(f"Updating sync config for {config.connector_name}")
+            old = self._configs[config.connector_name]
+            config.created_at = old.created_at
+            config.updated_at = datetime.now()
+        else:
+            logger.info(f"Adding new sync config for {config.connector_name}")
+        self._configs[config.connector_name] = config
+        self._schedule_next(config)
+        logger.info(f"Config added/updated: {config.connector_name}")
 
-    def load_configs(self) -> None:
-        """从 DB 加载所有频率配置。"""
-        conn = get_connection()
-        try:
-            rows = conn.execute(
-                "SELECT * FROM int_frequency_config WHERE enabled=1"
-            ).fetchall()
-
-            for row in rows:
-                connector = row["connector_name"]
-                schedule = row["schedule"]
-
-                if schedule == "cron" and row["cron_expr"]:
-                    self._cron_configs[connector] = {
-                        "cron_expr": row["cron_expr"],
-                        "last_triggered": row.get("last_triggered_at"),
-                    }
-                    logger.info(f"加载 cron 配置: {connector} = {row['cron_expr']}")
-
-                elif schedule == "event" and row["event_triggers"]:
-                    triggers = json.loads(row["event_triggers"])
-                    for event_name in triggers:
-                        self._event_handlers.setdefault(event_name, []).append(connector)
-                    logger.info(f"加载 event 配置: {connector} triggers={triggers}")
-
-        finally:
-            conn.close()
-
-    def handle_event(self, event_name: str, event_data: dict = None) -> None:
-        """处理业务事件，触发相关连接器同步。
-
-        Args:
-            event_name: 事件名称
-            event_data: 事件数据
-        """
-        connectors = self._event_handlers.get(event_name, [])
-        for connector in connectors:
-            logger.info(f"事件触发同步: {event_name} -> {connector}")
-            self._run_sync(connector, event_data)
-
-    def _run_sync(self, connector_name: str, params: dict = None) -> None:
-        """执行同步并更新 last_triggered_at。"""
-        if not self._service:
-            logger.error("IntegrationService 未注入，无法执行同步")
-            return
-
-        try:
-            sync_params = params or {}
-            result = self._service.sync(connector_name, **sync_params)
-            self._update_last_triggered(connector_name)
-            logger.info(f"调度同步完成: {connector_name} = {result.get('status')}")
-        except Exception as e:
-            logger.error(f"调度同步失败: {connector_name}: {e}")
-
-    def _update_last_triggered(self, connector_name: str) -> None:
-        """更新 last_triggered_at 时间戳。"""
-        conn = get_connection()
-        try:
-            conn.execute(
-                "UPDATE int_frequency_config SET last_triggered_at=? WHERE connector_name=?",
-                (datetime.now().isoformat(), connector_name),
-            )
-            conn.commit()
-        except Exception as e:
-            logger.warning(f"更新 last_triggered_at 失败: {e}")
-        finally:
-            conn.close()
-
-    def _parse_cron_expr(self, cron_expr: str) -> dict:
-        """解析 cron 表达式（简化版，支持标准 5 位）。
-
-        支持格式：minute hour day month weekday
-        示例：0 2 * * * = 每天 02:00
-        """
-        parts = cron_expr.strip().split()
-        if len(parts) != 5:
-            logger.warning(f"不支持的 cron 格式: {cron_expr}")
-            return {}
-        return {
-            "minute": parts[0],
-            "hour": parts[1],
-            "day": parts[2],
-            "month": parts[3],
-            "weekday": parts[4],
-        }
-
-    def _should_run_cron(self, cron_config: dict) -> bool:
-        """判断 cron 任务是否应该执行。"""
-        import calendar
-        from datetime import datetime
-
-        parsed = self._parse_cron_expr(cron_config["cron_expr"])
-        if not parsed:
+    def remove_config(self, connector_name: str) -> bool:
+        """Remove sync configuration"""
+        if connector_name not in self._configs:
             return False
-
-        now = datetime.now()
-
-        # 检查分钟
-        if parsed["minute"] != "*" and int(parsed["minute"]) != now.minute:
-            return False
-
-        # 检查小时
-        if parsed["hour"] != "*" and int(parsed["hour"]) != now.hour:
-            return False
-
-        # 检查日期
-        if parsed["day"] != "*" and int(parsed["day"]) != now.day:
-            return False
-
-        # 检查月份
-        if parsed["month"] != "*" and int(parsed["month"]) != now.month:
-            return False
-
-        # 检查星期（0=周日）
-        if parsed["weekday"] != "*":
-            weekday = now.weekday() + 1  # Python: 0=Mon, cron: 0=Sun
-            if int(parsed["weekday"]) != weekday % 7:
-                return False
-
-        # 检查是否已经执行过（同一分钟内不重复执行）
-        last = cron_config.get("last_triggered")
-        if last:
-            last_dt = datetime.fromisoformat(last)
-            if (now - last_dt).total_seconds() < 60:
-                return False
-
+        del self._configs[connector_name]
+        # Remove from queue
+        self._queue = [t for t in self._queue if t.config.connector_name != connector_name]
+        logger.info(f"Config removed: {connector_name}")
         return True
 
-    def run_pending(self) -> None:
-        """执行所有到期的 cron 任务。
+    def list_configs(self) -> List[SyncConfig]:
+        """List all sync configurations"""
+        return list(self._configs.values())
 
-        应在主循环中定期调用（如每分钟）。
-        """
-        for connector, config in self._cron_configs.items():
-            if self._should_run_cron(config):
-                logger.info(f"cron 触发: {connector}")
-                self._run_sync(connector)
+    def get_config(self, connector_name: str) -> Optional[SyncConfig]:
+        """Get config by connector name"""
+        return self._configs.get(connector_name)
 
-    def start_background(self, interval: int = 60) -> None:
-        """启动后台调度线程。
-
-        Args:
-            interval: 检查间隔（秒）
-        """
-        if self._running:
-            logger.warning("调度器已在运行")
-            return
-
-        self._running = True
-        self._thread = threading.Thread(
-            target=self._scheduler_loop, args=(interval,), daemon=True
+    def schedule_now(self, connector_name: str) -> Optional[SyncTask]:
+        """Schedule a task to run immediately"""
+        config = self.get_config(connector_name)
+        if not config:
+            logger.warning(f"Cannot schedule now: no config for {connector_name}")
+            return None
+        task = SyncTask(
+            config=config,
+            scheduled_at=datetime.now(),
         )
-        self._thread.start()
-        logger.info(f"调度器已启动，检查间隔 {interval}s")
+        self._queue.append(task)
+        logger.info(f"Scheduled immediately: {connector_name}")
+        return task
 
-    def stop_background(self) -> None:
-        """停止后台调度线程。"""
-        self._running = False
-        if self._thread:
-            self._thread.join(timeout=5)
-            logger.info("调度器已停止")
+    def pop_due_tasks(self) -> List[SyncTask]:
+        """Get all due tasks to run now"""
+        now = datetime.now()
+        due = [t for t in self._queue if t.scheduled_at <= now and t.status == SyncStatus.PENDING and t.config.enabled]
+        self._queue = [t for t in self._queue if not (t.scheduled_at <= now and t.status == SyncStatus.PENDING and t.config.enabled)]
+        if due:
+            logger.info(f"Popped {len(due)} due tasks")
+        return due
 
-    def _scheduler_loop(self, interval: int) -> None:
-        """调度器主循环。"""
-        while self._running:
-            try:
-                self.run_pending()
-            except Exception as e:
-                logger.error(f"调度循环异常: {e}")
-            time.sleep(interval)
+    def mark_started(self, task: SyncTask) -> None:
+        """Mark task as started"""
+        task.status = SyncStatus.IN_PROGRESS
+        task.started_at = datetime.now()
 
-    def get_status(self) -> dict:
-        """获取调度器状态。"""
-        return {
-            "running": self._running,
-            "cron_count": len(self._cron_configs),
-            "event_count": len(self._event_handlers),
-            "cron_configs": {
-                name: config["cron_expr"]
-                for name, config in self._cron_configs.items()
-            },
-            "event_handlers": {
-                event: connectors
-                for event, connectors in self._event_handlers.items()
-            },
-        }
+    def mark_finished(self, task: SyncTask, success: bool, error: Optional[str] = None) -> None:
+        """Mark task as finished"""
+        task.finished_at = datetime.now()
+        if success:
+            task.status = SyncStatus.SUCCESS
+            logger.info(f"Task succeeded: {task.config.connector_name}")
+        else:
+            task.status = SyncStatus.PERMANENT_FAILURE
+            task.error = error
+            # Add to dead letter queue
+            self.dlq.add(
+                source_id=f"{task.config.connector_name}-{datetime.now().isoformat()}",
+                source_type="sync_task",
+                error=error or "unknown error",
+                metadata={
+                    "connector_name": task.config.connector_name,
+                    "scheduled_at": task.scheduled_at.isoformat(),
+                }
+            )
+            logger.error(f"Task failed: {task.config.connector_name}, error: {error}")
+        # Schedule next run for periodic tasks
+        if task.config.frequency_type != FrequencyType.MANUAL:
+            self._schedule_next(task.config)
+
+    def _schedule_next(self, config: SyncConfig) -> None:
+        """Schedule next run based on frequency"""
+        next_at = self._calculate_next_run(config.frequency_type)
+        if not next_at:
+            return
+        task = SyncTask(
+            config=config,
+            scheduled_at=next_at,
+        )
+        self._queue.append(task)
+        logger.debug(f"Scheduled next run for {config.connector_name} at {next_at}")
+
+    def _calculate_next_run(self, frequency: FrequencyType) -> Optional[datetime]:
+        """Calculate next run time based on frequency"""
+        now = datetime.now()
+        match frequency:
+            case FrequencyType.DAILY:
+                # Next day same time
+                next_day = now + timedelta(days=1)
+                return datetime(next_day.year, next_day.month, next_day.day, now.hour, now.minute)
+            case FrequencyType.WEEKLY:
+                # Next week same day/time
+                next_week = now + timedelta(weeks=1)
+                return datetime(next_week.year, next_week.month, next_week.day, now.hour, now.minute)
+            case FrequencyType.MONTHLY:
+                # Next month same day/time
+                year = now.year
+                month = now.month + 1
+                if month > 12:
+                    month = 1
+                    year += 1
+                try:
+                    return datetime(year, month, now.day, now.hour, now.minute)
+                except ValueError:
+                    # Handle month with fewer days (e.g. 31 -> 30/28/29)
+                    # Roll to first day of next month
+                    if month == 12:
+                        return datetime(year + 1, 1, 1, now.hour, now.minute)
+                    else:
+                        return datetime(year, month + 1, 1, now.hour, now.minute)
+            case _:  # manual/event don't auto-schedule
+                return None
+
+    def get_queue_size(self) -> int:
+        """Get pending queue size"""
+        return len([t for t in self._queue if t.status == SyncStatus.PENDING])
