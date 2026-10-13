@@ -258,10 +258,29 @@ def _write_df_to_sheet(ws, df: pd.DataFrame, sheet_name: str = None, start_row: 
 def build_sign_sheet_df(df_sign_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.DataFrame:
     """构建签约 Sheet 完整 DataFrame（83 列）"""
     df = df_sign_raw.copy()
+    # Rename 履约项异常/变更备注 → 履约项异常/变更类型 对齐参考表
+    if "履约项异常/变更备注" in df.columns:
+        df = df.rename(columns={"履约项异常/变更备注": "履约项异常/变更类型"})
+
+    # 对齐人工基准 c38 备注：纯数字+冒号格式（如 "1231："）在人工 Excel 中被解析为
+    # 时长（[h]:mm:ss，1231 小时 → timedelta(days=51, seconds=25200)）
+    # 仅转换匹配 ^\d+：$ 的值，其余备注原样保留
+    if "备注" in df.columns:
+        import re as _re
+        _hour_re = _re.compile(r'^(\d+)：$')
+        def _note_convert(v):
+            if isinstance(v, str):
+                m = _hour_re.match(v.strip())
+                if m:
+                    hours = int(m.group(1))
+                    from datetime import timedelta as _td
+                    return _td(hours=hours)
+            return v
+        df["备注"] = df["备注"].map(_note_convert)
 
 
     # 列 41-44：简单计算列
-    df = add_simple_computed_columns(df)
+    df = add_simple_computed_columns(df, sheet_type="sign")
 
     # 列 45-67：状态相关列
     df = add_status_columns(df, REPORT_DATE)
@@ -317,55 +336,161 @@ def build_sign_sheet_df(df_sign_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.D
     return df
 
 
-def add_poc_computed_columns(df: pd.DataFrame) -> pd.DataFrame:
+def add_poc_computed_columns(df: pd.DataFrame, df_sign: pd.DataFrame = None, report_date: str = None) -> pd.DataFrame:
     """
-    给 POC Sheet 添加几个计算列：
-    1. 提前实施项目持续周期（天）：实际结项日期 - 立项日期
-    2. 提前实施项目持续周期-统计：分档分类
-    3. 提前实施项目是否已关联合同：是否关联合同 → 是/否
-    4. 关联合同归档日期：从合同表里关联（TODO）
-    5. 统计所属项目：项目编号
+    给 POC Sheet 添加计算列，对齐人工基准公式语义（202606 黄金基准）：
+
+      c79 提前实施项目持续周期（天） =IF(H3="POC","",IFS(
+            AND(I3="已归档",LEN(M3)>0), MIN(L3-J3, CD3-J3),   # 已归档且有合同：min(实际结项-立项, 关联归档-立项)
+            LEN(M3)>0,              CD3-J3,                    # 有合同：关联归档-立项
+            I3="已归档",            L3-J3,                     # 已归档：实际结项-立项
+            LEN(M3)=0,              $A$1-J3)                    # 无合同：月末-立项
+        )，结果 <0 取 0
+        H=项目类型(概览) I=项目状态 M=销售合同编号 J=立项日期 L=实际结项日期 CD=c82
+      c80 提前实施项目持续周期-统计 =IFS(<=30→1个月内; <=90→3个月内; <=180→6个月内; <=365→1年内; >365→超过1年)
+      c81 提前实施项目是否已关联合同 =IF(AND(LEN(M3)>0,H3="提前实施"),"已关联","未关联")
+      c82 关联合同归档日期 =VLOOKUP(M3,签约!M:P,4,FALSE)  （销售合同编号→签约表合同归档日期）
+      c83 统计所属项目 =IF(COUNTIF(G$2:G2,G3)>0,"",G3)  （所属项目去重）
     """
     from datetime import datetime
 
-    def _calc_duration(l_date, r_date):
-        l_dt = pd.to_datetime(l_date.astype(str).str[:10], errors="coerce")
-        r_dt = pd.to_datetime(r_date.astype(str).str[:10], errors="coerce")
-        return (r_dt - l_dt).dt.days
+    # c82：关联合同归档日期（从签约表按销售合同编号 VLOOKUP）
+    if "关联合同归档日期" not in df.columns:
+        if df_sign is not None and "销售合同编号" in df_sign.columns and "合同归档日期" in df_sign.columns:
+            lookup = df_sign.set_index("销售合同编号")["合同归档日期"]
+            # 销售合同编号可能重复，取第一个
+            lookup = lookup[~lookup.index.duplicated(keep="first")]
+            # 转换为 datetime（因为 pandas 构造 df 时把 datetime 转成字符串了）
+            def _parse_dt(v):
+                if not v or pd.isna(v):
+                    return v
+                try:
+                    return pd.to_datetime(str(v)[:10])
+                except:
+                    return v
+            lookup = lookup.apply(_parse_dt)
+            # 人工语义：空销售合同编号 → #N/A（VLOOKUP 空 criteria）；有合同未命中 → #N/A
+            df["关联合同归档日期"] = df["销售合同编号"].map(
+                lambda x: (lookup.get(x, "#N/A") if x in lookup.index else "#N/A")
+                if pd.notna(x) and str(x).strip() != "" else "#N/A"
+            )
+        else:
+            df["关联合同归档日期"] = "#N/A"
 
-    df["提前实施项目持续周期（天）"] = _calc_duration(df["立项日期"], df["实际结项日期"])
+    # c79：提前实施项目持续周期（天）
+    def _parse_dt(v):
+        if not v or pd.isna(v):
+            return None
+        try:
+            return datetime.strptime(str(v)[:10], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            return None
 
-    def _duration_bucket(days):
-        if pd.isna(days):
+    def _calc_duration(row):
+        proj_type = str(row.get("项目类型(概览)", "") or "")
+        # POC 类型项目 c79 为空，所以 return None
+        if proj_type == "POC":
+            return None
+        proj_status = str(row.get("项目状态", "") or "")
+        contract = str(row.get("销售合同编号", "") or "")
+        cd_raw = row.get("关联合同归档日期", "")
+        # 对齐人工语义：销售合同编号非空，但关联合同归档日期是 #N/A → 结果也是 #N/A
+        if contract and str(cd_raw) == "#N/A":
+            return "#N/A"
+        j_dt = _parse_dt(row.get("立项日期", ""))
+        l_dt = _parse_dt(row.get("实际结项日期", ""))
+        cd_dt = _parse_dt(cd_raw)
+        if report_date:
+            a1_dt = _parse_dt(report_date)
+        else:
+            a1_dt = None
+        # 逐个 IFS 分支
+        if proj_status == "已归档" and contract:
+            cands = []
+            if l_dt:
+                cands.append((l_dt - j_dt).days if j_dt else None)
+            if cd_dt:
+                cands.append((cd_dt - j_dt).days if j_dt else None)
+            days = min([c for c in cands if c is not None]) if cands else None
+        elif contract:
+            days = (cd_dt - j_dt).days if (cd_dt and j_dt) else None
+        elif proj_status == "已归档":
+            days = (l_dt - j_dt).days if (l_dt and j_dt) else None
+        else:
+            days = (a1_dt - j_dt).days if (a1_dt and j_dt) else None
+        if days is None:
             return ""
-        if days <= 30:
+        return max(days, 0)
+
+    df["提前实施项目持续周期（天）"] = df.apply(_calc_duration, axis=1)
+
+    # c80：分档
+    def _duration_bucket(days):
+        # 对齐人工语义：如果 days 是 #N/A，返回 #N/A
+        if str(days) == "#N/A":
+            return "#N/A"
+        # Excel 对空值比较，空 > 365 恒真，所以空值返回"超过1年"对齐人工
+        if days is None or pd.isna(days) or (isinstance(days, str) and days == ""):
+            return "超过1年"
+        try:
+            d = int(float(days))
+        except (ValueError, TypeError):
+            return "超过1年"
+        if d <= 30:
             return "1个月内"
-        elif days <= 90:
+        elif d <= 90:
             return "3个月内"
-        elif days <= 180:
+        elif d <= 180:
             return "6个月内"
+        elif d <= 365:
+            return "1年内"
         else:
             return "超过1年"
 
-    df["提前实施项目持续周期-统计"] = df["提前实施项目持续周期（天）"].apply(_duration_bucket)
-    df["提前实施项目是否已关联合同"] = df["销售合同编号"].notna().map({True: "是", False: "否"})
-    # TODO: 关联合同归档日期需要 OA 表关联
-    # df["关联合同归档日期"] = ...
-    df["统计所属项目"] = df["项目编号"]
+    df["提前实施项目持续周期-统计"] = df["提前实施项目持续周期（天）"].apply(
+        lambda x: _duration_bucket(x)
+    )
+
+    # c81：IF(AND(LEN(销售合同编号)>0, 项目类型=提前实施), "已关联", "未关联")
+    def _linked(row):
+        contract = str(row.get("销售合同编号", "") or "")
+        proj_type = str(row.get("项目类型(概览)", "") or "")
+        if len(contract) > 0 and proj_type == "提前实施":
+            return "已关联"
+        return "未关联"
+
+    df["提前实施项目是否已关联合同"] = df.apply(_linked, axis=1)
+
+    # c83：统计所属项目 —— 所属项目去重（上方已出现则空）
+    seen = set()
+    dedup = []
+    for v in df["所属项目"]:
+        sv = str(v) if pd.notna(v) else ""
+        if sv and sv in seen:
+            dedup.append("")
+        else:
+            dedup.append(v)
+            if sv:
+                seen.add(sv)
+    df["统计所属项目"] = dedup
 
     return df
 
 
-def build_poc_sheet_df(df_poc_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.DataFrame:
+def build_poc_sheet_df(df_poc_raw: pd.DataFrame, df_exc: pd.DataFrame,
+                       df_sign: pd.DataFrame = None) -> pd.DataFrame:
     """构建 POC&提前实施 Sheet 完整 DataFrame（84 列）"""
     df = df_poc_raw.copy()
+    # Rename 履约项异常/变更备注 → 履约项异常/变更类型 对齐参考表
+    if "履约项异常/变更备注" in df.columns:
+        df = df.rename(columns={"履约项异常/变更备注": "履约项异常/变更类型"})
 
 
     # 列 41-44：简单计算列
-    df = add_simple_computed_columns(df)
+    df = add_simple_computed_columns(df, sheet_type="poc")
 
-    # POC 增加计算列
-    df = add_poc_computed_columns(df)
+    # POC 增加计算列（c79-83，需签约表 VLOOKUP 关联合同归档日期）
+    df = add_poc_computed_columns(df, df_sign, REPORT_DATE)
 
     # 列 45-67：状态相关列
     df = add_status_columns(df, REPORT_DATE)
@@ -373,12 +498,29 @@ def build_poc_sheet_df(df_poc_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.Dat
     # 列 68-76：考核相关列
     df = add_scoring_columns(df)
 
-    # 列 77-79：映射相关列 — 注意顺序：这里项目经理已经是计算列，原始列不要保留
+    # 列 77-78：映射列（项目经理所属部门、销售团队-统计）
     df = add_mapping_columns(df)
 
-    # POC 工时合计：按项目汇总工时
+    # c84 POC 工时合计：按统计所属项目（完整【SSXM-...】名称）匹配工时文件
+    # 人工语义：=IF(LEN(CE3)>0,IF(ISNA(VLOOKUP(CE3,按项目汇总!A:B,2,FALSE)),0,VLOOKUP(...)),"")
+    #   → 统计所属项目为空 → ""；有项目未命中 → 0；命中 → 工时数
     poc_hours = get_poc_project_hours()
-    df = df.merge(poc_hours, left_on="项目编号", right_on="项目编号", how="left")
+    if not poc_hours.empty:
+        # 避免 merge 时 left 的「项目编号」被 pandas 重命名为 项目编号_x
+        hr = poc_hours.rename(columns={"项目编号": "工时项目编号"})
+        df = df.merge(hr, left_on="统计所属项目", right_on="工时项目编号", how="left")
+        df = df.drop(columns=["工时项目编号"], errors="ignore")
+        if "POC项目工时合计（小时）" not in df.columns:
+            df["POC项目工时合计（小时）"] = ""
+        # 统计所属项目为空 → ""；未命中（merge 后 NaN）→ 0
+        hours = df["POC项目工时合计（小时）"]
+        proj = df["统计所属项目"]
+        df["POC项目工时合计（小时）"] = [
+            "" if (pd.isna(p) or str(p).strip() == "") else (0 if pd.isna(h) else h)
+            for p, h in zip(proj, hours)
+        ]
+    else:
+        df["POC项目工时合计（小时）"] = ""
 
     # 确保列顺序正确（和参考报表一致）
     expected_cols = [
@@ -409,14 +551,14 @@ def build_poc_sheet_df(df_poc_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.Dat
         "交付计划准确率“是否跨月”", "交付计划准确率-考核扣分",
         "按时交付率“差异”", "按时交付率“提前/延后”",
         "按时交付率“是否跨月”", "按时交付率-考核扣分",
-        # 计算列 (77-81)
+        # 计算列 (77-83) + POC 工时 (84)，对齐人工基准顺序
+        "项目经理所属部门",
+        "销售团队-统计",
         "提前实施项目持续周期（天）",
         "提前实施项目持续周期-统计",
         "提前实施项目是否已关联合同",
         "关联合同归档日期",
         "统计所属项目",
-        # 映射列 (82-84)
-        "项目经理", "项目经理所属部门", "销售团队-统计",
         # POC 工时
         "POC项目工时合计（小时）",
     ]
@@ -425,69 +567,6 @@ def build_poc_sheet_df(df_poc_raw: pd.DataFrame, df_exc: pd.DataFrame) -> pd.Dat
     actual_cols = [c for c in expected_cols if c in df.columns]
     df = df[actual_cols]
 
-    return df
-
-
-def build_exception_df(df_exc_raw: pd.DataFrame, df_sign: pd.DataFrame) -> pd.DataFrame:
-    """
-    构建异常项目完整 DataFrame（38 列）
-    
-    列顺序对齐参考表异常项目 Sheet：
-      1-36: 异常项目基础信息 + 异常详情（从完整版 CSV 取）
-      37: 项目经理团队（从签约表关联）
-      38: 项目验收状态（从签约表关联）
-    """
-    df = df_exc_raw.copy()
-    
-    # 过滤：异常报备日期 <= 报告截止日（异常项目没有立项日期，用报备日期）
-    if "异常报备日期" in df.columns:
-        df["_报备_date"] = pd.to_datetime(df["异常报备日期"].astype(str).str[:10], errors="coerce")
-        df = df[df["_报备_date"] <= pd.to_datetime(REPORT_DATE)]
-        df.drop(columns=["_报备_date"], inplace=True)
-    
-    # 从签约表关联项目经理团队、项目验收状态
-    if "销售合同编号" in df.columns and "销售合同编号" in df_sign.columns:
-        # 项目经理团队 = 签约表的项目经理所属部门
-        dept_lookup = df_sign.set_index("销售合同编号")["项目经理所属部门"].to_dict()
-        df["项目经理团队"] = df["销售合同编号"].map(
-            lambda x: dept_lookup.get(x, "") if pd.notna(x) else ""
-        )
-        # 项目验收状态 = 签约表的项目验收状态（财报-验收状态）
-        acc_status_col = "项目验收状态（即，财报-验收状态）"
-        if acc_status_col in df_sign.columns:
-            acc_lookup = df_sign.set_index("销售合同编号")[acc_status_col].to_dict()
-            df["项目验收状态"] = df["销售合同编号"].map(
-                lambda x: acc_lookup.get(x, "") if pd.notna(x) else ""
-            )
-    
-    # 确保列顺序正确（对齐参考表异常项目 Sheet，38 列）
-    expected_cols = [
-        # 列 1-16：合同+项目基础信息
-        "销售合同编号", "合同归档日期", "最终用户名称", "客户名称",
-        "责任销售（履约项）", "责任销售所属团队", "负责人", "所属项目",
-        "项目类型(概览)", "合同起始日期", "合同结束日期",
-        "交付服务开始日期", "交付服务结束日期", "合同验收条款",
-        "验收时点", "验收方式",
-        # 列 17-21：异常项标识
-        "标题", "状态", "备注", "PMO备注", "ID",
-        # 列 22-36：异常详情
-        "事业部（区域）", "事业部负责人", "异常报备日期",
-        "预估异常处置完成日期", "异常归档日期", "异常影响情况",
-        "异常项目-类别", "异常项目-处置方案", "异常处置方案-影响",
-        "交付说明（异常履约项统计类别）",
-        "交付说明（履约项交付情况、合同交付条款）",
-        "交付中心反馈", "营销中心反馈", "项目异常内容", "预估金额",
-        # 列 37-38：关联签约表
-        "项目经理团队", "项目验收状态",
-    ]
-    
-    # 过滤存在的列
-    actual_cols = [c for c in expected_cols if c in df.columns]
-    missing = [c for c in expected_cols if c not in df.columns]
-    if missing:
-        print(f"  ⚠️  异常项目缺列: {missing}")
-    df = df[actual_cols]
-    
     return df
 
 

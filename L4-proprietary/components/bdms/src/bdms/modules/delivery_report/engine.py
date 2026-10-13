@@ -155,7 +155,7 @@ class DeliveryReportEngine:
 
         # ── 2. 核心数据 (Sheet 1-5) ──
         result["签约"] = _legacy.build_sign_sheet_df(df_sign, df_exc)
-        result["POC&提前实施"] = _legacy.build_poc_sheet_df(df_poc, df_exc)
+        result["POC&提前实施"] = _legacy.build_poc_sheet_df(df_poc, df_exc, df_sign)
         result["异常项目"] = _legacy.build_exception_df(df_exc, result["签约"]) 
 
         # 确收交接 (4)
@@ -206,9 +206,17 @@ class DeliveryReportEngine:
             for sheet, df in data.items():
                 if df is None or df.empty:
                     continue
-                df = self._dedupe_columns(df)
                 columns = list(df.columns)
-                rows = df.fillna("").to_dict(orient="records")
+                # convert pandas NA/np.nan to None for DB storage (so we can restore empty cells later)
+                rows = []
+                for row in df.itertuples(index=False):
+                    row_dict = {}
+                    for col, val in zip(columns, row):
+                        if pd.isna(val):
+                            row_dict[col] = None
+                        else:
+                            row_dict[col] = val
+                    rows.append(row_dict)
                 n = _db.save_sheet_rows(conn, month, sheet, columns, rows,
                                         prefix="dr", overwrite=overwrite)
                 counts[sheet] = n

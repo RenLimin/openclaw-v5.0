@@ -17,10 +17,12 @@ import logging
 import os
 import time
 import subprocess
+import urllib.request
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from contextlib import contextmanager
 
+from bdms.core import config
 from bdms.core.paths import DATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -115,8 +117,42 @@ def login_iam(username: str, password: str) -> bool:
             page.locator("input[type=text]").first.fill(username)
             page.locator("input[type=password]").first.fill(password)
             page.locator("button").nth(1).click()
+            time.sleep(3)
 
-            page.wait_for_url("**/home/**", timeout=15000)
+            # 检查是否需要邮件验证码
+            captcha_locator = page.locator("input[placeholder*=验证码],input[placeholder*=captcha]")
+            if captcha_locator.count() > 0:
+                logger.info("IAM 登录需要邮件验证码，正在获取...")
+                # 调用企业邮件 API 获取最新验证码
+                try:
+                    # 从 BDMS 配置读取邮件集成配置
+                    from bdms.core import config
+                    email_config = config.get("integrations.iam.email", {})
+                    if not email_config:
+                        logger.error("未配置 IAM 邮件验证码集成，请先配置")
+                        return False
+                    # 请求最新验证码
+                    req = urllib.request.Request(
+                        f"{email_config['base_url']}/api/latest-captcha",
+                        headers={"Authorization": f"Bearer {email_config['apiKey']}"},
+                        method="GET"
+                    )
+                    with urllib.request.urlopen(req, timeout=20) as resp:
+                        result = json.loads(resp.read().decode("utf-8"))
+                        captcha = result.get("captcha")
+                        if not captcha:
+                            logger.error("无法获取验证码：%s", result.get("error", "未知错误"))
+                            return False
+                        logger.info("成功获取验证码：%s", captcha)
+                        # 填入验证码
+                        captcha_locator.first.fill(captcha)
+                        page.locator("button").nth(1).click()
+                        time.sleep(3)
+                except Exception as e:
+                    logger.error("获取邮件验证码失败：%s", e)
+                    return False
+
+            page.wait_for_url("**/home/**", timeout=20000)
             page.wait_for_load_state("networkidle", timeout=15000)
             time.sleep(3)
 
