@@ -394,15 +394,29 @@ class WecomDocConnector(BaseConnector):
 
     @staticmethod
     def _read_csv(path: Path) -> List[Dict[str, Any]]:
-        """读取 CSV 为原始行列表（保留全部列）."""
-        import csv
+        """读取 CSV 为原始行列表（保留全部列）。
+
+        注意：不能直接用 csv.DictReader —— 当表头存在重复列名时
+        （如验收 CSV 的两个「截至目前全部/部分验收」），dict 键相同会互相覆盖，
+        导致第二列（pandas 语义下为「截至目前全部/部分验收.1」）丢失。
+        这里用 pandas 读取，自动对重复列名加 .1 后缀（与 pandas read_csv 语义一致），
+        保证两列数据都保留。
+        """
+        import pandas as pd
         rows = []
         if not path.exists():
             return rows
-        with open(path, newline='', encoding='utf-8-sig') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                rows.append({k: row.get(k, "") for k in reader.fieldnames})
+        try:
+            df = pd.read_csv(path, dtype=str, encoding="utf-8-sig")
+        except Exception:
+            # 兜底：utf-8 尝试
+            try:
+                df = pd.read_csv(path, dtype=str, encoding="utf-8")
+            except Exception:
+                return rows
+        df = df.fillna("")
+        for _, row in df.iterrows():
+            rows.append({str(k): ("" if v is None else v) for k, v in row.items()})
         return rows
 
     def _get_doc_url_from_search(self, page, doc_name: str) -> Optional[str]:

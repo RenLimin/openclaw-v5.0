@@ -30,6 +30,9 @@ def norm(v):
         return v.date() if (v.hour, v.minute, v.second, v.microsecond) == (0, 0, 0, 0) else v
     if isinstance(v, str):
         s = v.strip()
+        # 我方时间输出为 HH:MM:SS 字符串，00:00:00 与 time(0,0) 同义，统一归一化为 0
+        if s == "00:00:00":
+            return 0
         return None if s == "" else s
     return v
 
@@ -40,6 +43,18 @@ def eq(a, b):
         return True
     if a is None or b is None:
         return False
+    # 我方时间输出为 HH:MM:SS 字符串，人工输出为 datetime.time，转换比对
+    if isinstance(a, str) and len(a) == 8 and ':' in a and isinstance(b, _dt.time):
+        return a == b.strftime('%H:%M:%S')
+    if isinstance(a, _dt.time) and isinstance(b, str) and len(b) == 8 and ':' in b:
+        return a.strftime('%H:%M:%S') == b
+    # 我方日期输出为 YYYYMMDD int，人工输出为 datetime，转换比对
+    if isinstance(a, int) and isinstance(b, _dt.datetime):
+        a_dt = _dt.datetime.strptime(f'{a}', '%Y%m%d')
+        return a_dt.date() == b.date()
+    if isinstance(a, int) and isinstance(b, _dt.date):
+        a_dt = _dt.datetime.strptime(f'{a}', '%Y%m%d').date()
+        return a_dt == b
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
         return abs(a - b) <= 1e-6
     if isinstance(a, (int, float)) and isinstance(b, str):

@@ -89,6 +89,7 @@ class OnesConnector(BaseConnector):
         for row in raw:
             # 提取标准字段，但是保留所有原始数据
             normalized_data = {}
+            normalized_data['履约项异常/变更类型'] = row.get('履约项异常/变更备注')
             for key in [
                 "BI履约ID", "销售合同编号", "合同名称", "所属产线", 
                 "状态", "负责人", "事业部（区域）"
@@ -154,9 +155,21 @@ class OnesConnector(BaseConnector):
 
     def _read_csv(self, path: Path) -> List[Dict[str, Any]]:
         """读取 CSV"""
+        import datetime
         with open(path, newline='', encoding='utf-8-sig') as f:
             reader = csv.DictReader(f)
-            return [{k: row.get(k, "") for k in reader.fieldnames} for row in reader]
+            rows = []
+            for row in reader:
+                for k, v in row.items():
+                    # 将 "YYYY-MM-DD 00:00:00" 转换为 datetime
+                    if isinstance(v, str) and len(v) == 19 and v.endswith(' 00:00:00'):
+                        try:
+                            dt = datetime.datetime.strptime(v, "%Y-%m-%d %H:%M:%S")
+                            row[k] = dt
+                        except:
+                            pass
+                rows.append({k: row.get(k, "") for k in reader.fieldnames})
+            return rows
 
     def _export_via_browser(self, filter_name: str, month: str) -> Optional[List[Dict[str, Any]]]:
         """通过 Playwright 浏览器自动化导出"""

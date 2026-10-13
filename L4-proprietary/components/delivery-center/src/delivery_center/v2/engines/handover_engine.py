@@ -15,7 +15,8 @@ import json
 from pathlib import Path
 
 # 图例路径（复用旧版配置）
-LEGEND_PATH = Path(__file__).parent.parent / "v1" / "config" / "legend_pm_dept.json"
+# engines/ 下 → 需上溯三级到 delivery_center 包根，再进 v1/config
+LEGEND_PATH = Path(__file__).parent.parent.parent / "v1" / "config" / "legend_pm_dept.json"
 
 
 def _normalize_column_names(df: pd.DataFrame) -> pd.DataFrame:
@@ -111,7 +112,7 @@ def build_revenue_handover_df(df_raw: pd.DataFrame, period: str = "202606") -> p
     ]
     
     # 1. 月份
-    df["月份"] = period
+    df["月份"] = int(period)
     
     # 2-11. 直接映射（标题 ~ 备注）
     direct_map = {
@@ -134,7 +135,28 @@ def build_revenue_handover_df(df_raw: pd.DataFrame, period: str = "202606") -> p
     
     # 12. 交接日期
     if "交接日期" in df.columns:
-        df["交接日期"] = pd.to_datetime(df["交接日期"], errors="coerce")
+        # 人工确收交接该列为 YYYYMMDD 整数，输出为整数（保留空值为 None）
+        def _parse_date_int(x):
+            if pd.isna(x) or x is None:
+                return None
+            s = str(x).strip()
+            if not s:
+                return None
+            # 标准化：去掉所有非数字字符，取前8位
+            nums = ''.join([c for c in s if c.isdigit()])[:8]
+            if len(nums) == 8 and nums.isdigit():
+                return int(nums)
+            # 剩余情况：尝试解析 datetime 再提取 YYYYMMDD
+            try:
+                dt = pd.to_datetime(s, errors="coerce")
+                if pd.notna(dt):
+                    return int(dt.strftime("%Y%m%d"))
+            except:
+                pass
+            return None
+        df["交接日期"] = df["交接日期"].apply(_parse_date_int)
+    else:
+        df["交接日期"] = None
     
     # 13. 财务接收人 ← 财务
     if "财务" in df.columns:
@@ -176,7 +198,7 @@ def build_revenue_handover_df(df_raw: pd.DataFrame, period: str = "202606") -> p
     
     # 20. 项目经理所属区域（公式：VLOOKUP(项目经理, 图例!A:B, 2, FALSE)）
     pm_dept_map = _load_pm_dept_map()
-    df["项目经理所属区域"] = df["项目经理"].map(pm_dept_map).fillna("#N/A")
+    df["项目经理所属区域"] = df["项目经理"].map(lambda x: pm_dept_map.get(x, "") if pd.notna(x) else "")
     
     # 21. 跨月交接（公式：IF(ISERROR(FIND("是",交付邮件是否跨月)),"否","是")）
     def compute_cross_month(val):
@@ -201,7 +223,16 @@ def build_revenue_handover_df(df_raw: pd.DataFrame, period: str = "202606") -> p
     end_date = pd.Timestamp(f"{period[:4]}-{period[4:]}-01") + pd.offsets.MonthEnd(0)
     if "交接日期" in df.columns and df["交接日期"].dtype == "datetime64[ns]":
         df = df[df["交接日期"].fillna(pd.Timestamp("2099-12-31")) <= end_date]
-    
+
+    # 过滤三列全空行（标题/ID/合同编号全空 = 原始 CSV 尾部空行，人工基准已过滤）
+    # 注意：pipeline 读 CSV 时 fillna("") 会把空值变空字符串，需同时处理 NaN 和 ""
+    key_cols = [c for c in ["标题", "ID", "合同编号"] if c in df.columns]
+    if len(key_cols) == 3:
+        def _is_blank(s):
+            return pd.isna(s) or str(s).strip() == ""
+        mask = ~(df[key_cols[0]].apply(_is_blank) & df[key_cols[1]].apply(_is_blank) & df[key_cols[2]].apply(_is_blank))
+        df = df[mask]
+
     # 按预期列顺序返回
     return df[expected_cols]
 
@@ -245,7 +276,7 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
         "是否接收",          # ← 财务是否接收
         "实际验收方式",
         "财务反馈",
-        "__part2__",  # 第22列：截至目前全部/部分验收（第二个，源 CSV 带 .1 后缀）
+        "截至目前全部/部分验收__2",  # 第22列：截至目前全部/部分验收（第二个，源 CSV 带 .1 后缀）
         "PMO提交人",         # ← PMO
         "PMO反馈",           # ← PMO备注
         "是否修改ones及OA状态",
@@ -254,7 +285,7 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
     ]
     
     # 1. 月份
-    df["月份"] = period
+    df["月份"] = int(period)
     
     # 2-6. 直接映射
     direct_map = {
@@ -301,15 +332,19 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
     
     # 9. 交接日期
     if "交接日期" in df.columns:
-        df["交接日期"] = pd.to_datetime(df["交接日期"], errors="coerce")
+        # 将 "YYYY-MM-DD 00:00:00" 字符串转换为 datetime（对齐人工基准原生日期类型）
+        df["交接日期"] = df["交接日期"].apply(
+            lambda x: pd.to_datetime(str(x)[:10], errors="coerce")
+            if isinstance(x, str) and len(str(x)) >= 10 else pd.to_datetime(x, errors="coerce")
+        )
     else:
         df["交接日期"] = pd.NaT
     
     # 10. 截至目前全部/部分验收（第一个）
     if "截至目前全部/部分验收" in df.columns:
-        df["截至目前全部/部分验收"] = df["截至目前全部/部分验收"]
+        df["截至目前全部/部分验收"] = df["截至目前全部/部分验收"].replace('', pd.NA)
     else:
-        df["截至目前全部/部分验收"] = ""
+        df["截至目前全部/部分验收"] = pd.NA
     
     # 11. 是否为渠道 ← 列名含换行 "是否\n为渠道"
     channel_cols = [c for c in df.columns if "是否" in str(c) and "渠道" in str(c)]
@@ -330,11 +365,11 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
     if "是否接收" not in df.columns:
         df["是否接收"] = ""
     
-    # 14. 截至目前全部/部分验收.1（第二个）→ 临时列 __part2__，末尾 rename 回标准名
+    # 14. 截至目前全部/部分验收.1（第二个）→ 直接重命名为 __2 后缀，避免 pandas 覆盖第一个列的值，exporter 输出时还原为原名
     if "截至目前全部/部分验收.1" in df.columns:
-        df["__part2__"] = df["截至目前全部/部分验收.1"]
+        df["截至目前全部/部分验收__2"] = df["截至目前全部/部分验收.1"].replace('', pd.NA)
     else:
-        df["__part2__"] = ""
+        df["截至目前全部/部分验收__2"] = pd.NA
     
     # 15. PMO提交人 ← PMO
     if "PMO" in df.columns:
@@ -350,7 +385,7 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
     
     # 17. 项目经理所属区域（公式：VLOOKUP(L2,图例!A:B,2,FALSE)）
     pm_dept_map = _load_pm_dept_map()
-    df["项目经理所属区域"] = df["项目经理"].map(pm_dept_map).fillna("#N/A")
+    df["项目经理所属区域"] = df["项目经理"].map(lambda x: pm_dept_map.get(x, "") if pd.notna(x) else "")
     
     # 18. 是否合格（公式：IF(ISERROR(FIND("是",S2)),"否","是")）
     # S2 = 第19列 = 是否接收
@@ -365,6 +400,17 @@ def build_acceptance_handover_df(df_raw: pd.DataFrame, period: str = "202606") -
     end_date = pd.Timestamp(f"{period[:4]}-{period[4:]}-01") + pd.offsets.MonthEnd(0)
     if "交接日期" in df.columns and df["交接日期"].dtype == "datetime64[ns]":
         df = df[df["交接日期"].fillna(pd.Timestamp("2099-12-31")) <= end_date]
-    
-    # 按预期列顺序返回（__part2__ → 截至目前全部/部分验收，保持两列同名）
-    return df[expected_cols].rename(columns={"__part2__": "截至目前全部/部分验收"})
+
+    # 过滤三列全空行（标题/ID/合同编号全空 = 原始 CSV 尾部空行，人工基准已过滤）
+    # 注意：pipeline 读 CSV 时 fillna("") 会把空值变空字符串，需同时处理 NaN 和 ""
+    key_cols = [c for c in ["标题", "ID", "合同编号"] if c in df.columns]
+    if len(key_cols) == 3:
+        def _is_blank(s):
+            return pd.isna(s) or str(s).strip() == ""
+        mask = ~(df[key_cols[0]].apply(_is_blank) & df[key_cols[1]].apply(_is_blank) & df[key_cols[2]].apply(_is_blank))
+        df = df[mask]
+
+    # 按预期列顺序返回（__part2__ → 唯一名，避免 pandas to_dict 覆盖重复列值）
+    # exporter 写表头时会将 截至目前全部/部分验收__2 还原为 截至目前全部/部分验收
+    # 按预期列顺序返回（第二个列已经重命名 __2，exporter 输出时还原为原名，对齐人工重复列名）
+    return df[expected_cols]

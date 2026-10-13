@@ -42,10 +42,11 @@ STAT_SHEETS = {
     "异常统计", "交付异常分事业部统计",
 }
 
-# SUBTOTAL 公式列（对齐黄金基准）
+# SUBTOTAL 公式列（对齐黄金基准 202606 人工 r1：c53/c54/c57-66）
+# 0-based: c53→52, c54→53, c57→56 ... c66→65
 SUBTOTAL_FORMULA_COLS = {
-    "签约": [51, 52, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],  # 0-based col indices
-    "POC&提前实施": [51, 52, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64],
+    "签约": [52, 53, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
+    "POC&提前实施": [52, 53, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65],
 }
 
 
@@ -180,17 +181,19 @@ class DeliveryReportExporter:
         if title is not None:
             ws.cell(row=1, column=1, value=title)
 
-        # 去重列名（解决 pandas _dedupe_columns 产生的 .1 后缀）
-        seen = {}
+        # 列名原样保留（人工基准允许重复列名，如验收交接的两个「截至目前全部/部分验收」）
+        # 唯一名后缀 __2 还原为原名，保持与人工基准一致的重复列名
         clean_cols = []
         for c in df.columns:
             s = str(c)
-            if s in seen:
-                seen[s] += 1
-                clean_cols.append(f"{s}_{seen[s]}")
-            else:
-                seen[s] = 0
-                clean_cols.append(s)
+            if s.endswith("__2"):
+                s = s[:-3]
+            clean_cols.append(s)
+
+        if title is not None:
+            # 人工基准：签约/POC 的 r1c41 = "排序"（0-based 40）
+            if len(clean_cols) >= 41:
+                ws.cell(row=1, column=41, value="排序")
 
         # 表头
         for col_idx, col_name in enumerate(clean_cols, start=1):
@@ -202,6 +205,7 @@ class DeliveryReportExporter:
 
         # 数据
         n_data_rows = len(df)
+        import datetime as _dt
         for row_idx, record in enumerate(df.itertuples(index=False),
                                         start=header_row + 1):
             for col_idx, value in enumerate(record, start=1):
@@ -209,16 +213,39 @@ class DeliveryReportExporter:
                 cell.font = DATA_FONT
                 cell.alignment = DATA_ALIGN
 
+        # 日期归一化：DB 落盘经 json.dumps(default=str) 后 datetime 变字符串
+        # "YYYY-MM-DD 00:00:00" → 原生 datetime（对齐人工基准）
+        for row_idx in range(header_row + 1, header_row + 1 + n_data_rows):
+            for col_idx in range(1, len(clean_cols) + 1):
+                v = ws.cell(row=row_idx, column=col_idx).value
+                if isinstance(v, str) and len(v) == 19 and v.endswith(' 00:00:00'):
+                    try:
+                        ws.cell(row=row_idx, column=col_idx).value = _dt.datetime.strptime(v, "%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        pass
+
         # SUBTOTAL 公式列（对齐黄金基准）
         if subtotal_cols and n_data_rows > 0:
             from openpyxl.utils import get_column_letter
             for col_idx_0based in subtotal_cols:
                 col_idx_1based = col_idx_0based + 1
                 col_letter = get_column_letter(col_idx_1based)
-                first_data_row = header_row + 1
-                last_data_row = header_row + n_data_rows
-                cell_ref = f"{col_letter}{last_data_row + 1}"
-                ws[cell_ref] = f"=SUBTOTAL(9,{col_letter}{first_data_row}:{col_letter}{last_data_row})"
+                col_name = df.columns[col_idx_0based]
+                # 设计文档：公式结果以值写入（非 Excel 公式）。
+                # 签约：人工 r1 为全列 SUBTOTAL → 写列总和
+                # POC：人工 r1 为单行 SUBTOTAL(BA3:BA3) → 写首行值
+                if sheet_name == "POC&提前实施":
+                    try:
+                        total = df[col_name].iloc[0]
+                    except Exception:
+                        total = 0
+                else:
+                    try:
+                        total = df[col_name].sum()
+                    except Exception:
+                        total = 0
+                cell_ref = f"{col_letter}1"
+                ws[cell_ref] = total
                 ws[cell_ref].font = Font(bold=True)
 
         # 冻结表头行

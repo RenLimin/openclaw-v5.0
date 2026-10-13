@@ -128,8 +128,12 @@ def _load_data(force=False):
         return
     
     # 主数据源：ones_exports 目录
-    _sign_df = _try_read_csv(ONES_DIR / "签约项目统计.csv")
-    _poc_df = _try_read_csv(ONES_DIR / "poc_提前实施.csv")
+    _sign_df = _try_read_csv(ONES_DIR / f"{REPORT_MONTH}周报-签约项目统计.csv")
+    if _sign_df is None:
+        _sign_df = _try_read_csv(ONES_DIR / "签约项目统计.csv")
+    _poc_df = _try_read_csv(ONES_DIR / f"{REPORT_MONTH}周报-POC&提前实施统计.csv")
+    if _poc_df is None:
+        _poc_df = _try_read_csv(ONES_DIR / "poc_提前实施.csv")
     _poc_df_full = _poc_df.copy() if _poc_df is not None else None
     
     # 异常数据：优先使用完整版（55列），回退到标准版（40列）
