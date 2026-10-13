@@ -648,7 +648,21 @@ class DeliveryReportConnector:
                 row_data = {col: extra.get(col, '') for col in columns}
                 data.append(row_data)
 
-            return pd.DataFrame(data, columns=columns)
+            df = pd.DataFrame(data, columns=columns)
+
+            # 对齐人工基准：占位列名 col_* 在表头为空单元格，数据为空
+            # 备注_1 还原为重复列名 备注（人工图例 c4/c11 均为 备注）
+            import re as _re
+            new_cols = []
+            for c in df.columns:
+                if _re.fullmatch(r'col_\d+', str(c)):
+                    new_cols.append('')
+                elif str(c) == '备注_1':
+                    new_cols.append('备注')
+                else:
+                    new_cols.append(c)
+            df.columns = new_cols
+            return df
         finally:
             conn.close()
 
