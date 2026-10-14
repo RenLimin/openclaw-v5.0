@@ -753,6 +753,9 @@ CREATE INDEX IF NOT EXISTS idx_int_fm_target ON int_field_mapping(target_module,
 
 > **拉取方式：浏览器自动化**（已通过之前开发验证，复用 `ones-browser-export` 技能）
 
+> ✅ **实现状态**：浏览器自动化已实现（Playwright CDP 自动新开 Chrome，含还原视图+导出）。
+> **CLI 子命令 / 幂等写入 / 企微 API 方案**：待建设（见 INTEGRATION-DEVELOPMENT-TRACKING.md）。
+
 #### 5.1.1 概述
 
 | 属性 | 值 |
@@ -1330,10 +1333,14 @@ def validate_fetch_result(self, raw_data: list[dict], month: str) -> dict:
 | 默认频率 | 人工触发（生成月报前） |
 | 适配器 | WecomCliAdapter（封装 wecom-cli 命令） |
 
-> **技术选型说明**：按优先级降级：
-> 1. **wecom-cli API**（优先）：复用企业微信插件已有凭据，通过 `wecom-cli` 命令行操作企微文档/智能表格
-> 2. **浏览器自动化**（备选）：Playwright CDP 访问企微 Web 端，模拟点击导出
-> 3. **本机导入**（兜底）：用户手动下载 CSV 后通过 local_import 连接器导入
+> **实际降级链**（2026-10-14 对齐代码 `wecom_doc_connector.py:fetch`）：
+> 1. **file_path 本机导入**（最高优先级）：直接提供文件路径
+> 2. **月度目录 CSV**：团队报告月度目录下预导出 CSV（`{YYYYMM}确收凭证交接-确收.csv` / `-验收.csv`）
+> 3. **缓存 CSV**：企微导出缓存（`~/.openclaw/data/wecom_exports/`）
+> 4. **企微 API**（待授权）：wecom-cli（doc search + sheet get + sheet ranges get mode=csv；853007 权限需重新授权时自动降级）
+> 5. **浏览器自动化**（已实现可用）：Playwright CDP 连接已登录 Chrome（9222）+ `.tab-bar-item` 切 Sheet + Cmd+A/Cmd+C 剪贴板全选复制 + 表头定位/脏行过滤；确收 527 行 / 验收 530 行，与黄金数据 ID 100% 对齐。详见 `docs/architecture/components/browser-automation-wecom-doc.md` v1.1
+
+> **CLI 子命令 / 幂等写入**：待建设（见 INTEGRATION-DEVELOPMENT-TRACKING.md）。
 >
 > **当前验证状态**：
 > - wecom-cli 已配置并可用，支持文档列表、文档内容、智能表格操作（⚠️ 853007 文档权限需重新授权时自动降级）

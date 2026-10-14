@@ -391,6 +391,8 @@ class RevenueService(BaseService):
 
 ### 3.3 RevenueReportExporter
 
+> ✅ **已实现**（2026-10-14 文档-代码一致性对齐）：`src/bdms/modules/revenue/exporter.py`。签名以实际代码为准。
+
 ```python
 class RevenueReportExporter:
     """确认收入 Excel 导出器。"""
@@ -400,6 +402,8 @@ class RevenueReportExporter:
 ```
 
 ### 3.4 UnifiedRevenueImporter
+
+> ✅ **已实现**（2026-10-14 文档-代码一致性对齐）：`src/bdms/modules/revenue/importer.py`（追加于 AdaptiveImporter 之后）。内部包装 AdaptiveImporter 委托预算执行/计划底稿导入；签名以实际代码为准。
 
 ```python
 class UnifiedRevenueImporter:

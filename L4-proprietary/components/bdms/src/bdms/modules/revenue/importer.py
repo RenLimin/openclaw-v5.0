@@ -350,3 +350,84 @@ class AdaptiveImporter:
             f"INSERT INTO plan_draft ({','.join(cols)}) VALUES ({placeholders})",
             [rec.get(c) for c in cols],
         )
+
+
+class UnifiedRevenueImporter:
+    """统一确认收入导入器。"""
+
+    def __init__(self, db_path: Optional[Path] = None):
+        self._imp = AdaptiveImporter(db_path)
+
+    def import_budget_exec(self, excel_path: Path, month: str) -> dict:
+        """导入预算执行表。"""
+        return self._imp.import_budget_exec(excel_path, month)
+
+    def import_plan_draft(self, excel_path: Path, month: str) -> dict:
+        """导入计划确收底稿。"""
+        return self._imp.import_plan_draft(excel_path, month)
+
+    def import_summary(self, excel_path: Path, month: str) -> dict:
+        """导入确收汇总表（读取「汇总表」sheet 的通用导入）。"""
+        import json
+        from openpyxl import load_workbook
+        from bdms.core import db as _db
+
+        wb = load_workbook(excel_path, read_only=True, data_only=True)
+        if "汇总表" not in wb.sheetnames:
+            return {"rows": 0, "error": "找不到汇总表"}
+
+        ws = wb["汇总表"]
+        rows = []
+        for row in ws.iter_rows(values_only=True):
+            if all(v is None or str(v).strip() == "" for v in row):
+                continue
+            rows.append(row)
+
+        if not rows:
+            return {"rows": 0, "error": "汇总表无数据"}
+
+        # 表头从第一行取
+        headers = [str(cell.value).strip() if cell.value is not None else ""
+                   for cell in rows[0]]
+
+        conn = _db.get_connection(self._imp.db_path)
+        try:
+            conn.execute(
+                """CREATE TABLE IF NOT EXISTS revenue_summary (
+                     period TEXT PRIMARY KEY,
+                     summary_json TEXT,
+                     comparison_source TEXT,
+                     imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                   )"""
+            )
+            conn.execute("DELETE FROM revenue_summary WHERE comparison_source = ?",
+                         (month,))
+            n = 0
+            for row in rows[1:]:
+                period = None
+                for idx, header in enumerate(headers):
+                    if header.lower() == "period" or header in ("期间", "月份"):
+                        period = str(row[idx]).strip() if row[idx] is not None else ""
+                        break
+                if not period:
+                    continue
+                # 整行转为 JSON 存储（键为表头，值为单元格值）
+                row_dict = {headers[idx]: ("" if row[idx] is None else row[idx])
+                            for idx in range(min(len(headers), len(row)))}
+                conn.execute(
+                    "INSERT INTO revenue_summary (period, summary_json, comparison_source) VALUES (?, ?, ?)",
+                    (period, json.dumps(row_dict, ensure_ascii=False, default=str), month),
+                )
+                n += 1
+            conn.commit()
+            return {"rows": n, "error": None}
+        finally:
+            conn.close()
+
+    def import_all(self, excel_path: Path, month: str) -> dict:
+        """依次导入所有sheet：预算执行表 → 计划确收底稿 → 汇总表。"""
+        results = {}
+        results["budget_exec"] = self.import_budget_exec(excel_path, month)
+        results["plan_draft"] = self.import_plan_draft(excel_path, month)
+        results["summary"] = self.import_summary(excel_path, month)
+        return results

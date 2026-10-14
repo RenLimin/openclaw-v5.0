@@ -549,6 +549,8 @@ class ProfitService(BaseService):
 
 ### 3.3 BudgetAlertService
 
+> ✅ **已实现**（2026-10-14 文档-代码一致性对齐）：`src/bdms/modules/profit_management/budget_alert.py`。薄封装 `ProfitEngine.check_budget_alert`；签名以实际代码为准（`check(project_id, threshold=0.10)`）。
+
 ```python
 class BudgetAlertService:
     """预算告警服务。"""
@@ -578,6 +580,8 @@ class BudgetAlertService:
 ```
 
 ### 3.4 ProfitImporter
+
+> ✅ **已实现**（2026-10-14 文档-代码一致性对齐）：`src/bdms/modules/profit_management/importer.py`。薄封装 `ProfitService` 导入方法（`import_timesheet`/`import_travel_cost`/`import_all`）；签名以实际代码为准。
 
 ```python
 class ProfitImporter(BaseImporter):

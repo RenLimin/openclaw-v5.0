@@ -11,5 +11,7 @@
 """
 from .engine import ProfitEngine
 from .service import ProfitService
+from .budget_alert import BudgetAlertService
+from .importer import ProfitImporter
 
-__all__ = ["ProfitEngine", "ProfitService"]
+__all__ = ["ProfitEngine", "ProfitService", "BudgetAlertService", "ProfitImporter"]
