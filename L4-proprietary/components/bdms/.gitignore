@@ -19,3 +19,6 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# 可再生原始数据导出（从原始系统可重新拉取）
+raw_data_*/

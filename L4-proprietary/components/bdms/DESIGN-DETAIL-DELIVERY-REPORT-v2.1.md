@@ -117,11 +117,10 @@ Step 5: Excel 导出
 ```
 modules/delivery_report/
 ├── __init__.py          # 模块入口
-├── engine.py            # 计算引擎（DeliveryReportEngine）
+├── engine.py            # 计算引擎（DeliveryReportEngine，包含统计 Sheet 结构定义（C组10个））
 ├── service.py           # 编排服务（DeliveryReportService）
 ├── validator.py         # 数据校验器（新增）
-├── exporter.py          # Excel 导出（DeliveryReportExporter）
-└── stats_builders_c.py  # 统计 Sheet 结构定义（C 组 10 个，仅定义结构）
+└── exporter.py          # Excel 导出（DeliveryReportExporter）
 
 modules/dashboard/
 └── delivery_report_connector.py  # DASHBOARD 聚合查询适配（新增）
@@ -138,6 +137,10 @@ tests/
 ```
 
 ---
+
+> **实现状态说明**（2026-10-14 文档-代码一致性对齐）：四个核心类
+> （DeliveryReportEngine / DeliveryReportService / DeliveryReportExporter / DeliveryReportValidator）
+> 实际均**直接实现**，未继承 Base 基类；`stats_builders_c.py` 不存在，C 组统计结构定义已内联至 engine.py。
 
 ## 2. OS 依赖与限制
 
@@ -581,10 +584,10 @@ for i, val in enumerate(df['所属项目']):
 |---|---|---|---|---|
 | `load_ones_sign_contracts` | `delivery-center/v2/` 或 `modules/revenue/weekly_importer.py` | **import 引用** | 重构为 integration I-01 连接器方法 | `from bdms.modules.integration.connectors.ones import OnesConnector` |
 | `build_sign_sheet_df` | `delivery-center/v2/` | **import 引用** | 迁入本模块 engine.py | `from .legacy_adapter import build_sign_sheet_df` |
-| `stats_builders_c` | `modules/delivery_report/stats_builders_c.py` | **import 引用** | 直接调用 | `from .stats_builders_c import build_abnormal_ledger, build_efficiency_stats, ...` |
-| `BaseEngine` | `modules/base.py` | **继承** | 子类化 | `class DeliveryReportEngine(BaseEngine): ...` |
-| `BaseService` | `modules/base.py` | **继承** | 子类化 | `class DeliveryReportService(BaseService): ...` |
-| `BaseExporter` | `modules/base.py` | **继承** | 子类化 | `class DeliveryReportExporter(BaseExporter): ...` |
+| `stats_builders_c` | 已内联至 `modules/delivery_report/engine.py` | **直接实现** | 无 | 无外部引用（已内联） |
+| `BaseEngine` | `modules/base.py` | 实际未继承，直接实现 | 无 | `class DeliveryReportEngine: ...` |
+| `BaseService` | `modules/base.py` | 实际未继承，直接实现 | 无 | `class DeliveryReportService: ...` |
+| `BaseExporter` | `modules/base.py` | 实际未继承，直接实现 | 无 | `class DeliveryReportExporter: ...` |
 | `DashboardService` | `modules/dashboard/service.py` | **组合** | 实例化调用（统计汇总） | `from bdms.modules.dashboard.service import DashboardService; dashboard = DashboardService()` |
 | `md_reference` | `core/schemas_v21.py` | **DB 共享** | 读写字典 | `SELECT label FROM md_reference WHERE data_type='legend_config' AND code=?` |
 | `dr_sheet_row` | `core/schemas_v21.py` | **DB 共享** | 读写宽表 | `INSERT INTO dr_sheet_row (month, sheet, row_index, data) VALUES (...)` |

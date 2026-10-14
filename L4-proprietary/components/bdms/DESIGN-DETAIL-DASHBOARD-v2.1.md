@@ -373,10 +373,19 @@ class DashboardService:
 
     def summary(self, month: str | None = None,
                 view_id: str | None = None) -> dict:
-        """KPI 汇总。view_id 指定自定义视图，None 用默认驾驶舱。"""
+        """KPI 汇总。view_id 指定自定义视图，None 用默认驾驶舱。
+
+        > ⚠️ 实现状态（以代码为准）：engine 已实现 `compute_monthly_trend`，
+        service/Web 未暴露 summary/trend 端点。当前 DashboardService 仅提供
+        `get_dashboard`/`drill_down`/`refresh_snapshot`/`list_available_months`。
+        """
 
     def trend(self, metric: str, range_months: int = 12) -> list:
-        """单指标时间序列趋势。"""
+        """单指标时间序列趋势。
+
+        > ⚠️ 实现状态（以代码为准）：engine 已实现 `compute_monthly_trend`，
+        service/Web 未暴露 summary/trend 端点。
+        """
 
     def drill_down(self, metric: str, month: str,
                    dimension: str | None = None,
@@ -590,6 +599,10 @@ class DashboardDataSourceService:
 /api/dashboard/summary          → KPI 汇总（支持 view_id 参数）
 /api/dashboard/trend/{metric}   → 趋势数据
 /api/dashboard/drilldown/{metric} → 下钻明细
+
+> ⚠️ 实现状态（以代码为准）：`/api/dashboard/summary` 与 `/api/dashboard/trend/{metric}`
+> 尚未在 Web API 暴露（api.py 仅提供 `/{month}` 与 `/drill-down`）。engine 已实现
+> `compute_monthly_trend`，service/Web 未暴露对应端点。
 /api/dashboard/views            → 视图 CRUD
 /api/dashboard/views/{id}       → 单个视图
 /api/dashboard/views/{id}/default → 设为默认
@@ -804,6 +817,9 @@ CREATE TABLE IF NOT EXISTS dash_user_config (
 
 CLI：`bdms dashboard summary / trend / drilldown / views / set-default`
 Web API：15 个路由（summary/trend/drilldown/views CRUD/edit/undo/refresh/data-sources）
+
+> ⚠️ 实现状态（以代码为准）：engine 已实现 `compute_monthly_trend`；
+> service/Web 未暴露 summary/trend 端点（Web 仅提供 `/{month}` 与 `/drill-down`）。
 
 ## 18. 测试策略
 

@@ -147,6 +147,24 @@ CREATE TABLE IF NOT EXISTS cr_contract_relations (
     FOREIGN KEY (target_contract_id) REFERENCES cr_contracts(id),
     UNIQUE(source_contract_id, target_contract_id, relation_type)
 );
+
+-- 导入校验结果表（contract_management.validator 使用；DDL 与 DB 实际结构一致，2026-10-14 对齐补录）
+CREATE TABLE IF NOT EXISTS cr_import_validation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    batch_no TEXT NOT NULL,
+    row_index INTEGER NOT NULL,
+    sheet_name TEXT DEFAULT 'contracts',
+    rule_code TEXT NOT NULL,
+    severity TEXT DEFAULT 'ERROR',
+    column_name TEXT,
+    original_value TEXT,
+    message TEXT NOT NULL,
+    corrected_value TEXT,
+    corrected_by TEXT,
+    corrected_at TEXT,
+    status TEXT DEFAULT 'pending',          -- pending / confirmed / rejected
+    created_at TEXT DEFAULT (datetime('now', 'localtime'))
+);
 """
 
 
@@ -396,6 +414,7 @@ CREATE INDEX IF NOT EXISTS idx_pf_sr_person ON pf_staff_rate(person_name);
 CREATE INDEX IF NOT EXISTS idx_pf_sr_role ON pf_staff_rate(role);
 
 -- 成本项明细表（成本归集中间表）
+-- ⚠️ 预留表，暂未接入业务（schema 已定义，业务代码未读写）
 CREATE TABLE IF NOT EXISTS pf_cost_item (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
@@ -456,6 +475,7 @@ CREATE INDEX IF NOT EXISTS idx_pf_snapshot_period ON pf_profit_snapshot(period);
 CREATE INDEX IF NOT EXISTS idx_pf_snapshot_status ON pf_profit_snapshot(status);
 
 -- 预算告警记录
+-- ⚠️ 预留表，暂未接入业务（schema 已定义，业务代码未读写；告警由 ProfitEngine.check_budget_alert 实时计算）
 CREATE TABLE IF NOT EXISTS pf_budget_alert (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
@@ -480,6 +500,7 @@ CREATE INDEX IF NOT EXISTS idx_pf_alert_status ON pf_budget_alert(status);
 CREATE INDEX IF NOT EXISTS idx_pf_alert_period ON pf_budget_alert(period);
 
 -- 现金流（v2.2 占位表）
+-- ⚠️ 预留表，暂未接入业务
 CREATE TABLE IF NOT EXISTS pf_cash_flow (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
@@ -495,6 +516,7 @@ CREATE TABLE IF NOT EXISTS pf_cash_flow (
 );
 
 -- 间接成本分摊（v2.2 占位表）
+-- ⚠️ 预留表，暂未接入业务
 CREATE TABLE IF NOT EXISTS pf_cost_overhead (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     period TEXT NOT NULL,
@@ -993,6 +1015,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS kb_fts USING fts5(
 
 DASH_V2_SCHEMA = """
 -- 指标快照缓存
+-- ⚠️ 预留表，暂未接入业务（仅迁移脚本使用；看板缓存实际走 db_snapshot）
 CREATE TABLE IF NOT EXISTS dash_snapshot (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     metric_key TEXT NOT NULL,
