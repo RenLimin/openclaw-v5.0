@@ -226,7 +226,7 @@ class DeliveryReportService:
                     (month, status)
                 )
 
-            # 同步校验统计
+            # 同步校验统计 + 明细落盘
             if status == "validating":
                 validator = DeliveryReportValidator(self.db_path)
                 result = validator.collect_suspicious(month)
@@ -237,6 +237,41 @@ class DeliveryReportService:
                      result["summary"]["total_warnings"],
                      result["summary"]["total_errors"],
                      month)
+                )
+                # 明细落盘 dr_import_validation（先清空再写入，保证幂等）
+                conn.execute("DELETE FROM dr_import_validation WHERE month = ?", (month,))
+                rows_to_insert = []
+                for e in result["errors"]:
+                    rows_to_insert.append((
+                        month, e.get("sheet", ""), e.get("row", -1),
+                        e.get("col", ""), e.get("issue", ""),
+                        "error", e.get("issue", ""),
+                        str(e.get("value", ""))[:500] if e.get("value") is not None else "",
+                        "", "pending", "",
+                    ))
+                for w in result["warnings"]:
+                    rows_to_insert.append((
+                        month, w.get("sheet", ""), w.get("row", -1),
+                        w.get("col", ""), w.get("issue", ""),
+                        "warning", w.get("issue", ""),
+                        "", "", "pending", "",
+                    ))
+                if rows_to_insert:
+                    conn.executemany(
+                        "INSERT INTO dr_import_validation "
+                        "(month, sheet, row_index, column_name, rule_code, "
+                        " severity, message, original_value, corrected_value, status, operator) "
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        rows_to_insert
+                    )
+                # 同步 pending_fixes 统计（取明细表 pending 状态数）
+                pending_count = conn.execute(
+                    "SELECT COUNT(*) FROM dr_import_validation WHERE month = ? AND status = 'pending'",
+                    (month,)
+                ).fetchone()[0]
+                conn.execute(
+                    "UPDATE dr_review_status SET pending_fixes = ? WHERE month = ?",
+                    (pending_count, month)
                 )
 
             conn.commit()

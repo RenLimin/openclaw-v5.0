@@ -1,3 +1,60 @@
+/* BDMS 全局样式（响应式 + 品牌覆盖） */
+
+/* ===== Bangcle 品牌主题覆盖（全系统生效） ===== */
+:root {
+  --c-primary: #2D74BB;      /* 梆梆蓝 C-01 */
+  --c-primary-l: #3FA1DA;    /* 浅蓝 C-02 */
+  --c-primary-d: #1d4ed8;
+  --c-success: #33ADA0;      /* 青绿 C-04 */
+  --c-warning: #EFBA20;      /* 金 C-05 */
+  --c-danger: #DC3545;       /* 功能红 */
+  --c-bg: #F0F2F5;           /* 页面浅灰 */
+  --c-surface: #FFFFFF;
+  --c-surface-2: #F5F7FA;
+  --c-border: #E7E6E6;
+  --c-border-2: #d1d5db;
+  --c-text: #333333;
+  --c-muted: #595757;
+}
+
+/* 侧边栏品牌 Logo */
+.sidebar-brand .brand-logo-img {
+  height: 28px;
+  width: auto;
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+/* 深色模式品牌适配 */
+[data-theme="dark"] {
+  --c-bg: #00122B;            /* 深藏青 C-06 */
+  --c-surface: #1A2B48;
+  --c-surface-2: #243A5E;
+  --c-border: #BFBFBF;
+  --c-border-2: #2D74BB;
+  --c-text: #FFFFFF;
+  --c-muted: #BEE3FA;
+  --c-primary: #3FA1DA;
+}
+
+/* 页面标题品牌装饰条 */
+.page-header h1 {
+  position: relative;
+  padding-left: 0.75rem;
+}
+.page-header h1::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 1.2em;
+  background: var(--c-primary, #2D74BB);
+  border-radius: 2px;
+}
+
 /* --- Responsive Breakpoints --- */
 @media (max-width: 1200px) {
   .main { padding: var(--s-6); }

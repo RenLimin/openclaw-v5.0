@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-14 14:17 UTC+08:00
+最后生成：2026-10-15 13:08 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -53,6 +53,7 @@
 | 层级 | 名称 | 描述 | 路径 |
 |---|---|---|---|
 | L4 专有业务 | `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `L4-proprietary/skills/bangcle-ppt` |
+| L4 专有业务 | `bdms-web-ui-design` |  | `L4-proprietary/skills/bdms-web-ui-design` |
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
@@ -61,8 +62,9 @@
 | L2 基础设施 | `pdf-toolkit` | Page-level PDF operations: merge multiple PDFs into one, split into... | `L2-infra/skills/pdf-toolkit` |
 | L2 基础设施 | `role-library` | 标准化 Agent 角色库。支持按角色执行任务，覆盖数据分析、报告生成、系统运维、文档管理等场景。 | `L2-infra/skills/role-library` |
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
+| L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
+_自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -122,8 +124,8 @@ _自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| session-auto-retry | ✅ | 每 600s | `isolated` |
 | quota-restore-check | ✅ | 每 1800s | `isolated` |
+| session-auto-retry | ✅ | 每 600s | `isolated` |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | cron `0 */2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 
@@ -212,8 +214,8 @@ _自建技能总计: 9 个（L2: 5, L3: 1, L4: 3, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `82aa1893` |
-| Commit 数 | 445 |
+| HEAD | `e0362c7c` |
+| Commit 数 | 446 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
