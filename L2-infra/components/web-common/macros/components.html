@@ -311,3 +311,173 @@
     {% endfor %}
 </div>
 {% endmacro %}
+
+{# ============================================================
+   Modal 对话框组件
+   ============================================================ #}
+{% macro modal(id, title="", size="md", closable=True) %}
+{#
+  通用 Modal 对话框组件。
+  
+  参数:
+    - id: Modal DOM ID（必填，用于 JS 控制）
+    - title: 标题文字
+    - size: 尺寸 sm/md/lg/xl（默认 md）
+    - closable: 是否显示关闭按钮 / ESC 关闭（默认 True）
+  
+  使用方法:
+    {% call modal(id="my-modal", title="确认操作") %}
+      <p>确定要执行此操作吗？</p>
+    {% endcall %}
+    
+    JS:
+      openModal('my-modal')
+      closeModal('my-modal')
+      
+  内容区：放在 call ... endcall 之间
+  底部按钮：使用 modal-footer class，或在 call 内自定义
+#}
+<div id="{{ id }}" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:9999;justify-content:center;align-items:center;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);" onclick="if(event.target===this)closeModal('{{ id }}')">
+  <div class="modal-content" style="background:var(--c-bg, #fff);border-radius:14px;box-shadow:0 25px 80px -15px rgba(0,0,0,0.35),0 0 0 1px rgba(255,255,255,0.05);{% if size=='sm' %}width:320px;{% elif size=='lg' %}width:560px;{% elif size=='xl' %}width:720px;{% else %}width:440px;{% endif %}max-width:92vw;overflow:hidden;animation:modalIn 0.18s ease-out;">
+    {% if title or closable %}
+    <div class="modal-header" style="padding:1.25rem 1.5rem 0.875rem;border-bottom:1px solid var(--c-border, #e5e7eb);display:flex;align-items:center;justify-content:space-between;">
+      <h3 style="margin:0;font-size:1rem;font-weight:600;letter-spacing:-0.01em;color:var(--c-text, #111827);">{{ title }}</h3>
+      {% if closable %}
+      <button onclick="closeModal('{{ id }}')" style="background:none;border:none;font-size:1.25rem;cursor:pointer;color:var(--c-muted, #9ca3af);padding:0.25rem 0.5rem;line-height:1;border-radius:6px;" onmouseover="this.style.background='var(--c-surface, #f3f4f6)'" onmouseout="this.style.background='transparent'">×</button>
+      {% endif %}
+    </div>
+    {% endif %}
+    <div class="modal-body" style="padding:1.25rem 1.5rem;">
+      {{ caller() }}
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{# ============================================================
+   Toast 通知组件
+   ============================================================ #}
+{% macro toast_container() %}
+{#
+  Toast 通知容器。每个页面只需放一个，放在 body 末尾。
+  JS: toast('消息内容', 'success|error|warning|info', duration)
+#}
+<div id="toast-container" style="position:fixed;top:1.5rem;right:1.5rem;z-index:10000;display:flex;flex-direction:column;gap:0.5rem;pointer-events:none;"></div>
+{% endmacro %}
+
+{# ============================================================
+   Modal + Toast 通用 JS（放在页面 </body> 前）
+   ============================================================ #}
+{% macro modal_toast_js() %}
+<script>
+  // ===== Modal =====
+  function openModal(id) {
+    const m = document.getElementById(id);
+    if (m) { m.style.display = 'flex'; }
+  }
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) { m.style.display = 'none'; }
+  }
+  // ESC 关闭所有 Modal
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.modal-overlay').forEach(function(m) {
+        if (m.style.display !== 'none') m.style.display = 'none';
+      });
+    }
+  });
+  
+  // ===== Toast =====
+  function toast(message, type, duration) {
+    type = type || 'info';
+    duration = duration || 3000;
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const bgColors = {
+      success: '#10b981',
+      error: '#ef4444',
+      warning: '#f59e0b',
+      info: 'var(--c-surface-2, #f3f4f6)'
+    };
+    const textColors = {
+      success: '#fff',
+      error: '#fff',
+      warning: '#fff',
+      info: 'var(--c-text, #111827)'
+    };
+    
+    const el = document.createElement('div');
+    el.style.cssText = [
+      'background:' + (bgColors[type] || bgColors.info),
+      'color:' + (textColors[type] || textColors.info),
+      'padding:0.75rem 1rem',
+      'border-radius:10px',
+      'font-size:0.875rem',
+      'font-weight:500',
+      'box-shadow:0 10px 30px -10px rgba(0,0,0,0.25)',
+      'pointer-events:auto',
+      'animation:toastIn 0.25s ease-out',
+      'min-width:200px',
+      'max-width:360px',
+      'border:1px solid ' + (type === 'info' ? 'var(--c-border, #e5e7eb)' : 'transparent')
+    ].join(';');
+    el.textContent = message;
+    container.appendChild(el);
+    
+    setTimeout(function() {
+      el.style.animation = 'toastOut 0.2s ease-in forwards';
+      setTimeout(function() { el.remove(); }, 200);
+    }, duration);
+  }
+  toast.success = function(msg, d) { return toast(msg, 'success', d); };
+  toast.error = function(msg, d) { return toast(msg, 'error', d); };
+  toast.warning = function(msg, d) { return toast(msg, 'warning', d); };
+  toast.info = function(msg, d) { return toast(msg, 'info', d); };
+  
+  // ===== Confirm Modal 快捷方法 =====
+  // 使用 showConfirm(title, message, onOk) 快速弹确认框
+  // 依赖页面中有 id="confirm-modal" 的 Modal（可由 modal() macro 生成）
+  let _confirmCallback = null;
+  function showConfirm(title, message, onOk) {
+    const modal = document.getElementById('confirm-modal');
+    if (!modal) {
+      // 找不到 confirm-modal DOM，静默失败
+      console.warn('showConfirm: confirm-modal not found');
+      if (onOk) onOk();
+      return;
+    }
+    const titleEl = modal.querySelector('.confirm-title') || modal.querySelector('.modal-header h3');
+    const msgEl = modal.querySelector('.confirm-message') || modal.querySelector('.modal-body p');
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl) msgEl.textContent = message;
+    _confirmCallback = onOk;
+    openModal('confirm-modal');
+  }
+  function confirmOk() {
+    if (_confirmCallback) _confirmCallback();
+    closeModal('confirm-modal');
+    _confirmCallback = null;
+  }
+  function confirmCancel() {
+    closeModal('confirm-modal');
+    _confirmCallback = null;
+  }
+</script>
+<style>
+  @keyframes modalIn {
+    from { opacity:0; transform:translateY(-8px) scale(0.97); }
+    to { opacity:1; transform:translateY(0) scale(1); }
+  }
+  @keyframes toastIn {
+    from { opacity:0; transform:translateX(20px); }
+    to { opacity:1; transform:translateX(0); }
+  }
+  @keyframes toastOut {
+    from { opacity:1; transform:translateX(0); }
+    to { opacity:0; transform:translateX(20px); }
+  }
+</style>
+{% endmacro %}
+

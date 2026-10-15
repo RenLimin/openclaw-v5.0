@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 {% from "layout.html" import page_header with context %}
-{% from "components.html" import card, badge, progress_bar with context %}
+{% from "components.html" import card, badge, progress_bar, stat_card, dashboard_grid, pagination, filter_bar, modal, toast_container, modal_toast_js with context %}
 
 {% set page_title = '交付月报 — BDMS' %}
+{% set active_page = 'report' %}
 
 {% block content %}
 {{ page_header(
@@ -10,93 +11,493 @@
     subtitle='生成 / 审核 / 导出 / 浏览月度交付报表（15 Sheet）'
 ) }}
 
-<!-- ========== 人机协作审核面板 ========== -->
-{% call card(title="人机协作审核", id="review-panel") %}
-<div id="review-summary" style="display:flex;gap:1.5rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
-  <div>状态: <span id="review-status" class="badge">—</span></div>
-  <div>错误: <span id="review-errors" style="color:var(--c-danger);font-weight:600;">0</span></div>
-  <div>警告: <span id="review-warnings" style="color:var(--c-warning);font-weight:600;">0</span></div>
-  <div>待处理: <span id="review-pending" style="color:var(--c-warning);font-weight:600;">0</span></div>
-</div>
-<div id="review-actions" style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-  <button class="btn btn-primary" id="btn-approve" onclick="doApprove()" disabled>✓ 审批通过</button>
-  <button class="btn btn-danger" id="btn-reject" onclick="doReject()" disabled>✗ 驳回</button>
-  <button class="btn" id="btn-revalidate" onclick="doRevalidate()" disabled>↻ 重新校验</button>
-  <input id="review-reason" class="input" placeholder="驳回原因（可选）" style="width:200px;display:none;">
-</div>
-{% endcall %}
+<div class="report-container report-page">
+  <!-- 左侧：月份列表导航 -->
+      <div class="report-sidebar">
+        <div class="sidebar-header">
+          <button class="btn btn-primary btn-block" onclick="showNewMonthModal()">+ 新建月份</button>
+        </div>
+        <div class="sidebar-subtitle">已生成月份</div>
+        <div id="months-list" class="months-list">加载中...</div>
+        <div class="sidebar-legend">
+          <div class="sidebar-legend-title">状态图例</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--c-success);"></span>已通过</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--c-warning);"></span>待审核</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--c-primary);"></span>生成中</div>
+          <div class="legend-item"><span class="legend-dot" style="background:var(--c-muted);"></span>未生成</div>
+        </div>
+      </div>
 
-{% call card(title="生成月报") %}
-<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
-  <div>
-    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <input id="gen-month" class="input" list="gen-month-list" placeholder="YYYYMM 或选择已有" style="width:160px;">
-    <datalist id="gen-month-list"></datalist>
+  <!-- 右侧：内容区 -->
+  <div class="report-main">
+    <!-- Tab 导航 -->
+    <div class="report-tabs">
+      <button class="report-tab active" data-tab="generate" onclick="switchTab('generate')">生成 & 审核</button>
+      <button class="report-tab" data-tab="browse" onclick="switchTab('browse')">数据浏览</button>
+      <button class="report-tab" data-tab="issues" onclick="switchTab('issues')">问题清单</button>
+    </div>
+
+    <!-- Tab 内容区 -->
+    <div class="report-tab-content">
+
+      <!-- Tab 1: 生成 & 审核 -->
+      <div id="tab-generate" class="tab-pane active">
+
+
+        <!-- 状态卡片区 -->
+        <div id="status-card" class="empty-state" style="display:none;">
+          <div class="status-header">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">选择月份开始生成</span>
+            <span class="generated-at" id="generated-at"></span>
+          </div>
+          <div class="status-stats">
+            <div class="stat-card"><div class="stat-label">错误</div><div class="stat-value danger" id="stat-errors">0</div></div>
+            <div class="stat-card"><div class="stat-label">警告</div><div class="stat-value warning" id="stat-warnings">0</div></div>
+            <div class="stat-card"><div class="stat-label">待处理</div><div class="stat-value warning" id="stat-pending">0</div></div>
+          </div>
+          <div class="progress-container" id="progress-container" style="display:none;">
+            {{ progress_bar(0, variant="primary", label="生成进度") }}
+          </div>
+          <div class="status-actions" id="status-actions">
+            <button class="btn btn-primary" id="btn-approve" onclick="doApprove()" disabled>✓ 审批通过</button>
+            <button class="btn btn-danger" id="btn-reject" onclick="doReject()" disabled>✗ 驳回</button>
+            <button class="btn" id="btn-revalidate" onclick="doRevalidate()" disabled>↻ 重新校验</button>
+            <button class="btn" id="btn-regenerate" onclick="doRegenerate()" disabled>↻ 重新生成</button>
+          <button class="btn btn-success" id="btn-export-main" onclick="doExport()" disabled>📤 导出 Excel</button>
+          </div>
+          <div id="reason-input-container" style="margin-top:1rem;display:none;">
+            <input id="review-reason" class="input" placeholder="请填写驳回原因" style="width:100%;">
+          </div>
+        </div>
+
+        <!-- Sheet 明细 (折叠) -->
+        {% call card(title="Sheet 明细") %}
+        <div id="sheet-detail" style="color:var(--c-muted);">生成后显示明细行数</div>
+        {% endcall %}
+
+      </div><!-- /Tab 1 -->
+
+      <!-- Tab 2: 数据浏览 -->
+      <div id="tab-browse" class="tab-pane">
+        {% call card() %}
+        <div class="browse-toolbar" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
+          <div class="view-month-label">当前月份: <strong id="browse-month-label">--</strong></div>
+          <div>
+            <label style="font-weight:600;display:block;margin-bottom:0.3rem;">Sheet</label>
+            <select id="view-sheet" class="input" style="width:180px;">
+              <option value="签约">签约</option>
+              <option value="POC&提前实施">POC&提前实施</option>
+              <option value="异常项目">异常项目</option>
+              <option value="确收交接">确收交接</option>
+              <option value="验收交接">验收交接</option>
+            </select>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <label style="font-weight:600;display:block;margin-bottom:0.3rem;">搜索</label>
+            <input id="view-search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="width:100%;">
+          </div>
+          <button class="btn btn-primary" onclick="loadTable()">查询</button>
+          <button class="btn" onclick="exportCurrent()">导出当前筛选</button>
+        </div>
+        {% endcall %}
+
+        {% call card() %}
+        <div id="data-table-container">
+          <p style="color:var(--c-muted);">选择月份和 Sheet 查看数据</p>
+        </div>
+        <div id="pagination" style="margin-top:1rem;"></div>
+        {% endcall %}
+      </div><!-- /Tab 2 -->
+
+      <!-- Tab 3: 问题清单 -->
+      <div id="tab-issues" class="tab-pane">
+        {% call card() %}
+        {{ filter_bar(fields=[
+            {"type": "select", "label": "状态", "id": "filter-status", "options": [
+                ("", "全部"),
+                ("PENDING", "待处理"),
+                ("CONFIRMED", "已确认"),
+                ("REJECTED", "已驳回")
+            ]},
+            {"type": "select", "label": "严重度", "id": "filter-severity", "options": [
+                ("", "全部"),
+                ("ERROR", "错误"),
+                ("WARNING", "警告")
+            ]}
+        ], submit_onclick="loadReviewIssues", submit_label="筛选") }}
+        {% endcall %}
+
+        {% call card(title="审核问题") %}
+        <div id="review-issues-stats" style="margin-bottom:1rem;color:var(--c-muted);">请先选择月份查看问题</div>
+        <div id="review-issues-list" style="color:var(--c-muted);">暂无审核问题</div>
+        <div id="issues-pagination" style="margin-top:1rem;"></div>
+        {% endcall %}
+      </div><!-- /Tab 3 -->
+
+    </div><!-- /report-tab-content -->
+    <div class="brand-signature">Powered by Bangcle 梆梆安全 · 交付管理系统</div>
+  </div><!-- /report-main -->
+</div><!-- /report-container -->
+
+<!-- 空状态: 无任何月份 -->
+<div id="empty-state-no-months" class="empty-state-container" style="display:none;">
+  <div class="empty-state-content">
+    <div class="empty-state-icon">📊</div>
+    <h3>还没有生成交付月报</h3>
+    <p>点击下方按钮，输入月份，一键生成月度交付报表</p>
+    <div style="margin-top:1rem;">
+      <button class="btn btn-primary" onclick="showNewMonthModal()">开始生成第一份月报</button>
+    </div>
   </div>
-  <div>
-    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">模式</label>
-    <select id="gen-mode" class="input" style="width:180px;">
-      <option value="auto">auto（有则读，无则生成）</option>
-      <option value="read">read（只读已有）</option>
-      <option value="regenerate">regenerate（强制重算）</option>
-    </select>
-  </div>
-  <button class="btn btn-primary" onclick="doGenerate()">生成</button>
-  <button class="btn" onclick="doExport()">导出 Excel</button>
 </div>
-<div id="gen-status" style="margin-top:1rem;color:var(--c-muted);"></div>
-{% endcall %}
 
-{% call card(title="已生成月份") %}
-<div id="months-list">加载中...</div>
-{% endcall %}
+      {% call modal(id="new-month-modal", title="新建月份") %}
+        <label for="new-month-input" style="display:block;font-size:0.875rem;font-weight:500;margin-bottom:0.5rem;color:var(--c-text,#111827);">报告月份</label>
+        <input type="text" id="new-month-input" class="input" placeholder="YYYYMM，如 202606" maxlength="6"
+               style="width:100%;padding:0.65rem 0.875rem;font-size:0.95rem;font-family:ui-monospace,Menlo,monospace;letter-spacing:0.05em;border-radius:10px;border:1px solid var(--c-border,#e5e7eb);background:var(--c-bg,#fff);color:var(--c-text,#111827);outline:none;transition:all 0.15s;box-sizing:border-box;"
+               onkeydown="if(event.key==='Enter')confirmNewMonth()">
+        <p style="margin:0.6rem 0 0 0;font-size:0.8rem;color:var(--c-muted,#6b7280);line-height:1.4;">输入 6 位年月，系统将自动拉取原始数据并生成该月交付月报</p>
+        <div style="padding:1rem 0 0;margin-top:1rem;border-top:1px solid var(--c-border,#e5e7eb);display:flex;justify-content:flex-end;gap:0.5rem;">
+          <button class="btn" onclick="closeModal('new-month-modal')" style="padding:0.5rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:500;">取消</button>
+          <button class="btn btn-primary" onclick="confirmNewMonth()" style="padding:0.5rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:500;">生成</button>
+        </div>
+      {% endcall %}
 
-{% call card(title="数据浏览") %}
-<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
-  <div>
-    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <select id="view-month" class="input" style="width:160px;"></select>
-  </div>
-  <div>
-    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">Sheet</label>
-    <select id="view-sheet" class="input" style="width:200px;">
-      <option value="签约">签约</option>
-      <option value="POC&提前实施">POC&提前实施</option>
-      <option value="异常项目">异常项目</option>
-      <option value="确收交接">确收交接</option>
-      <option value="验收交接">验收交接</option>
-    </select>
-  </div>
-  <div style="flex:1;min-width:200px;">
-    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">搜索</label>
-    <input id="view-search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="width:100%;">
-  </div>
-  <button class="btn btn-primary" onclick="loadTable()">查询</button>
-  <button class="btn" onclick="exportCurrent()">导出当前筛选</button>
-</div>
-<div id="data-table-container">
-  <p style="color:var(--c-muted);">选择月份和 Sheet 查看数据</p>
-</div>
-<div id="pagination" style="display:flex;gap:0.5rem;align-items:center;margin-top:1rem;"></div>
-{% endcall %}
+      {% call modal(id="confirm-modal", title="确认操作") %}
+        <p class="confirm-message" style="margin:0;font-size:0.9rem;color:var(--c-text-secondary,#6b7280);line-height:1.5;">确定要执行此操作吗？</p>
+        <div style="padding:1rem 0 0;margin-top:1rem;border-top:1px solid var(--c-border,#e5e7eb);display:flex;justify-content:flex-end;gap:0.5rem;">
+          <button class="btn" onclick="confirmCancel()" style="padding:0.5rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:500;">取消</button>
+          <button class="btn btn-primary" onclick="confirmOk()" style="padding:0.5rem 1rem;border-radius:8px;font-size:0.875rem;font-weight:500;">确认</button>
+        </div>
+      {% endcall %}
 
-{% call card(title="Sheet 明细") %}
-<div id="sheet-detail" style="color:var(--c-muted);">生成后显示</div>
-{% endcall %}
+      {{ toast_container() }}
+      {{ modal_toast_js() }}
 
-{% call card(title="审核问题清单", id="review-issues-panel") %}
-<div id="review-issues-list" style="color:var(--c-muted);">暂无审核问题</div>
-{% endcall %}
+      <script>
+      function showNewMonthModal() {
+        openModal('new-month-modal');
+        setTimeout(function() {
+          var input = document.getElementById('new-month-input');
+          if (input) { input.focus(); input.select(); }
+        }, 50);
+      }
+      function confirmNewMonth() {
+        var input = document.getElementById('new-month-input');
+        var m = input.value.trim();
+        if (!m || !/^\d{6}$/.test(m)) {
+          toast.error('月份格式不正确，请输入 YYYYMM 格式，如 202606');
+          input.focus(); input.select();
+          return;
+        }
+        closeModal('new-month-modal');
+        var exists = document.querySelector('.month-item[data-month="' + m + '"]');
+        if (exists) { selectMonth(m); return; }
+        doGenerate(m, 'auto');
+      }
+      </script>
+
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+/* ===== Bangcle 品牌主题覆盖（v2.1 r6，仅本页生效） ===== */
+.report-page {
+  --c-primary: #2D74BB;      /* 梆梆蓝 C-01 */
+  --c-primary-l: #3FA1DA;    /* 浅蓝 C-02 */
+  --c-primary-soft: #BEE3FA; /* 极浅蓝 */
+  --c-success: #33ADA0;      /* 青绿 C-04 */
+  --c-warning: #EFBA20;      /* 金 C-05 */
+  --c-danger: #DC3545;       /* 功能红 */
+  --c-bg: #F0F2F5;           /* 页面浅灰 */
+  --c-border: #E7E6E6;       /* 浅灰边框 */
+  --c-muted: #595757;        /* 深灰 C-07 */
+  --c-text: #333333;         /* 正文深灰 */
+}
+
+
+/* 侧边栏状态图例 */
+.sidebar-legend {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+}
+.sidebar-legend-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-muted);
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--c-text);
+  padding: 0.15rem 0;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* 品牌签名区 */
+.brand-signature {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--c-muted);
+  padding: 0.5rem 0 0;
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--c-border);
+  opacity: 0.75;
+}
+
+.report-container {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.report-sidebar {
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+  overflow: hidden;
+  height: fit-content;
+  position: sticky;
+  top: 1rem;
+}
+
+.sidebar-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-surface-2);
+}
+
+.sidebar-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.months-list {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.month-item {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--c-border-2);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.month-item:last-child {
+  border-bottom: none;
+}
+
+.month-item:hover {
+  background: var(--c-hover);
+}
+
+.month-item.active {
+  background: var(--c-primary-soft);
+  font-weight: 600;
+  color: var(--c-primary);
+}
+
+.sidebar-footer {
+  padding: 0.5rem;
+  border-top: 1px solid var(--c-border);
+}
+
+.report-main {
+  min-width: 0;
+}
+
+.report-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: 1rem;
+  background: transparent;
+}
+
+.report-tab {
+  padding: 0.75rem 1.25rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--c-muted);
+  margin-bottom: -1px;
+  transition: all 0.15s;
+}
+
+.report-tab:hover {
+  color: var(--c-text);
+  background: var(--c-hover);
+}
+
+.report-tab.active {
+  color: var(--c-primary);
+  background: var(--c-surface);
+  border-color: var(--c-border);
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 状态卡片样式 */
+#status-card {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.status-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.generated-at {
+  margin-left: auto;
+  color: var(--c-muted);
+  font-size: 0.85rem;
+}
+
+.status-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.status-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--c-border-2);
+}
+
+.empty-state-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.empty-state-content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.empty-state-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* 状态颜色映射 */
+.status-dot.not_started { background: var(--c-muted); }
+.status-dot.generating { background: var(--c-primary); }
+.status-dot.validating { background: var(--c-warning); }
+.status-dot.reviewing { background: var(--c-warning); }
+.status-dot.approved { background: var(--c-success); }
+.status-dot.rejected { background: var(--c-danger); }
+
+/* 响应式 */
+@media (max-width: 900px) {
+  .report-container {
+    grid-template-columns: 1fr;
+  }
+  .report-sidebar {
+    position: static;
+    max-height: 200px;
+  }
+}
+
+/* ===== 深色模式品牌适配（v2.1 r6） ===== */
+[data-theme="dark"] .report-page {
+  --c-bg: #00122B;            /* 深藏青 C-06 */
+  --c-surface: #1A2B48;       /* 半透深藏青卡片 */
+  --c-surface-2: #243A5E;     /* 次级面板 */
+  --c-border: #BFBFBF;
+  --c-border-2: #2D74BB;
+  --c-text: #FFFFFF;
+  --c-muted: #BEE3FA;
+  --c-primary: #3FA1DA;       /* 深色模式主色提亮 */
+  --c-primary-soft: rgba(46, 116, 187, 0.25);
+}
+
+[data-theme="dark"] .report-page .table thead {
+  background: rgba(46, 116, 187, 0.25);
+}
+
+[data-theme="dark"] .report-page .month-item.active {
+  background: rgba(46, 116, 187, 0.35);
+}
+</style>
+
 <script>
+let currentMonth = null;
 let currentPage = 1;
 let totalPages = 1;
-let viewMonth = null;
-let viewSheet = null;
-let _urlParams = null;
 
+// ========== Tab 切换 ==========
+function switchTab(tabName) {
+  document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelector(`.report-tab[data-tab="${tabName}"]`).classList.add('active');
+  document.getElementById(`tab-${tabName}`).classList.add('active');
+  window.location.hash = `#${tabName}`;
+}
+
+// 初始化 Tab 从 hash
+function initTabFromHash() {
+  const hash = window.location.hash.replace('#', '');
+  if (['generate', 'browse', 'issues'].includes(hash)) {
+    switchTab(hash);
+  }
+}
+
+// ========== 月份列表 ==========
 async function loadMonths() {
   const r = await fetch('/api/report/months');
   const d = await r.json();
@@ -106,102 +507,297 @@ async function loadMonths() {
     return { month: mm, row_counts: m.row_counts, generated_at: m.generated_at };
   }).filter(m => m.month && /^\d{6}$/.test(m.month));
 
-  // 填充月份列表
-  const dl = document.getElementById('gen-month-list');
-  if (dl) {
-    dl.innerHTML = months.map(m =>
-      `<option value="${m.month}">${m.month.slice(0,4)}年${m.month.slice(4)}月</option>`
-    ).join('');
+
+
+  // 填充左侧月份导航
+  const container = document.getElementById('months-list');
+  if (months.length === 0) {
+    container.innerHTML = '<p style="padding:1rem;color:var(--c-muted);text-align:center;">暂无已生成月份<br><span style="font-size:0.85rem;">在上方输入月份生成第一份月报</span></p>';
+    // 保持生成 Tab 可见，清空状态卡片
+    currentMonth = null;
+    document.getElementById('status-card').style.display = 'none';
+    return;
   }
 
-  // 填充浏览月份下拉（保存引用到全局变量）
-  viewMonth = document.getElementById('view-month');
-  if (viewMonth) {
-    viewMonth.innerHTML = months.map(m =>
-      `<option value="${m.month}">${m.month.slice(0,4)}年${m.month.slice(4)}月</option>`
-    ).join('');
-    if (months.length > 0) {
-      viewMonth.value = months[0].month;
-    }
-    viewMonth.addEventListener('change', function() {
-      loadTable();
-      loadReviewStatus(this.value);
-      updateUrlParams();
-    });
+  container.innerHTML = months.map(m =>
+    `<div class="month-item" data-month="${m.month}" onclick="selectMonth('${m.month}')">
+      ${m.month.slice(0,4)}年${m.month.slice(4)}月
+    </div>`
+  ).join('');
+
+  // 选中第一个月份（如果没有选中）
+  if (!currentMonth && months.length > 0) {
+    selectMonth(months[0].month);
+  } else if (currentMonth) {
+    // 保持选中
+    const active = container.querySelector(`.month-item[data-month="${currentMonth}"]`);
+    if (active) active.classList.add('active');
   }
 
-  // 保存 Sheet 引用
-  viewSheet = document.getElementById('view-sheet');
-  if (viewSheet) {
-    viewSheet.addEventListener('change', function() {
-      loadTable();
-      updateUrlParams();
-    });
+  // 自动加载 review status
+  if (currentMonth) {
+    loadReviewStatus(currentMonth);
   }
+}
 
-  // 填充月份列表
-  document.getElementById('months-list').innerHTML = months.length
-    ? '<div class="table-wrapper"><table class="table"><thead><tr><th>月份</th><th>操作</th></tr></thead><tbody>'
-      + months.map(m =>
-          `<tr><td><strong>${m.month.slice(0,4)}年${m.month.slice(4)}月</strong></td>`
-            + `<td><a class="btn btn-sm btn-success" href="/api/report/export/${m.month}">下载 Excel</a></td></tr>`
-        ).join('') + '</tbody></table></div>'
-    : '<p style="color:var(--c-muted);">尚无已生成月份</p>';
+function selectMonth(month) {
+  currentMonth = month;
 
-  // 应用 URL 参数
-  applyUrlParams();
+  // 更新左侧选中样式
+  document.querySelectorAll('.month-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.month === month);
+  });
 
-  // 自动加载数据
-  if (months.length > 0) {
+  // 加载审核状态
+  loadReviewStatus(month);
+
+  // 如果在浏览或问题 Tab，自动加载数据
+  const activeTab = document.querySelector('.report-tab.active').dataset.tab;
+  if (activeTab === 'browse') {
     loadTable();
-    loadReviewStatus(months[0].month);
+  } else if (activeTab === 'issues') {
+    loadReviewIssues();
   }
 }
 
-// 从 URL 读取参数
-function parseUrlParams() {
-  const params = new URLSearchParams(window.location.search);
-  return {
-    month: params.get('month'),
-    sheet: params.get('sheet'),
-    search: params.get('search'),
-  };
+
+
+// ========== 生成流程 ==========
+async function doGenerate(month, mode = 'auto') {
+  if (!month) { toast.error('请输入月份'); return; }
+  // mode 从参数传入
+  const st = document.getElementById('status-text');
+  const progressContainer = document.getElementById('progress-container');
+  const progressBar = document.querySelector('.progress-fill');
+
+  if (!month || !/^\d{6}$/.test(month)) {
+    st.textContent = '⚠️ 请输入有效的月份（YYYYMM格式）';
+    return;
+  }
+
+  // 更新当前选中
+  selectMonth(month);
+
+  document.getElementById('status-card').style.display = 'block';
+  st.textContent = `生成中（${mode}）...`;
+  progressContainer.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  try {
+    const r = await fetch('/api/report/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({month, mode})
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      st.textContent = `⚠️ ${d.detail || d.error}`;
+      progressContainer.style.display = 'none';
+      return;
+    }
+    st.innerHTML = `✅ <strong>${d.action}</strong> 完成，合计 <strong>${d.total_rows}</strong> 行`;
+    progressContainer.style.display = 'none';
+
+    // 显示 Sheet 明细
+    let h = '<div class="grid grid-cols-5 gap-2">';
+    for (const [k, v] of Object.entries(d.sheets || {})) h += `<div>${k}: <strong>${v}</strong> 行</div>`;
+    h += '</div>';
+    document.getElementById('sheet-detail').innerHTML = h;
+
+    // 重新加载月份列表
+    loadMonths();
+    // 加载审核状态
+    await loadReviewStatus(month);
+    // 滚动到状态卡片
+    document.getElementById('status-card').scrollIntoView({behavior: 'smooth'});
+    // toast 通知
+    if (window.toast) toast.success('生成完成');
+  } catch (e) {
+    st.textContent = `失败: ${e}`;
+    progressContainer.style.display = 'none';
+  }
 }
 
-// 应用 URL 参数到表单
-function applyUrlParams() {
-  if (!_urlParams) _urlParams = parseUrlParams();
-  if (_urlParams.month && viewMonth) {
-    viewMonth.value = _urlParams.month;
+function doRegenerate() {
+  if (!currentMonth) {
+    toast.warning('请先选择月份');
+    return;
   }
-  if (_urlParams.sheet && viewSheet) {
-    viewSheet.value = _urlParams.sheet;
-  }
-  if (_urlParams.search) {
-    const searchInput = document.getElementById('view-search');
-    if (searchInput) searchInput.value = _urlParams.search;
-  }
+  showConfirm('确认重新生成', `重新生成 ${currentMonth} 月报将覆盖现有数据，确定继续吗？`, function() {
+    doGenerate(currentMonth, 'regenerate');
+  });
 }
 
-// 更新 URL 参数（浏览器历史记录）
-function updateUrlParams() {
-  const params = new URLSearchParams();
-  if (viewMonth?.value) params.set('month', viewMonth.value);
-  if (viewSheet?.value) params.set('sheet', viewSheet.value);
-  const searchInput = document.getElementById('view-search');
-  if (searchInput?.value) params.set('search', searchInput.value);
-  const qs = params.toString();
-  const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-  window.history.replaceState({}, '', newUrl);
+function doExport() {
+  const month = currentMonth || '';
+  if (!month) return;
+  window.location.href = `/api/report/export/${month}`;
 }
 
-async function loadTable() {
-  const month = viewMonth ? viewMonth.value : '';
-  const sheet = viewSheet ? viewSheet.value || '签约' : '签约';
+// ========== 状态和审核 ==========
+async function loadReviewStatus(month) {
   if (!month) return;
 
+  const statusCard = document.getElementById('status-card');
+  statusCard.style.display = 'block';
+
+  try {
+    const r = await fetch(`/api/report/review-status/${month}`);
+    const d = await r.json();
+
+    // 更新状态
+    const status = d.status || 'not_started';
+    document.getElementById('status-text').textContent = statusLabel(status);
+    const statusDot = document.getElementById('status-dot');
+    statusDot.className = `status-dot ${status}`;
+
+    // 更新统计
+    document.getElementById('stat-errors').textContent = d.total_errors != null ? d.total_errors : 0;
+    document.getElementById('stat-warnings').textContent = d.total_warnings != null ? d.total_warnings : 0;
+    document.getElementById('stat-pending').textContent = d.pending_fixes != null ? d.pending_fixes : 0;
+
+    // 显示生成时间
+    if (d.generated_at) {
+      document.getElementById('generated-at').textContent =
+        `生成于 ${new Date(d.generated_at * 1000).toLocaleString('zh-CN')}`;
+    } else {
+      document.getElementById('generated-at').textContent = '';
+    }
+
+    // 更新按钮状态
+    const btnApprove = document.getElementById('btn-approve');
+    const btnReject = document.getElementById('btn-reject');
+    const btnRevalidate = document.getElementById('btn-revalidate');
+    const btnExport = document.getElementById('btn-export-main');
+
+    btnApprove.disabled = !(['validating', 'reviewing'].includes(status));
+    btnReject.disabled = !(['validating', 'reviewing'].includes(status));
+    btnRevalidate.disabled = ['not_started', 'generating'].includes(status);
+    btnExport.disabled = status !== 'approved';
+    const btnRegenerate = document.getElementById('btn-regenerate');
+    if (btnRegenerate) btnRegenerate.disabled = ['not_started', 'generating'].includes(status);
+
+    // 加载问题到问题 Tab
+    if (status === 'validating' || status === 'reviewing') {
+      loadReviewIssues();
+    } else if (status === 'approved') {
+      document.getElementById('review-issues-list').innerHTML =
+        '<p style="color:var(--c-success);text-align:center;padding:1rem;">✅ 审核通过，无待处理问题</p>';
+    }
+  } catch (e) {
+    console.warn('Failed to load review status:', e);
+  }
+}
+
+function statusLabel(s) {
+  switch (s) {
+    case 'not_started': return '未生成';
+    case 'generating': return '生成中';
+    case 'validating': return '待审核';
+    case 'reviewing': return '审核中';
+    case 'approved': return '已通过';
+    case 'rejected': return '已驳回';
+    default: return s;
+  }
+}
+
+async function doApprove() {
+  const month = currentMonth;
+  if (!month) return;
+  showConfirm('确认审批通过', `确认通过 ${month} 的交付月报审核？`, function() {
+    _doApprove(month);
+  });
+  return;
+}
+
+async function _doApprove(month) {
+  try {
+  const r = await fetch(`/api/report/review-approve/${month}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({reviewer: '人工审核'}),
+  });
+  const d = await r.json();
+  if (!r.ok) { toast.error(`审批失败: ${d.detail || d.error}`); return; }
+  toast.success('✅ 审核通过，已允许导出');
+  loadReviewStatus(month);
+  if (window.toast) toast.success('审批成功');
+  } catch (e) { toast.error(`失败: ${e}`); }
+}
+
+async function doReject() {
+  const month = currentMonth;
+  if (!month) return;
+  const container = document.getElementById('reason-input-container');
+  container.style.display = 'block';
+  container.scrollIntoView({behavior: 'smooth'});
+  const reasonInput = document.getElementById('review-reason');
+  if (!reasonInput.value.trim()) {
+    return;
+  }
+  showConfirm('确认驳回', `确认驳回 ${month} 的交付月报？`, function() {
+    _doReject(month);
+  });
+  return;
+  try {
+    const r = await fetch(`/api/report/review-reject/${month}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({reason: reasonInput.value, reviewer: '人工审核'}),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast.error(`驳回失败: ${d.detail || d.error}`); return; }
+    toast.success('已驳回，等待修正');
+    loadReviewStatus(month);
+    reasonInput.value = '';
+    container.style.display = 'none';
+    if (window.toast) toast.success('已驳回');
+  } catch (e) { toast.error(`失败: ${e}`); }
+}
+
+async function _doReject(month) {
+  try {
+  const r = await fetch(`/api/report/review-reject/${month}`, {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({reason: reasonInput.value, reviewer: '人工审核'}),
+  });
+  const d = await r.json();
+  if (!r.ok) { toast.error(`驳回失败: ${d.detail || d.error}`); return; }
+  toast.success('已驳回，等待修正');
+  loadReviewStatus(month);
+  reasonInput.value = '';
+  container.style.display = 'none';
+  if (window.toast) toast.success('已驳回');
+  } catch (e) { toast.error(`失败: ${e}`); }
+}
+
+async function doRevalidate() {
+  const month = currentMonth;
+  if (!month) return;
+  try {
+    const r = await fetch(`/api/report/revalidate/${month}`, {method: 'POST'});
+    const d = await r.json();
+    if (!r.ok) { toast.error(`重新校验失败: ${d.detail || d.error}`); return; }
+    toast.success('✅ 重新校验完成');
+    loadReviewStatus(month);
+    loadReviewIssues();
+    if (window.toast) toast.success('重新校验完成');
+  } catch (e) { toast.error(`失败: ${e}`); }
+}
+
+// ========== 数据浏览 ==========
+async function loadTable() {
+  const month = currentMonth || (currentMonth || '');
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  if (!month) {
+    document.getElementById('data-table-container').innerHTML =
+      '<p style="color:var(--c-muted);text-align:center;">请先选择月份</p>';
+    return;
+  }
+
   const container = document.getElementById('data-table-container');
-  container.innerHTML = '<p style="color:var(--c-muted);">加载中...</p>';
+  container.innerHTML = '<p style="color:var(--c-muted);text-align:center;">加载中...</p>';
 
   currentPage = 1;
   await fetchPage(month, sheet, currentPage);
@@ -214,13 +810,15 @@ function getSearchKeyword() {
 async function fetchPage(month, sheet, page) {
   const container = document.getElementById('data-table-container');
   const search = getSearchKeyword();
+  const pagContainer = document.getElementById('pagination');
   try {
     const params = new URLSearchParams({ page, page_size: 50 });
     if (search) params.set('search', search);
     const r = await fetch(`/api/report/data/${month}/${encodeURIComponent(sheet)}?${params.toString()}`);
     if (!r.ok) {
       const err = await r.json();
-      container.innerHTML = `<p style="color:var(--c-danger);">⚠️ ${err.detail || '加载失败'}</p>`;
+      container.innerHTML = `<p style="color:var(--c-danger);text-align:center;">⚠️ ${err.detail || '加载失败'}</p>`;
+      pagContainer.innerHTML = '';
       return;
     }
     const d = await r.json();
@@ -228,8 +826,8 @@ async function fetchPage(month, sheet, page) {
     totalPages = d.total_pages;
 
     if (!d.rows || d.rows.length === 0) {
-      container.innerHTML = `<p style="color:var(--c-muted);">无数据${search ? `（搜索: "${search}"）` : ''}</p>`;
-      document.getElementById('pagination').innerHTML = '';
+      container.innerHTML = `<p style="color:var(--c-muted);text-align:center;padding:1rem;">无数据${search ? `（搜索: "${search}"）` : ''}</p>`;
+      pagContainer.innerHTML = '';
       return;
     }
 
@@ -250,13 +848,25 @@ async function fetchPage(month, sheet, page) {
     container.innerHTML = html;
 
     // 分页
-    renderPagination(month, sheet);
+    renderPagination(pagContainer, month, sheet, totalPages, currentPage);
   } catch (e) {
-    container.innerHTML = `<p style="color:var(--c-danger);">⚠️ ${e.message}</p>`;
+    container.innerHTML = `<p style="color:var(--c-danger);text-align:center;">⚠️ ${e.message}</p>`;
   }
 }
 
-// 搜索框回车触发查询
+// 导出当前筛选结果
+function exportCurrent() {
+  const month = currentMonth || (currentMonth || '');
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  const search = getSearchKeyword();
+  if (!month) return;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  const qs = params.toString();
+  window.location.href = `/api/report/export-sheet/${month}/${encodeURIComponent(sheet)}${qs ? '?' + qs : ''}`;
+}
+
+// 搜索防抖 + 浏览区事件监听
 let searchTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('view-search');
@@ -268,179 +878,118 @@ document.addEventListener('DOMContentLoaded', () => {
         loadTable();
       }
     });
-    // 防抖搜索
     searchInput.addEventListener('input', () => {
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
         currentPage = 1;
         loadTable();
-        updateUrlParams();
       }, 400);
     });
   }
-  // 启动
+
+
+  // 浏览区 Sheet 切换自动加载
+  const viewSheetSel = document.getElementById('view-sheet');
+  if (viewSheetSel) {
+    viewSheetSel.addEventListener('change', function() {
+      currentPage = 1;
+      loadTable();
+    });
+  }
+
+  // 初始化
+  initTabFromHash();
   loadMonths();
 });
 
-// 导出当前筛选结果
-function exportCurrent() {
-  const month = viewMonth ? viewMonth.value : '';
-  const sheet = viewSheet ? viewSheet.value || '签约' : '签约';
-  const search = getSearchKeyword();
-  if (!month) return;
-  const params = new URLSearchParams();
-  if (search) params.set('search', search);
-  const qs = params.toString();
-  window.location.href = `/api/report/export-sheet/${month}/${encodeURIComponent(sheet)}${qs ? '?' + qs : ''}`;
-}
-
-function renderPagination(month, sheet) {
-  const pag = document.getElementById('pagination');
-  let html = '';
-  if (totalPages > 1) {
-    html += `<button class="btn btn-sm" ${currentPage <= 1 ? 'disabled' : ''} onclick="fetchPage('${month}','${sheet}',${currentPage - 1})">上一页</button>`;
-    for (let i = 1; i <= Math.min(totalPages, 10); i++) {
-      html += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : ''}" onclick="fetchPage('${month}','${sheet}',${i})">${i}</button>`;
-    }
-    if (totalPages > 10) html += `<span>...</span>`;
-    html += `<button class="btn btn-sm" ${currentPage >= totalPages ? 'disabled' : ''} onclick="fetchPage('${month}','${sheet}',${currentPage + 1})">下一页</button>`;
+// ========== 问题清单 ==========
+async function loadReviewIssues(page = 1, pageSize = 50) {
+  if (!currentMonth) {
+    document.getElementById('review-issues-list').innerHTML =
+      '<p style="color:var(--c-muted);text-align:center;padding:1rem;">请先在左侧选择月份</p>';
+    return;
   }
-  pag.innerHTML = html;
-}
 
-async function doGenerate() {
-  const month = document.getElementById('gen-month').value.trim();
-  const mode = document.getElementById('gen-mode').value;
-  const st = document.getElementById('gen-status');
-  st.textContent = `生成中（${mode}）...`;
-  try {
-    const r = await fetch('/api/report/generate', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({month, mode})
-    });
-    const d = await r.json();
-    if (!r.ok) { st.textContent = `⚠️ ${d.detail || d.error}`; return; }
-    st.innerHTML = `✅ <strong>${d.action}</strong> 完成，合计 <strong>${d.total_rows}</strong> 行`;
-    let h = '<div class="table-wrapper"><table class="table"><thead><tr><th>Sheet</th><th>行数</th></tr></thead><tbody>';
-    for (const [k, v] of Object.entries(d.sheets || {})) h += `<tr><td>${k}</td><td>${v}</td></tr>`;
-    h += '</tbody></table></div>';
-    document.getElementById('sheet-detail').innerHTML = h;
-    loadMonths();
-    if (d.review_status) loadReviewStatus(month);
-  } catch (e) { st.textContent = `失败: ${e}`; }
-}
-
-function doExport() {
-  const month = document.getElementById('gen-month').value.trim();
-  window.location.href = `/api/report/export/${month}`;
-}
-
-// ========== 人机协作审核 ==========
-
-async function loadReviewStatus(month) {
-  if (!month) return;
-  try {
-    const r = await fetch(`/api/report/review-status/${month}`);
-    const d = await r.json();
-    document.getElementById('review-status').textContent = d.status || '未生成';
-    document.getElementById('review-errors').textContent = d.total_errors || 0;
-    document.getElementById('review-warnings').textContent = d.total_warnings || 0;
-    document.getElementById('review-pending').textContent = d.pending_fixes || 0;
-
-    const btnApprove = document.getElementById('btn-approve');
-    const btnReject = document.getElementById('btn-reject');
-    const btnRevalidate = document.getElementById('btn-revalidate');
-
-    const canExport = d.status === 'approved';
-    document.querySelector('[onclick="doExport()"]').disabled = !canExport;
-
-    btnApprove.disabled = d.status !== 'validating' && d.status !== 'reviewing';
-    btnReject.disabled = d.status !== 'validating' && d.status !== 'reviewing';
-    btnRevalidate.disabled = d.status === 'not_started' || d.status === 'generating';
-
-    if (d.status === 'validating' || d.status === 'reviewing') {
-      loadReviewIssues(month);
-    } else {
-      document.getElementById('review-issues-list').innerHTML =
-        d.status === 'approved' ? '<p style="color:var(--c-success);">✅ 审核通过，无待处理问题</p>' : '暂无审核问题';
-    }
-  } catch (e) {
-    console.warn('Failed to load review status:', e);
-  }
-}
-
-async function loadReviewIssues(month) {
   const container = document.getElementById('review-issues-list');
+  const statsContainer = document.getElementById('review-issues-stats');
+  container.innerHTML = '<p style="color:var(--c-muted);text-align:center;">加载中...</p>';
+
+  const statusFilter = document.getElementById('filter-status').value;
+  const severityFilter = document.getElementById('filter-severity').value;
+
   try {
-    const r = await fetch(`/api/report/review-issues/${month}`);
+    let url = `/api/report/review-issues/${currentMonth}?page=${page}&page_size=${pageSize}`;
+    if (statusFilter) url += `&status=${statusFilter}`;
+    if (severityFilter) url += `&severity=${severityFilter}`;
+    const r = await fetch(url);
     const d = await r.json();
+
     if (!d.issues || d.issues.length === 0) {
-      container.innerHTML = '<p style="color:var(--c-success);">✅ 无校验问题，可提交审核</p>';
+      container.innerHTML = '<p style="color:var(--c-success);text-align:center;padding:1rem;">✅ 无匹配问题</p>';
+      statsContainer.textContent =
+        `共 ${d.total || 0} 个问题`;
+      document.getElementById('issues-pagination').innerHTML = '';
       return;
     }
-    let html = `<p style="margin-bottom:0.5rem;">共 <strong>${d.total}</strong> 个问题（待处理 ${d.pending} / 已确认 ${d.confirmed} / 已驳回 ${d.rejected}）</p>`;
-    html += '<div class="table-wrapper"><table class="table"><thead><tr><th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th></tr></thead><tbody>';
+
+    statsContainer.textContent =
+      `共 ${d.total} 个问题（待处理 ${d.pending} / 已确认 ${d.confirmed} / 已驳回 ${d.rejected}）`;
+
+    let html = `<div class="table-wrapper"><table class="table"><thead><tr>
+      <th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th></tr></thead><tbody>`;
+
     d.issues.forEach(issue => {
       const severityColor = issue.severity === 'ERROR' ? 'var(--c-danger)' : 'var(--c-warning)';
-      html += `<tr><td>${issue.sheet}</td><td>${issue.row_index}</td><td>${issue.column_name || '-'}</td>`;
-      html += `<td style="color:${severityColor};">${issue.message}</td>`;
-      html += `<td>${issue.original_value || '-'}</td><td>${issue.status}</td></tr>`;
+      html += `<tr>
+        <td>${issue.sheet}</td>
+        <td>${issue.row_index}</td>
+        <td>${issue.column_name || '-'}</td>
+        <td style="color:${severityColor};font-weight:500;">${issue.message}</td>
+        <td>${issue.original_value || '-'}</td>
+        <td>${issue.status}</td>
+      </tr>`;
     });
+
     html += '</tbody></table></div>';
     container.innerHTML = html;
+
+    // 分页
+    const pagContainer = document.getElementById('issues-pagination');
+    if (d.total_pages > 1) {
+      renderPagination(pagContainer, null, null, d.total_pages, page, (p) => loadReviewIssues(p, pageSize));
+    } else {
+      pagContainer.innerHTML = '';
+    }
   } catch (e) {
-    container.innerHTML = `<p style="color:var(--c-danger);">⚠️ 加载失败: ${e.message}</p>`;
+    container.innerHTML = `<p style="color:var(--c-danger);text-align:center;">⚠️ 加载失败: ${e.message}</p>`;
   }
 }
 
-async function doApprove() {
-  const month = viewMonth ? viewMonth.value : '';
-  if (!month) return;
-  if (!confirm(`确认审批通过 ${month} 的交付月报？`)) return;
-  try {
-    const r = await fetch(`/api/report/review-approve/${month}`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reviewer: '人工审核'}),
-    });
-    const d = await r.json();
-    if (!r.ok) { alert(`审批失败: ${d.detail || d.error}`); return; }
-    alert('✅ 审核通过，已允许导出');
-    loadReviewStatus(month);
-  } catch (e) { alert(`失败: ${e}`); }
-}
+// ========== 通用分页渲染 ==========
+function renderPagination(container, month, sheet, totalPages, current, onClick) {
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  let html = '<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">';
+  html += `<button class="btn btn-sm" ${current <= 1 ? 'disabled' : ''} onclick="__pagClick(${current - 1})">上一页</button>`;
+  html += `<span style="margin:0 0.5rem;color:var(--c-muted);font-size:0.85rem;">第 ${current} / ${totalPages} 页</span>`;
+  html += `<button class="btn btn-sm" ${current >= totalPages ? 'disabled' : ''} onclick="__pagClick(${current + 1})">下一页</button>`;
+  html += '</div>';
+  container.innerHTML = html;
 
-async function doReject() {
-  const month = viewMonth ? viewMonth.value : '';
-  if (!month) return;
-  const reasonInput = document.getElementById('review-reason');
-  reasonInput.style.display = 'inline-block';
-  if (!reasonInput.value) { alert('请填写驳回原因'); return; }
-  if (!confirm(`驳回 ${month} 的交付月报？`)) return;
-  try {
-    const r = await fetch(`/api/report/review-reject/${month}`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reason: reasonInput.value, reviewer: '人工审核'}),
+  // 绑定点击事件
+  const btns = container.querySelectorAll('button');
+  btns.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const next = parseInt(this.getAttribute('onclick').match(/__pagClick\((\d+)\)/)[1]);
+      if (next >= 1 && next <= totalPages) {
+        onClick(next);
+      }
     });
-    const d = await r.json();
-    if (!r.ok) { alert(`驳回失败: ${d.detail || d.error}`); return; }
-    alert('已驳回，等待修正');
-    loadReviewStatus(month);
-  } catch (e) { alert(`失败: ${e}`); }
-}
+  });
 
-async function doRevalidate() {
-  const month = viewMonth ? viewMonth.value : '';
-  if (!month) return;
-  try {
-    const r = await fetch(`/api/report/revalidate/${month}`, {method: 'POST'});
-    const d = await r.json();
-    if (!r.ok) { alert(`重新校验失败: ${d.detail || d.error}`); return; }
-    alert('✅ 重新校验完成');
-    loadReviewStatus(month);
-  } catch (e) { alert(`失败: ${e}`); }
+  function __pagClick(p) { return p; }
 }
 </script>
 {% endblock %}
-

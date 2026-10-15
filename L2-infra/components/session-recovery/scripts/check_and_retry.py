@@ -205,9 +205,11 @@ def check_and_retry(apply=False):
     _log(f"📋 当前任务: {task_name} ({task_id}), 已失败 {fail_count} 次")
 
     # 2. 检查是否已达最大重试次数
+    # 达到上限是正常终态（等人工介入），非脚本错误 → 返回 True（exit 0）
+    # 避免被 OpenClaw 计为 consecutiveErrors 导致自动化自动禁用
     if fail_count >= MAX_RETRIES:
         _log(f"🛑 已达最大重试次数 ({MAX_RETRIES})，停止自动重试，等人工介入")
-        return False
+        return True
 
     # 3. 检查主会话状态
     main_session = "agent:main:main"
