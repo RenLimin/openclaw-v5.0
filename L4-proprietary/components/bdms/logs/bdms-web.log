@@ -242,3 +242,5 @@ INFO:     127.0.0.1:55184 - "GET /api/report/data/202608/%E7%AD%BE%E7%BA%A6?page
 INFO:     127.0.0.1:55197 - "GET /api/report/review-status/202608 HTTP/1.1" 200 OK
 INFO:     127.0.0.1:55184 - "GET /api/report/data/202609/%E7%AD%BE%E7%BA%A6?page=1&page_size=50 HTTP/1.1" 404 Not Found
 INFO:     127.0.0.1:55197 - "GET /api/report/review-status/202609 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49521 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56166 - "GET /static/app/css/style.css HTTP/1.1" 200 OK

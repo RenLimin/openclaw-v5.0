@@ -3,16 +3,14 @@
     title=page_title or '',
     brand_name=brand_name,
     brand_icon=brand_icon,
-    brand_logo='/static/img/logo.png',
+    brand_logo='/static/app/img/logo.png',
     active_page=active_page or '',
     storage_key=storage_key,
     sidebar_items=sidebar_items,
     extra_head=extra_head if extra_head is defined else ''
 ) %}
-        <link rel="stylesheet" href="/static/app/css/style.css?v=1.0">
+        <link rel="stylesheet" href="/static/app/css/style.css?v=3.2">
     {% block content %}{% endblock %}
-            <script src="/static/web-common/js/theme.js"></script>
-    <script src="/static/web-common/js/toast.js"></script>
-    <script src="/static/app/js/bdms.js?v=1.0"></script>
+    <script src="/static/app/js/bdms.js?v=1.1"></script>
     {% block extra_scripts %}{% endblock %}
 {% endcall %}
