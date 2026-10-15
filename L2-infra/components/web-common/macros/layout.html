@@ -28,10 +28,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}{% if title %} | {% endif %}{{ brand_name }}</title>
-    <link rel="stylesheet" href="/static/web-common/css/base.css">
-    <link rel="stylesheet" href="/static/web-common/css/layout.css">
-    <link rel="stylesheet" href="/static/web-common/css/components.css">
-    <link rel="stylesheet" href="/static/web-common/css/forms.css">
+    <link rel="stylesheet" href="/static/web-common/css/base.css?v=w1.2">
+    <link rel="stylesheet" href="/static/web-common/css/layout.css?v=w1.2">
+    <link rel="stylesheet" href="/static/web-common/css/components.css?v=w1.2">
+    <link rel="stylesheet" href="/static/web-common/css/forms.css?v=w1.2">
     {# head 区域预留，内容在 main 中通过 caller() 渲染 #}
     {% block extra_head %}{{ extra_head|safe }}{% endblock %}
 </head>
@@ -42,12 +42,15 @@
 
     <div class="app-layout">
         <aside class="sidebar" id="sidebar">
+            <!-- 拖拽调宽手柄 -->
+            <div class="sidebar-resizer" id="sidebarResizer" title="拖动调整宽度"></div>
+
             <div class="sidebar-brand">
                 {% if brand_logo %}
                 <img src="{{ brand_logo }}" alt="{{ brand_name }}" class="brand-logo-img">
                 {% else %}
                 <span class="brand-icon">{{ brand_icon }}</span>
-                <span>{{ brand_name }}</span>
+                <span class="sidebar-brand-text">{{ brand_name }}</span>
                 {% endif %}
             </div>
 
@@ -62,9 +65,10 @@
                                 {% for item in section['items'] %}
                                     <li>
                                         <a href="{{ item.url }}"
-                                           class="{% if item.id == active_page %}active{% endif %}">
+                                           class="{% if item.id == active_page %}active{% endif %}"
+                                           title="{{ item.label }}">
                                             <span class="nav-icon">{{ item.icon or '📄' }}</span>
-                                            {{ item.label }}
+                                            <span class="nav-label">{{ item.label }}</span>
                                         </a>
                                     </li>
                                 {% endfor %}
@@ -78,15 +82,31 @@
             </nav>
 
             <div class="sidebar-footer">
-                <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
-                    🌙 深色
+                <button class="theme-toggle" id="themeToggle" aria-label="切换主题" title="切换深色/浅色模式">
+                    <span class="theme-icon">🌙</span>
+                    <span class="theme-label">深色</span>
                 </button>
             </div>
         </aside>
 
-        <main class="main">
-            {{ caller() if caller is defined else '' }}
-        </main>
+        <div class="main-wrapper">
+            <!-- 顶部工具栏 -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <span class="topbar-title">{{ title or brand_name }}</span>
+                </div>
+                <div class="topbar-right">
+                    {% block topbar_actions %}{% endblock %}
+                    <button class="topbar-btn sidebar-toggle-top" id="sidebarToggle" aria-label="折叠/展开侧边栏" title="收起侧边栏">
+                        <span class="sidebar-toggle-icon">☰</span>
+                    </button>
+                </div>
+            </header>
+
+            <main class="main">
+                {{ caller() if caller is defined else '' }}
+            </main>
+        </div>
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
@@ -94,8 +114,9 @@
     <script>
         window.__WEB_COMMON_STORAGE_KEY__ = "{{ storage_key }}";
     </script>
-    <script src="/static/web-common/js/theme.js"></script>
-    <script src="/static/web-common/js/toast.js"></script>
+    <script src="/static/web-common/js/theme.js?v=w1.2"></script>
+    <script src="/static/web-common/js/toast.js?v=w1.2"></script>
+    <script src="/static/web-common/js/sidebar.js?v=w1.2"></script>
     {% if show_mobile_menu %}
     <script>
     // 移动端菜单
