@@ -472,54 +472,76 @@ def scan_zombie_processes():
 
 
 def scan_context_overflow():
-    """检测当前主会话上下文溢出风险，检测 token 占用是否接近/超过阈值"""
+    """检测当前主会话上下文溢出风险，检测 token 占用是否接近/超过阈值
+
+    修复 2026-10-16：
+    - 原实现依赖 `openclaw session status --output json`（命令不存在，`session` 应为 `sessions`），
+      每次执行都失败并静默返回空 → 上下文溢出永远检测不到。
+    - 改用 `openclaw sessions list --json`，从 `totalTokens` / `contextTokens` 真实字段读取。
+    """
     errors = []
-    
-    # 读取 openclaw.json 获取当前模型上下文窗口配置
-    try:
-        output, rc = run_cmd("openclaw config get agents.defaults.model --output json 2>/dev/null")
-        if rc != 0:
-            return errors
-        
-        model_config = json.loads(output)
-        context_window = model_config.get("contextWindow", 262144)  # 默认 256k
-        
-        # 获取当前会话 token 使用情况
-        output, rc = run_cmd("openclaw session status --output json 2>/dev/null")
-        if rc != 0:
-            # 获取失败，不检测
-            return errors
-        
-        session_status = json.loads(output)
-        estimated_tokens = session_status.get("estimatedPromptTokens", 0)
-        
-        # 计算阈值：80% 预警，95% 报错
-        warn_threshold = int(context_window * 0.8)
-        error_threshold = int(context_window * 0.95)
-        
-        if estimated_tokens >= error_threshold:
-            errors.append({
-                "type": "context_overflow",
-                "detail": f"Context overflow imminent: {estimated_tokens}/{context_window} tokens (>= 95%)",
-                "estimated_tokens": estimated_tokens,
-                "context_window": context_window,
-                "threshold": "error"
-            })
-        elif estimated_tokens >= warn_threshold:
-            errors.append({
-                "type": "context_warning",
-                "detail": f"Context pressure high: {estimated_tokens}/{context_window} tokens (>= 80%)",
-                "estimated_tokens": estimated_tokens,
-                "context_window": context_window,
-                "threshold": "warn"
-            })
-    except Exception as e:
-        # 出错不中断扫描，仅记录
+
+    output, rc = run_cmd("openclaw sessions list --json 2>/dev/null", timeout=30)
+    if rc != 0:
         errors.append({
             "type": "context_scan_failed",
-            "detail": f"Failed to scan context: {str(e)[:100]}"
+            "detail": f"sessions list failed: {output[:100]}"
         })
-    
+        return errors
+
+    try:
+        data = json.loads(output)
+    except (json.JSONDecodeError, AttributeError):
+        errors.append({
+            "type": "context_scan_failed",
+            "detail": "sessions list output is not valid JSON"
+        })
+        return errors
+
+    sessions = data.get("sessions", [])
+    target = None
+    for s in sessions:
+        if s.get("key") == "agent:main:main":
+            target = s
+            break
+    if target is None:
+        # 找不到主会话（可能被重置），取第一个 running 会话
+        for s in sessions:
+            if s.get("status") == "running":
+                target = s
+                break
+    if target is None:
+        return errors
+
+    # 真实字段：totalTokens / contextTokens（sessions list 直接提供，不再硬编码）
+    estimated_tokens = target.get("totalTokens") or 0
+    context_window = target.get("contextTokens") or 262144
+    if context_window == 0:
+        context_window = 262144
+
+    # 计算阈值：80% 预警，95% 报错
+    warn_threshold = int(context_window * 0.8)
+    error_threshold = int(context_window * 0.95)
+
+    if estimated_tokens >= error_threshold:
+        errors.append({
+            "type": "context_overflow",
+            "detail": f"Context overflow imminent: {estimated_tokens}/{context_window} tokens (>= 95%)",
+            "estimated_tokens": estimated_tokens,
+            "context_window": context_window,
+            "session_key": target.get("key"),
+            "threshold": "error"
+        })
+    elif estimated_tokens >= warn_threshold:
+        errors.append({
+            "type": "context_warning",
+            "detail": f"Context pressure high: {estimated_tokens}/{context_window} tokens (>= 80%)",
+            "estimated_tokens": estimated_tokens,
+            "context_window": context_window,
+            "session_key": target.get("key"),
+            "threshold": "warn"
+        })
+
     return errors
 
 
@@ -601,55 +623,82 @@ def auto_fix(errors):
         # 按严重程度排序：error > warn
         has_overflow = any(e.get("type") == "context_overflow" for e in context_errors)
         has_warn = any(e.get("type") == "context_warning" for e in context_errors)
-        
+
+        # 从错误里取 session key（修复后 scan 会带上）
+        session_key = None
+        for e in context_errors:
+            if e.get("session_key"):
+                session_key = e["session_key"]
+                break
+        if not session_key:
+            session_key = "agent:main:main"
+
         if has_overflow:
-            # Layer 1: 先尝试 /compact
+            # Layer 1: 先尝试 /compact（正确命令：openclaw sessions compact <key>，LLM 摘要压缩）
             fixes.append({
                 "action": "context_auto_recovery",
                 "reason": "Context overflow detected, starting 3-layer recovery",
                 "layer": "layer1_compact"
             })
-            
-            rc = run_cmd("openclaw chat command /compact 2>/dev/null")[1]
+
+            rc = run_cmd(f'openclaw sessions compact "{session_key}" 2>/dev/null', timeout=120)[1]
             fixes[-1]["executed"] = True
             fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
-            
+
             # 重新检测 token 数，还是高就下一层
             try:
-                output, rc_new = run_cmd("openclaw session status --output json 2>/dev/null")
+                output, rc_new = run_cmd("openclaw sessions list --json 2>/dev/null", timeout=30)
                 if rc_new == 0:
-                    status = json.loads(output)
-                    tokens = status.get("estimatedPromptTokens", 0)
-                    window = next(e["context_window"] for e in context_errors if "context_window" in e)
-                    if tokens >= int(window * 0.95):
-                        # Layer 2: /reset soft
-                        fixes.append({
-                            "action": "context_auto_recovery",
-                            "reason": "/compact did not free enough space",
-                            "layer": "layer2_reset_soft"
-                        })
-                        rc = run_cmd("openclaw chat command /reset soft 2>/dev/null")[1]
-                        fixes[-1]["executed"] = True
-                        fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
-                        
-                        # 再次检测，还是高就下一层
-                        output, rc_new2 = run_cmd("openclaw session status --output json 2>/dev/null")
-                        if rc_new2 == 0:
-                            status = json.loads(output)
-                            tokens = status.get("estimatedPromptTokens", 0)
-                            window = next(e["context_window"] for e in context_errors if "context_window" in e)
-                            if tokens >= int(window * 0.95):
-                                # Layer 3: /new
-                                fixes.append({
-                                    "action": "context_auto_recovery",
-                                    "reason": "/reset soft did not free enough space",
-                                    "layer": "layer3_new_session"
-                                })
-                                # 保存当前任务到 memory 供恢复
-                                run_cmd("python3 L2-infra/components/session-recovery/scripts/task_tracker.py save --current 2>/dev/null")
-                                rc = run_cmd("openclaw chat command /new 2>/dev/null")[1]
-                                fixes[-1]["executed"] = True
-                                fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
+                    data = json.loads(output)
+                    target = None
+                    for s in data.get("sessions", []):
+                        if s.get("key") == session_key:
+                            target = s
+                            break
+                    if target:
+                        tokens = target.get("totalTokens") or 0
+                        window = target.get("contextTokens") or 262144
+                        if tokens >= int(window * 0.95):
+                            # Layer 2: 强制截断兜底（--max-lines 不依赖 LLM 摘要，必定成功）
+                            # 注：/reset 无 CLI 路径（agent turn 不执行 slash 命令），
+                            # 用硬截断达到同样效果——永久释放上下文预算
+                            fixes.append({
+                                "action": "context_auto_recovery",
+                                "reason": "/compact did not free enough space",
+                                "layer": "layer2_hard_truncate"
+                            })
+                            rc = run_cmd(
+                                f'openclaw sessions compact "{session_key}" --max-lines 200 2>/dev/null',
+                                timeout=120
+                            )[1]
+                            fixes[-1]["executed"] = True
+                            fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
+
+                            # 再次检测，还是高就下一层
+                            output, rc_new2 = run_cmd("openclaw sessions list --json 2>/dev/null", timeout=30)
+                            if rc_new2 == 0:
+                                data2 = json.loads(output)
+                                target2 = None
+                                for s in data2.get("sessions", []):
+                                    if s.get("key") == session_key:
+                                        target2 = s
+                                        break
+                                if target2:
+                                    tokens = target2.get("totalTokens") or 0
+                                    window = target2.get("contextTokens") or 262144
+                                    if tokens >= int(window * 0.95):
+                                        # Layer 3: 通知用户手动 /new（无自动化 CLI 路径）
+                                        fixes.append({
+                                            "action": "context_auto_recovery",
+                                            "reason": "/compact and hard truncate did not free enough space",
+                                            "layer": "layer3_user_new_session",
+                                            "executed": False,
+                                            "result": "需要用户手动执行 /new 启动全新会话（无 CLI 自动化路径）"
+                                        })
+                                        # 保存当前任务到 memory 供恢复
+                                        run_cmd("python3 L2-infra/components/session-recovery/scripts/task_tracker.py save --current 2>/dev/null")
+                                        fixes[-1]["executed"] = True
+                                        fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
             except Exception:
                 pass
         elif has_warn:
@@ -659,7 +708,7 @@ def auto_fix(errors):
                 "reason": "High context pressure detected, preemptive compaction",
                 "executed": False
             })
-            rc = run_cmd("openclaw chat command /compact 2>/dev/null")[1]
+            rc = run_cmd(f'openclaw sessions compact "{session_key}" 2>/dev/null', timeout=120)[1]
             fixes[-1]["executed"] = True
             fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
     
