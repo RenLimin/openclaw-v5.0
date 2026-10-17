@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>web-common 组件示例</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/layout.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <style>
+        body {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--s-4);
+        }
+        .demo-section {
+            margin-bottom: var(--s-8);
+        }
+        .demo-title {
+            font-size: var(--fs-2xl);
+            margin-bottom: var(--s-4);
+            border-bottom: 1px solid var(--c-border);
+            padding-bottom: var(--s-2);
+        }
+        .demo-card {
+            background: var(--c-surface);
+            border-radius: var(--radius);
+            padding: var(--s-4);
+            box-shadow: var(--shadow);
+            margin-bottom: var(--s-4);
+        }
+    </style>
+</head>
+<body>
+    <h1 class="demo-title">web-common v2.0 组件示例</h1>
+
+    <div class="demo-section">
+        <h2 class="demo-title">颜色展示</h2>
+        <div class="demo-card">
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s-4);">
+                <div>
+                    <div style="height: 60px; background: var(--c-primary); border-radius: var(--radius);"></div>
+                    <p><code>--c-primary</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-success); border-radius: var(--radius);"></div>
+                    <p><code>--c-success</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-warning); border-radius: var(--radius);"></div>
+                    <p><code>--c-warning</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-error); border-radius: var(--radius);"></div>
+                    <p><code>--c-error</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-info); border-radius: var(--radius);"></div>
+                    <p><code>--c-info</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius);"></div>
+                    <p><code>--c-surface</code></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">按钮</h2>
+        <div class="demo-card">
+            <button class="btn btn-primary">主按钮</button>
+            <button class="btn btn-secondary">次按钮</button>
+            <button class="btn btn-text">文字按钮</button>
+            <button class="btn btn-primary" disabled>禁用主按钮</button>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">表单</h2>
+        <div class="demo-card">
+            <div class="form-group">
+                <label class="form-label">用户名</label>
+                <input type="text" class="form-input" placeholder="请输入用户名">
+            </div>
+            <div class="form-group">
+                <label class="form-label">密码</label>
+                <input type="password" class="form-input" placeholder="请输入密码">
+            </div>
+            <div class="form-group">
+                <label class="form-label">简介</label>
+                <textarea class="form-textarea" placeholder="介绍一下自己"></textarea>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" id="agree">
+                <label for="agree">我同意协议</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">卡片</h2>
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-header">
+                    <h3>卡片标题</h3>
+                </div>
+                <div class="card-body">
+                    <p>这是一个标准卡片示例，包含标题和内容区域。</p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-text">操作</button>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <p>这是一个没有标题和底部的简单卡片。内容区域占据整个卡片空间。</p>
+                </div>
+            </div>
+            <div class="card">
+                <h3>简洁卡片</h3>
+                <p>没有复杂结构的简单卡片。</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">表格</h2>
+        <div class="demo-card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>名称</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td>项目一</td>
+                        <td><span class="badge badge-success">已完成</span></td>
+                        <td><a href="#">编辑</a></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>项目二</td>
+                        <td><span class="badge badge-warning">进行中</span></td>
+                        <td><a href="#">编辑</a></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>项目三</td>
+                        <td><span class="badge badge-error">已驳回</span></td>
+                        <td><a href="#">编辑</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2 class="demo-title">徽章标签</h2>
+        <div class="demo-card">
+            <span class="badge badge-success">成功</span>
+            <span class="badge badge-warning">警告</span>
+            <span class="badge badge-error">错误</span>
+            <span class="badge badge-info">信息</span>
+            <span class="badge badge-primary">主要</span>
+        </div>
+    </div>
+
+    <script>
+        // 简单的主题切换演示
+        let theme = 'light';
+        document.body.insertAdjacentHTML('beforeend', `
+            <div style="position: fixed; top: 20px; right: 20px;">
+                <button onclick="toggleTheme()">切换主题</button>
+            </div>
+        `);
+        function toggleTheme() {
+            theme = theme === 'light' ? 'dark' : 'light';
+            document.documentElement.dataset.theme = theme;
+        }
+    </script>
+</body>
+</html>

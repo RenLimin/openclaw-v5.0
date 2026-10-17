@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>web-common v2.0 组件展示</title>
+    <link rel="stylesheet" href="/static/web-common/css/base.css">
+    <link rel="stylesheet" href="/static/web-common/css/tokens.css">
+    <link rel="stylesheet" href="/static/web-common/css/layout.css">
+    <link rel="stylesheet" href="/static/web-common/css/components.css">
+    <link rel="stylesheet" href="/static/web-common/css/forms.css">
+    <style>
+        body {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--s-4);
+        }
+        .demo-section {
+            margin-bottom: var(--s-8);
+        }
+        .demo-title {
+            font-size: var(--fs-2xl);
+            margin-bottom: var(--s-4);
+            border-bottom: 1px solid var(--c-border);
+            padding-bottom: var(--s-2);
+        }
+        .demo-card {
+            background: var(--c-surface);
+            border-radius: var(--radius);
+            padding: var(--s-4);
+            box-shadow: var(--shadow);
+            margin-bottom: var(--s-4);
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--s-4);
+        }
+    </style>
+</head>
+<body>
+    <h1 class="demo-title">web-common v2.0 组件全展示</h1>
+
+    <!-- 颜色展示 -->
+    <div class="demo-section">
+        <h2 class="demo-title">颜色体系</h2>
+        <div class="demo-card">
+            <h3>品牌色 & 功能色</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s-4); margin-top: var(--s-4);">
+                <div>
+                    <div style="height: 60px; background: var(--c-primary); border-radius: var(--radius);"></div>
+                    <p><code>--c-primary</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-success); border-radius: var(--radius);"></div>
+                    <p><code>--c-success</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-warning); border-radius: var(--radius);"></div>
+                    <p><code>--c-warning</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-error); border-radius: var(--radius);"></div>
+                    <p><code>--c-error</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-info); border-radius: var(--radius);"></div>
+                    <p><code>--c-info</code></p>
+                </div>
+            </div>
+            <h3 style="margin-top: var(--s-4);">中性色层次</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s-4); margin-top: var(--s-4);">
+                <div>
+                    <div style="height: 60px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: var(--radius);"></div>
+                    <p><code>--c-bg</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius);"></div>
+                    <p><code>--c-surface</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--radius);"></div>
+                    <p><code>--c-surface-2</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-surface-3); border: 1px solid var(--c-border); border-radius: var(--radius);"></div>
+                    <p><code>--c-surface-3</code></p>
+                </div>
+                <div>
+                    <div style="height: 60px; background: var(--c-border); border-radius: var(--radius);"></div>
+                    <p><code>--c-border</code></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 按钮 -->
+    <div class="demo-section">
+        <h2 class="demo-title">按钮</h2>
+        <div class="demo-card">
+            <div style="display: flex; flex-wrap: wrap; gap: var(--s-4); align-items: center;">
+                <button class="btn btn-primary">主按钮 primary</button>
+                <button class="btn btn-success">成功 success</button>
+                <button class="btn btn-warning">警告 warning</button>
+                <button class="btn btn-danger">错误 danger</button>
+                <button class="btn btn-info">信息 info</button>
+                <button class="btn">默认按钮</button>
+                <button class="btn btn-primary btn-sm">小按钮 sm</button>
+                <button class="btn btn-primary btn-lg">大按钮 lg</button>
+                <button class="btn btn-primary" disabled>禁用按钮</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表单 -->
+    <div class="demo-section">
+        <h2 class="demo-title">表单组件</h2>
+        <div class="demo-card">
+            <div class="form-row">
+                <div>
+                    <div class="form-group">
+                        <label>用户名</label>
+                        <input type="text" placeholder="请输入用户名">
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>邮箱</label>
+                        <input type="email" placeholder="xxx@example.com">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <input type="password" placeholder="请输入密码">
+                <div class="form-help">密码长度 8-16 位，包含字母和数字</div>
+            </div>
+            <div class="form-group">
+                <label>自我介绍</label>
+                <textarea rows="4" placeholder="介绍一下自己"></textarea>
+            </div>
+            <div class="form-row">
+                <div>
+                    <div class="form-group">
+                        <label>性别</label>
+                        <select>
+                            <option value="">请选择</option>
+                            <option value="male">男</option>
+                            <option value="female">女</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="form-group">
+                        <label>出生日期</label>
+                        <input type="date">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox">
+                    <span>我已阅读并同意用户协议</span>
+                </label>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between;">
+                <label for="">启用通知</label>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div style="display: flex; gap: var(--s-3); margin-top: var(--s-4);">
+                <button class="btn btn-secondary">取消</button>
+                <button class="btn btn-primary">提交</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 卡片 -->
+    <div class="demo-section">
+        <h2 class="demo-title">卡片</h2>
+        <div class="demo-card">
+            <div class="demo-grid">
+                <div class="card">
+                    <h3>基础卡片</h3>
+                    <p>这是一个最基础的卡片，只有内容区域。</p>
+                </div>
+                <div class="card">
+                    <div class="card-title">带标题卡片</div>
+                    <p>带标题区域的标准卡片。</p>
+                </div>
+                <div class="card">
+                    <div class="card-title">带操作卡片</div>
+                    <p>标题栏右侧可以放置操作按钮。</p>
+                    <div class="card-actions">
+                        <button class="btn btn-sm btn-text">编辑</button>
+                        <button class="btn btn-sm btn-danger">删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="demo-section">
+        <h2 class="demo-title">统计卡片</h2>
+        <div class="demo-card">
+            <div class="dashboard-grid">
+                <div class="stat-card">
+                    <div class="stat-label">总访问量</div>
+                    <div class="stat-value primary">12,345</div>
+                    <div class="stat-sub">较昨日 +12%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">注册用户</div>
+                    <div class="stat-value success">1,234</div>
+                    <div class="stat-sub">较昨日 +5.2%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">待处理</div>
+                    <div class="stat-value warning">18</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">错误率</div>
+                    <div class="stat-value danger">2.3%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 表格 -->
+    <div class="demo-section">
+        <h2 class="demo-title">表格</h2>
+        <div class="demo-card">
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>名称</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>项目一</td>
+                            <td><span class="badge badge-success">已完成</span></td>
+                            <td>2026-10-01</td>
+                            <td><a href="#">编辑</a> <a href="#">删除</a></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>项目二</td>
+                            <td><span class="badge badge-warning">进行中</span></td>
+                            <td>2026-10-05</td>
+                            <td><a href="#">编辑</a> <a href="#">删除</a></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>项目三</td>
+                            <td><span class="badge badge-error">已驳回</span></td>
+                            <td>2026-10-10</td>
+                            <td><a href="#">编辑</a> <a href="#">删除</a></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 徽章 -->
+    <div class="demo-section">
+        <h2 class="demo-title">徽章</h2>
+        <div class="demo-card">
+            <div style="display: flex; flex-wrap: wrap; gap: var(--s-3);">
+                <span class="badge badge-success">成功 success</span>
+                <span class="badge badge-warning">警告 warning</span>
+                <span class="badge badge-danger">错误 danger</span>
+                <span class="badge badge-info">信息 info</span>
+                <span class="badge badge-primary">主要 primary</span>
+                <span class="badge badge-muted">默认 muted</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 进度条 -->
+    <div class="demo-section">
+        <h2 class="demo-title">进度条</h2>
+        <div class="demo-card">
+            <div style="display: flex; flex-direction: column; gap: var(--s-4);">
+                <div>
+                    <div class="progress-label">项目完成进度（primary）</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 75%;"></div>
+                    </div>
+                    <div class="progress-label">75%</div>
+                </div>
+                <div>
+                    <div class="progress-label">上传进度（success）</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill success" style="width: 95%;"></div>
+                    </div>
+                    <div class="progress-label">95%</div>
+                </div>
+                <div>
+                    <div class="progress-label">CPU 使用率（warning）</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill warning" style="width: 68%;"></div>
+                    </div>
+                    <div class="progress-label">68%</div>
+                </div>
+                <div>
+                    <div class="progress-label">错误率（danger）</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill danger" style="width: 12%;"></div>
+                    </div>
+                    <div class="progress-label">12%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 时间线 -->
+    <div class="demo-section">
+        <h2 class="demo-title">时间线</h2>
+        <div class="demo-card">
+            <div class="timeline">
+                <div class="timeline-item completed">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-title">项目创建</div>
+                    <div class="timeline-meta">2026-10-01 10:00 | Rex</div>
+                    <div class="timeline-comment">初始化项目，创建基础结构</div>
+                </div>
+                <div class="timeline-item active">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-title">开发中</div>
+                    <div class="timeline-meta">2026-10-02 09:30 | Jerry</div>
+                    <div class="timeline-comment">组件规范化开发中</div>
+                </div>
+                <div class="timeline-item rejected">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-title">首次提交审核</div>
+                    <div class="timeline-meta">2026-10-10 16:00</div>
+                    <div class="timeline-comment">需要调整间距，重新修改</div>
+                </div>
+                <div class="timeline-item active">
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-title">修改完成</div>
+                    <div class="timeline-meta">2026-10-17 15:00</div>
+                    <div class="timeline-comment">等待二次审核</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情信息网格 -->
+    <div class="demo-section">
+        <h2 class="demo-title">详情信息网格</h2>
+        <div class="demo-card">
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">项目名称</div>
+                    <div class="info-value">web-common v2.0</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">创建时间</div>
+                    <div class="info-value">2026-10-17</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">负责人</div>
+                    <div class="info-value">Jerry 🦞</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">状态</div>
+                    <div class="info-value"><span class="badge badge-success">开发中</span></div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">描述</div>
+                    <div class="info-value">Web UI 组件库规范化升级</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">进度</div>
+                    <div class="info-value"><span class="badge badge-primary">75%</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 主题切换演示
+        let theme = 'light';
+        document.body.insertAdjacentHTML('beforeend', `
+            <div style="position: fixed; top: 20px; right: 20px;">
+                <button class="btn" onclick="toggleTheme()">切换主题</button>
+            </div>
+        `);
+        function toggleTheme() {
+            theme = theme === 'light' ? 'dark' : 'light';
+            document.documentElement.dataset.theme = theme;
+        }
+    </script>
+</body>
+</html>

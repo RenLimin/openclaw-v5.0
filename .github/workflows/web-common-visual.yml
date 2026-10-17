@@ -1,0 +1,43 @@
+name: web-common Visual Regression Tests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest playwright pillow pytest-playwright
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium
+
+      - name: Run all visual regression tests
+        run: |
+          # 本测试需要本地服务已启动
+          # 在 CI 中需要配置启动所有被测服务
+          # 这里提供框架，实际需要根据被测服务调整启动步骤
+          cd ${{ github.workspace }}
+          python -m pytest --collect-only -q L*/**/tests/visual/test_pages.py
+
+      - name: Upload test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-test-diff
+          path: '*/tests/visual/diff/'

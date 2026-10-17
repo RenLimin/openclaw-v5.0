@@ -52,7 +52,7 @@
     width: 36px;
     height: 36px;
     border-radius: var(--r-sm);
-    color: var(--c-text-2);
+    color: var(--c-text-secondary);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -71,7 +71,7 @@
 }
 
 .topbar-title {
-    font-size: 1rem;
+    font-size: var(--fs-base);
     font-weight: 600;
     color: var(--c-text);
     white-space: nowrap;
@@ -150,9 +150,9 @@
     gap: var(--s-3);
     padding: var(--s-2) var(--s-3);
     border-radius: var(--r-sm);
-    color: var(--c-text-2);
+    color: var(--c-text-secondary);
     text-decoration: none;
-    font-size: 0.88rem;
+    font-size: var(--fs-sm);
     font-weight: 500;
     transition: all var(--t-fast);
 }
@@ -164,7 +164,7 @@
 
 .sidebar-links a.active {
     color: var(--c-primary);
-    background: rgba(59, 130, 246, 0.1);
+    background: var(--c-primary-light);
     font-weight: 600;
 }
 
@@ -381,10 +381,10 @@
 
 /* --- Main Content --- */
 .main {
-    margin-left: var(--sidebar-w);
     flex: 1;
-    padding: var(--s-8);
+    padding: var(--s-6) var(--s-8);
     max-width: none;
+    width: 100%;
 }
 
 /* --- Page Header --- */
@@ -398,15 +398,15 @@
 }
 .page-header h1 {
     font-family: var(--font-display);
-    font-size: 1.75rem;
+    font-size: var(--fs-3xl);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--c-text);
 }
 .page-header p {
-    color: var(--c-muted);
+    color: var(--c-text-muted);
     margin-top: var(--s-1);
-    font-size: 0.95rem;
+    font-size: var(--fs-base);
 }
 
 .page-actions {

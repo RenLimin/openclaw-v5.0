@@ -34,6 +34,11 @@
         if (btn) {
             btn.textContent = theme === 'dark' ? '☀️ 浅色' : '🌙 深色';
         }
+        var btnTop = document.getElementById('themeToggleTop');
+        if (btnTop) {
+            btnTop.querySelector('.theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
+            btnTop.title = theme === 'dark' ? '切换到浅色模式' : '切换到深色模式';
+        }
         // 通知监听器
         listeners.forEach(function(cb) {
             try { cb(theme); } catch (e) { console.error('Theme listener error:', e); }
@@ -74,6 +79,11 @@
         if (btn && !btn.__themeBound) {
             btn.addEventListener('click', toggleTheme);
             btn.__themeBound = true;
+        }
+        var btnTop = document.getElementById('themeToggleTop');
+        if (btnTop && !btnTop.__themeBound) {
+            btnTop.addEventListener('click', toggleTheme);
+            btnTop.__themeBound = true;
         }
     }
 
