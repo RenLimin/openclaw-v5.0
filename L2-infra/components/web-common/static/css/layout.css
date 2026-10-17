@@ -23,6 +23,7 @@
     height: 56px;
     background: var(--c-surface);
     border-bottom: 1px solid var(--c-border);
+    box-shadow: var(--sh-sm);
     display: flex;
     align-items: center;
     justify-content: space-between;
