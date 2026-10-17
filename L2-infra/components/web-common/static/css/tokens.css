@@ -72,6 +72,21 @@
     --shadow:  var(--sh-md);                                    /* 层级 2：默认（卡片/浮层） */
     --sh-lg:   0 8px 24px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);  /* 层级 3：下拉菜单/模态框 */
     --sh-xl:   0 16px 48px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.04); /* 层级 4：超大浮层 */
+
+    /* ========== 6. 动效语义别名（时长 + 缓动） ========== */
+    /* 时长（值来自 base.css --t-*，此处补语义别名） */
+    --dur-fast: 150ms;   /* hover 反馈、小交互 */
+    --dur-base: 250ms;   /* 主题切换、展开收起 */
+    --dur-slow: 400ms;   /* 弹窗、大型切换 */
+    /* 缓动函数 */
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* 标准缓动（Material 风格） */
+    --ease-in:       cubic-bezier(0.4, 0, 1, 1);    /* 加速（进入） */
+    --ease-out:      cubic-bezier(0, 0, 0.2, 1);    /* 减速（退出） */
+    --ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);  /* 对称缓动 */
+    /* 完整 transition 值（可直接使用） */
+    --t-fast: var(--dur-fast) var(--ease-standard);
+    --t-base: var(--dur-base) var(--ease-standard);
+    --t-slow: var(--dur-slow) var(--ease-standard);
 }
 
 /* ========== 暗色主题覆盖 ========== */

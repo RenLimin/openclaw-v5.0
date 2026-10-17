@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-17 22:53 UTC+08:00
+最后生成：2026-10-17 23:02 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -214,8 +214,8 @@ _自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9939a28e` |
-| Commit 数 | 455 |
+| HEAD | `ac6b6639` |
+| Commit 数 | 456 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
