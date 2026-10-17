@@ -33,6 +33,9 @@
       if (!this.toggle || !this.menu) return;
 
       this.isOpen = false;
+      // 初始化 ARIA
+      this.toggle.setAttribute('aria-haspopup', 'true');
+      this.toggle.setAttribute('aria-expanded', 'false');
       this._bindEvents();
     }
 

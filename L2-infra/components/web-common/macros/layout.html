@@ -38,11 +38,11 @@
 </head>
 <body>
     {% if show_mobile_menu %}
-    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="菜单">☰</button>
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="打开菜单" aria-expanded="false" aria-controls="sidebar">☰</button>
     {% endif %}
 
     <div class="app-layout">
-        <aside class="sidebar" id="sidebar">
+        <aside class="sidebar" id="sidebar" aria-label="侧边导航">
             <!-- 拖拽调宽手柄 -->
             <div class="sidebar-resizer" id="sidebarResizer" title="拖动调整宽度"></div>
 
@@ -55,7 +55,7 @@
                 {% endif %}
             </div>
 
-            <nav class="sidebar-nav">
+            <nav class="sidebar-nav" aria-label="主导航">
                 {% if sidebar_items %}
                     {% for section in sidebar_items %}
                         <div class="sidebar-section">
@@ -83,7 +83,7 @@
             </nav>
 
             <div class="sidebar-footer">
-                <button class="sidebar-collapse-btn" id="sidebarToggle" aria-label="折叠/展开侧边栏" title="收起侧边栏">
+                <button class="sidebar-collapse-btn" id="sidebarToggle" aria-label="折叠/展开侧边栏" aria-controls="sidebar" title="收起侧边栏">
                     <span class="sidebar-toggle-icon">◀</span>
                     <span class="collapse-label">收起侧边栏</span>
                 </button>
@@ -98,7 +98,7 @@
                 </div>
                 <div class="topbar-right">
                     {% block topbar_actions %}{% endblock %}
-                    <button class="topbar-btn theme-toggle-top" id="themeToggleTop" aria-label="切换主题" title="切换深色/浅色模式">
+                    <button class="topbar-btn theme-toggle-top" id="themeToggleTop" aria-label="切换主题" aria-pressed="false" title="切换深色/浅色模式">
                         <span class="theme-icon">🌙</span>
                     </button>
                 </div>
@@ -126,20 +126,49 @@
     <script src="/static/web-common/js/table.js?v=w2.1"></script>
     {% if show_mobile_menu %}
     <script>
-    // 移动端菜单
+    // 移动端菜单（增强版：外部点击/Esc 关闭 + aria-expanded 状态）
     (function() {
         var btn = document.getElementById('mobileMenuBtn');
         var sidebar = document.getElementById('sidebar');
-        if (btn && sidebar) {
-            btn.addEventListener('click', function() {
-                sidebar.classList.toggle('open');
-            });
-            sidebar.querySelectorAll('a').forEach(function(a) {
-                a.addEventListener('click', function() {
-                    sidebar.classList.remove('open');
-                });
-            });
+        if (!btn || !sidebar) return;
+
+        function isMobile() {
+            return window.innerWidth <= 768;
         }
+        function setMenuState(open) {
+            sidebar.classList.toggle('open', open);
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            btn.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
+        }
+        btn.addEventListener('click', function() {
+            setMenuState(!sidebar.classList.contains('open'));
+        });
+        // 点击导航项后关闭
+        sidebar.querySelectorAll('a').forEach(function(a) {
+            a.addEventListener('click', function() {
+                if (isMobile()) setMenuState(false);
+            });
+        });
+        // 点击外部关闭
+        document.addEventListener('click', function(e) {
+            if (isMobile() && sidebar.classList.contains('open') &&
+                !sidebar.contains(e.target) && !btn.contains(e.target)) {
+                setMenuState(false);
+            }
+        });
+        // Esc 关闭
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+                setMenuState(false);
+                btn.focus();
+            }
+        });
+        // 窗口从移动端切回桌面时重置
+        window.addEventListener('resize', function() {
+            if (!isMobile() && sidebar.classList.contains('open')) {
+                setMenuState(false);
+            }
+        });
     })();
     </script>
     {% endif %}

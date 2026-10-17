@@ -17,6 +17,14 @@
     var resizer = document.getElementById('sidebarResizer');
     if (!sidebar) return;
 
+    // 初始化折叠按钮 ARIA 状态
+    function updateToggleAria(c) {
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', c ? 'false' : 'true');
+            toggleBtn.setAttribute('aria-label', c ? '展开侧边栏' : '收起侧边栏');
+        }
+    }
+
     // ---- 状态读写 ----
     function loadState() {
         try {
@@ -61,6 +69,7 @@
                 toggleBtn.title = '收起侧边栏';
             }
         }
+        updateToggleAria(c);
         saveState({ collapsed: c });
     }
 
@@ -77,6 +86,7 @@
         if (collapsed && icon) icon.style.transform = 'rotate(90deg)';
         toggleBtn.title = collapsed ? '展开侧边栏' : '收起侧边栏';
     }
+    updateToggleAria(collapsed);
 
     // ---- 折叠按钮点击 ----
     if (toggleBtn) {

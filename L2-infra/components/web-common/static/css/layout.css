@@ -461,3 +461,36 @@
     .stat-value { font-size: 1.5rem; }
     .table th, .table td { padding: var(--s-2); font-size: 0.8rem; }
 }
+
+/* ===== 移动端增强（Phase 5） ===== */
+/* 表格横向滚动：小屏不折行，保证可读性 */
+@media (max-width: 768px) {
+    .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+    .table-wrapper table {
+        min-width: 600px; /* 触发横向滚动，保持列宽可读 */
+    }
+    /* 点击区域 ≥ 48px（WCAG 2.5.5 目标尺寸） */
+    .btn,
+    .page-btn,
+    .tabs-tab,
+    .dropdown-item,
+    .sidebar-links a,
+    .sidebar-collapse-btn {
+        min-height: 44px; /* 移动端触控目标（48px 视觉 + 4px 间距内可接受 44px） */
+    }
+    .mobile-menu-btn {
+        width: 48px;
+        height: 48px;
+    }
+    /* 表单控件移动端放大 */
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        font-size: 16px; /* 防止 iOS 聚焦缩放 */
+        min-height: 44px;
+    }
+}
