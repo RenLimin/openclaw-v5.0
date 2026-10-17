@@ -124,6 +124,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* --- Utility Classes --- */
 .text-muted  { color: var(--c-muted); }
+.text-hint   { color: var(--c-muted); font-style: italic; font-size: 0.85em; }
 .text-success { color: var(--c-success); }
 .text-danger { color: var(--c-danger); }
 .text-primary { color: var(--c-primary); }

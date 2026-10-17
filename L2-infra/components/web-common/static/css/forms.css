@@ -8,10 +8,10 @@
 
 .form-group label {
     display: block;
-    font-size: 0.8rem;
+    font-size: var(--fs-sm);
     font-weight: 600;
     margin-bottom: var(--s-1);
-    color: var(--c-text-2);
+    color: var(--c-text-secondary);
 }
 
 .form-group input[type="text"],
@@ -29,7 +29,7 @@
     padding: var(--s-2) var(--s-3);
     border: 1px solid var(--c-border);
     border-radius: var(--r-sm);
-    font-size: 0.9rem;
+    font-size: var(--fs-base);
     font-family: var(--font-body);
     background: var(--c-surface);
     color: var(--c-text);
@@ -41,14 +41,14 @@
 .form-group textarea:focus {
     outline: none;
     border-color: var(--c-primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    box-shadow: 0 0 0 3px var(--c-primary-light);
 }
 
 .form-group input:disabled,
 .form-group select:disabled,
 .form-group textarea:disabled {
     background: var(--c-surface-2);
-    color: var(--c-muted);
+    color: var(--c-text-muted);
     cursor: not-allowed;
 }
 
@@ -95,15 +95,15 @@
 
 /* --- Form Help & Error --- */
 .form-help {
-    font-size: 0.75rem;
-    color: var(--c-muted);
-    margin-top: 4px;
+    font-size: var(--fs-xs);
+    color: var(--c-text-muted);
+    margin-top: var(--s-1);
 }
 
 .form-error {
-    font-size: 0.75rem;
-    color: var(--c-danger);
-    margin-top: 4px;
+    font-size: var(--fs-xs);
+    color: var(--c-error);
+    margin-top: var(--s-1);
 }
 
 .form-group.has-error input,
@@ -132,8 +132,8 @@
     gap: var(--s-2);
     cursor: pointer;
     font-weight: 500;
-    font-size: 0.88rem;
-    color: var(--c-text-2);
+    font-size: var(--fs-sm);
+    color: var(--c-text-secondary);
 }
 
 .checkbox-label input {

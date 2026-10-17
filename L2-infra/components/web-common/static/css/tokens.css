@@ -1,0 +1,64 @@
+/* ============================================================
+   tokens.css — Design Tokens v2.0 语义层
+   ============================================================
+   组件：web-common (L2) · 版本：v2.0 · ADR-033
+   策略：桥接 + 补全（不破坏现有页面）
+   - v1 变量（--c-* / --s-* / --r-* / --sh-* / --font-* / --t-*）在 base.css 定义，保持不动
+   - 本文件定义 v2 语义别名 + 缺失 tokens（字号 / 断点 / 新颜色层级）
+   - 语义别名指向 base.css 的 v1 变量，保证单一来源
+   用法：新页面/新组件优先使用 v2 语义 token（--c-text-secondary / --fs-* / --radius）
+   加载：必须在 base.css 之后引入（layout.html 已配置）
+   参考：DESIGN-TOKENS.md
+   ============================================================ */
+
+:root {
+    /* ========== 1. 字号 Typography（v2 新增） ========== */
+    --fs-xs:   0.75rem;   /* 12px 标签/辅助文字/角标 */
+    --fs-sm:   0.875rem;  /* 14px 表单/表格/紧凑正文 */
+    --fs-base: 0.9375rem; /* 15px 正文（与 base.css body 一致） */
+    --fs-lg:   1.125rem;  /* 18px 小标题/强调文字 */
+    --fs-xl:   1.25rem;   /* 20px 卡片标题 */
+    --fs-2xl:  1.5rem;    /* 24px 页面二级标题 */
+    --fs-3xl:  2rem;      /* 32px 页面主标题 */
+
+    /* ========== 2. 断点 Breakpoints（v2 新增） ========== */
+    --bp-sm: 480px;
+    --bp-md: 768px;
+    --bp-lg: 1024px;
+    --bp-xl: 1200px;
+
+    /* ========== 3. 颜色语义别名（桥接 v1 → v2） ========== */
+    --c-primary-light:  var(--c-primary-l);   /* 品牌浅色（hover/轻背景） */
+    --c-primary-hover:  var(--c-primary-d);   /* 品牌深色（hover 按压） */
+    --c-success-light:  var(--c-success-l);   /* 成功浅背景 */
+    --c-warning-light:  #fef3c7;              /* 警告浅背景（v2 新增） */
+    --c-error:          var(--c-danger);      /* 错误（v1 别名 danger） */
+    --c-error-light:    var(--c-danger-l);    /* 错误浅背景 */
+    --c-info-light:     #cffafe;              /* 信息浅背景（v2 新增） */
+    --c-text-secondary: var(--c-text-2);      /* 次要文字 */
+    --c-text-muted:     var(--c-muted);       /* 辅助文字/占位符 */
+    --c-text-inverse:   #ffffff;              /* 反色文字（深色按钮上） */
+    --c-surface-3:      #e9ebf0;              /* 三级表面（hover 行，v2 新增） */
+    --c-border-light:   #f1f5f9;              /* 浅边框（卡片内分隔） */
+    --c-border-strong:  var(--c-border-2);    /* 强调边框（输入框 focus） */
+
+    /* ========== 4. 圆角语义别名 ========== */
+    --r-none:  0;
+    --radius:  var(--r-md);   /* 默认圆角（卡片/按钮/输入框） */
+    --r-full:  9999px;        /* 圆形/胶囊 */
+
+    /* ========== 5. 阴影语义别名 ========== */
+    --shadow:  var(--sh-md);  /* 默认阴影 */
+}
+
+/* ========== 暗色主题覆盖 ========== */
+[data-theme="dark"] {
+    --fs-base: 0.9375rem;
+
+    --c-warning-light: #451a03;
+    --c-info-light:    #083344;
+    --c-text-inverse:  #0f172a;
+    --c-surface-3:     #2f3545;
+    --c-border-light:  #1a1d26;
+    --c-border-strong: var(--c-border-2);
+}

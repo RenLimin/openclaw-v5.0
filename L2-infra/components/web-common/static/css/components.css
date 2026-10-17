@@ -12,16 +12,16 @@
     box-shadow: var(--sh-sm);
     transition: all var(--t-base);
 }
-.card:hover { box-shadow: var(--sh-md); }
+.card:hover { box-shadow: var(--shadow); }
 
 .card-title {
     font-family: var(--font-display);
-    font-size: 0.8rem;
+    font-size: var(--fs-sm);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: var(--s-4);
-    color: var(--c-muted);
+    color: var(--c-text-muted);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -71,9 +71,9 @@
 .stat-card:hover::before { opacity: 1; }
 
 .stat-label {
-    font-size: 0.78rem;
+    font-size: var(--fs-xs);
     font-weight: 500;
-    color: var(--c-muted);
+    color: var(--c-text-muted);
     margin-bottom: var(--s-2);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -81,7 +81,7 @@
 
 .stat-value {
     font-family: var(--font-display);
-    font-size: 1.85rem;
+    font-size: var(--fs-2xl);
     font-weight: 700;
     letter-spacing: -0.02em;
     color: var(--c-text);
@@ -90,13 +90,13 @@
 
 .stat-value.primary { color: var(--c-primary); }
 .stat-value.success { color: var(--c-success); }
-.stat-value.danger  { color: var(--c-danger); }
+.stat-value.danger  { color: var(--c-error); }
 .stat-value.warning { color: var(--c-warning); }
 .stat-value.info    { color: var(--c-info); }
 
 .stat-sub {
-    font-size: 0.78rem;
-    color: var(--c-muted);
+    font-size: var(--fs-xs);
+    color: var(--c-text-muted);
     margin-top: var(--s-1);
 }
 
@@ -108,7 +108,7 @@
 .table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.9rem;
+    font-size: var(--fs-base);
 }
 
 .table th,
@@ -121,8 +121,8 @@
 .table th {
     background: var(--c-surface-2);
     font-weight: 600;
-    color: var(--c-muted);
-    font-size: 0.75rem;
+    color: var(--c-text-muted);
+    font-size: var(--fs-xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     white-space: nowrap;
@@ -150,7 +150,7 @@
     gap: var(--s-2);
     padding: var(--s-2) var(--s-4);
     border-radius: var(--r-sm);
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     font-weight: 500;
     text-decoration: none;
     cursor: pointer;
@@ -161,16 +161,16 @@
     font-family: var(--font-body);
     white-space: nowrap;
 }
-.btn:hover { border-color: var(--c-border-2); box-shadow: var(--sh-sm); transform: translateY(-1px); }
+.btn:hover { border-color: var(--c-border-strong); box-shadow: var(--sh-sm); transform: translateY(-1px); }
 .btn:active { transform: translateY(0); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
 .btn-primary {
     background: var(--c-primary);
-    color: white;
+    color: var(--c-text-inverse);
     border-color: var(--c-primary);
 }
-.btn-primary:hover { background: var(--c-primary-d); border-color: var(--c-primary-d); }
+.btn-primary:hover { background: var(--c-primary-hover); border-color: var(--c-primary-hover); }
 
 .btn-success {
     background: var(--c-success);
@@ -216,9 +216,9 @@
 /* --- Badges / Status Pills --- */
 .badge {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 999px;
-    font-size: 0.72rem;
+    padding: var(--s-1) var(--s-3);
+    border-radius: var(--r-full);
+    font-size: var(--fs-xs);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -273,9 +273,9 @@
 }
 
 .progress-label {
-    font-size: 0.78rem;
-    color: var(--c-muted);
-    margin-top: 4px;
+    font-size: var(--fs-xs);
+    color: var(--c-text-muted);
+    margin-top: var(--s-1);
 }
 
 /* --- Chart Container --- */
@@ -319,7 +319,7 @@
 }
 
 .filter-bar .form-group label {
-    font-size: 0.72rem;
+    font-size: var(--fs-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -338,14 +338,14 @@
 }
 
 .info-label {
-    font-size: 0.72rem;
-    color: var(--c-muted);
+    font-size: var(--fs-xs);
+    color: var(--c-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
 
 .info-value {
-    font-size: 0.92rem;
+    font-size: var(--fs-sm);
     color: var(--c-text);
     font-weight: 500;
 }
@@ -353,11 +353,11 @@
 /* --- Toast --- */
 .toast {
     padding: var(--s-3) var(--s-5);
-    border-radius: var(--r-md);
+    border-radius: var(--radius);
     background: var(--c-surface);
     border: 1px solid var(--c-border);
     box-shadow: var(--sh-lg);
-    font-size: 0.88rem;
+    font-size: var(--fs-sm);
     animation: slideIn 0.3s ease-out;
     display: flex;
     align-items: center;
@@ -405,7 +405,7 @@
 
 .modal-title {
     font-family: var(--font-display);
-    font-size: 1.2rem;
+    font-size: var(--fs-xl);
     font-weight: 700;
     margin-bottom: var(--s-4);
     color: var(--c-text);
@@ -497,18 +497,18 @@ input:checked + .slider:before {
 }
 .timeline-title {
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--fs-base);
     color: var(--c-text);
     margin-bottom: 2px;
 }
 .timeline-meta {
-    font-size: 0.78rem;
-    color: var(--c-muted);
+    font-size: var(--fs-xs);
+    color: var(--c-text-muted);
     margin-bottom: var(--s-1);
 }
 .timeline-comment {
-    font-size: 0.85rem;
-    color: var(--c-text-2);
+    font-size: var(--fs-sm);
+    color: var(--c-text-secondary);
     background: var(--c-surface-2);
     padding: var(--s-2) var(--s-3);
     border-radius: var(--r-sm);

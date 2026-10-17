@@ -1,0 +1,186 @@
+# web-common — 实施计划 (IMPLEMENTATION-PLAN)
+
+> 组件：web-common (L2 基础设施层)
+> 版本：v2.0
+> 日期：2026-10-17
+> 状态：proposed
+> 关联 ADR：ADR-033
+> 预计总工时：15 天
+
+## 1. 总体计划
+
+| Phase | 内容 | 工时 | 关键交付物 | 验收标准 |
+|---|---|---|---|---|
+| **Phase 1** | 基础设施 | 3 天 | Tokens + 测试框架 + Checklist + UI 角色 | 基础设施可用，能跑通视觉回归测试 |
+| **Phase 2** | 组件库升级 | 5 天 | 组件文档 + CI 接入 + 主题验证 | 组件库规范化，可复用 |
+| **Phase 3** | 全量走查 | 7 天 | 基准图库 + 修复报告 + 走查总结 | 71 页面覆盖，P0 清零 |
+
+## 2. Phase 1：基础设施（3 天）
+
+### Day 1：Design Tokens 体系
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 1.1 | 梳理现有 CSS 变量，识别重复和不一致 | 变量清单 | 2h |
+| 1.2 | 按 DESIGN-DETAIL 定义完整 Tokens 体系 | `tokens.css` | 4h |
+| 1.3 | 暗色主题 Tokens 完整覆盖 | `tokens.css` dark 部分 | 2h |
+| 1.4 | 编写 DESIGN-TOKENS.md 参考文档 | `DESIGN-TOKENS.md` | 2h |
+| 1.5 | Tokens 与现有 CSS 变量桥接（向后兼容） | 桥接样式 | 2h |
+
+**Day 1 验收**：Tokens 完整定义，暗/亮双主题覆盖，文档齐全，不破坏现有页面。
+
+### Day 2：视觉回归测试框架
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 2.1 | 安装 Playwright Python + Chromium | 环境就绪 | 1h |
+| 2.2 | 实现 VisualTestBase 基类 | `base.py` | 4h |
+| 2.3 | 实现像素对比引擎 | 对比函数 | 2h |
+| 2.4 | 实现基准图管理（golden 首次生成 + 读取） | 基准图管理 | 2h |
+| 2.5 | 实现动态内容 Mask 机制 | Mask 功能 | 1h |
+| 2.6 | 实现 Diff 报告生成 | Diff HTML 报告 | 2h |
+| 2.7 | 编写示例测试用例 | `examples/` | 1h |
+
+**Day 2 验收**：能跑通一个完整的视觉回归测试用例（截图 → 对比 → 通过/失败 → diff 报告）。
+
+### Day 3：Checklist + UI 设计师角色
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 3.1 | 完善 UI 验收 Checklist（5 大类 25+ 项） | `UI-CHECKLIST.md` | 3h |
+| 3.2 | 编写 UI 设计师角色定义 | role-library ui-designer | 2h |
+| 3.3 | 编写 UI 走查工作流 | 走查流程文档 | 2h |
+| 3.4 | 更新交付 7 步法，加入视觉验收 | 交付流程文档更新 | 1h |
+| 3.5 | 更新 web-ui-design skill | `SKILL.md` v2 | 2h |
+| 3.6 | Phase 1 整体验证 + 修复问题 | 验证报告 | 2h |
+
+**Day 3 验收**：Checklist 齐全，UI 角色可用，Phase 1 全量验证通过。
+
+## 3. Phase 2：组件库升级（5 天）
+
+### Day 4-5：组件库规范化
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 4.1 | 审查 layout macro 现状，识别问题 | 审查报告 | 2h |
+| 4.2 | layout macro 规范化 + Tokens 替换 | `layout.html` | 4h |
+| 4.3 | 审查 forms macro 现状，识别问题 | 审查报告 | 2h |
+| 4.4 | forms macro 规范化 + Tokens 替换 | `forms.html` | 4h |
+| 4.5 | 审查 components macro 现状，识别问题 | 审查报告 | 2h |
+| 4.6 | components macro 规范化 + Tokens 替换 | `components.html` | 4h |
+| 4.7 | 审查 icons macro 现状，识别问题 | 审查报告 | 1h |
+| 4.8 | icons macro 规范化 | `icons.html` | 3h |
+
+### Day 6：组件文档 + 示例页
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 6.1 | layout macro 文档（用法 + 示例） | 文档 | 2h |
+| 6.2 | forms macro 文档（用法 + 示例） | 文档 | 2h |
+| 6.3 | components macro 文档（用法 + 示例） | 文档 | 3h |
+| 6.4 | icons macro 文档（用法 + 示例） | 文档 | 1h |
+| 6.5 | 组件示例页（展示所有组件 + 双主题） | `examples/demo.html` | 4h |
+
+**Day 6 验收**：每个组件有文档、有示例，demo 页可访问。
+
+### Day 7-8：主题验证 + CI 接入
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 7.1 | 暗色主题全组件验证，修复缺失 | 修复 + 验证 | 4h |
+| 7.2 | 亮色主题全组件验证，修复问题 | 修复 + 验证 | 2h |
+| 7.3 | 主题切换功能验证 | 验证 | 1h |
+| 7.4 | 视觉回归测试接入 CI/CD 流程 | CI 配置 | 3h |
+| 7.5 | 编写测试运行脚本（一键测试） | 测试脚本 | 2h |
+| 7.6 | Phase 2 整体验证 + 回归测试 | 验证报告 | 4h |
+
+**Day 8 验收**：暗/亮双主题完整覆盖，CI 可运行视觉测试，Phase 2 全量验证通过。
+
+## 4. Phase 3：全量页面 UI 走查（7 天）
+
+### Day 9-10：P0 组件走查（BDMS + FIN-L4）
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 9.1 | BDMS 9 页面逐一截图 + 走查 | 走查报告 | 4h |
+| 9.2 | BDMS 问题分类 + 批量修复 | 修复 + 验证 | 8h |
+| 9.3 | FIN-L4 19 页面逐一截图 + 走查 | 走查报告 | 6h |
+| 9.4 | FIN-L4 问题分类 + 批量修复 | 修复 + 验证 | 6h |
+| 9.5 | 建立 BDMS + FIN-L4 基准图 | golden/ | 2h |
+
+### Day 11-12：P1 组件走查（Finance Engine + Office Contract）
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 11.1 | Finance Engine 18 页面走查 | 走查报告 | 6h |
+| 11.2 | Finance Engine 问题修复 | 修复 + 验证 | 6h |
+| 11.3 | Office Contract 6 页面走查 | 走查报告 | 2h |
+| 11.4 | Office Contract 问题修复 | 修复 + 验证 | 4h |
+| 11.5 | 建立 Finance Engine + Contract 基准图 | golden/ | 2h |
+
+### Day 13-14：P2 组件走查 + 回归验证
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 13.1 | Delivery Center 5 页面走查 + 修复 | 走查+修复 | 4h |
+| 13.2 | CISSP Trainer 9 页面走查 + 修复 | 走查+修复 | 6h |
+| 13.3 | Bangcle PPT 5 页面走查 + 修复 | 走查+修复 | 4h |
+| 13.4 | 全量基准图建立 | golden/ | 4h |
+| 13.5 | 全量视觉回归测试（71 页面） | 测试报告 | 4h |
+| 14.1 | 回归问题修复 | 修复 | 4h |
+| 14.2 | 走查总结报告 | 总结报告 | 2h |
+
+### Day 15：整体验收 + Rex 确认
+
+| # | 任务 | 产出 | 预计工时 |
+|---|---|---|---|
+| 15.1 | 整体走查结果汇总 | 汇总报告 | 2h |
+| 15.2 | P0/P1 问题验证清零 | 验证清单 | 2h |
+| 15.3 | 关键页面 Rex 确认 | 确认记录 | 2h |
+| 15.4 | 文档最终化 + 归档 | 最终文档 | 2h |
+
+**Phase 3 验收**：71 页面 100% 覆盖，P0 问题清零，P1 修复率 ≥ 90%，Rex 确认关键页面。
+
+## 5. 风险与应对
+
+| 风险 | 概率 | 影响 | 应对措施 |
+|---|---|---|---|
+| Playwright 在 macOS 下不稳定 | 中 | 高 | 备选方案：直接用 Chrome headless + Pillow 截图对比 |
+| 动态内容导致视觉测试误报率高 | 高 | 中 | 加强 Mask 机制，提高默认阈值 |
+| 71 页面走查发现问题远超预期 | 中 | 中 | 先修复 P0，P1/P2 分批处理 |
+| 组件库规范化引入回归 | 中 | 高 | 每个组件修改后跑视觉回归测试 |
+| 暗色主题覆盖不全 | 中 | 中 | 走查时重点检查，逐个修复 |
+
+## 6. 交付物清单
+
+### 文档类
+- [ ] ADR-033：Web UI 设计开发能力体系建设
+- [ ] PRD-v2.0.md
+- [ ] DESIGN-OUTLINE-v2.0.md
+- [ ] DESIGN-DETAIL-v2.0.md
+- [ ] VERIFICATION-v2.0.md
+- [ ] OPERATIONS-v2.0.md
+- [ ] IMPLEMENTATION-PLAN-v2.0.md
+- [ ] DESIGN-TOKENS.md
+- [ ] UI-CHECKLIST.md
+- [ ] 全量走查总结报告
+
+### 代码类
+- [ ] `static/css/tokens.css`（Design Tokens 定义）
+- [ ] `tests/visual/base.py`（视觉测试基类）
+- [ ] `tests/visual/conftest.py`（pytest 配置）
+- [ ] `tests/visual/golden/`（基准图）
+- [ ] 4 个 macro 规范化版本
+- [ ] 组件示例页
+
+### 角色类
+- [ ] role-library ui-designer 角色
+
+## 7. 相关文档
+
+- ADR-033
+- PRD-v2.0.md
+- DESIGN-OUTLINE-v2.0.md
+- DESIGN-DETAIL-v2.0.md
+- VERIFICATION-v2.0.md
+- OPERATIONS-v2.0.md
