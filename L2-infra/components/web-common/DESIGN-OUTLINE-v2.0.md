@@ -211,3 +211,8 @@ Design Tokens 定义 (CSS Variables)
 | Phase 1 | Design Tokens + 视觉测试框架 + Checklist + UI 角色 | 基础设施可用 |
 | Phase 2 | 组件库规范化 + 文档补齐 + CI 接入 | 组件库可复用 |
 | Phase 3 | 全量 71 页面走查 + 批量修复 | 视觉质量达标 |
+| Phase 4 | 核心交互组件补全（Dropdown/Modal/Tabs/表单/分页/表格） | 交互组件齐备 |
+| Phase 5 | 可访问性（WCAG AA）+ 移动适配 | 无障碍/移动达标 |
+| Phase 6 | 排版体系 + 阴影层次 + 暗黑模式优化 | 视觉层次专业 |
+| Phase 7 | 工程化：Storybook + 构建流程 + ESLint 检查 | 开发体验提升 |
+| Phase 8 | 动效体系 + 主题定制能力 | 交互体验完整 |

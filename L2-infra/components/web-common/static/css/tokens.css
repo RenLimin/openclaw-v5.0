@@ -21,6 +21,25 @@
     --fs-2xl:  1.5rem;    /* 24px 页面二级标题 */
     --fs-3xl:  2rem;      /* 32px 页面主标题 */
 
+    /* ========== 1b. 行高 Line Height（v2 新增） ========== */
+    --lh-tight: 1.2;   /* 大标题 */
+    --lh-base:  1.5;   /* 正文、段落 */
+    --lh-loose: 1.6;   /* 大段落文字、宽松排版 */
+
+    /* ========== 1c. 字重 Font Weight（v2 新增） ========== */
+    --fw-light:    300;  /* 轻量文字、次要信息 */
+    --fw-normal:   400;  /* 普通正文 */
+    --fw-medium:   500;  /* 小标题、强调文字 */
+    --fw-semibold: 600;  /* 卡片标题、按钮文字 */
+    --fw-bold:     700;  /* 大标题、重量级强调 */
+
+    /* ========== 1d. 字体族 Font Family（v2 新增） ========== */
+    --ff-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+               "Apple Color Emoji", "Segoe UI Emoji";
+    --ff-mono: SFMono-Regular, Menlo, Monaco, Consolas,
+               "Liberation Mono", "Courier New", monospace;
+
     /* ========== 2. 断点 Breakpoints（v2 新增） ========== */
     --bp-sm: 480px;
     --bp-md: 768px;
@@ -47,8 +66,12 @@
     --radius:  var(--r-md);   /* 默认圆角（卡片/按钮/输入框） */
     --r-full:  9999px;        /* 圆形/胶囊 */
 
-    /* ========== 5. 阴影语义别名 ========== */
-    --shadow:  var(--sh-md);  /* 默认阴影 */
+    /* ========== 5. 阴影语义别名（分层 0-4） ========== */
+    --sh-0:    none;                                            /* 层级 0：无阴影 */
+    --sh-sm:   0 1px 2px rgba(0,0,0,0.04);                      /* 层级 1：小卡片 */
+    --shadow:  var(--sh-md);                                    /* 层级 2：默认（卡片/浮层） */
+    --sh-lg:   0 8px 24px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);  /* 层级 3：下拉菜单/模态框 */
+    --sh-xl:   0 16px 48px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.04); /* 层级 4：超大浮层 */
 }
 
 /* ========== 暗色主题覆盖 ========== */
