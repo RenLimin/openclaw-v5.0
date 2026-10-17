@@ -15,9 +15,9 @@
 .card:hover { box-shadow: var(--shadow); }
 
 .card-title {
-    font-family: var(--font-display);
+    font-family: var(--ff-sans);
     font-size: var(--fs-sm);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: var(--s-4);
@@ -72,7 +72,7 @@
 
 .stat-label {
     font-size: var(--fs-xs);
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     color: var(--c-text-muted);
     margin-bottom: var(--s-2);
     text-transform: uppercase;
@@ -80,9 +80,9 @@
 }
 
 .stat-value {
-    font-family: var(--font-display);
+    font-family: var(--ff-sans);
     font-size: var(--fs-2xl);
-    font-weight: 700;
+    font-weight: var(--fw-bold);
     letter-spacing: -0.02em;
     color: var(--c-text);
     font-variant-numeric: tabular-nums;
@@ -295,7 +295,7 @@
 }
 
 .pagination .page-info {
-    font-size: 0.8rem;
+    font-size: var(--fs-sm);
     color: var(--c-muted);
     margin: 0 var(--s-3);
 }
