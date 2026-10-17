@@ -104,11 +104,11 @@
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
-    font-family: var(--font-body);
+    font-family: var(--ff-sans);
     background: var(--c-bg);
     color: var(--c-text);
-    line-height: 1.6;
-    font-size: 15px;
+    line-height: var(--lh-base);
+    font-size: var(--fs-base);
     transition: background-color var(--t-base), color var(--t-base);
 }
 

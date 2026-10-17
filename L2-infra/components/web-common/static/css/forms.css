@@ -9,7 +9,7 @@
 .form-group label {
     display: block;
     font-size: var(--fs-sm);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
     margin-bottom: var(--s-1);
     color: var(--c-text-secondary);
 }
@@ -30,7 +30,7 @@
     border: 1px solid var(--c-border);
     border-radius: var(--r-sm);
     font-size: var(--fs-base);
-    font-family: var(--font-body);
+    font-family: var(--ff-sans);
     background: var(--c-surface);
     color: var(--c-text);
     transition: border-color var(--t-fast), box-shadow var(--t-fast);
@@ -59,9 +59,9 @@
 .form-group textarea {
     resize: vertical;
     min-height: 100px;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    line-height: 1.5;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-sm);
+    line-height: var(--lh-base);
 }
 
 .form-group select {
@@ -131,7 +131,7 @@
     align-items: center;
     gap: var(--s-2);
     cursor: pointer;
-    font-weight: 500;
+    font-weight: var(--fw-medium);
     font-size: var(--fs-sm);
     color: var(--c-text-secondary);
 }
@@ -149,9 +149,9 @@ fieldset {
 }
 
 legend {
-    font-family: var(--font-display);
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-family: var(--ff-sans);
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-lg);
     color: var(--c-text);
     padding: 0 var(--s-2);
 }
