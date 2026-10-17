@@ -38,6 +38,7 @@
         if (btnTop) {
             btnTop.querySelector('.theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
             btnTop.title = theme === 'dark' ? '切换到浅色模式' : '切换到深色模式';
+            btnTop.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
         }
         // 通知监听器
         listeners.forEach(function(cb) {
