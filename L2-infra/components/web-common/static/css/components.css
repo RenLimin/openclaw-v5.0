@@ -452,6 +452,240 @@ input:checked + .slider:before {
     transform: translateX(18px);
 }
 
+/* --- Dropdown --- */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 180px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-lg);
+    padding: var(--s-1);
+    z-index: 1000;
+    display: none;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.dropdown-menu.open {
+    display: block;
+    animation: fadeUp 0.15s ease-out;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: var(--s-2) var(--s-3);
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: var(--fs-sm);
+    color: var(--c-text);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background var(--t-fast);
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background: var(--c-surface-2);
+    outline: none;
+}
+
+.dropdown-item.active {
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    font-weight: 500;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--c-border);
+    margin: var(--s-1) 0;
+}
+
+.dropdown-header {
+    padding: var(--s-1) var(--s-3);
+    font-size: var(--fs-xs);
+    color: var(--c-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.dropdown-search {
+    width: 100%;
+    padding: var(--s-1) var(--s-2);
+    margin-bottom: var(--s-1);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    font-size: var(--fs-sm);
+    background: var(--c-surface);
+    color: var(--c-text);
+}
+
+/* --- Tabs --- */
+.tabs-nav {
+    display: flex;
+    border-bottom: 1px solid var(--c-border);
+    gap: var(--s-1);
+    overflow-x: auto;
+}
+
+.tabs-tab {
+    padding: var(--s-3) var(--s-5);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    transition: color var(--t-fast), border-color var(--t-fast);
+    white-space: nowrap;
+}
+
+.tabs-tab:hover {
+    color: var(--c-text);
+}
+
+.tabs-tab.active {
+    color: var(--c-primary);
+    border-bottom-color: var(--c-primary);
+    font-weight: 600;
+}
+
+.tabs-panel {
+    padding: var(--s-5) 0;
+}
+
+.tabs-panel[hidden] {
+    display: none;
+}
+
+/* --- Table 排序 & 选中 --- */
+.table th[data-sort] {
+    user-select: none;
+    cursor: pointer;
+}
+
+.table th[data-sort]:hover {
+    color: var(--c-primary);
+}
+
+.sort-indicator {
+    font-size: var(--fs-xs);
+    color: var(--c-primary);
+}
+
+.table tr.selected {
+    background: var(--c-primary-light) !important;
+}
+
+.row-expander {
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--c-text-secondary);
+    font-size: var(--fs-xs);
+    padding: 2px var(--s-2);
+    border-radius: var(--r-sm);
+}
+
+.row-expander:hover {
+    background: var(--c-surface-2);
+    color: var(--c-text);
+}
+
+.row-detail {
+    background: var(--c-surface-2);
+}
+
+/* --- Pagination 页码 --- */
+.page-numbers {
+    display: inline-flex;
+    gap: var(--s-1);
+    align-items: center;
+}
+
+.page-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 var(--s-2);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    background: var(--c-surface);
+    color: var(--c-text-secondary);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+    transition: all var(--t-fast);
+}
+
+.page-btn:hover:not(:disabled) {
+    border-color: var(--c-primary);
+    color: var(--c-primary);
+}
+
+.page-btn.active {
+    background: var(--c-primary);
+    border-color: var(--c-primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.page-ellipsis {
+    color: var(--c-text-muted);
+    padding: 0 var(--s-1);
+}
+
+/* --- 表单校验状态 --- */
+.form-group input.is-invalid,
+.form-group select.is-invalid,
+.form-group textarea.is-invalid {
+    border-color: var(--c-danger);
+}
+
+.form-group input.is-invalid:focus,
+.form-group select.is-invalid:focus,
+.form-group textarea.is-invalid:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* --- Modal 增强 --- */
+.modal-open {
+    overflow: hidden;
+}
+
+.modal-overlay.open {
+    display: flex !important;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--s-3);
+    padding: var(--s-4) var(--s-6);
+    border-top: 1px solid var(--c-border);
+    margin-top: var(--s-4);
+}
+
 /* --- Timeline --- */
 .timeline {
     position: relative;
