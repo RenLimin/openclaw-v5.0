@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>web-common 主题定制示例 — 金融风</title>
+<!-- 引入顺序：base → tokens → 业务覆盖 -->
+<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/components.css">
+<style>
+/* ===== 业务主题覆盖示例：金融深蓝金 ===== */
+:root {
+    --c-primary:       #0f4c81;
+    --c-primary-hover: #0b3a63;
+    --c-primary-light: #e8f0f8;
+    --c-warning:       #b8860b;
+    --radius: 8px;
+    --r-lg: 10px;
+}
+[data-theme="dark"] {
+    --c-primary:       #4d9de0;
+    --c-primary-hover: #6fb3e8;
+    --c-primary-light: #173a55;
+    --c-bg:      #0b0d12;
+    --c-surface: #151821;
+}
+</style>
+</head>
+<body style="padding: 32px; background: var(--c-bg);">
+    <h1 style="margin-bottom: 8px; color: var(--c-text);">金融深蓝金主题</h1>
+    <p style="color: var(--c-text-muted); margin-bottom: 24px;">业务系统通过覆盖 Design Tokens 变量实现品牌定制，无需修改 web-common 源码。</p>
+
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+        <button class="btn btn-primary">主按钮</button>
+        <button class="btn btn-success">成功按钮</button>
+        <button class="btn btn-warning" style="background: var(--c-warning); border-color: var(--c-warning); color: #fff;">警告按钮</button>
+        <button class="btn">默认按钮</button>
+    </div>
+
+    <div class="card" style="max-width: 480px;">
+        <div class="card-title">主题定制验证</div>
+        <p style="color: var(--c-text-secondary); line-height: 1.6;">
+            本页面覆盖了品牌色（深蓝 <code>#0f4c81</code>）、警告色（金 <code>#b8860b</code>）、
+            圆角（8px）三个变量组。点击右上角切换按钮（如存在）可查看暗色模式适配。
+        </p>
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+            <span class="badge" style="background: var(--c-primary-light); color: var(--c-primary); padding: 4px 12px; border-radius: var(--radius);">primary 浅底</span>
+            <span class="badge" style="background: rgba(184,134,11,0.1); color: var(--c-warning); padding: 4px 12px; border-radius: var(--radius);">warning 浅底</span>
+        </div>
+    </div>
+
+    <script>
+        // 简化主题切换验证
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-primary';
+        btn.textContent = '切换暗色模式';
+        btn.style.position = 'fixed';
+        btn.style.top = '16px';
+        btn.style.right = '16px';
+        btn.onclick = function() {
+            var html = document.documentElement;
+            var dark = html.getAttribute('data-theme') === 'dark';
+            html.setAttribute('data-theme', dark ? 'light' : 'dark');
+            btn.textContent = dark ? '切换暗色模式' : '切换亮色模式';
+        };
+        document.body.appendChild(btn);
+    </script>
+</body>
+</html>

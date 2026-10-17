@@ -164,13 +164,39 @@ Design Tokens 是 web-common 设计系统的核心，它将所有设计属性（
 }
 ```
 
-## 过渡体系
+## 过渡/动效体系
 
-| Token | 时长 + 缓动 | 用途 |
+### 时长 Tokens
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--dur-fast` | 150ms | hover 反馈、小交互（按钮按压、链接变色） |
+| `--dur-base` | 250ms | 默认过渡（主题切换、展开收起、面板切换） |
+| `--dur-slow` | 400ms | 慢过渡（弹窗出现、大型面板切换） |
+
+### 缓动函数 Tokens
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--ease-standard` | cubic-bezier(0.4, 0, 0.2, 1) | 标准缓动（Material 风格，默认推荐） |
+| `--ease-in` | cubic-bezier(0.4, 0, 1, 1) | 加速缓动（元素进入场景） |
+| `--ease-out` | cubic-bezier(0, 0, 0.2, 1) | 减速缓动（元素退出场景） |
+| `--ease-in-out` | cubic-bezier(0.4, 0, 0.2, 1) | 对称缓动（往返动画） |
+
+### 完整过渡 Tokens（组合值，直接用于 transition 属性）
+
+| Token | 值 | 用途 |
 |---|---|---|
 | `--t-fast` | 150ms cubic-bezier(0.4, 0, 0.2, 1) | 快速过渡（hover 反馈） |
 | `--t-base` | 250ms cubic-bezier(0.4, 0, 0.2, 1) | 默认过渡（主题切换、展开收起） |
 | `--t-slow` | 400ms cubic-bezier(0.4, 0, 0.2, 1) | 慢过渡（动画、大型切换） |
+
+### 动效规范
+
+1. **hover 反馈**：一律使用 `--t-fast`（150ms），反馈即时不拖沓
+2. **状态切换**（展开/收起/主题）：使用 `--t-base`（250ms），兼顾流畅与响应
+3. **弹窗/浮层出现**：使用 `--t-slow`（400ms）+ `--ease-out`，退出用 `--ease-in`
+4. **不滥用动效**：仅交互节点加过渡，内容区避免持续动画；尊重 `prefers-reduced-motion`（base.css 已内置媒体查询）
 
 ## 使用指南
 
