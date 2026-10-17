@@ -22,6 +22,9 @@ Design Tokens 是 web-common 设计系统的核心，它将所有设计属性（
 | `--sh-` | 阴影 (Shadow) | `--shadow`, `--sh-lg` |
 | `--bp-` | 断点 (Breakpoint) | `--bp-md`, `--bp-xl` |
 | `--t-` | 过渡 (Transition) | `--t-base`, `--t-fast` |
+| `--lh-` | 行高 (Line Height) | `--lh-base`, `--lh-tight` |
+| `--fw-` | 字重 (Font Weight) | `--fw-normal`, `--fw-bold` |
+| `--ff-` | 字体族 (Font Family) | `--ff-sans`, `--ff-mono` |
 
 ## 颜色体系
 
@@ -99,6 +102,31 @@ Design Tokens 是 web-common 设计系统的核心，它将所有设计属性（
 | `--fs-3xl` | 2rem | 32px | 1.2 | 页面主标题 |
 
 **使用要点**：正文永远使用 `--fs-base`，不要随意使用其他字号。
+
+## 行高体系
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--lh-tight` | 1.2 | 大标题（减少行高让标题更紧凑） |
+| `--lh-base` | 1.5 | 正文、段落 |
+| `--lh-loose` | 1.6 | 大段落文字、宽松排版 |
+
+## 字重体系
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--fw-light` | 300 | 轻量文字、次要信息 |
+| `--fw-normal` | 400 | 普通正文 |
+| `--fw-medium` | 500 | 小标题、强调文字 |
+| `--fw-semibold` | 600 | 卡片标题、按钮文字 |
+| `--fw-bold` | 700 | 大标题、重量级强调 |
+
+## 字体族体系
+
+| Token | 值 | 用途 |
+|---|---|---|
+| `--ff-sans` | -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji" | 正文、UI 元素（默认字体） |
+| `--ff-mono` | SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace | 代码、等宽文字 |
 
 ## 圆角体系
 
