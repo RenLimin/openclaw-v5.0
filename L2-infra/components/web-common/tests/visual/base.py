@@ -30,6 +30,7 @@ class VisualTestBase:
     mask_selectors: list[str] = []
     wait_for_selector: str | None = None
     full_page: bool = False  # 是否整页截图
+    settle_time: float = 0.0  # 截图前稳定等待秒数（等图表动画/异步渲染完成）
 
     def get_full_url(self) -> str:
         """获取完整测试 URL"""
@@ -139,6 +140,10 @@ class VisualTestBase:
 
         # 处理动态内容 mask
         self.mask_dynamic_content(page)
+
+        # 等待动态内容稳定（图表动画/异步渲染）
+        if self.settle_time > 0:
+            page.wait_for_timeout(int(self.settle_time * 1000))
 
         # 截图
         screenshot = page.screenshot(full_page=self.full_page)

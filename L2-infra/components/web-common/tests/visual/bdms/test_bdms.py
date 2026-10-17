@@ -70,6 +70,7 @@ class TestBDMSRevenue(VisualTestBase):
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
+    settle_time = 1.5  # 等待 Chart.js 动画完成
 
     def test_revenue(self, page):
         self.assert_visual_match(page, "revenue")

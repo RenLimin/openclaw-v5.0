@@ -481,3 +481,96 @@
 </style>
 {% endmacro %}
 
+{# ============================================================
+   Dropdown 下拉菜单组件
+   ============================================================ #}
+{% macro dropdown(id, trigger_text="", trigger_class="", items=None, searchable=False, align="left") %}
+{#
+  Dropdown 下拉菜单。依赖 static/js/dropdown.js。
+  参数:
+    - id: 下拉 DOM ID（必填）
+    - trigger_text: 触发器文字
+    - trigger_class: 触发器附加 class（如 btn btn-primary）
+    - items: 菜单项列表 [{label, value, type(optional: divider/header), active}]
+    - searchable: 是否显示搜索框
+    - align: left/right 对齐
+  事件监听:
+    el.addEventListener('dropdown:select', e => console.log(e.detail))
+#}
+<div class="dropdown" data-dropdown id="{{ id }}">
+    <button class="dropdown-trigger {{ trigger_class }}" data-dropdown-toggle
+            aria-haspopup="true" aria-expanded="false">
+        {{ trigger_text }} <span class="dropdown-caret">▾</span>
+    </button>
+    <div class="dropdown-menu {% if align == 'right' %}dropdown-menu-right{% endif %}" data-dropdown-menu role="menu">
+        {% if searchable %}
+        <input type="text" class="dropdown-search" data-dropdown-search placeholder="搜索..." aria-label="搜索">
+        {% endif %}
+        {% for item in items or [] %}
+            {% if item.type == 'divider' %}
+                <div class="dropdown-divider"></div>
+            {% elif item.type == 'header' %}
+                <div class="dropdown-header">{{ item.label }}</div>
+            {% else %}
+                <button type="button" class="dropdown-item {% if item.active %}active{% endif %}"
+                        data-dropdown-item data-value="{{ item.value or item.label }}"
+                        role="menuitem">{{ item.label }}</button>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}
+
+{# ============================================================
+   Tabs 标签页组件
+   ============================================================ #}
+{% macro tabs(id, tabs=None, default_tab="", save_state=False) %}
+{#
+  Tabs 标签页。依赖 static/js/tabs.js。
+  参数:
+    - id: Tabs DOM ID（必填）
+    - tabs: [{id, label, content(HTML string)}]
+    - default_tab: 默认激活标签 id
+    - save_state: 是否保存激活状态到 localStorage
+  用法:
+    {{ tabs(id="my-tabs", tabs=[
+        {"id": "tab1", "label": "概览", "content": "<p>内容 1</p>"},
+        {"id": "tab2", "label": "详情", "content": "<p>内容 2</p>"},
+    ], default_tab="tab1") }}
+#}
+<div class="tabs" data-tabs id="{{ id }}"
+     {% if save_state %}data-tabs-key="{{ id }}-active"{% endif %}
+     {% if default_tab %}data-default-tab="{{ default_tab }}"{% endif %}>
+    <div class="tabs-nav" role="tablist">
+        {% for tab in tabs or [] %}
+            <button type="button" class="tabs-tab" role="tab" data-tab="{{ tab.id }}"
+                    aria-selected="false" tabindex="-1">{{ tab.label }}</button>
+        {% endfor %}
+    </div>
+    <div class="tabs-panels">
+        {% for tab in tabs or [] %}
+            <div class="tabs-panel" role="tabpanel" data-panel="{{ tab.id }}" hidden>{{ tab.content|safe }}</div>
+        {% endfor %}
+    </div>
+</div>
+{% endmacro %}
+
+{# ============================================================
+   Confirm Modal 快捷组件
+   ============================================================ #}
+{% macro confirm_modal(id="confirm-modal") %}
+{#
+  确认对话框（配合 modal_toast_js 的 showConfirm 使用）。
+  用法:
+    {{ confirm_modal() }}
+    <script>showConfirm('确认删除?', '此操作不可恢复', function(){ ... })</script>
+#}
+{% call modal(id=id, title="确认操作") %}
+    <p class="confirm-message" style="margin:0;color:var(--c-text-secondary);font-size:0.9375rem;">确定要执行此操作吗？</p>
+    <div class="modal-footer" style="padding:1rem 0 0;">
+        <button class="btn" onclick="confirmCancel()">取消</button>
+        <button class="btn btn-danger" onclick="confirmOk()">确认</button>
+    </div>
+{% endcall %}
+{% endmacro %}
+

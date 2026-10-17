@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 4 交互组件验证</title>
+<link rel="stylesheet" href="/static/css/base.css?v=w2.1">
+<link rel="stylesheet" href="/static/css/tokens.css?v=w2.1">
+<link rel="stylesheet" href="/static/css/layout.css?v=w2.1">
+<link rel="stylesheet" href="/static/css/components.css?v=w2.1">
+<link rel="stylesheet" href="/static/css/forms.css?v=w2.1">
+<style>
+  body { padding: 24px; background: var(--c-bg); color: var(--c-text); font-family: var(--ff-sans, sans-serif); }
+  .section { margin-bottom: 32px; }
+  .section-title { font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; border-bottom: 1px solid var(--c-border); padding-bottom: 8px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+  .demo-panel { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--r-md); padding: 20px; flex: 1; min-width: 320px; }
+</style>
+</head>
+<body>
+
+<div class="section">
+  <div class="section-title">1. Dropdown 下拉菜单</div>
+  <div class="row">
+    <div class="demo-panel">
+      <div class="dropdown" id="demoDropdown" data-dropdown>
+        <button class="dropdown-trigger btn btn-primary" data-dropdown-toggle aria-haspopup="true" aria-expanded="false">
+          操作菜单 <span class="dropdown-caret">▾</span>
+        </button>
+        <div class="dropdown-menu" data-dropdown-menu role="menu">
+          <div class="dropdown-header">基本操作</div>
+          <button type="button" class="dropdown-item" data-dropdown-item data-value="view">查看详情</button>
+          <button type="button" class="dropdown-item" data-dropdown-item data-value="edit">编辑</button>
+          <div class="dropdown-divider"></div>
+          <button type="button" class="dropdown-item" data-dropdown-item data-value="delete">删除</button>
+        </div>
+      </div>
+      <p style="margin-top:12px;font-size:0.85rem;color:var(--c-text-muted);">点击展开/外部点击关闭，选择触发 dropdown:select 事件</p>
+      <p id="dropdownResult" style="margin-top:4px;font-size:0.85rem;color:var(--c-primary);"></p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">2. Tabs 标签页</div>
+  <div class="demo-panel">
+    <div class="tabs" data-tabs id="demoTabs" data-default-tab="overview">
+      <div class="tabs-nav" role="tablist">
+        <button type="button" class="tabs-tab" role="tab" data-tab="overview" aria-selected="false" tabindex="-1">概览</button>
+        <button type="button" class="tabs-tab" role="tab" data-tab="detail" aria-selected="false" tabindex="-1">详情</button>
+        <button type="button" class="tabs-tab" role="tab" data-tab="logs" aria-selected="false" tabindex="-1">日志</button>
+      </div>
+      <div class="tabs-panels">
+        <div class="tabs-panel" role="tabpanel" data-panel="overview" hidden>概览内容：系统状态正常</div>
+        <div class="tabs-panel" role="tabpanel" data-panel="detail" hidden>详情内容：详细数据展示</div>
+        <div class="tabs-panel" role="tabpanel" data-panel="logs" hidden>日志内容：操作日志列表</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">3. Modal 模态弹窗</div>
+  <div class="row">
+    <div class="demo-panel">
+      <button class="btn btn-primary" onclick="Modal.open('demoModal')">打开弹窗</button>
+      <div class="modal-overlay" id="demoModal" data-modal style="display:none;" aria-hidden="true">
+        <div class="modal" role="dialog" aria-modal="true" style="display:block;">
+          <div class="modal-title">模态弹窗标题</div>
+          <div class="modal-body" style="padding:0 0 var(--s-4);">这是一个演示模态弹窗，支持 Esc 关闭、蒙层点击关闭。</div>
+          <div class="modal-actions">
+            <button class="btn" onclick="Modal.close('demoModal')">取消</button>
+            <button class="btn btn-primary" onclick="Modal.close('demoModal')">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">4. 表单校验 Forms</div>
+  <div class="demo-panel">
+    <form data-validate id="demoForm" novalidate>
+      <div class="form-group">
+        <label for="f-email">邮箱（必填，格式校验）</label>
+        <input type="email" id="f-email" name="email" data-rules="required|email" placeholder="name@example.com">
+        <div class="form-error" data-error-for="email"></div>
+      </div>
+      <div class="form-group">
+        <label for="f-name">姓名（必填，至少 2 字符）</label>
+        <input type="text" id="f-name" name="name" data-rules="required|minLength:2" placeholder="张三">
+        <div class="form-error" data-error-for="name"></div>
+      </div>
+      <div class="form-group">
+        <label for="f-age">年龄（数字 18-99）</label>
+        <input type="number" id="f-age" name="age" data-rules="number|min:18|max:99" value="25">
+        <div class="form-error" data-error-for="age"></div>
+      </div>
+      <button type="submit" class="btn btn-primary">提交</button>
+      <span id="formResult" style="margin-left:12px;font-size:0.85rem;"></span>
+    </form>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">5. Pagination 分页</div>
+  <div class="demo-panel">
+    <nav class="pagination" data-pagination data-total="95" data-page-size="10" data-current="1">
+      <button class="btn btn-sm" data-page-prev>上一页</button>
+      <span class="page-numbers" data-page-numbers></span>
+      <button class="btn btn-sm" data-page-next>下一页</button>
+      <select data-page-size-select style="margin-left:12px;">
+        <option value="10">10/页</option>
+        <option value="20">20/页</option>
+        <option value="50">50/页</option>
+      </select>
+      <span class="page-info" data-page-info style="margin-left:12px;"></span>
+    </nav>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">6. Table 排序表格</div>
+  <div class="demo-panel">
+    <div class="table-wrapper" data-table data-sortable>
+      <table class="table">
+        <thead>
+          <tr>
+            <th data-sort="name">名称 <span class="sort-indicator"></span></th>
+            <th data-sort="amount" data-sort-type="number">金额 <span class="sort-indicator"></span></th>
+            <th data-sort="status">状态 <span class="sort-indicator"></span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-row><td>项目 C</td><td class="num">3200</td><td>进行中</td></tr>
+          <tr data-row><td>项目 A</td><td class="num">12500</td><td>已完成</td></tr>
+          <tr data-row><td>项目 B</td><td class="num">8300</td><td>待审核</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/dropdown.js?v=w2.1"></script>
+<script src="/static/js/modal.js?v=w2.1"></script>
+<script src="/static/js/tabs.js?v=w2.1"></script>
+<script src="/static/js/forms.js?v=w2.1"></script>
+<script src="/static/js/pagination.js?v=w2.1"></script>
+<script src="/static/js/table.js?v=w2.1"></script>
+<script>
+  // Dropdown 事件
+  document.getElementById('demoDropdown').addEventListener('dropdown:select', function(e) {
+    document.getElementById('dropdownResult').textContent = '已选择: ' + e.detail.text + ' (value=' + e.detail.value + ')';
+  });
+  // 表单提交结果
+  document.getElementById('demoForm').addEventListener('submit', function(e) {
+    document.getElementById('formResult').textContent = '✅ 表单校验通过，提交成功!';
+  });
+  document.getElementById('demoForm').addEventListener('form:invalid', function() {
+    document.getElementById('formResult').textContent = '❌ 表单校验失败';
+  });
+</script>
+</body>
+</html>
