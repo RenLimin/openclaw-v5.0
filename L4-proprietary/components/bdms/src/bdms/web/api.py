@@ -47,6 +47,22 @@ async def report_months():
     return {"months": DeliveryReportService().list_months()}
 
 
+@router.get("/report/generate-progress/{job_id}")
+async def report_generate_progress(job_id: int):
+    from bdms.core import db as _db
+    from bdms.core.db import get_connection
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM job WHERE id = ?", (job_id,)
+        ).fetchone()
+        if row:
+            return dict(row)
+        return {"id": job_id, "status": "not_found"}
+    finally:
+        conn.close()
+
+
 @router.post("/report/generate")
 async def report_generate(req: GenerateRequest):
     from bdms.modules.delivery_report.service import DeliveryReportService
