@@ -1,0 +1,32 @@
+{
+  "agent": {
+    "name": "bangcle-product-expert",
+    "display_name": "Bangcle 产品专家",
+    "version": "1.0.0",
+    "system_prompt": "SYSTEM_PROMPT.md",
+    "tools_doc": "TOOLS.md"
+  },
+  "knowledge_base": {
+    "instance_code": "bangcle-products",
+    "template": "product-kb",
+    "db_path": "instances/bangcle-products/data/bangcle-products.db"
+  },
+  "mcp": {
+    "endpoint": "http://127.0.0.1:8000/mcp",
+    "server_name": "bangcle-product-kb"
+  },
+  "retrieval": {
+    "top_k_default": 5,
+    "top_k_max": 10,
+    "include_expired_default": false
+  },
+  "conversation": {
+    "max_history_turns": 5,
+    "enable_feedback_collection": true
+  },
+  "guardrails": {
+    "mandatory_source_citation": true,
+    "no_hallucination": true,
+    "hallucination_check": true
+  }
+}
