@@ -590,218 +590,106 @@
   .mobile-menu-btn { display: none; }
 }
 
+
 /* ============================================================
-   BDMS 交付月报页面专属组件样式（作用域 .report-page）
-   对齐 web-common v2.0 tokens，不覆盖全局布局/品牌色
+   BDMS 交付月报页面样式（作用域 .report-page）
+   对标 dashboard 视觉基准，仅做差异化调整
    ============================================================ */
 
-/* ---- 左栏：月份导航 ---- */
-.report-container {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: var(--s-4);
-}
-
-.report-sidebar {
-  background: var(--c-surface);
-  border-radius: var(--r-md);
-  border: 1px solid var(--c-border);
-  box-shadow: var(--sh-sm);
-  overflow: hidden;
-  height: fit-content;
-  align-self: start;
-  position: sticky;
-  top: var(--s-3);
-}
-
-.sidebar-subtitle {
-  padding: var(--s-3) var(--s-4);
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-semibold);
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--c-border);
-  background: var(--c-surface-2);
-}
-
-.months-list {
-  max-height: 55vh;
-  overflow-y: auto;
-}
-
-.month-item {
-  padding: var(--s-2) var(--s-4);
-  border-bottom: 1px solid var(--c-border);
-  cursor: pointer;
-  font-size: var(--fs-sm);
-  color: var(--c-text);
-  transition: background var(--t-fast), color var(--t-fast);
-}
-.month-item:last-child { border-bottom: none; }
-.month-item:hover { background: var(--c-primary-soft); }
-.month-item.active {
-  background: var(--c-primary-soft);
-  color: var(--c-primary);
-  font-weight: var(--fw-semibold);
-  border-left: 3px solid var(--c-primary);
-}
-
-.sidebar-legend {
-  padding: var(--s-3) var(--s-4);
-  border-top: 1px solid var(--c-border);
-  background: var(--c-surface-2);
-}
-.sidebar-legend-title {
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-semibold);
-  color: var(--c-text-muted);
-  margin-bottom: var(--s-2);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-.legend-item {
+/* ---- Tabs 容器（web-common 未定义 .tabs 级样式，在此补充） ---- */
+.tabs {
   display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  font-size: var(--fs-xs);
-  color: var(--c-text-secondary);
-  padding: var(--s-1) 0;
+  flex-direction: column;
+  gap: var(--s-3);
 }
-.legend-dot {
+.tabs-panels { width: 100%; }
+.tabs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);  /* 对齐主内容区卡片间距 12px */
+}
+.tabs-panel[hidden] { display: none; }
+
+/* ---- KPI 统计卡（严格对齐 dashboard 同款样式） ---- */
+.report-page .kpi-card {
+  padding: 12px 16px;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: var(--c-surface);
+  transition: transform var(--t-fast), box-shadow var(--t-fast);
+  cursor: default;
+  height: 111px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+.report-page .kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-md);
+}
+.report-page .kpi-card .kpi-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.report-page .kpi-card .kpi-label {
+  font-size: 0.8rem;
+  color: var(--c-muted);
+}
+.report-page .kpi-card .stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ---- Dashboard grid 边距对齐 ---- */
+.report-page #kpi-grid {
+  gap: 1rem;
+  margin-bottom: 0;
+}
+
+/* ---- 筛选区 label 对齐（和 dashboard 一致：label mb=0） ---- */
+.report-page .card > div > div > label {
+  margin-bottom: 0.3rem;
+}
+
+/* ---- 状态点 ---- */
+.status-dot {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* ---- 右侧内容区：Tab 导航 ---- */
-.report-main { min-width: 0; }
-
-.report-tabs {
-  display: flex;
-  gap: var(--s-1);
-  border-bottom: 1px solid var(--c-border);
-  margin-bottom: var(--s-4);
-  overflow-x: auto;
-}
-
-.report-tab {
-  padding: var(--s-3) var(--s-5);
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  cursor: pointer;
-  font-weight: var(--fw-medium);
-  font-size: var(--fs-sm);
-  color: var(--c-text-secondary);
-  transition: color var(--t-fast), border-color var(--t-fast);
-  white-space: nowrap;
-}
-.report-tab:hover { color: var(--c-primary); }
-.report-tab.active {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
-  font-weight: var(--fw-semibold);
-}
-
-.tab-pane { display: none; }
-.tab-pane.active { display: block; animation: fadeIn 0.2s ease-in-out; }
-
-/* ---- 生成工具条 ---- */
-.generate-toolbar {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--s-3);
-  flex-wrap: wrap;
-  padding: var(--s-4);
-  margin-bottom: var(--s-4);
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-md);
-}
-.gt-field { display: flex; flex-direction: column; gap: var(--s-1); }
-.gt-field label {
-  font-size: var(--fs-xs);
-  font-weight: var(--fw-semibold);
-  color: var(--c-text-muted);
-}
-.gt-field .input { width: 160px; }
-.gt-field select.input { width: 180px; }
-.gt-actions { display: flex; align-items: flex-end; }
-.gt-hint { width: 100%; margin-top: var(--s-1); }
-
-/* ---- 状态卡片 ---- */
-#status-card {
-  margin-top: var(--s-2);
-  padding: var(--s-4);
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-md);
-  box-shadow: var(--sh-sm);
-}
-.status-header {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  margin-bottom: var(--s-3);
-  flex-wrap: wrap;
-}
-.status-dot {
-  width: 12px;
-  height: 12px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
 }
-.status-text { font-size: var(--fs-base); font-weight: var(--fw-semibold); }
-.generated-at { margin-left: auto; color: var(--c-text-muted); font-size: var(--fs-xs); }
-.status-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s-3);
-  margin-bottom: var(--s-3);
-}
-.status-actions {
-  display: flex;
-  gap: var(--s-2);
-  flex-wrap: wrap;
-  margin-top: var(--s-3);
-  padding-top: var(--s-3);
-  border-top: 1px solid var(--c-border);
-}
-
-/* 状态颜色映射 */
 .status-dot.not_started { background: var(--c-text-muted); }
-.status-dot.generating { background: var(--c-primary); }
+.status-dot.generating { background: var(--c-primary); animation: pulse-dot 1.5s ease-in-out infinite; }
 .status-dot.validating { background: var(--c-warning); }
 .status-dot.reviewing { background: var(--c-warning); }
 .status-dot.approved { background: var(--c-success); }
 .status-dot.rejected { background: var(--c-danger); }
 
-/* ---- 空状态 ---- */
-.empty-state-container {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: var(--s-8);
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
-.empty-state-content { text-align: center; max-width: 500px; }
-.empty-state-icon { font-size: var(--fs-3xl); margin-bottom: var(--s-3); }
 
-/* ---- 品牌签名 ---- */
-.brand-signature {
-  text-align: center;
-  font-size: var(--fs-xs);
-  color: var(--c-text-muted);
-  padding: var(--s-2) 0 0;
-  margin-top: var(--s-2);
-  border-top: 1px solid var(--c-border);
-  opacity: 0.75;
+/* ---- Sheet 明细网格 ---- */
+#sheet-detail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--s-2) var(--s-3);
+  font-size: var(--fs-sm);
+}
+#sheet-detail > div {
+  padding: var(--s-2);
+  background: var(--c-surface-2);
+  border-radius: var(--r-sm);
+}
+#sheet-detail > div strong {
+  color: var(--c-primary);
 }
 
 /* ---- 响应式 ---- */
 @media (max-width: 900px) {
-  .report-container { grid-template-columns: 1fr; }
-  .report-sidebar { position: static; max-height: 200px; }
+  .report-page #kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
 }
