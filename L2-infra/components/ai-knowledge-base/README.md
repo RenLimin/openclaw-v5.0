@@ -118,6 +118,7 @@ python3 -m pytest tests/ -v
 | `config.json` | Agent 运行配置（实例/MCP端点/检索参数） |
 | `scripts/init_instance.sh` | 创建 bangcle-products 实例（product-kb 模板） |
 | `scripts/import_knowledge.sh` | 从源目录批量导入产品知识（md/txt/doc/docx/pdf） |
+| `data/product_catalog.json` | 标准产品目录分层（由 `梆梆_产品价格查询-2026-09-08.xlsx` 生成，产品名唯一事实源） |
 | `tests/e2e_verify.py` | E2E 验证（18 项检查） |
 
 ### 产品知识导入
@@ -136,3 +137,15 @@ python3 agents/bangcle-product-expert/tests/e2e_verify.py
 ```
 
 > 产品源文档体积约 2.4G，不纳入 git 仓库；`knowledge/` 目录为运行时副本（已 gitignore）。
+
+### 标准产品目录分层（检索优化）
+
+以 `梆梆_产品价格查询-2026-09-08.xlsx` 为标准产品/服务名称的唯一事实源，建立三层目录并接入检索：
+
+```
+产品线 (collection) → 产品/服务类别 (collection) → 产品/服务名称 (entity) → 关联文档 (kb_relation)
+```
+
+- 7 产品线 / 60 类别 / 189 标准产品实体 / 2778 条实体-文档关联
+- 查询归一化：非标准叫法自动映射标准名（如"应用安全检测平台"→"应用安全测评软件V5.0"）
+- 详情见 `docs/DESIGN-DETAIL-检索层-v1.0.md` 第 11 章

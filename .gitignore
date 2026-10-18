@@ -38,8 +38,8 @@ DREAMS.md
 # OCR virtualenv（大量第三方包，不提交）
 .venv-ocr/
 
-# 业务数据（本地持久化，不提交）
-data/
+# 业务数据（本地持久化，不提交，仅限仓库根）
+/data/
 *.db
 *.sqlite3
 

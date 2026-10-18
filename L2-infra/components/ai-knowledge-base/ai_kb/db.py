@@ -494,6 +494,17 @@ class AIKB:
         """, (doc_id, limit))
         return cursor.fetchall()
 
+    def get_docs_by_relation(self, entity_id: int, relation_type: str = "documents") -> List[sqlite3.Row]:
+        """Get doc_asset rows linked to an entity via kb_relation (catalog links)."""
+        cursor = self.conn.execute("""
+        SELECT da.* FROM kb_relation kr
+        INNER JOIN doc_asset da ON kr.object_id = da.id
+        WHERE kr.subject_type = 'entity' AND kr.subject_id = ?
+          AND kr.relation_type = ? AND kr.object_type = 'doc_asset'
+        ORDER BY da.file_name
+        """, (entity_id, relation_type))
+        return cursor.fetchall()
+
     def get_entity_knowledge(self, domain_id: int, name: str, chunk_limit: int = 3, include_expired: bool = False) -> List[Dict]:
         """Deterministic knowledge lookup: entity → docs → chunks.
         Falls back to same-family entities' docs when the entity has no docs.

@@ -88,11 +88,46 @@ class RetrievalEngine:
         # 1. Process query
         processed = self.query_processor.process(query_text)
 
+        # 1b. 检索查询优先使用归一化后的标准产品名（提升实体/FTS 命中率）
+        retrieval_query = processed.normalized_query or processed.cleaned_query
+
         # 2. Collect recall from each enabled channel
         entity_recall: List[RecallResult] = []
         if self.channel_config['entity']['enabled']:
+            # 2a. 标准目录精确召回: 归一化命中的标准产品/服务名 -> 目录实体 -> 关联文档
+            for std_name in processed.matched_catalog_names:
+                ent_row = self.db.get_entity_by_name(self.domain_id, std_name)
+                if not ent_row:
+                    continue
+                # 目录实体关联的文档 (kb_relation)
+                rel_docs = self.db.get_docs_by_relation(ent_row['id'])
+                # 也尝试直挂文档
+                own_docs = self.db.get_docs_by_entity(ent_row['id'])
+                docs = rel_docs + own_docs
+                if not docs:
+                    # 目录实体无文档: 同类别其他实体的文档兜底
+                    fam_docs = self.db.execute("""
+                        SELECT da.* FROM doc_asset da
+                        INNER JOIN entity e ON da.entity_id = e.id
+                        WHERE e.collection_id = ? AND e.id != ?
+                        LIMIT 10
+                    """, (ent_row['collection_id'], ent_row['id'])).fetchall()
+                    docs = fam_docs
+                for doc in docs[:5]:  # 每个实体最多取 5 篇关联文档
+                    chunks = self.db.get_chunks_by_doc(doc['id'], 3)
+                    for chunk in chunks:
+                        entity_recall.append(RecallResult(
+                            chunk_id=chunk['id'],
+                            entity_id=ent_row['id'],
+                            doc_id=doc['id'],
+                            channel="entity",
+                            raw_score=1.0,
+                            weight=self.channel_config['entity']['weight'] * 1.5
+                        ))
+
+            # 2b. 通用实体搜索 (名称/别名匹配)
             entity_results = self.entity_searcher.search(
-                processed.cleaned_query,
+                retrieval_query,
                 self.channel_config['entity']['top_k']
             )
             for ent_result in entity_results:
@@ -115,7 +150,7 @@ class RetrievalEngine:
         fts_recall: List[RecallResult] = []
         if self.channel_config['fts']['enabled']:
             fts_results = self.fts_searcher.search(
-                processed.rewritten_query,
+                retrieval_query,
                 self.channel_config['fts']['top_k']
             )
             for (chunk_id, score) in fts_results:
@@ -146,7 +181,7 @@ class RetrievalEngine:
         vector_recall: List[RecallResult] = []
         if self.channel_config['vector']['enabled']:
             vector_results = self.vector_searcher.search(
-                processed.rewritten_query,
+                retrieval_query,
                 self.channel_config['vector']['top_k']
             )
             for (chunk_id, score) in vector_results:
