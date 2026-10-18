@@ -82,7 +82,7 @@ class RetrievalEngine:
 
         self.fusion_ranker = FusionRanker(method=fusion_method)
 
-    def search(self, query_text: str, top_k: int = 5, min_score: float = 0.3) -> RetrievalResult:
+    def search(self, query_text: str, top_k: int = 5, min_score: float = 0.1) -> RetrievalResult:
         """Full search pipeline"""
 
         # 1. Process query
