@@ -19,7 +19,7 @@ class HybridSearch:
         self.include_expired = include_expired
         self.retrieval_engine = RetrievalEngine(kb, domain_id, include_expired=include_expired)
 
-    def search(self, query: str, top_k: int = 5, min_score: float = 0.3) -> List[Dict]:
+    def search(self, query: str, top_k: int = 5, min_score: float = 0.1) -> List[Dict]:
         """
         Public search API, returns the same format as before for backward compatibility.
         """

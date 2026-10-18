@@ -9,3 +9,6 @@ venv/
 *.db-wal
 *.db-shm
 instances/
+
+# 产品源文档副本（2.4G，由 import_knowledge.sh 从源目录直接导入）
+agents/bangcle-product-expert/knowledge/

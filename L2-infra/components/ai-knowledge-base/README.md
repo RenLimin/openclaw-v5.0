@@ -113,20 +113,26 @@ python3 -m pytest tests/ -v
 | `SYSTEM_PROMPT.md` | Agent 系统提示词（强制来源引用/禁止编造/上下文管理） |
 | `TOOLS.md` | MCP 工具对接说明 |
 | `config.json` | Agent 运行配置（实例/MCP端点/检索参数） |
-| `knowledge/` | 产品知识源文档（APP加固/渠道监测/威胁情报） |
+| `SYSTEM_PROMPT.md` | Agent 系统提示词（强制来源引用/禁止编造/反馈闭环） |
+| `TOOLS.md` | MCP 工具对接说明 |
+| `config.json` | Agent 运行配置（实例/MCP端点/检索参数） |
 | `scripts/init_instance.sh` | 创建 bangcle-products 实例（product-kb 模板） |
-| `scripts/import_knowledge.sh` | 批量导入产品知识 |
+| `scripts/import_knowledge.sh` | 从源目录批量导入产品知识（md/txt/doc/docx/pdf） |
 | `tests/e2e_verify.py` | E2E 验证（18 项检查） |
 
-快速启用：
+### 产品知识导入
+
+知识源目录：`/Users/bangcle/Bangcle Workspace/07. Bangcle Prod/`（872 篇产品文档，6 大产品线）
 
 ```bash
-# 1. 创建实例
+# 1. 创建实例（product-kb 模板）
 bash agents/bangcle-product-expert/scripts/init_instance.sh
 
-# 2. 导入知识
+# 2. 从源目录导入全部产品知识（约 5-8 分钟）
 bash agents/bangcle-product-expert/scripts/import_knowledge.sh
 
 # 3. E2E 验证
 python3 agents/bangcle-product-expert/tests/e2e_verify.py
 ```
+
+> 产品源文档体积约 2.4G，不纳入 git 仓库；`knowledge/` 目录为运行时副本（已 gitignore）。
