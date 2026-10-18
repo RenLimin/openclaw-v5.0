@@ -5,6 +5,8 @@ import re
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
 
+from .catalog_normalizer import CatalogNormalizer
+
 
 @dataclass
 class ProcessedQuery:
@@ -14,6 +16,8 @@ class ProcessedQuery:
     expanded_terms: List[str]
     cleaned_query: str
     detected_entities: List[str]
+    normalized_query: str  # 经过标准产品目录归一化的查询
+    matched_catalog_names: List[str]  # 命中的标准产品/服务名称
     confidence: float  # How confident we are about the query being well-formed
     issues: List[str]
 
@@ -21,8 +25,10 @@ class ProcessedQuery:
 class QueryProcessor:
     """Process and rewrite user queries"""
 
-    def __init__(self, synonyms: Optional[Dict[str, List[str]]] = None):
+    def __init__(self, synonyms: Optional[Dict[str, List[str]]] = None,
+                 catalog_normalizer: Optional[CatalogNormalizer] = None):
         self.synonyms = synonyms or {}
+        self.catalog_normalizer = catalog_normalizer or CatalogNormalizer()
 
     def clean(self, query: str) -> str:
         """Clean query: remove extra whitespace, control characters"""
@@ -82,8 +88,10 @@ class QueryProcessor:
         original = query.strip()
         cleaned = self.clean(original)
         corrected = self.correct_spelling(cleaned)
-        rewritten, expanded = self.expand_synonyms(corrected)
-        entities = self.detect_entities(corrected)
+        # 标准产品目录归一化: 非标准叫法 -> 标准产品名
+        normalized, matched_catalog = self.catalog_normalizer.normalize(corrected)
+        rewritten, expanded = self.expand_synonyms(normalized)
+        entities = self.detect_entities(normalized)
 
         # Calculate confidence
         confidence = 1.0
@@ -103,6 +111,8 @@ class QueryProcessor:
             expanded_terms=expanded,
             cleaned_query=cleaned,
             detected_entities=entities,
+            normalized_query=normalized,
+            matched_catalog_names=matched_catalog,
             confidence=confidence,
             issues=issues
         )

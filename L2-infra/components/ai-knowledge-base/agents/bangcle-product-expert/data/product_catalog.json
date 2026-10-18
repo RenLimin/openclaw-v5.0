@@ -1,0 +1,2631 @@
+{
+  "source": "梆梆_产品价格查询-2026-09-08.xlsx",
+  "generated_at": "2026-10-18",
+  "lines": [
+    {
+      "name": "安全监测线",
+      "ones": "4：安全监测产品线",
+      "categories": [
+        {
+          "name": "全渠道应用安全监测",
+          "products": [
+            {
+              "name": "全渠道应用安全监测软件V6.0",
+              "codes": [
+                "AS-AIOTP-6.0-EA-SAP-021",
+                "AS-AIOTP-6.0-EA-SAP-031",
+                "AS-AIOTP-6.0-EA-SPLV-012",
+                "AS-AIOTP-6.0-EA-SPLV-022",
+                "AS-AIOTP-6.0-EA-SPLV-032",
+                "AS-AIOTP-6.0-SAP-STD",
+                "AS-AIOTP-6.0-SPLV-STD"
+              ],
+              "models": [
+                "轻应用授权扩展年付费许可版",
+                "APP授权扩展年付费许可版",
+                "流量节点扩展永久许可版",
+                "轻应用授权扩展永久许可版",
+                "APP授权扩展永久许可版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "全渠道应用安全监测定制服务",
+              "codes": [
+                "AS-AIOTP-6.0-ES-MC"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "全渠道应用安全监测V6.0维保服务",
+              "codes": [
+                "AS-AIOTP-6.0-ES-MS"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "API安全平台",
+          "products": [
+            {
+              "name": "API安全平台软件V3.0",
+              "codes": [
+                "AS-API-3.0-EA-SAP-011",
+                "AS-API-3.0-EA-SAP-021",
+                "AS-API-3.0-EA-SAP-031",
+                "AS-API-3.0-EA-SPLV-022",
+                "AS-API-3.0-SAP-STD",
+                "AS-API-3.0-SPLV-STD"
+              ],
+              "models": [
+                "流量节点扩展年付费许可版",
+                "轻应用授权扩展年付费许可版",
+                "APP授权扩展年付费许可版",
+                "轻应用授权扩展永久许可版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "移动应用反电诈智能平台",
+          "products": [
+            {
+              "name": "移动应用反电诈智能平台V1.0本地安装部署服务",
+              "codes": [
+                "SM-FDZ-1.0-ES-AddlitionalDeployment"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用反电诈智能平台V1.0操作系统及组件定制适配",
+              "codes": [
+                "SM-FDZ-1.0-ES-ComponetAdapt"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用反电诈智能平台V1.0定制化部署实施",
+              "codes": [
+                "SM-FDZ-1.0-ES-SpecialDeploymentSolution"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用反电诈智能平台V1.0",
+              "codes": [
+                "SM-FDZ-1.0-SAP-STD"
+              ],
+              "models": [
+                "移动应用反电诈智能平台V1.0-年付费许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "移动应用安全监测软件",
+          "products": [
+            {
+              "name": "移动应用反电诈智能平台V1.0-生产数据分析和策略优化高级服务",
+              "codes": [
+                "SM-FDZ-1.0-ES-DATA"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用反电诈智能平台V1.0--功能现场开发测试服务",
+              "codes": [
+                "SM-FDZ-1.0-ES-DEV"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测标准版V4.0软件维保服务",
+              "codes": [
+                "SM-TP-4.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测增强版V4.0软件维保服务",
+              "codes": [
+                "SM-TP-4.0-ES-MS021"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测软件V5.0本地安装部署服务",
+              "codes": [
+                "SM-TP-5.0-AddlitionalDeployment"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测软件V5.0操作系统及组件定制适配",
+              "codes": [
+                "SM-TP-5.0-ComponetAdapt"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测软件V5.0",
+              "codes": [
+                "SM-TP-5.0-EA-AEA011",
+                "SM-TP-5.0-EA-AEA012",
+                "SM-TP-5.0-EA-AEA013",
+                "SM-TP-5.0-EA-AEA014",
+                "SM-TP-5.0-EA-AEA021",
+                "SM-TP-5.0-EA-AEA022",
+                "SM-TP-5.0-EM-HARM011",
+                "SM-TP-5.0-EM-HARM012",
+                "SM-TP-5.0-EM-HARM021",
+                "SM-TP-5.0-EM-MOD021",
+                "SM-TP-5.0-EM-MOD022",
+                "SM-TP-5.0-EM-MOD023",
+                "SM-TP-5.0-PC",
+                "SM-TP-5.0-SAP-PLUS",
+                "SM-TP-5.0-SAP-STD",
+                "SM-TP-5.0-SPLV-PLUS",
+                "SM-TP-5.0-SPLV-STD"
+              ],
+              "models": [
+                "应用授权扩展公有云版",
+                "应用授权年付费许可版",
+                "鸿蒙NEXT应用授权扩展公有云版",
+                "鸿蒙NEXT应用授权年付费许可版",
+                "应用授权扩展永久许可版",
+                "鸿蒙NEXT应用授权扩展永久许可版",
+                "鸿蒙NEXT监测模块公有云版",
+                "鸿蒙NEXT监测模块年付费许可版",
+                "鸿蒙NEXT监测模块永久许可版",
+                "Android或iOS监测模块公有云版",
+                "Android或iOS监测模块年付费许可版",
+                "Android或iOS监测模块永久许可版",
+                "公有云版",
+                "年付费许可增强版",
+                "年付费许可标准版",
+                "永久许可增强版",
+                "永久许可标准版"
+              ]
+            },
+            {
+              "name": "移动应用安全监测软件-生产数据分析和策略优化高级服务",
+              "codes": [
+                "SM-TP-5.0-ES-DATA"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测软件-功能现场开发测试服务",
+              "codes": [
+                "SM-TP-5.0-ES-DEV"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测标准版V5.0软件维保服务",
+              "codes": [
+                "SM-TP-5.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用安全监测增强版V5.0软件维保服务",
+              "codes": [
+                "SM-TP-5.0-ES-MS021"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "平台版本升级服务",
+              "codes": [
+                "SM-TP-5.0-ES-USPLUS",
+                "SM-TP-5.0-ES-USSTD"
+              ],
+              "models": [
+                "增强版",
+                "标准版"
+              ]
+            },
+            {
+              "name": "移动应用安全监测驻场产品运营及运维人员外包服务",
+              "codes": [
+                "SM-TP-5.0-ES-ZHUCHANG"
+              ],
+              "models": [
+                "客户本地年付费服务"
+              ]
+            },
+            {
+              "name": "移动应用安全监测软件V5.0定制化部署实施",
+              "codes": [
+                "SM-TP-5.0-SpecialDeploymentSolution"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "外发SDK安全监测软件",
+          "products": [
+            {
+              "name": "外发SDK安全监测软件V4.0",
+              "codes": [
+                "SM-TPSDK-4.0-EA-AEA011",
+                "SM-TPSDK-4.0-SPLV-PLUS",
+                "SM-TPSDK-4.0-SPLV-STD"
+              ],
+              "models": [
+                "应用授权扩展",
+                "永久许可增强版",
+                "永久许可标准版"
+              ]
+            },
+            {
+              "name": "外发SDK安全监测标准版软件维保服务",
+              "codes": [
+                "SM-TPSDK-4.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "外发SDK安全监测增强版软件维保服务",
+              "codes": [
+                "SM-TPSDK-4.0-ES-MS021"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "运行环境可信SDK（探针）",
+          "products": [
+            {
+              "name": "运行环境可信检测SDK软件V2.0",
+              "codes": [
+                "SM-TRSDK-2.0-SAPLV"
+              ],
+              "models": [
+                "软件年付费许可版"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "安全检测线",
+      "ones": "3：安全检测产品线",
+      "categories": [
+        {
+          "name": "应用安全测评",
+          "products": [
+            {
+              "name": "应用安全测评软件维保服务",
+              "codes": [
+                "SD-AIMRSK-4.0-ES-MS011",
+                "SD-AIMRSK-5.0-ES-MS011"
+              ],
+              "models": [
+                "-",
+                "-"
+              ]
+            },
+            {
+              "name": "应用安全测评软件V5.0",
+              "codes": [
+                "SD-AIMRSK-5.0-EA-AEA011",
+                "SD-AIMRSK-5.0-EA-AEA021",
+                "SD-AIMRSK-5.0-EA-AEA031",
+                "SD-AIMRSK-5.0-EA-AEA041",
+                "SD-AIMRSK-5.0-EA-AEA051",
+                "SD-AIMRSK-5.0-EM-ENGINE011",
+                "SD-AIMRSK-5.0-EM-ENGINE021",
+                "SD-AIMRSK-5.0-EM-ENGINE031",
+                "SD-AIMRSK-5.0-PC-SAAS",
+                "SD-AIMRSK-5.0-SAPLV",
+                "SD-AIMRSK-5.0-SPLV"
+              ],
+              "models": [
+                "应用授权扩展公有云版",
+                "应用授权扩展年付费许可版",
+                "应用授权扩展年付费不限应用版",
+                "应用授权扩展永久许可版",
+                "应用授权扩展永久许可不限应用版",
+                "检测引擎扩展公有云版",
+                "检测引擎扩展年付费许可版",
+                "检测引擎扩展永久许可版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "应用安全测评软件国产化定制",
+              "codes": [
+                "SD-AIMRSK-5.0-ES-GC"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "应用安全测评软件迁移服务",
+              "codes": [
+                "SD-AIMRSK-5.0-ES-SD"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "平台版本升级服务",
+              "codes": [
+                "SD-AIMRSK-5.0-ES-UPDATE"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "应用安全测评服务",
+              "codes": [
+                "SD-AIMRSK-5.0-RPT"
+              ],
+              "models": [
+                "单次服务"
+              ]
+            },
+            {
+              "name": "应用安全测评系统V5.0",
+              "codes": [
+                "SD-AIMRSK-5.0-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版（标准服务器形态）"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "固件检测",
+          "products": [
+            {
+              "name": "固件安全检测软件V3.0",
+              "codes": [
+                "SD-IOTFD-3.0-EA-FEA011",
+                "SD-IOTFD-3.0-EA-FEA031",
+                "SD-IOTFD-3.0-EA-FEA051",
+                "SD-IOTFD-3.0-PC",
+                "SD-IOTFD-3.0-SAPLV",
+                "SD-IOTFD-3.0-SPLV"
+              ],
+              "models": [
+                "次数授权扩展标准版",
+                "次数授权扩展标准不限次版",
+                "次数授权扩展永久不限次数版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "固件安全检测软件维保服务",
+              "codes": [
+                "SD-IOTFD-3.0-ES-MS-011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "固件安全检测系统V3.0",
+              "codes": [
+                "SD-IOTFD-3.0-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "移动应用合规平台",
+          "products": [
+            {
+              "name": "移动应用合规软件V3.0",
+              "codes": [
+                "SD-MACP-3.0-EA-AEA011",
+                "SD-MACP-3.0-EA-AEA021",
+                "SD-MACP-3.0-EA-AEA031",
+                "SD-MACP-3.0-EA-AEA041",
+                "SD-MACP-3.0-EA-AEA051",
+                "SD-MACP-3.0-EM-ENGINE011",
+                "SD-MACP-3.0-EM-ENGINE021",
+                "SD-MACP-3.0-EM-ENGINE031",
+                "SD-MACP-3.0-EM-ENGINE041",
+                "SD-MACP-3.0-EM-ENGINE051",
+                "SD-MACP-3.0-EM-ENGINE061",
+                "SD-MACP-3.0-PC",
+                "SD-MACP-3.0-SAPLV",
+                "SD-MACP-3.0-SPLV"
+              ],
+              "models": [
+                "应用授权扩展公有云版",
+                "应用授权扩展年付费许可版",
+                "应用授权扩展年付费不限应用版",
+                "应用授权扩展永久许可版",
+                "应用授权扩展永久许可不限应用版",
+                "安全检测引擎扩展公有云版",
+                "安全检测引擎扩展年付费许可版",
+                "安全检测引擎扩展永久许可版",
+                "合规检测引擎扩展公有云版",
+                "合规检测引擎扩展年付费许可版",
+                "合规检测引擎扩展永久许可版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "移动应用合规软件国产化定制",
+              "codes": [
+                "SD-MACP-3.0-ES-GC"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用合规软件维保服务",
+              "codes": [
+                "SD-MACP-3.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "平台版本升级服务",
+              "codes": [
+                "SD-MACP-3.0-ES-PUS"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动应用合规系统V3.0",
+              "codes": [
+                "SD-MACP-3.0-SAHIM011"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "产品通用服务及配件",
+          "products": [
+            {
+              "name": "定制版Android手机",
+              "codes": [
+                "SPS-UP-EH-Android011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "定制版检测终端",
+              "codes": [
+                "SPS-UP-EH-DT"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "定制版iOS手机",
+              "codes": [
+                "SPS-UP-EH-iOS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "Mac电脑-Mac mini",
+              "codes": [
+                "SPS-UP-EH-MAC011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "Mac电脑-MacBook Air",
+              "codes": [
+                "SPS-UP-EH-MAC012"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "手机集群服务器",
+              "codes": [
+                "SPS-UP-EH-PHONESERVER011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "人工定制服务-中级",
+              "codes": [
+                "SPS-UP-ES-SD-AMC"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "人工定制服务-高级",
+              "codes": [
+                "SPS-UP-ES-SD-IMC"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "梆梆移动安全管理平台",
+          "products": [
+            {
+              "name": "梆梆移动安全管理平台系统V1.0",
+              "codes": [
+                "SS-SP-1.0-EM-AEA011",
+                "SS-SP-1.0-EM-AEA021",
+                "SS-SP-1.0-EM-AEA031",
+                "SS-SP-1.0-SAHIM"
+              ],
+              "models": [
+                "知识库",
+                "工具库",
+                "风险库",
+                "软硬一体机版"
+              ]
+            },
+            {
+              "name": "移动应用资产画像梳理服务",
+              "codes": [
+                "SS-SP-1.0-ES-MDAS021"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "移动安全能力平台软件维保服务",
+              "codes": [
+                "SS-SP-1.0-ES-MS021"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "内容安全产品线",
+      "ones": "7：内容安全产品线",
+      "categories": [
+        {
+          "name": "渠道监测",
+          "products": [
+            {
+              "name": "渠道监测服务报告定制服务",
+              "codes": [
+                "SD-APPCM-ES-REPORT"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "APP渠道监测服务",
+              "codes": [
+                "SD-APPCM-PLUS",
+                "SD-APPCM-STD"
+              ],
+              "models": [
+                "增强版",
+                "标准版"
+              ]
+            },
+            {
+              "name": "微信小程序渠道监测服务",
+              "codes": [
+                "SD-MPCM-STD"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "微信公众号渠道监测服务",
+              "codes": [
+                "SD-OACM-STD"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "移动应用监管平台",
+          "products": [
+            {
+              "name": "移动应用监管软件V4.0",
+              "codes": [
+                "SD-ASP-4.0-EM-AIMRSKE-SPLV",
+                "SD-ASP-4.0-EM-AIMRSK-PC",
+                "SD-ASP-4.0-EM-MACPE-SPLV",
+                "SD-ASP-4.0-EM-MACP-PC",
+                "SD-ASP-4.0-EM-PA-PC",
+                "SD-ASP-4.0-PC-CITY",
+                "SD-ASP-4.0-PC-COUNTRY",
+                "SD-ASP-4.0-PC-PROVINCE",
+                "SD-ASP-4.0-SPLV-CITY",
+                "SD-ASP-4.0-SPLV-COUNTRY",
+                "SD-ASP-4.0-SPLV-PROVINCE"
+              ],
+              "models": [
+                "应用安全分析引擎扩展永久版",
+                "应用安全分析引擎扩展公有云版",
+                "应用合规分析引擎扩展永久版",
+                "应用合规分析引擎扩展公有云版",
+                "盗版仿冒分析引擎扩展公有云版",
+                "公有云市级版",
+                "公有云全国版",
+                "公有云省级版",
+                "永久许可市级版",
+                "永久许可全国版",
+                "永久许可省级版"
+              ]
+            },
+            {
+              "name": "监管数据更新服务",
+              "codes": [
+                "SD-ASP-4.0-ES-DP011",
+                "SD-ASP-4.0-ES-DP021"
+              ],
+              "models": [
+                "市级版",
+                "省级版"
+              ]
+            },
+            {
+              "name": "移动应用监管软件维保服务",
+              "codes": [
+                "SD-ASP-4.0-ES-MS011",
+                "SD-ASP-4.0-ES-MS021"
+              ],
+              "models": [
+                "市级版",
+                "省级版"
+              ]
+            },
+            {
+              "name": "移动应用监管迁移服务",
+              "codes": [
+                "SD-ASP-4.0-ES-SM011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "数据爬取风险评估",
+          "products": [
+            {
+              "name": "全渠道单次数据爬取风险评估",
+              "codes": [
+                "SJFQ-FXPG-4D"
+              ],
+              "models": [
+                "——"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "APP情报通",
+          "products": [
+            {
+              "name": "APP情报通服务",
+              "codes": [
+                "WCS-QBT-1.1-BASEA-STD"
+              ],
+              "models": [
+                "应用安全监控标准版"
+              ]
+            },
+            {
+              "name": "品牌形象监控服务",
+              "codes": [
+                "WCS-QBT-1.1-BASEP-STD"
+              ],
+              "models": [
+                "品牌形象监控标准版"
+              ]
+            },
+            {
+              "name": "APP情报通扩展服务",
+              "codes": [
+                "WCS-QBT-1.1-EA-BASEA01"
+              ],
+              "models": [
+                "扩展授权应用安全监控标准版"
+              ]
+            },
+            {
+              "name": "负面处置处理",
+              "codes": [
+                "WCS-QBT-1.1-EA-YQ"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "APP周围情报联动系统",
+              "codes": [
+                "WCS-QBT-1.1-ES-ENVCUST"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "APP深度定制情报分析",
+              "codes": [
+                "WCS-QBT-1.1-ES-VACUST"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "移动端电信欺诈威胁情报",
+          "products": [
+            {
+              "name": "移动端电信欺诈威胁情报",
+              "codes": [
+                "YDDZ-Intelligence",
+                "YDDZ-Intelligence-YEAR"
+              ],
+              "models": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "安全保护线",
+      "ones": "1：安全保护产品线",
+      "categories": [
+        {
+          "name": "Android应用加固",
+          "products": [
+            {
+              "name": "Android应用加固软件V7.0",
+              "codes": [
+                "SP-AAP-7.0-EA-AEA011",
+                "SP-AAP-7.0-EA-AEA021",
+                "SP-AAP-7.0-EA-AEA031",
+                "SP-AAP-7.0-PC-PLUS",
+                "SP-AAP-7.0-PC-STD",
+                "SP-AAP-7.0-SAPLV-PLUS",
+                "SP-AAP-7.0-SAPLV-STD",
+                "SP-AAP-7.0-SPLV"
+              ],
+              "models": [
+                "标准版应用授权扩展",
+                "应用授权扩展增强版",
+                "应用授权扩展永久版",
+                "公有云增强版",
+                "公有云标准版",
+                "软件年付费许可增强版",
+                "软件年付费许可标准版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "Android应用加固兼容性测试服务",
+              "codes": [
+                "SP-AAP-7.0-ES-CTS011",
+                "SP-AAP-7.0-ES-CTS021"
+              ],
+              "models": [
+                "标准版",
+                "增强版"
+              ]
+            },
+            {
+              "name": "Android应用加固软件维保服务",
+              "codes": [
+                "SP-AAP-7.0-ES-MS011"
+              ],
+              "models": []
+            },
+            {
+              "name": "Android应用加固软件迁移服务",
+              "codes": [
+                "SP-AAP-7.0-ES-SM011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "Android应用加固服务",
+              "codes": [
+                "SP-AAP-7.0-ONE"
+              ],
+              "models": [
+                "单次服务"
+              ]
+            },
+            {
+              "name": "Android应用加固系统V7.0",
+              "codes": [
+                "SP-AAP-7.0-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "应用安全加固",
+          "products": [
+            {
+              "name": "应用安全加固软件V7.2",
+              "codes": [
+                "SP-APPS-7.2-EA-AEA011",
+                "SP-APPS-7.2-EA-AEA012",
+                "SP-APPS-7.2-EA-AEA022",
+                "SP-APPS-7.2-EM-EG010",
+                "SP-APPS-7.2-EM-EG020",
+                "SP-APPS-7.2-EM-EG030",
+                "SP-APPS-7.2-PC",
+                "SP-APPS-7.2-SAPLV",
+                "SP-APPS-7.2-SPLV"
+              ],
+              "models": [
+                "应用授权扩展标准版",
+                "应用授权扩展标准版不限数量",
+                "应用授权扩展永久版不限数量",
+                "加固引擎扩展公有云版",
+                "加固引擎扩展年付费许可版",
+                "加固引擎扩展永久许可版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "兼容性加固测试服务",
+              "codes": [
+                "SP-APPS-7.2-ES-CTS011"
+              ],
+              "models": [
+                "标准版"
+              ]
+            },
+            {
+              "name": "应用安全加固软件国产化适配改造服务",
+              "codes": [
+                "SP-APPS-7.2-ES-GC011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "应用安全加固软件维保服务",
+              "codes": [
+                "SP-APPS-7.2-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "应用安全加固软件迁移服务",
+              "codes": [
+                "SP-APPS-7.2-ES-SD"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "应用安全加固系统V7.2",
+              "codes": [
+                "SP-APPS-7.2-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "防界面劫持",
+          "products": [
+            {
+              "name": "防界面劫持维保服务",
+              "codes": [
+                "SP-ASIL-3.2-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "防界面劫持保护软件V3.2",
+              "codes": [
+                "SP-ASIL-3.2-SAPLV",
+                "SP-ASIL-3.2-SPLV"
+              ],
+              "models": [
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "通信协议保护",
+          "products": [
+            {
+              "name": "通信协议保护软件V3.0",
+              "codes": [
+                "SP-CPP-3.0-APP011",
+                "SP-CPP-3.0-APP021",
+                "SP-CPP-3.0-SAPLV",
+                "SP-CPP-3.0-SPLV"
+              ],
+              "models": [
+                "APP授权扩展单个版",
+                "APP授权扩展10个版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "H5应用加固",
+          "products": [
+            {
+              "name": "H5应用加固软件V3.3",
+              "codes": [
+                "SP-H5AP-3.3-EA-AEA011",
+                "SP-H5AP-3.3-EA-AEA031",
+                "SP-H5AP-3.3-PC",
+                "SP-H5AP-3.3-SAPLV",
+                "SP-H5AP-3.3-SPLV"
+              ],
+              "models": [
+                "应用授权扩展标准版",
+                "应用授权扩展永久版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "H5应用加固软件维保服务",
+              "codes": [
+                "SP-H5AP-3.3-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "鸿蒙NEXT通信协议保护",
+          "products": [
+            {
+              "name": "鸿蒙NEXT通信协议保护软件V1.0",
+              "codes": [
+                "SP-HM-CPP-1.0-APP011",
+                "SP-HM-CPP-1.0-SAPLV",
+                "SP-HM-CPP-1.0-SPLV"
+              ],
+              "models": [
+                "APP授权扩展单个版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "鸿蒙NEXT安全键盘",
+          "products": [
+            {
+              "name": "鸿蒙NEXT安全键盘UI布局调整定制服务",
+              "codes": [
+                "SP-HM-SSK-1.0-DZ011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "鸿蒙NEXT安全键盘软件V1.0",
+              "codes": [
+                "SP-HM-SSK-1.0-EM-APP011",
+                "SP-HM-SSK-1.0-EM-APP031",
+                "SP-HM-SSK-1.0-SAPLV",
+                "SP-HM-SSK-1.0-SPLV"
+              ],
+              "models": [
+                "APP授权扩展单个版",
+                "APP授权扩展不限量版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "鸿蒙NEXT安全键盘加密机对接服务",
+              "codes": [
+                "SP-HM-SSK-1.0-JMJ011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "鸿蒙NEXT安全键盘维保服务",
+              "codes": [
+                "SP-HM-SSK-1.0-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "鸿蒙NEXT密盾",
+          "products": [
+            {
+              "name": "梆梆密盾鸿蒙NEXT密钥安全保护软件V1.0",
+              "codes": [
+                "SP-HM-WBC-1.0-EM-AP021",
+                "SP-HM-WBC-1.0-EM-APP011",
+                "SP-HM-WBC-1.0-PC",
+                "SP-HM-WBC-1.0-SAPLV",
+                "SP-HM-WBC-1.0-SPLV"
+              ],
+              "models": [
+                "APP授权扩展10个版",
+                "APP授权扩展1个版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "梆梆密盾鸿蒙NEXT密钥安全保护软件维保服务",
+              "codes": [
+                "SP-HM-WBC-1.0-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "iOS应用加固",
+          "products": [
+            {
+              "name": "iOS应用加固软件V4.0",
+              "codes": [
+                "SP-IAP-4.0-EA-AEA011",
+                "SP-IAP-4.0-EA-AEA031",
+                "SP-IAP-4.0-PC",
+                "SP-IAP-4.0-SAPLV",
+                "SP-IAP-4.0-SPLV"
+              ],
+              "models": [
+                "标准版",
+                "永久版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "iOS应用加固软件维保服务",
+              "codes": [
+                "SP-IAP-4.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "IPA应用加固服务",
+              "codes": [
+                "SP-IAP-4.0-ONE"
+              ],
+              "models": [
+                "单次服务"
+              ]
+            },
+            {
+              "name": "iOS应用加固系统V4.0",
+              "codes": [
+                "SP-IAP-4.0-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "物联网应用加固",
+          "products": [
+            {
+              "name": "物联网应用加固软件V2.0",
+              "codes": [
+                "SP-IOTAP-2.0-EA-AEA021",
+                "SP-IOTAP-2.0-PC",
+                "SP-IOTAP-2.0-SAPLV",
+                "SP-IOTAP-2.0-SPLV"
+              ],
+              "models": [
+                "应用授权扩展年付费许可版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "物联网应用加固软件维保服务",
+              "codes": [
+                "SP-IOTAP-2.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "小程序加固",
+          "products": [
+            {
+              "name": "梆梆安全小程序加固软件V3.3",
+              "codes": [
+                "SP-MPP-3.3-EA-AEA011",
+                "SP-MPP-3.3-EA-AEA031",
+                "SP-MPP-3.3-PC",
+                "SP-MPP-3.3-SAPLV",
+                "SP-MPP-3.3-SPLV"
+              ],
+              "models": [
+                "应用授权扩展标准版",
+                "应用授权扩展永久版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "小程序应用加固软件维保服务",
+              "codes": [
+                "SP-MPP-3.3-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "梆梆安全小程序加固系统V3.3",
+              "codes": [
+                "SP-MPP-3.3-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "智能手表应用加固",
+          "products": [
+            {
+              "name": "智能手表应用加固软件V2.0",
+              "codes": [
+                "SP-MW-APP-2.0-EA-AEA021",
+                "SP-MW-APP-2.0-SAPLV"
+              ],
+              "models": [
+                "应用授权扩展年许可版",
+                "软件年付费许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "智能手表通信协议保护",
+          "products": [
+            {
+              "name": "智能手表通信协议保护软件V2.0",
+              "codes": [
+                "SP-MW-CPP-2.0-EM-APP011",
+                "SP-MW-CPP-2.0-SAPLV"
+              ],
+              "models": [
+                "APP授权扩展1个版",
+                "软件年付费许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "智能手表密盾",
+          "products": [
+            {
+              "name": "智能手表密盾密钥安全保护软件V2.0",
+              "codes": [
+                "SP-MW-WBC-2.0-EM-APP011",
+                "SP-MW-WBC-2.0-EM-PLA011",
+                "SP-MW-WBC-2.0-SAPLV"
+              ],
+              "models": [
+                "APP授权扩展1个版",
+                "系统授权扩展标准版",
+                "软件年付费许可版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "鸿蒙NEXT应用加固",
+          "products": [
+            {
+              "name": "鸿蒙NEXT应用加固软件V2.0",
+              "codes": [
+                "SP-NEXTAP-2.0-EA-AEA012",
+                "SP-NEXTAP-2.0-EA-AEA031",
+                "SP-NEXTAP-2.0-PC",
+                "SP-NEXTAP-2.0-SAPLV",
+                "SP-NEXTAP-2.0-SPLV"
+              ],
+              "models": [
+                "应用授权扩展标准版",
+                "应用授权扩展永久版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "鸿蒙NEXT应用加固软件维保服务",
+              "codes": [
+                "SP-NEXTAP-2.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "鸿蒙NEXT应用加固系统V2.0",
+              "codes": [
+                "SP-NEXTAP-2.0-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "鸿蒙NEXT元服务加固",
+          "products": [
+            {
+              "name": "梆梆安全鸿蒙NEXT元服务加固软件V2.0",
+              "codes": [
+                "SP-NEXTMPP-2.0-EA-AEA011",
+                "SP-NEXTMPP-2.0-PC",
+                "SP-NEXTMPP-2.0-SAPLV"
+              ],
+              "models": [
+                "应用授权扩展标准版",
+                "公有云版",
+                "软件年付费许可版"
+              ]
+            },
+            {
+              "name": "鸿蒙NEXT元服务加固软件维保服务",
+              "codes": [
+                "SP-NEXTMPP-2.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "鸿蒙NEXT SDK加固",
+          "products": [
+            {
+              "name": "鸿蒙NEXT SDK加固软件V2.0",
+              "codes": [
+                "SP-NEXTSDKP-2.0-EA-AEA011",
+                "SP-NEXTSDKP-2.0-PC",
+                "SP-NEXTSDKP-2.0-SAPLV",
+                "SP-NEXTSDKP-2.0-SPLV"
+              ],
+              "models": [
+                "应用授权扩展标准版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "鸿蒙NEXT SDK加固软件维保服务",
+              "codes": [
+                "SP-NEXTSDKP-2.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "AndroidSDK加固",
+          "products": [
+            {
+              "name": "AndroidSDK加固软件V7.0",
+              "codes": [
+                "SP-SDKP-7.0-EA-AEA011",
+                "SP-SDKP-7.0-EA-AEA031",
+                "SP-SDKP-7.0-PC",
+                "SP-SDKP-7.0-SAPLV",
+                "SP-SDKP-7.0-SPLV"
+              ],
+              "models": [
+                "应用授权扩展标准版",
+                "应用授权扩展永久版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "AndroidSDK加固软件维保服务",
+              "codes": [
+                "SP-SDKP-7.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "可信安全键盘",
+          "products": [
+            {
+              "name": "可信安全键盘软件V4.0",
+              "codes": [
+                "SP-SSK-4.0-EM-APP011",
+                "SP-SSK-4.0-EM-APP031",
+                "SP-SSK-4.0-EM-PLA011",
+                "SP-SSK-4.0-EM-PLA021",
+                "SP-SSK-4.0-SAPLV",
+                "SP-SSK-4.0-SPLV"
+              ],
+              "models": [
+                "APP授权扩展单个版",
+                "APP授权扩展不限量版",
+                "平台授权扩展年费版",
+                "平台授权扩展永久版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "可信安全键盘UI布局调整定制服务",
+              "codes": [
+                "SP-SSK-4.0-ES-DZ011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "可信安全键盘软件国产化适配改造服务",
+              "codes": [
+                "SP-SSK-4.0-ES-GC011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "可信安全键盘加密机对接服务",
+              "codes": [
+                "SP-SSK-4.0-ES-JMJ011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "可信安全键盘维保服务",
+              "codes": [
+                "SP-SSK-4.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "产品通用服务及配件",
+          "products": [
+            {
+              "name": "人工定制服务-中级",
+              "codes": [
+                "SPS-UP-ES-SP-AMC"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "人工定制服务-高级",
+              "codes": [
+                "SPS-UP-ES-SP-IMC"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "梆梆密盾",
+          "products": [
+            {
+              "name": "梆梆密盾密钥安全保护软件V4.0",
+              "codes": [
+                "SP-WBC-4.0-EM-APP011",
+                "SP-WBC-4.0-EM-PLA011",
+                "SP-WBC-4.0-EM-PLA031",
+                "SP-WBC-4.0-PC",
+                "SP-WBC-4.0-SAPLV",
+                "SP-WBC-4.0-SPLV"
+              ],
+              "models": [
+                "APP授权扩展1个版",
+                "平台授权扩展标准版",
+                "平台授权扩展永久版",
+                "公有云版",
+                "软件年付费许可版",
+                "软件永久许可版"
+              ]
+            },
+            {
+              "name": "梆梆密盾密钥安全保护软件维保服务",
+              "codes": [
+                "SP-WBC-4.0-ES-MS011"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "梆梆密盾密钥安全保护软件迁移服务",
+              "codes": [
+                "SP-WBC-4.0-ES-SD"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "梆梆密盾密钥安全保护系统V4.0",
+              "codes": [
+                "SP-WBC-4.0-SAHIM"
+              ],
+              "models": [
+                "软硬一体机版"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "安全产品",
+      "ones": "4：安全监测产品线",
+      "categories": [
+        {
+          "name": "产品通用服务及配件",
+          "products": [
+            {
+              "name": "机架服务器",
+              "codes": [
+                "SPS-UP-EH-HS011",
+                "SPS-UP-EH-HS021"
+              ],
+              "models": [
+                "标准版",
+                "高级版"
+              ]
+            },
+            {
+              "name": "信创版服务器",
+              "codes": [
+                "SPS-UP-EH-KP01"
+              ],
+              "models": [
+                "鲲鹏版"
+              ]
+            },
+            {
+              "name": "人工定制服务-高级",
+              "codes": [
+                "SPS-UP-ES-AMC"
+              ],
+              "models": [
+                "-"
+              ]
+            },
+            {
+              "name": "人工定制服务-中级",
+              "codes": [
+                "SPS-UP-ES-IMC"
+              ],
+              "models": [
+                "-"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "安全服务产品线",
+      "ones": "2：安全服务产品线",
+      "categories": [
+        {
+          "name": "个人信息隐私合规单平台评估服务",
+          "products": [
+            {
+              "name": "现场咨询服务",
+              "codes": [
+                "SS-CA-2022-ES-PICASPLC"
+              ],
+              "models": [
+                "人天服务"
+              ]
+            },
+            {
+              "name": "监管通报专业版复测服务",
+              "codes": [
+                "SS-CA-2022-ES-PICASPZYFC"
+              ],
+              "models": [
+                "单平台-专业版"
+              ]
+            },
+            {
+              "name": "合规评估服务（认证版）",
+              "codes": [
+                "SS-CA-2022-PICASPGB"
+              ],
+              "models": [
+                "单平台-GB35273标准版"
+              ]
+            },
+            {
+              "name": "监管通报应急支撑服务",
+              "codes": [
+                "SS-CA-2022-PICASPJG"
+              ],
+              "models": [
+                "单平台-单标准版"
+              ]
+            },
+            {
+              "name": "合规评估服务（极速版）",
+              "codes": [
+                "SS-CA-2022-PICASPJS"
+              ],
+              "models": [
+                "单平台-单标准版"
+              ]
+            },
+            {
+              "name": "监管通报标准版复测服务",
+              "codes": [
+                "SS-CA-2024-ES-PICASPJCFC"
+              ],
+              "models": [
+                "单平台-标准版"
+              ]
+            },
+            {
+              "name": "监管通报专家版复测服务",
+              "codes": [
+                "SS-CA-2024-ES-PICASPZJFC"
+              ],
+              "models": [
+                "单平台-专家版"
+              ]
+            },
+            {
+              "name": "GDPR合规检测服务",
+              "codes": [
+                "SS-CA-2024-PICAGDPR"
+              ],
+              "models": [
+                "单平台-GDPR评估"
+              ]
+            },
+            {
+              "name": "个人信息合规审计服务",
+              "codes": [
+                "SS-CA-2024-PICAHGSA"
+              ],
+              "models": [
+                "单平台-合规审计评估"
+              ]
+            },
+            {
+              "name": "个人信息影响评估服务",
+              "codes": [
+                "SS-CA-2024-PICASPIA"
+              ],
+              "models": [
+                "单平台-影响评估"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报标准版）",
+              "codes": [
+                "SS-CA-2024-PICASPJC"
+              ],
+              "models": [
+                "单平台-标准版"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报金融专业版）",
+              "codes": [
+                "SS-CA-2024-PICASPJR"
+              ],
+              "models": [
+                "单平台-金融专业版"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报专家版）",
+              "codes": [
+                "SS-CA-2024-PICASPZJ"
+              ],
+              "models": [
+                "单平台-专家版"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报非金融专业版）",
+              "codes": [
+                "SS-CA-2024-PICASPZY"
+              ],
+              "models": [
+                "单平台-非金融专业版"
+              ]
+            },
+            {
+              "name": "隐私政策辅助编写服务",
+              "codes": [
+                "SS-CA-2024-PISPYSZC"
+              ],
+              "models": [
+                "单平台-隐私政策服务"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "个人信息隐私合规双平台评估服务",
+          "products": [
+            {
+              "name": "合规评估服务（认证版）",
+              "codes": [
+                "SS-CA-2022-PICADPGB"
+              ],
+              "models": [
+                "双平台-GB35273标准版"
+              ]
+            },
+            {
+              "name": "监管通报应急支撑服务",
+              "codes": [
+                "SS-CA-2022-PICADPJG"
+              ],
+              "models": [
+                "双平台-单标准版"
+              ]
+            },
+            {
+              "name": "合规评估服务（极速版）",
+              "codes": [
+                "SS-CA-2022-PICADPJS"
+              ],
+              "models": [
+                "双平台-单标准版"
+              ]
+            },
+            {
+              "name": "现场咨询服务",
+              "codes": [
+                "SS-CA-2022-PICADPPLKS5"
+              ],
+              "models": [
+                "人天服务"
+              ]
+            },
+            {
+              "name": "监管通报标准版复测服务",
+              "codes": [
+                "SS-CA-2024-ES-PICADPJCFC"
+              ],
+              "models": [
+                "双平台-标准版"
+              ]
+            },
+            {
+              "name": "监管通报专家版复测服务",
+              "codes": [
+                "SS-CA-2024-ES-PICADPZJFC"
+              ],
+              "models": [
+                "双平台-专家版"
+              ]
+            },
+            {
+              "name": "监管通报专业版复测服务",
+              "codes": [
+                "SS-CA-2024-ES-PICADPZYFC"
+              ],
+              "models": [
+                "双平台-专业版"
+              ]
+            },
+            {
+              "name": "GDPR合规检测服务",
+              "codes": [
+                "SS-CA-2024-PICADPGDPR"
+              ],
+              "models": [
+                "双平台-GDPR评估"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报标准版）",
+              "codes": [
+                "SS-CA-2024-PICADPJC"
+              ],
+              "models": [
+                "双平台-标准版"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报金融专业版）",
+              "codes": [
+                "SS-CA-2024-PICADPJR"
+              ],
+              "models": [
+                "双平台-金融专业版"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报专家版）",
+              "codes": [
+                "SS-CA-2024-PICADPZJ"
+              ],
+              "models": [
+                "双平台-专家版"
+              ]
+            },
+            {
+              "name": "合规评估服务（监管通报非金融专业版）",
+              "codes": [
+                "SS-CA-2024-PICADPZY"
+              ],
+              "models": [
+                "双平台-非金融专业版"
+              ]
+            },
+            {
+              "name": "个人信息合规审计服务",
+              "codes": [
+                "SS-CA-2024-PICAHGDPSA"
+              ],
+              "models": [
+                "双平台-合规审计评估"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "App合规认证及咨询服务",
+          "products": [
+            {
+              "name": "其他个人信息或数据安全咨询服务（定制化）",
+              "codes": [
+                "SS-CC-2022-CSCA"
+              ],
+              "models": [
+                "标准版"
+              ]
+            },
+            {
+              "name": "金融科技产品认证评估及咨询服务",
+              "codes": [
+                "SS-CC-2022-FCA"
+              ],
+              "models": [
+                "标准版"
+              ]
+            },
+            {
+              "name": "App安全认证咨询服务",
+              "codes": [
+                "SS-CC-2022-MACA"
+              ],
+              "models": [
+                "标准版"
+              ]
+            },
+            {
+              "name": "GDPR合规咨询服务",
+              "codes": [
+                "SS-CC-2024-ZXGDPR"
+              ],
+              "models": [
+                "咨询服务"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "APP个人信息隐私合规评估赋能培训服务",
+          "products": [
+            {
+              "name": "合规评估能力赋能现场培训",
+              "codes": [
+                "SS-CST-2022-ES-L"
+              ],
+              "models": [
+                "现场培训版"
+              ]
+            },
+            {
+              "name": "高级版-新增一项法规赋能培训",
+              "codes": [
+                "SS-CST-2022-ES-L3"
+              ],
+              "models": [
+                "标准扩展培训-高级版"
+              ]
+            },
+            {
+              "name": "合规评估能力赋能培训-基础版",
+              "codes": [
+                "SS-CST-2022-L1"
+              ],
+              "models": [
+                "单标准版"
+              ]
+            },
+            {
+              "name": "合规评估能力赋能培训-标准版",
+              "codes": [
+                "SS-CST-2022-L2"
+              ],
+              "models": [
+                "单标准版"
+              ]
+            },
+            {
+              "name": "合规评估能力赋能培训-高级版",
+              "codes": [
+                "SS-CST-2022-L3"
+              ],
+              "models": [
+                "单标准版"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "黑产复现",
+          "products": [
+            {
+              "name": "人脸绕过黑产技术分析",
+              "codes": [
+                "SS-HK-2024-FCAN"
+              ],
+              "models": [
+                "远程实施，包括单端1次人脸绕过技术分析报告、1次报告解读。"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "鸿蒙NEXT客户端安全测试",
+          "products": [
+            {
+              "name": "鸿蒙APP单台安全测试",
+              "codes": [
+                "SS-HN-2024-MASP"
+              ],
+              "models": [
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            },
+            {
+              "name": "鸿蒙APP单平台安全测试",
+              "codes": [
+                "SS-HN-2024-MASPL"
+              ],
+              "models": [
+                "客户现场实施"
+              ]
+            },
+            {
+              "name": "鸿蒙APP单平台安全复测",
+              "codes": [
+                "SS-HN-2024-MASPRT"
+              ],
+              "models": [
+                "增加1次远程复测"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "企业重保服务",
+          "products": [
+            {
+              "name": "国家重大活动网络安全保障服务",
+              "codes": [
+                "SS-HW-2022-BLUE",
+                "SS-HW-2022-ES-REDL",
+                "SS-HW-2022-RED"
+              ],
+              "models": [
+                "蓝队服务（现场）",
+                "客户现场实施红队服务",
+                "红队服务（远程）"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "人员外包服务",
+          "products": [
+            {
+              "name": "合规检查",
+              "codes": [
+                "SS-OS-2022-CA1",
+                "SS-OS-2022-CA2",
+                "SS-OS-2022-CA-S1",
+                "SS-OS-2022-CA-S2",
+                "SS-OS-2022-CA-S3"
+              ],
+              "models": [
+                "APP合规检查（初级）",
+                "APP合规检查（中级）",
+                "APP合规检查（初级）-未购产品",
+                "APP合规检查（中级）-未购产品",
+                "APP合规检查（高级）-未购产品"
+              ]
+            },
+            {
+              "name": "安全测试",
+              "codes": [
+                "SS-OS-2022-PT1",
+                "SS-OS-2022-PT2",
+                "SS-OS-2022-PT3",
+                "SS-OS-2022-SCA2",
+                "SS-OS-2022-SCA3"
+              ],
+              "models": [
+                "渗透测试（初级）",
+                "渗透测试（中级）",
+                "渗透测试（高级）",
+                "代码审计（中级）",
+                "代码审计（高级）"
+              ]
+            },
+            {
+              "name": "产品运营",
+              "codes": [
+                "SS-OS-2022-SO1",
+                "SS-OS-2022-SO2",
+                "SS-OS-2022-SO3"
+              ],
+              "models": [
+                "产品安全运营（初级）",
+                "产品安全运营（中级）",
+                "产品安全运营（高级）"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "APP双平台安全测试服务",
+          "products": [
+            {
+              "name": "APP双平台安全测试",
+              "codes": [
+                "SS-PT-2022-ES-MADPL",
+                "SS-PT-2022-MADP"
+              ],
+              "models": [
+                "客户现场实施",
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            },
+            {
+              "name": "APP双平台安全复测",
+              "codes": [
+                "SS-PT-2022-ES-MADPRT"
+              ],
+              "models": [
+                "增加1次远程复测"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "APP单平台安全测试服务",
+          "products": [
+            {
+              "name": "APP单平台安全测试",
+              "codes": [
+                "SS-PT-2022-ES-MASPL",
+                "SS-PT-2022-MASP"
+              ],
+              "models": [
+                "客户现场实施",
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            },
+            {
+              "name": "APP单平台安全复测",
+              "codes": [
+                "SS-PT-2022-ES-MASPRT"
+              ],
+              "models": [
+                "增加1次远程复测"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "业务端(web、小程序、公众号)安全测试服务",
+          "products": [
+            {
+              "name": "业务端(web、小程序、公众号)安全测试",
+              "codes": [
+                "SS-PT-2022-ES-WAL"
+              ],
+              "models": [
+                "客户现场实施"
+              ]
+            },
+            {
+              "name": "业务端(web、微信公众号)安全复测",
+              "codes": [
+                "SS-PT-2024-ES-WART"
+              ],
+              "models": [
+                "增加1次远程复测"
+              ]
+            },
+            {
+              "name": "业务端(web、微信公众号)安全测试",
+              "codes": [
+                "SS-PT-2024-WA"
+              ],
+              "models": [
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            },
+            {
+              "name": "API安全测试",
+              "codes": [
+                "SS-PT-2024-WA-API"
+              ],
+              "models": [
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            },
+            {
+              "name": "其它小程序安全测试",
+              "codes": [
+                "SS-PT-2024-WA-OP"
+              ],
+              "models": [
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            },
+            {
+              "name": "其它小程序安全复测",
+              "codes": [
+                "SS-PT-2024-WA-OPRT"
+              ],
+              "models": [
+                "增加1次远程复测"
+              ]
+            },
+            {
+              "name": "微信小程序安全测试",
+              "codes": [
+                "SS-PT-2024-WA-WP"
+              ],
+              "models": [
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            },
+            {
+              "name": "微信小程序安全复测",
+              "codes": [
+                "SS-PT-2024-WA-WPRT"
+              ],
+              "models": [
+                "增加1次远程复测"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "风险评估服务",
+          "products": [
+            {
+              "name": "场景化风险评估服务【人脸识别绕过】",
+              "codes": [
+                "SS-RA-2022-ES-RA2L",
+                "SS-RA-2022-ES-RART2",
+                "SS-RA-2022-RA2"
+              ],
+              "models": [
+                "客户现场实施",
+                "增加1次远程复测",
+                "远程实施，包括1次风险评估、1-2次复测、1次报告解读。"
+              ]
+            },
+            {
+              "name": "监管符合性评估服务",
+              "codes": [
+                "SS-RA-2022-ES-RART3",
+                "SS-RA-2022-RA3"
+              ],
+              "models": [
+                "增加1次远程复测",
+                "远程实施，包括1次符合性评估、1-2次复测、1次报告解读。"
+              ]
+            },
+            {
+              "name": "标准风险评估",
+              "codes": [
+                "SS-RA-2022-RA"
+              ],
+              "models": [
+                "现场实施，包括1次风险评估、1-2次复测、1次报告解读。"
+              ]
+            },
+            {
+              "name": "场景化风险评估服务【电信欺诈】",
+              "codes": [
+                "SS-RA-2022-RA2-2"
+              ],
+              "models": [
+                "远程实施，包括1次风险评估、1-2次复测、1次报告解读。"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "APP/SDK样本分析服务",
+          "products": [
+            {
+              "name": "样本分析",
+              "codes": [
+                "SS-SA-2022-APPA"
+              ],
+              "models": [
+                "移动APP、SDK样本分析。包含1次远程分析、1次远程报告解读"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "代码审计服务",
+          "products": [
+            {
+              "name": "源代码审计",
+              "codes": [
+                "SS-SA-2022-ES-SCAL",
+                "SS-SA-2022-ES-SCART",
+                "SS-SA-2022-SCA"
+              ],
+              "models": [
+                "客户现场实施",
+                "增加1次复测",
+                "APP客户端、小程序/公众号、WEB业务侧源代码安全审计。包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "安全运营服务",
+          "products": [
+            {
+              "name": "产品安全运营",
+              "codes": [
+                "SS-SO-2022-EA-SMDA",
+                "SS-SO-2022-ES-SMDAL",
+                "SS-SO-2022-SMDA"
+              ],
+              "models": [
+                "移动端攻击发现及溯源服务，1年12次",
+                "客户现场实施",
+                "移动端攻击发现及溯源服务"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "应急响应服务",
+          "products": [
+            {
+              "name": "应急处置",
+              "codes": [
+                "SS-SRC-2022-ER",
+                "SS-SRC-2022-ES-ERL"
+              ],
+              "models": [
+                "应急响应及取证溯源。包含1次远程处置、1次远程复测和1次远程报告解读",
+                "客户现场实施"
+              ]
+            },
+            {
+              "name": "应急单平台客户端安全检测",
+              "codes": [
+                "SS-SRC-2024-ER-ASP"
+              ],
+              "models": [
+                "包含1次远程初测、1次远程复测和1次远程报告解读"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "安全专题培训服务",
+          "products": [
+            {
+              "name": "安全专题培训",
+              "codes": [
+                "SS-ST-2022-EA-T",
+                "SS-ST-2022-ES-TE",
+                "SS-ST-2022-ES-TL"
+              ],
+              "models": [
+                "增加20人听课",
+                "增加0.5人天线上课程（3小时）",
+                "客户现场实施"
+              ]
+            },
+            {
+              "name": "护网培训",
+              "codes": [
+                "SS-ST-2022-HW"
+              ],
+              "models": [
+                "腾讯会议线上授课，标准课程半天，共3小时--20人内"
+              ]
+            },
+            {
+              "name": "移动应用安全开发培训",
+              "codes": [
+                "SS-ST-2022-MD"
+              ],
+              "models": [
+                "腾讯会议线上授课，标准课程半天，共3小时--20人内"
+              ]
+            },
+            {
+              "name": "移动应用常见漏洞培训",
+              "codes": [
+                "SS-ST-2022-MV"
+              ],
+              "models": [
+                "腾讯会议线上授课，标准课程半天，共3小时时--20人内"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "移动应用渗透测试专题培训服务",
+          "products": [
+            {
+              "name": "移动应用渗透测试专题培训",
+              "codes": [
+                "SS-ST-2022-PT"
+              ],
+              "models": [
+                "腾讯会议线上授课，标准课程3天，总共18小时--20人内"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "移动应用安全开发专题培训服务",
+          "products": [
+            {
+              "name": "移动应用安全开发专题培训",
+              "codes": [
+                "SS-ST-2022-SDL"
+              ],
+              "models": [
+                "腾讯会议线上授课，标准课程4天，总共24小时--20人内"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "物联网服务产品线",
+      "ones": "6：物联网服务产品线",
+      "categories": [
+        {
+          "name": "汽车信息安全测试平台",
+          "products": [
+            {
+              "name": "汽车信息安全测试工具箱系统V1.0",
+              "codes": [
+                "TP-IOV-1.0-BOX"
+              ],
+              "models": [
+                "工具箱版"
+              ]
+            },
+            {
+              "name": "汽车信息安全测试平台V1.0",
+              "codes": [
+                "TP-IOV-1.0-MANAGER-ALL",
+                "TP-IOV-1.0-MANAGER-SW"
+              ],
+              "models": [
+                "软硬一体机版",
+                "软硬一体机版"
+              ]
+            },
+            {
+              "name": "汽车网络安全及渗透测试培训",
+              "codes": [
+                "TP-IOV-1.0-TRAIN"
+              ],
+              "models": [
+                "通用型"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "物联网安全检测和渗透",
+          "products": [
+            {
+              "name": "人工安全检测和渗透",
+              "codes": [
+                "TS-IOT-1.0-MAN"
+              ],
+              "models": [
+                "通用型"
+              ]
+            },
+            {
+              "name": "物联网设备安全检测和渗透",
+              "codes": [
+                "TS-IOT-1.0-PART"
+              ],
+              "models": [
+                "通用型"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "车联网安全检测和渗透",
+          "products": [
+            {
+              "name": "车机APP安全检测和渗透",
+              "codes": [
+                "TS-IOV-1.0-APP"
+              ],
+              "models": [
+                "通用型"
+              ]
+            },
+            {
+              "name": "零部件安全检测和渗透",
+              "codes": [
+                "TS-IOV-1.0-PART"
+              ],
+              "models": [
+                "通用型"
+              ]
+            },
+            {
+              "name": "TSP安全检测和渗透",
+              "codes": [
+                "TS-IOV-1.0-TSP"
+              ],
+              "models": [
+                "通用型"
+              ]
+            },
+            {
+              "name": "整车安全检测和渗透",
+              "codes": [
+                "TS-IOV-1.0-VEHICLE"
+              ],
+              "models": [
+                "通用型"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "alias_map": {
+    "安全保护线": "安全保护产品线",
+    "安全保护": "安全保护产品线",
+    "安全检测线": "安全检测产品线",
+    "安全检测": "安全检测产品线",
+    "安全服务产品线": "安全服务产品线",
+    "安全服务": "安全服务产品线",
+    "安全监测线": "安全监测产品线",
+    "安全监测": "安全监测产品线",
+    "内容安全产品线": "内容安全产品线",
+    "内容安全": "内容安全产品线",
+    "物联网服务产品线": "物联网服务产品线",
+    "物联网服务": "物联网服务产品线",
+    "物联网": "物联网服务产品线",
+    "应用安全检测平台": "应用安全测评软件V5.0",
+    "应用安全检测软件": "应用安全测评软件V5.0",
+    "应用测评公有云软件": "应用安全测评软件V5.0",
+    "应用测评平台": "应用安全测评软件V5.0",
+    "应用安全测评平台": "应用安全测评软件V5.0",
+    "移动应用合规平台": "移动应用合规软件V3.0",
+    "移动应用合规软件": "移动应用合规软件V3.0",
+    "固件安全检测平台": "固件安全检测软件V3.0",
+    "固件检测": "固件安全检测软件V3.0",
+    "移动应用安全监测平台": "移动应用安全监测软件V5.0",
+    "移动应用安全监测": "移动应用安全监测软件V5.0",
+    "全渠道应用安全监测平台": "全渠道应用安全监测软件V6.0",
+    "API安全平台": "API安全平台软件V3.0",
+    "Android应用加固": "Android应用加固软件V7.0",
+    "Android应用加固软件": "Android应用加固软件V7.0",
+    "iOS应用加固": "iOS应用加固软件V4.0",
+    "iOS应用加固软件": "iOS应用加固软件V4.0",
+    "鸿蒙NEXT应用加固": "鸿蒙NEXT应用加固软件V2.0",
+    "鸿蒙Next应用加固": "鸿蒙NEXT应用加固软件V2.0",
+    "小程序加固": "梆梆安全小程序加固软件V3.3",
+    "小程序应用加固": "梆梆安全小程序加固软件V3.3",
+    "H5应用加固": "H5应用加固软件V3.3",
+    "物联网应用加固": "物联网应用加固软件V2.0",
+    "梆梆密盾": "梆梆密盾密钥安全保护软件V4.0",
+    "密盾": "梆梆密盾密钥安全保护软件V4.0",
+    "可信安全键盘": "可信安全键盘软件V4.0",
+    "安全键盘": "可信安全键盘软件V4.0",
+    "鸿蒙NEXT安全键盘": "鸿蒙NEXT安全键盘软件V1.0",
+    "通信协议保护": "通信协议保护软件V3.0",
+    "鸿蒙NEXT通信协议保护": "鸿蒙NEXT通信协议保护软件V1.0",
+    "智能手表通信协议保护": "智能手表通信协议保护软件V2.0",
+    "AndroidSDK加固": "AndroidSDK加固软件V7.0",
+    "Android SDK加固": "AndroidSDK加固软件V7.0",
+    "鸿蒙NEXT SDK加固": "鸿蒙NEXT SDK加固软件V2.0",
+    "防界面劫持": "防界面劫持保护软件V3.2",
+    "移动应用监管平台": "移动应用监管软件V4.0",
+    "APP情报通": "APP情报通服务",
+    "渠道监测": "APP渠道监测服务",
+    "移动端电信欺诈威胁情报": "移动端电信欺诈威胁情报",
+    "数据爬取风险评估": "全渠道单次数据爬取风险评估",
+    "外发SDK安全监测": "外发SDK安全监测软件V4.0",
+    "运行环境可信SDK": "运行环境可信检测SDK软件V2.0",
+    "移动应用反电诈智能平台": "移动应用反电诈智能平台V1.0",
+    "汽车信息安全测试平台": "汽车信息安全测试平台V1.0",
+    "梆梆移动安全管理平台": "梆梆移动安全管理平台系统V1.0",
+    "汽车信息安全测试工具箱": "汽车信息安全测试工具箱系统V1.0"
+  }
+}
