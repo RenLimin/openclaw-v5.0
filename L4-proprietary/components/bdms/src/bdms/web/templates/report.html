@@ -18,45 +18,45 @@
 
   <!-- 数据范围卡（对标 dashboard 同款筛选） -->
   {% call card(title="数据范围") %}
-  <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+  <div class="form-row">
     <div>
-      <label style="font-weight:600;display:block;margin-bottom:0.3rem;">选择月份：</label>
+      <label class="field-label">选择月份：</label>
       <select id="month-select" class="input" style="min-width:180px;">
         <option value="">加载中...</option>
       </select>
     </div>
     <div style="border-left:1px solid var(--c-border);height:36px;margin:0 0.5rem;"></div>
     <div>
-      <label style="font-weight:600;display:block;margin-bottom:0.3rem;">新建月份：</label>
-      <input type="text" id="new-month-input" class="input" placeholder="YYYYMM" maxlength="6"
-             style="width:120px;" onkeydown="if(event.key==='Enter')confirmNewMonth()">
+      <label class="field-label">新建月份：</label>
+      <input type="month" id="new-month-input" class="input" class="w-140"
+             onkeydown="if(event.key==='Enter')confirmNewMonth()">
     </div>
     <div>
-      <label style="font-weight:600;display:block;margin-bottom:0.3rem;">模式：</label>
+      <label class="field-label">模式：</label>
       <select id="new-month-mode" class="input" style="width:160px;">
         <option value="auto">自动（有数据则读取）</option>
         <option value="regenerate">强制重新生成</option>
       </select>
     </div>
     <button class="btn btn-primary" onclick="confirmNewMonth()">+ 生成月报</button>
-    <span id="load-status" style="color:var(--c-muted);font-size:0.85rem;"></span>
+    <span id="load-status" class="text-muted fs-xs"></span>
   </div>
   {% endcall %}
 
   <!-- 核心指标（对标 dashboard 同款统计卡） -->
   {% call card(title="审核概览") %}
   <div id="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
-    <div id="stat-errors" class="kpi-card" onclick="switchToTab('issues')" style="cursor:pointer;">
+    <div id="stat-errors" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
       <div class="kpi-icon">❌</div>
       <div class="kpi-label">错误</div>
       <div class="stat-value danger">0</div>
     </div>
-    <div id="stat-warnings" class="kpi-card" onclick="switchToTab('issues')" style="cursor:pointer;">
+    <div id="stat-warnings" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
       <div class="kpi-icon">⚠️</div>
       <div class="kpi-label">警告</div>
       <div class="stat-value warning">0</div>
     </div>
-    <div id="stat-pending" class="kpi-card" onclick="switchToTab('issues')" style="cursor:pointer;">
+    <div id="stat-pending" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
       <div class="kpi-icon">⏳</div>
       <div class="kpi-label">待处理</div>
       <div class="stat-value primary">0</div>
@@ -101,7 +101,7 @@
 
         <!-- 驳回原因输入 -->
         <div id="reason-input-container" style="margin-top:1rem;display:none;">
-          <input id="review-reason" class="input" placeholder="请填写驳回原因">
+          <textarea id="review-reason" class="input" placeholder="请填写驳回原因" rows="3" style="width:100%;"></textarea>
         </div>
         {% endcall %}
 
@@ -121,8 +121,8 @@
         ]) %}
         <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
           <div>
-            <label style="font-weight:600;display:block;margin-bottom:0.3rem;">Sheet：</label>
-            <select id="view-sheet" class="input" style="width:180px;">
+            <label class="field-label">Sheet：</label>
+            <select id="view-sheet" class="input" class="w-180">
               <option value="签约">签约</option>
               <option value="POC&提前实施">POC&提前实施</option>
               <option value="异常项目">异常项目</option>
@@ -131,8 +131,8 @@
             </select>
           </div>
           <div style="flex:1;min-width:200px;">
-            <label style="font-weight:600;display:block;margin-bottom:0.3rem;">搜索：</label>
-            <input id="view-search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="width:100%;">
+            <label class="field-label">搜索：</label>
+            <input id="view-search" type="search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="width:100%;">
           </div>
           <button class="btn btn-primary" onclick="loadTable()">查询</button>
         </div>
@@ -141,19 +141,19 @@
 
         {% call card() %}
         <div id="data-table-container">
-          <p class="text-muted" style="text-align:center;padding:1rem;">选择月份和 Sheet 查看数据</p>
+          <p class="text-muted" class="text-center" style="padding:1rem;">选择月份和 Sheet 查看数据</p>
         </div>
-        <div id="pagination" style="margin-top:1rem;"></div>
+        <div id="pagination" class="mt-4"></div>
         {% endcall %}
       </div><!-- /Tab 2 -->
 
       <!-- Tab 3: 问题清单 -->
       <div class="tabs-panel" role="tabpanel" data-panel="issues" hidden>
         {% call card() %}
-        <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-row">
           <div>
-            <label style="font-weight:600;display:block;margin-bottom:0.3rem;">状态：</label>
-            <select id="filter-status" class="input" style="width:140px;">
+            <label class="field-label">状态：</label>
+            <select id="filter-status" class="input" class="w-140">
               <option value="">全部</option>
               <option value="PENDING">待处理</option>
               <option value="CONFIRMED">已确认</option>
@@ -161,8 +161,8 @@
             </select>
           </div>
           <div>
-            <label style="font-weight:600;display:block;margin-bottom:0.3rem;">严重度：</label>
-            <select id="filter-severity" class="input" style="width:140px;">
+            <label class="field-label">严重度：</label>
+            <select id="filter-severity" class="input" class="w-140">
               <option value="">全部</option>
               <option value="ERROR">错误</option>
               <option value="WARNING">警告</option>
@@ -175,7 +175,7 @@
         {% call card(title="审核问题") %}
         <div id="review-issues-stats" style="margin-bottom:1rem;" class="text-muted">请先选择月份查看问题</div>
         <div id="review-issues-list" class="text-muted">暂无审核问题</div>
-        <div id="issues-pagination" style="margin-top:1rem;"></div>
+        <div id="issues-pagination" class="mt-4"></div>
         {% endcall %}
       </div><!-- /Tab 3 -->
 
@@ -209,16 +209,26 @@ function switchToTab(tabName) {
 function confirmNewMonth() {
   var input = document.getElementById('new-month-input');
   var modeSel = document.getElementById('new-month-mode');
-  var m = input.value.trim();
+  var raw = input.value.trim();
+  // type=month 返回 YYYY-MM，转成后端要的 YYYYMM
+  var m = raw.replace('-', '');
   if (!m || !/^\d{6}$/.test(m)) {
-    toast.error('月份格式不正确，请输入 YYYYMM 格式，如 202606');
-    input.focus(); input.select();
+    Toast.error('请选择月份');
+    input.focus();
     return;
   }
   var mode = modeSel ? modeSel.value : 'auto';
   var monthSel = document.getElementById('month-select');
   var exists = monthSel ? monthSel.querySelector(`option[value="${m}"]`) : null;
-  if (exists && mode !== 'regenerate') { selectMonth(m); return; }
+  if (exists && mode !== 'regenerate') {
+    // 月份已存在：明确提示用户，而不是静默切换
+    Toast.info(`✅ ${m.slice(0,4)}年${m.slice(4)}月 已生成，已切换查看`);
+    selectMonth(m);
+    // 滚动到状态区，让用户看到结果
+    const statusCard = document.getElementById('status-card');
+    if (statusCard) statusCard.scrollIntoView({behavior: 'smooth', block: 'start'});
+    return;
+  }
   doGenerate(m, mode);
 }
 </script>
@@ -387,11 +397,20 @@ async function pollGenerateProgress() {
 }
 
 async function doGenerate(month, mode = 'auto') {
-  if (!month) { toast.error('请输入月份'); return; }
-  // mode 从参数传入
+  if (!month) { Toast.error('请输入月份'); return; }
+
   const st = document.getElementById('status-text');
   const progressContainer = document.getElementById('progress-container');
   const progressBar = document.querySelector('.progress-fill');
+  const statusCard = document.getElementById('status-card');
+  const btnRevalidate = document.getElementById('btn-revalidate');
+  const btnRegenerate = document.getElementById('btn-regenerate');
+  const btnExport = document.getElementById('btn-export-main');
+
+  if (!st) {
+    Toast.error('页面元素加载异常，请刷新后重试');
+    return;
+  }
 
   if (!month || !/^\d{6}$/.test(month)) {
     st.textContent = '⚠️ 请输入有效的月份（YYYYMM格式）';
@@ -401,11 +420,17 @@ async function doGenerate(month, mode = 'auto') {
   // 更新当前选中
   selectMonth(month);
 
-  document.getElementById('status-card').style.display = 'block';
+  // 禁用操作按钮，防止重复提交
+  if (btnRevalidate) btnRevalidate.disabled = true;
+  if (btnRegenerate) btnRegenerate.disabled = true;
+  if (btnExport) btnExport.disabled = true;
+
+  // 显示状态卡片
+  if (statusCard) statusCard.style.display = 'block';
   st.textContent = `准备生成（${mode}）...`;
-  progressContainer.style.display = 'block';
-  progressBar.style.width = '0%';
-  
+  if (progressContainer) progressContainer.style.display = 'block';
+  if (progressBar) progressBar.style.width = '0%';
+
   // 启动进度轮询（每秒更新一次）
   stopGeneratePolling();
   generatePollTimer = setInterval(() => pollGenerateProgress(), 1000);
@@ -418,50 +443,66 @@ async function doGenerate(month, mode = 'auto') {
     });
     const d = await r.json();
     currentJobId = d.job_id;
-    
+
     if (!r.ok) {
-      st.textContent = `⚠️ ${d.detail || d.error}`;
-      progressContainer.style.display = 'none';
+      st.textContent = `⚠️ ${d.detail || d.error || '生成失败'}`;
+      if (progressContainer) progressContainer.style.display = 'none';
       stopGeneratePolling();
+      // 恢复按钮状态
+      if (btnRevalidate) btnRevalidate.disabled = false;
+      if (btnRegenerate) btnRegenerate.disabled = false;
+      if (btnExport) btnExport.disabled = false;
+      Toast.error(d.detail || d.error || '生成失败');
       return;
     }
-    
+
     // 完成时进度条拉满
     if (progressBar) progressBar.style.width = '100%';
     st.innerHTML = `✅ <strong>${d.action}</strong> 完成，合计 <strong>${d.total_rows}</strong> 行`;
-    
+
     // 延迟半秒后隐藏进度条，让用户看到 100%
     setTimeout(() => {
-      progressContainer.style.display = 'none';
+      if (progressContainer) progressContainer.style.display = 'none';
     }, 500);
     stopGeneratePolling();
 
     // 显示 Sheet 明细
-    let h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem 1rem;font-size:0.875rem;">';
-    for (const [k, v] of Object.entries(d.sheets || {})) h += `<div style="padding:0.5rem;background:var(--c-surface-2);border-radius:var(--r-sm);">${k}: <strong style="color:var(--c-primary);">${v}</strong> 行</div>`;
-    h += '</div>';
-    document.getElementById('sheet-detail').innerHTML = h;
-    const sdCard = document.querySelector('#sheet-detail').closest('.card');
-    if (sdCard) sdCard.style.display = 'block';
+    const sheetDetail = document.getElementById('sheet-detail');
+    if (sheetDetail && d.sheets) {
+      let h = '<div class="detail-grid">';
+      for (const [k, v] of Object.entries(d.sheets)) {
+        h += `<div style="padding:0.5rem;background:var(--c-surface-2);border-radius:var(--r-sm);">${k}: <strong style="color:var(--c-primary);">${v}</strong> 行</div>`;
+      }
+      h += '</div>';
+      sheetDetail.innerHTML = h;
+      const sdCard = sheetDetail.closest('.card');
+      if (sdCard) sdCard.style.display = 'block';
+    }
 
     // 重新加载月份列表
     loadMonths();
     // 加载审核状态
     await loadReviewStatus(month);
     // 滚动到状态卡片
-    document.getElementById('status-card').scrollIntoView({behavior: 'smooth'});
+    if (statusCard) statusCard.scrollIntoView({behavior: 'smooth'});
     // toast 通知
-    if (window.toast) toast.success('生成完成');
+    Toast.success('生成完成');
   } catch (e) {
     stopGeneratePolling();
-    st.textContent = `失败: ${e}`;
-    progressContainer.style.display = 'none';
+    console.error('doGenerate error:', e);
+    st.textContent = `失败: ${e.message || e}`;
+    if (progressContainer) progressContainer.style.display = 'none';
+    // 恢复按钮状态
+    if (btnRevalidate) btnRevalidate.disabled = false;
+    if (btnRegenerate) btnRegenerate.disabled = false;
+    if (btnExport) btnExport.disabled = false;
+    Toast.error(`生成失败: ${e.message || e}`);
   }
 }
 
 function doRegenerate() {
   if (!currentMonth) {
-    toast.warning('请先选择月份');
+    Toast.warning('请先选择月份');
     return;
   }
   showConfirm('确认重新生成', `重新生成 ${currentMonth} 月报将覆盖现有数据，确定继续吗？`, function() {
@@ -530,17 +571,17 @@ async function loadReviewStatus(month) {
       document.getElementById('generated-at').textContent = '';
     }
 
-    // 更新按钮状态
+    // 更新按钮状态（全部加存在性检查，避免 DOM 不存在时报错中断）
     const btnApprove = document.getElementById('btn-approve');
     const btnReject = document.getElementById('btn-reject');
     const btnRevalidate = document.getElementById('btn-revalidate');
     const btnExport = document.getElementById('btn-export-main');
-
-    btnApprove.disabled = !(['validating', 'reviewing'].includes(status));
-    btnReject.disabled = !(['validating', 'reviewing'].includes(status));
-    btnRevalidate.disabled = ['not_started', 'generating'].includes(status);
-    btnExport.disabled = status !== 'approved';
     const btnRegenerate = document.getElementById('btn-regenerate');
+
+    if (btnApprove) btnApprove.disabled = !(['validating', 'reviewing'].includes(status));
+    if (btnReject) btnReject.disabled = !(['validating', 'reviewing'].includes(status));
+    if (btnRevalidate) btnRevalidate.disabled = ['not_started', 'generating'].includes(status);
+    if (btnExport) btnExport.disabled = status !== 'approved';
     if (btnRegenerate) btnRegenerate.disabled = ['not_started', 'generating'].includes(status);
 
     // 加载问题到问题 Tab
@@ -548,7 +589,7 @@ async function loadReviewStatus(month) {
       loadReviewIssues();
     } else if (status === 'approved') {
       document.getElementById('review-issues-list').innerHTML =
-        '<p style="color:var(--c-success);text-align:center;padding:1rem;">✅ 审核通过，无待处理问题</p>';
+        '<p class="success-tip">✅ 审核通过，无待处理问题</p>';
     }
   } catch (e) {
     console.warn('Failed to load review status:', e);
@@ -563,7 +604,7 @@ async function loadSheetDetail(month) {
     const target = (d.months || []).find(m => (m.month || m) === month || (typeof m === 'string' && m === month));
     if (!target || !target.row_counts) return;
     const counts = typeof target.row_counts === 'string' ? JSON.parse(target.row_counts) : target.row_counts;
-    let h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.5rem 1rem;font-size:0.875rem;">';
+    let h = '<div class="detail-grid">';
     for (const [k, v] of Object.entries(counts)) h += `<div>${k}: <strong>${v}</strong> 行</div>`;
     h += '</div>';
     document.getElementById('sheet-detail').innerHTML = h;
@@ -593,80 +634,80 @@ async function doApprove() {
   return;
 }
 
+let _approving = false;
 async function _doApprove(month) {
+  if (_approving) return;
+  _approving = true;
   try {
-  const r = await fetch(`/api/report/review-approve/${month}`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({reviewer: '人工审核'}),
-  });
-  const d = await r.json();
-  if (!r.ok) { toast.error(`审批失败: ${d.detail || d.error}`); return; }
-  toast.success('✅ 审核通过，已允许导出');
-  loadReviewStatus(month);
-  if (window.toast) toast.success('审批成功');
-  } catch (e) { toast.error(`失败: ${e}`); }
+    const r = await fetch(`/api/report/review-approve/${month}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({reviewer: '人工审核'}),
+    });
+    const d = await r.json();
+    if (!r.ok) { Toast.error(`审批失败: ${d.detail || d.error}`); return; }
+    Toast.success('✅ 审核通过，已允许导出');
+    loadReviewStatus(month);
+  } catch (e) { Toast.error(`失败: ${e}`); }
+  finally { _approving = false; }
 }
 
 async function doReject() {
   const month = currentMonth;
   if (!month) return;
   const container = document.getElementById('reason-input-container');
-  container.style.display = 'block';
-  container.scrollIntoView({behavior: 'smooth'});
   const reasonInput = document.getElementById('review-reason');
+  
+  // 第一次点击：展开输入框让用户填原因
   if (!reasonInput.value.trim()) {
+    container.style.display = 'block';
+    container.scrollIntoView({behavior: 'smooth'});
+    reasonInput.focus();
+    Toast.warning('请输入驳回原因');
     return;
   }
-  showConfirm('确认驳回', `确认驳回 ${month} 的交付月报？`, function() {
-    _doReject(month);
+  
+  const reason = reasonInput.value.trim();
+  showConfirm('确认驳回', `确认驳回 ${month} 的交付月报？\n原因：${reason}`, function() {
+    _doReject(month, reason, container, reasonInput);
   });
-  return;
+}
+
+let _rejecting = false;
+async function _doReject(month, reason, container, reasonInput) {
+  if (_rejecting) return;
+  _rejecting = true;
   try {
     const r = await fetch(`/api/report/review-reject/${month}`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({reason: reasonInput.value, reviewer: '人工审核'}),
+      body: JSON.stringify({reason: reason, reviewer: '人工审核'}),
     });
     const d = await r.json();
-    if (!r.ok) { toast.error(`驳回失败: ${d.detail || d.error}`); return; }
-    toast.success('已驳回，等待修正');
+    if (!r.ok) { Toast.error(`驳回失败: ${d.detail || d.error}`); return; }
+    Toast.success('已驳回，等待修正');
     loadReviewStatus(month);
     reasonInput.value = '';
     container.style.display = 'none';
-    if (window.toast) toast.success('已驳回');
-  } catch (e) { toast.error(`失败: ${e}`); }
+  } catch (e) { Toast.error(`失败: ${e}`); }
+  finally { _rejecting = false; }
 }
 
-async function _doReject(month) {
-  try {
-  const r = await fetch(`/api/report/review-reject/${month}`, {
-  method: 'POST',
-  headers: {'Content-Type': 'application/json'},
-  body: JSON.stringify({reason: reasonInput.value, reviewer: '人工审核'}),
-  });
-  const d = await r.json();
-  if (!r.ok) { toast.error(`驳回失败: ${d.detail || d.error}`); return; }
-  toast.success('已驳回，等待修正');
-  loadReviewStatus(month);
-  reasonInput.value = '';
-  container.style.display = 'none';
-  if (window.toast) toast.success('已驳回');
-  } catch (e) { toast.error(`失败: ${e}`); }
-}
-
+let _revalidating = false;
 async function doRevalidate() {
   const month = currentMonth;
   if (!month) return;
+  if (_revalidating) return;
+  _revalidating = true;
   try {
     const r = await fetch(`/api/report/revalidate/${month}`, {method: 'POST'});
     const d = await r.json();
-    if (!r.ok) { toast.error(`重新校验失败: ${d.detail || d.error}`); return; }
-    toast.success('✅ 重新校验完成');
+    if (!r.ok) { Toast.error(`重新校验失败: ${d.detail || d.error}`); return; }
+    Toast.success('✅ 重新校验完成');
     loadReviewStatus(month);
     loadReviewIssues();
-    if (window.toast) toast.success('重新校验完成');
-  } catch (e) { toast.error(`失败: ${e}`); }
+  } catch (e) { Toast.error(`失败: ${e}`); }
+  finally { _revalidating = false; }
 }
 
 // ========== 数据浏览 ==========
@@ -675,12 +716,12 @@ async function loadTable() {
   const sheet = document.getElementById('view-sheet').value || '签约';
   if (!month) {
     document.getElementById('data-table-container').innerHTML =
-      '<p class="text-muted" style="text-align:center;">请先选择月份</p>';
+      '<p class="text-muted" class="text-center">请先选择月份</p>';
     return;
   }
 
   const container = document.getElementById('data-table-container');
-  container.innerHTML = '<p class="text-muted" style="text-align:center;">加载中...</p>';
+  container.innerHTML = '<p class="text-muted" class="text-center">加载中...</p>';
 
   currentPage = 1;
   await fetchPage(month, sheet, currentPage);
@@ -700,7 +741,7 @@ async function fetchPage(month, sheet, page) {
     const r = await fetch(`/api/report/data/${month}/${encodeURIComponent(sheet)}?${params.toString()}`);
     if (!r.ok) {
       const err = await r.json();
-      container.innerHTML = `<p style="color:var(--c-danger);text-align:center;">⚠️ ${err.detail || '加载失败'}</p>`;
+      container.innerHTML = `<p class="error-tip">⚠️ ${err.detail || '加载失败'}</p>`;
       pagContainer.innerHTML = '';
       return;
     }
@@ -709,7 +750,7 @@ async function fetchPage(month, sheet, page) {
     totalPages = d.total_pages;
 
     if (!d.rows || d.rows.length === 0) {
-      container.innerHTML = `<p class="text-muted" style="text-align:center;padding:1rem;">无数据${search ? `（搜索: "${search}"）` : ''}</p>`;
+      container.innerHTML = `<p class="text-muted" class="text-center" style="padding:1rem;">无数据${search ? `（搜索: "${search}"）` : ''}</p>`;
       pagContainer.innerHTML = '';
       return;
     }
@@ -733,7 +774,7 @@ async function fetchPage(month, sheet, page) {
     // 分页
     renderPagination(pagContainer, month, sheet, totalPages, currentPage);
   } catch (e) {
-    container.innerHTML = `<p style="color:var(--c-danger);text-align:center;">⚠️ ${e.message}</p>`;
+    container.innerHTML = `<p class="error-tip">⚠️ ${e.message}</p>`;
   }
 }
 
@@ -792,13 +833,13 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadReviewIssues(page = 1, pageSize = 50) {
   if (!currentMonth) {
     document.getElementById('review-issues-list').innerHTML =
-      '<p class="text-muted" style="text-align:center;padding:1rem;">请先在左侧选择月份</p>';
+      '<p class="text-muted" class="text-center" style="padding:1rem;">请先在左侧选择月份</p>';
     return;
   }
 
   const container = document.getElementById('review-issues-list');
   const statsContainer = document.getElementById('review-issues-stats');
-  container.innerHTML = '<p class="text-muted" style="text-align:center;">加载中...</p>';
+  container.innerHTML = '<p class="text-muted" class="text-center">加载中...</p>';
 
   const statusFilter = document.getElementById('filter-status').value;
   const severityFilter = document.getElementById('filter-severity').value;
@@ -811,7 +852,7 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
     const d = await r.json();
 
     if (!d.issues || d.issues.length === 0) {
-      container.innerHTML = '<p style="color:var(--c-success);text-align:center;padding:1rem;">✅ 无匹配问题</p>';
+      container.innerHTML = '<p class="success-tip">✅ 无匹配问题</p>';
       statsContainer.textContent =
         `共 ${d.total || 0} 个问题`;
       document.getElementById('issues-pagination').innerHTML = '';
@@ -822,10 +863,15 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
       `共 ${d.total} 个问题（待处理 ${d.pending} / 已确认 ${d.confirmed} / 已驳回 ${d.rejected}）`;
 
     let html = `<div class="table-wrapper"><table class="table"><thead><tr>
-      <th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th></tr></thead><tbody>`;
+      <th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th><th>操作</th></tr></thead><tbody>`;
 
     d.issues.forEach(issue => {
       const severityColor = issue.severity === 'ERROR' ? 'var(--c-danger)' : 'var(--c-warning)';
+      const isPending = issue.status === 'pending';
+      const actionBtns = isPending
+        ? `<button class="btn btn-sm btn-success" onclick="resolveIssue(${issue.id}, 'confirm')" style="margin-right:0.25rem;">确认</button>`
+          + `<button class="btn btn-sm" onclick="resolveIssue(${issue.id}, 'reject')" style="border-color:var(--c-danger);color:var(--c-danger);">驳回</button>`
+        : `<span class="text-muted" style="font-size:0.85rem;">${issue.status === 'confirmed' ? '✅ 已确认' : '🗑 已驳回'}</span>`;
       html += `<tr>
         <td>${issue.sheet}</td>
         <td>${issue.row_index}</td>
@@ -833,6 +879,7 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
         <td style="color:${severityColor};font-weight:500;">${issue.message}</td>
         <td>${issue.original_value || '-'}</td>
         <td>${issue.status}</td>
+        <td>${actionBtns}</td>
       </tr>`;
     });
 
@@ -847,7 +894,7 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
       pagContainer.innerHTML = '';
     }
   } catch (e) {
-    container.innerHTML = `<p style="color:var(--c-danger);text-align:center;">⚠️ 加载失败: ${e.message}</p>`;
+    container.innerHTML = `<p class="error-tip">⚠️ 加载失败: ${e.message}</p>`;
   }
 }
 
@@ -876,6 +923,30 @@ function renderPagination(container, month, sheet, totalPages, current, onClick)
   });
 
   function __pagClick(p) { return p; }
+}
+
+// ========== issue 状态流转（确认/驳回） ==========
+async function resolveIssue(issueId, action) {
+  if (!currentMonth) return;
+  const actionLabel = action === 'confirm' ? '确认' : '驳回';
+  const hint = action === 'confirm' ? '确认后不再计入待处理。' : '驳回后视为误报，不再计入待处理。';
+  showConfirm(`处理问题 #${issueId}`, `确定${actionLabel}该问题？${hint}`, async function() {
+    try {
+      const r = await fetch(`/api/report/review-issues/${currentMonth}/${issueId}/resolve`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action, operator: '人工处理'})
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || '处理失败');
+      Toast.success(`✅ ${actionLabel}成功${d.changed === false ? '（已处理过）' : ''}`);
+      // 刷新问题列表 + 顶部 KPI（loadReviewStatus 会重算 total_errors/pending_fixes）
+      loadReviewIssues();
+      loadReviewStatus(currentMonth);
+    } catch (e) {
+      Toast.error(`❌ ${actionLabel}失败: ${e.message}`);
+    }
+  });
 }
 </script>
 {% endblock %}

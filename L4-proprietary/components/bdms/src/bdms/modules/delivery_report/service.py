@@ -125,6 +125,88 @@ class DeliveryReportService:
         finally:
             conn.close()
 
+    def resolve_issue(self, month: str, issue_id: int, action: str,
+                      operator: str = "") -> dict:
+        """单条 issue 状态流转：confirm（确认/确认错误无误）或 reject（驳回/误报）。
+
+        同时重算 pending_fixes，保持 dr_review_status 与明细表一致。
+        """
+        if action not in ("confirm", "reject"):
+            raise ValueError(f"未知 action: {action}，仅支持 confirm / reject")
+        target_status = "confirmed" if action == "confirm" else "rejected"
+
+        conn = _db.get_connection(self.db_path)
+        try:
+            # 检查 issue 是否存在且属于该 month
+            row = conn.execute(
+                "SELECT id, status FROM dr_import_validation "
+                "WHERE id = ? AND month = ?",
+                (issue_id, month)
+            ).fetchone()
+            if not row:
+                raise ValueError(f"issue {issue_id} 不存在或不属于 {month}")
+
+            # 已处理过的不再重复处理（幂等）
+            if row["status"] == target_status:
+                return {"id": issue_id, "status": target_status, "changed": False}
+
+            # 更新状态
+            conn.execute(
+                "UPDATE dr_import_validation SET status=?, operator=?, "
+                "resolved_at=datetime('now','localtime') WHERE id = ?",
+                (target_status, operator, issue_id)
+            )
+
+            # 重算 pending_fixes
+            pending_count = conn.execute(
+                "SELECT COUNT(*) FROM dr_import_validation "
+                "WHERE month = ? AND status = 'pending'",
+                (month,)
+            ).fetchone()[0]
+            conn.execute(
+                "UPDATE dr_review_status SET pending_fixes = ? WHERE month = ?",
+                (pending_count, month)
+            )
+            conn.commit()
+            return {"id": issue_id, "status": target_status,
+                    "pending_fixes": pending_count, "changed": True}
+        finally:
+            conn.close()
+
+    def batch_resolve_issues(self, month: str, issue_ids: List[int],
+                             action: str, operator: str = "") -> dict:
+        """批量处理 issue。"""
+        if not issue_ids:
+            return {"updated": 0, "pending_fixes": 0}
+        if action not in ("confirm", "reject"):
+            raise ValueError(f"未知 action: {action}")
+        target_status = "confirmed" if action == "confirm" else "rejected"
+        placeholders = ",".join("?" * len(issue_ids))
+
+        conn = _db.get_connection(self.db_path)
+        try:
+            conn.execute(
+                f"UPDATE dr_import_validation SET status=?, operator=?, "
+                f"resolved_at=datetime('now','localtime') "
+                f"WHERE month = ? AND id IN ({placeholders}) AND status != ?",
+                [target_status, operator, month, *issue_ids, target_status]
+            )
+            updated = conn.total_changes
+
+            pending_count = conn.execute(
+                "SELECT COUNT(*) FROM dr_import_validation "
+                "WHERE month = ? AND status = 'pending'",
+                (month,)
+            ).fetchone()[0]
+            conn.execute(
+                "UPDATE dr_review_status SET pending_fixes = ? WHERE month = ?",
+                (pending_count, month)
+            )
+            conn.commit()
+            return {"updated": updated, "pending_fixes": pending_count}
+        finally:
+            conn.close()
+
     def revalidate(self, month: str) -> dict:
         """人工触发：重新校验（修正后验证）。"""
         validator = DeliveryReportValidator(self.db_path)
@@ -134,18 +216,27 @@ class DeliveryReportService:
         try:
             conn.execute(
                 "UPDATE dr_review_status SET status='validating', "
-                "total_errors=?, total_warnings=?, pending_fixes=?, "
-                "updated_at=datetime('now','localtime') WHERE month=?",
+                "total_errors=?, total_warnings=?, updated_at=datetime('now','localtime') "
+                "WHERE month=?",
                 (result["summary"]["total_errors"],
                  result["summary"]["total_warnings"],
-                 result["summary"]["total_errors"],
                  month)
+            )
+            # 重算 pending_fixes（取明细表 pending 状态数）
+            pending_count = conn.execute(
+                "SELECT COUNT(*) FROM dr_import_validation "
+                "WHERE month = ? AND status = 'pending'",
+                (month,)
+            ).fetchone()[0]
+            conn.execute(
+                "UPDATE dr_review_status SET pending_fixes = ? WHERE month = ?",
+                (pending_count, month)
             )
             conn.commit()
         finally:
             conn.close()
 
-        return {"month": month, "validation": result}
+        return {"month": month, "validation": result, "pending_fixes": pending_count}
 
     # ──────────────────────────────────────────────────────
     #  原有方法
