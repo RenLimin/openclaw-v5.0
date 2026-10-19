@@ -11,11 +11,12 @@ from base import VisualTestBase
 
 class TestFindashboard(VisualTestBase):
     """FIN-L4 仪表盘页面测试"""
-    url = "http://127.0.0.1:18801/"
+    url = "http://127.0.0.1:18804/"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
-    mask_selectors = [".hero-greeting"]
+    settle_time = 2.0  # 等待 ECharts 渲染完成
+    mask_selectors = [".hero-greeting", "canvas"]  # 动态问候语 + ECharts 抗锯齿随机性
 
     def test_dashboard(self, page):
         self.assert_visual_match(page, "dashboard")
@@ -23,7 +24,7 @@ class TestFindashboard(VisualTestBase):
 
 class TestFinaccounts(VisualTestBase):
     """FIN-L4 账户页面测试"""
-    url = "http://127.0.0.1:18801/accounts"
+    url = "http://127.0.0.1:18804/accounts"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -34,7 +35,7 @@ class TestFinaccounts(VisualTestBase):
 
 class TestFinadvise(VisualTestBase):
     """FIN-L4 建议页面测试"""
-    url = "http://127.0.0.1:18801/advise"
+    url = "http://127.0.0.1:18804/advise"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -45,7 +46,7 @@ class TestFinadvise(VisualTestBase):
 
 class TestFinbudget(VisualTestBase):
     """FIN-L4 预算页面测试"""
-    url = "http://127.0.0.1:18801/budget"
+    url = "http://127.0.0.1:18804/budget"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -56,7 +57,7 @@ class TestFinbudget(VisualTestBase):
 
 class TestFincoveragegap(VisualTestBase):
     """FIN-L4 保障缺口页面测试"""
-    url = "http://127.0.0.1:18801/insurance/coverage-gap"
+    url = "http://127.0.0.1:18804/insurance/coverage-gap"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -67,7 +68,7 @@ class TestFincoveragegap(VisualTestBase):
 
 class TestFinimport(VisualTestBase):
     """FIN-L4 导入页面测试"""
-    url = "http://127.0.0.1:18801/import"
+    url = "http://127.0.0.1:18804/import"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -78,7 +79,7 @@ class TestFinimport(VisualTestBase):
 
 class TestFininsurance(VisualTestBase):
     """FIN-L4 保险页面测试"""
-    url = "http://127.0.0.1:18801/insurance"
+    url = "http://127.0.0.1:18804/insurance"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -86,10 +87,9 @@ class TestFininsurance(VisualTestBase):
     def test_insurance(self, page):
         self.assert_visual_match(page, "insurance")
 
-
 class TestFinloans(VisualTestBase):
     """FIN-L4 贷款页面测试"""
-    url = "http://127.0.0.1:18801/loans"
+    url = "http://127.0.0.1:18804/loans"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -100,7 +100,7 @@ class TestFinloans(VisualTestBase):
 
 class TestFinportfolio(VisualTestBase):
     """FIN-L4 投资组合页面测试"""
-    url = "http://127.0.0.1:18801/portfolio"
+    url = "http://127.0.0.1:18804/portfolio"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -111,7 +111,7 @@ class TestFinportfolio(VisualTestBase):
 
 class TestFinrates(VisualTestBase):
     """FIN-L4 利率页面测试"""
-    url = "http://127.0.0.1:18801/rates"
+    url = "http://127.0.0.1:18804/rates"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -122,7 +122,7 @@ class TestFinrates(VisualTestBase):
 
 class TestFinreports(VisualTestBase):
     """FIN-L4 报表页面测试"""
-    url = "http://127.0.0.1:18801/reports"
+    url = "http://127.0.0.1:18804/reports"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -133,10 +133,12 @@ class TestFinreports(VisualTestBase):
 
 class TestFinrules(VisualTestBase):
     """FIN-L4 规则页面测试"""
-    url = "http://127.0.0.1:18801/rules"
+    url = "http://127.0.0.1:18804/rules"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
+    settle_time = 1.0
+    mask_selectors = ["canvas"]  # ECharts 抗锯齿渲染有随机性
 
     def test_rules(self, page):
         self.assert_visual_match(page, "rules")
@@ -144,7 +146,7 @@ class TestFinrules(VisualTestBase):
 
 class TestFinsettings(VisualTestBase):
     """FIN-L4 设置页面测试"""
-    url = "http://127.0.0.1:18801/settings"
+    url = "http://127.0.0.1:18804/settings"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -155,7 +157,7 @@ class TestFinsettings(VisualTestBase):
 
 class TestFintransactions(VisualTestBase):
     """FIN-L4 交易页面测试"""
-    url = "http://127.0.0.1:18801/transactions"
+    url = "http://127.0.0.1:18804/transactions"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"

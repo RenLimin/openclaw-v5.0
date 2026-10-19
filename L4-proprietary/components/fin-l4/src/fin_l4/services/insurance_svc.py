@@ -1,6 +1,7 @@
 
 """保险服务 — 调用 FIN-003 引擎"""
 
+import re
 from decimal import Decimal
 from typing import List, Dict, Optional
 from fin003_insurance import InsuranceEngine, InsuranceType
@@ -17,6 +18,30 @@ TYPE_MAP = {
     "universal_life": InsuranceType.UNIVERSAL_LIFE,
     "tax_deferred": InsuranceType.TAX_DEFERRED,
 }
+
+
+def _parse_amount(raw) -> Decimal:
+    """容错解析金额字段
+
+    数据库中的 sum_assured 可能是多种格式：
+    - "600000" 纯数字
+    - "600000元" 带货币单位
+    - "215527.86元" 带小数+单位
+    - "参见条款" / "" / None 等非数值占位
+
+    解析失败时返回 0，不中断页面渲染。
+    """
+    if raw is None:
+        return Decimal("0")
+    text = str(raw).strip()
+    # 提取数字部分（含小数点和负号），兼容 "1,234.56元" 千分位格式
+    cleaned = re.sub(r"[^0-9.\-]", "", text)
+    if not cleaned or cleaned in {".", "-", "-."}:
+        return Decimal("0")
+    try:
+        return Decimal(cleaned)
+    except Exception:
+        return Decimal("0")
 
 
 class InsuranceService:
@@ -189,7 +214,7 @@ class InsuranceService:
             if pol["status"] != "active":
                 continue
             ptype = pol["policy_type"]
-            coverage[ptype] = coverage.get(ptype, Decimal("0")) + Decimal(pol["sum_assured"])
+            coverage[ptype] = coverage.get(ptype, Decimal("0")) + _parse_amount(pol["sum_assured"])
 
         gaps = []
         for ptype, recommended in recommendations.items():

@@ -150,21 +150,21 @@ async def page_contracts(request: Request):
     })
 
 
-@app.get("/contracts/{contract_id}", response_class=HTMLResponse)
-async def page_contract_detail(request: Request, contract_id: int):
-    return templates.TemplateResponse(request, "contract_detail.html", {
-        "request": request,
-        "active_page": "contracts",
-        "contract_id": contract_id,
-    })
-
-
 @app.get("/new", response_class=HTMLResponse)
 @app.get("/contracts/new", response_class=HTMLResponse)
 async def page_new_contract(request: Request):
     return templates.TemplateResponse(request, "contract_new.html", {
         "request": request,
         "active_page": "new",
+    })
+
+
+@app.get("/contracts/{contract_id}", response_class=HTMLResponse)
+async def page_contract_detail(request: Request, contract_id: int):
+    return templates.TemplateResponse(request, "contract_detail.html", {
+        "request": request,
+        "active_page": "contracts",
+        "contract_id": contract_id,
     })
 
 

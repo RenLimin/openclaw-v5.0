@@ -174,20 +174,39 @@
 
 ## 6. 最终验证结果
 
-### 6.1 全量视觉回归测试结果
+### 6.1 全量视觉回归测试结果（2026-10-19 实跑，三轮全绿）
 
 | # | 业务系统 | 测试用例数 | 状态 |
 |---|---|---|---|
-| 1 | BDMS | 8 | ✅ 全部通过 |
+| 1 | BDMS | 7 | ✅ 全部通过 |
 | 2 | examples | 1 | ✅ 通过 |
 | 3 | bangcle-ppt | 3 | ✅ 全部通过 |
-| 4 | cissp-trainer | 6 | ✅ 全部通过 |
+| 4 | cissp-trainer | 5 | ✅ 全部通过 |
 | 5 | delivery-center | 3 | ✅ 全部通过 |
 | 6 | fin-l4 | 14 | ✅ 全部通过 |
-| 7 | office-contract | 4 | ✅ 全部通过 |
+| 7 | office-contract | 5 | ✅ 全部通过 |
 | **总计** | **-** | **38** | **✅ 全部通过** |
 
-所有业务系统后端服务已正常启动，38 个测试用例全量通过视觉回归验证，新基准图已更新。
+所有 7 个业务系统后端服务均已启动并通过 tmux 常驻运行（BDMS:8000 / PPT:18801 / CISSP:18802 / DC:18803 / FIN:18804 / OC:18805），38 个测试用例连续三轮全量验证均 100% 通过（幂等性验证通过）。
+
+### 6.2 假通过根因修复（本次重点）
+
+**核心问题**：测试框架首跑时基准图不存在，直接把**任何页面（含 404/500 错误页）存成基准图并判通过**，导致此前记录的"38/38 全绿""53/53 全绿"均为假数据——大量测试实际访问的是错误页。
+
+**修复清单**：
+
+| # | 修复项 | 影响 |
+|---|---|---|
+| 1 | `base.py` 增加 HTTP 200 状态码校验，非 200 直接判失败，禁止错误页存为基准图 | 堵死假通过机制根因 |
+| 2 | 修正 3 个测试文件端口映射（PPT/FIN/OC 串台） | 约 30 个用例从连接拒绝变正常 |
+| 3 | 修正 6 个测试文件 URL（PPT `/generate`→`/generator`、BDMS `/masterdata`→`/master-data` 等） | 12 个用例从 404 变真实页面 |
+| 4 | 删除 12 个应用不存在的页面测试（CISSP modules/progress/reports、FIN tax/categories/tags/currencies/debt 等） | 用例数与真实路由对齐 |
+| 5 | 修复 FIN 路由顺序 bug（`/insurance/coverage-gap` 被 `{policy_id}` 抢先匹配→400） | coverage-gap 页面从 400 恢复 200 |
+| 6 | 修复 FIN `Decimal(sum_assured)` 崩溃（数据库存"600000元"等中文金额，新增 `_parse_amount` 容错解析） | coverage-gap 页面从 500 恢复 200 |
+| 7 | 修复 OC 路由顺序 bug（`/contracts/new` 被 `{contract_id}` 抢先匹配→422） | contracts/new 从 422 恢复 200 |
+| 8 | 创建 OC 缺失的 `risk_rules.html` 模板 | risk-rules 从 500 恢复 200 |
+| 9 | 修复 canvas mask 机制（`visibility:hidden` 替代 `textContent=''`） | Chart.js/ECharts 抗锯齿渲染随机性不再导致误报 |
+| 10 | 清理 24 个假基准图（错误页），重新生成真实基准图 | golden 目录与真实页面对齐 |
 
 ## 7. 相关文档
 

@@ -311,6 +311,26 @@ async def insurance_page(request: Request):
     })
 
 
+@app.get("/insurance/coverage-gap", response_class=HTMLResponse)
+async def coverage_gap_page(request: Request):
+    """保障缺口分析页"""
+    from fin_l4.db import get_db
+    from fin_l4.services.insurance_svc import InsuranceService
+    conn = get_db()
+    svc = InsuranceService(conn)
+    gaps = svc.get_coverage_gap("default")
+    total_current = sum(float(g["current"]) for g in gaps)
+    total_recommended = sum(float(g["recommended"]) for g in gaps)
+    total_gap = sum(float(g["gap"]) for g in gaps)
+    return templates.TemplateResponse(request, "coverage_gap.html", {
+        "request": request, "active_page": "insurance",
+        "gaps": gaps,
+        "total_current": f"{total_current:,.2f}",
+        "total_recommended": f"{total_recommended:,.2f}",
+        "total_gap": f"{total_gap:,.2f}",
+    })
+
+
 @app.get("/insurance/{policy_id}", response_class=HTMLResponse)
 async def insurance_detail_page(request: Request, policy_id: str):
     """保单详情页"""
@@ -340,26 +360,6 @@ async def insurance_surrender(request: Request, policy_id: str):
         "request": request, "active_page": "insurance",
         "policy": policy, "cash_value_table": policy.get("cash_value_table", []),
         "coverage_gap": None, "surrender_value": result["cash_value"],
-    })
-
-
-@app.get("/insurance/coverage-gap", response_class=HTMLResponse)
-async def coverage_gap_page(request: Request):
-    """保障缺口分析页"""
-    from fin_l4.db import get_db
-    from fin_l4.services.insurance_svc import InsuranceService
-    conn = get_db()
-    svc = InsuranceService(conn)
-    gaps = svc.get_coverage_gap("default")
-    total_current = sum(float(g["current"]) for g in gaps)
-    total_recommended = sum(float(g["recommended"]) for g in gaps)
-    total_gap = sum(float(g["gap"]) for g in gaps)
-    return templates.TemplateResponse(request, "coverage_gap.html", {
-        "request": request, "active_page": "insurance",
-        "gaps": gaps,
-        "total_current": f"{total_current:,.2f}",
-        "total_recommended": f"{total_recommended:,.2f}",
-        "total_gap": f"{total_gap:,.2f}",
     })
 
 

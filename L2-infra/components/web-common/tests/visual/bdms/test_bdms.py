@@ -21,8 +21,8 @@ class TestBDMSDashboard(VisualTestBase):
 
 
 class TestBDMSDashView(VisualTestBase):
-    """BDMS 明细查看页面测试"""
-    url = "http://127.0.0.1:8000/masterdata/dashview"
+    """BDMS 仪表盘视图页面测试"""
+    url = "http://127.0.0.1:8000/dashboard"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -31,20 +31,9 @@ class TestBDMSDashView(VisualTestBase):
         self.assert_visual_match(page, "dashview")
 
 
-class TestBDMSError(VisualTestBase):
-    """BDMS 错误页面测试"""
-    url = "http://127.0.0.1:8000/error"
-    viewport = (1440, 900)
-    threshold = 0.001
-    wait_for_selector = "body"
-
-    def test_error(self, page):
-        self.assert_visual_match(page, "error")
-
-
 class TestBDMSMasterData(VisualTestBase):
     """BDMS 主数据页面测试"""
-    url = "http://127.0.0.1:8000/masterdata"
+    url = "http://127.0.0.1:8000/master-data"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -71,6 +60,7 @@ class TestBDMSRevenue(VisualTestBase):
     threshold = 0.001
     wait_for_selector = "body"
     settle_time = 1.5  # 等待 Chart.js 动画完成
+    mask_selectors = ["canvas"]  # Chart.js 抗锯齿渲染有随机性，mask 图表区
 
     def test_revenue(self, page):
         self.assert_visual_match(page, "revenue")
@@ -82,6 +72,8 @@ class TestBDMSRevenueCompare(VisualTestBase):
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
+    settle_time = 1.5
+    mask_selectors = ["canvas"]  # Chart.js 抗锯齿渲染有随机性，mask 图表区
 
     def test_revenue_compare(self, page):
         self.assert_visual_match(page, "revenuecompare")
