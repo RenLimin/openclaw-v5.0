@@ -33,7 +33,7 @@ class TestDCGenerate(VisualTestBase):
 
 class TestDCReportDetail(VisualTestBase):
     """Delivery Center 报表详情页面测试"""
-    url = "http://127.0.0.1:18803/report/detail"
+    url = "http://127.0.0.1:18803/reports/1"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"

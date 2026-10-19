@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, table with context %}
+
+{% block content %}
+{{ page_header(
+    title="风险规则配置",
+    subtitle="管理合同风险扫描规则与阈值",
+    actions=[{"label": "← 返回", "onclick": "history.back()", "variant": ""}]
+) }}
+
+<div class="grid-2">
+    {% call card(title="⚖️ 审批级别规则") %}
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>金额区间</th>
+                        <th>审批层级</th>
+                        <th>审批角色</th>
+                        <th>SLA</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="mono">0 ~ 10万</td>
+                        <td>1 级</td>
+                        <td>销售经理</td>
+                        <td>1 个工作日</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">10万 ~ 50万</td>
+                        <td>2 级</td>
+                        <td>销售经理、法务审查员</td>
+                        <td>2 个工作日</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">50万 ~ 200万</td>
+                        <td>3 级</td>
+                        <td>销售总监、法务审查员、财务经理</td>
+                        <td>3 个工作日</td>
+                    </tr>
+                    <tr>
+                        <td class="mono">200万以上</td>
+                        <td>4 级</td>
+                        <td>VP/CEO、法务总监、财务总监</td>
+                        <td>5 个工作日</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% endcall %}
+
+    {% call card(title="🚨 风险扫描规则") %}
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>规则</th>
+                        <th>说明</th>
+                        <th>级别</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>无违约条款</td>
+                        <td>合同缺少违约责任条款</td>
+                        <td><span class="badge badge-warning">中</span></td>
+                    </tr>
+                    <tr>
+                        <td>无争议解决条款</td>
+                        <td>合同缺少争议解决方式约定</td>
+                        <td><span class="badge badge-warning">中</span></td>
+                    </tr>
+                    <tr>
+                        <td>付款条件不利</td>
+                        <td>预付款比例过高或账期过长</td>
+                        <td><span class="badge badge-danger">高</span></td>
+                    </tr>
+                    <tr>
+                        <td>无限责任条款</td>
+                        <td>未约定责任上限</td>
+                        <td><span class="badge badge-danger">高</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="text-muted" style="margin-top: var(--s-4); font-size: 0.85rem;">
+            规则阈值可在后台配置中心调整，保存后即时生效。
+        </div>
+    {% endcall %}
+</div>
+
+{% endblock %}

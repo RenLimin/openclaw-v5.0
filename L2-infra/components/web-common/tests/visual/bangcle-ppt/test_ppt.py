@@ -11,7 +11,7 @@ from base import VisualTestBase
 
 class TestPPTIndex(VisualTestBase):
     """Bangcle PPT 首页测试"""
-    url = "http://127.0.0.1:18805/"
+    url = "http://127.0.0.1:18801/"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -22,7 +22,7 @@ class TestPPTIndex(VisualTestBase):
 
 class TestPPTGenerator(VisualTestBase):
     """Bangcle PPT 生成页面测试"""
-    url = "http://127.0.0.1:18805/generate"
+    url = "http://127.0.0.1:18801/generator"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
@@ -32,8 +32,8 @@ class TestPPTGenerator(VisualTestBase):
 
 
 class TestPPTDetail(VisualTestBase):
-    """Bangcle PPT 详情页面测试"""
-    url = "http://127.0.0.1:18805/detail/1"
+    """Bangcle PPT 模板详情页面测试"""
+    url = "http://127.0.0.1:18801/templates/demo"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"

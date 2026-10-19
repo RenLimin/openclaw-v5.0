@@ -113,13 +113,24 @@ class VisualTestBase:
         return True, diff_ratio, None
 
     def mask_dynamic_content(self, page):
-        """隐藏动态内容区域，避免误报"""
+        """隐藏动态内容区域，避免误报
+
+        对不同类型元素采用不同策略：
+        - canvas / svg: 用 visibility:hidden 隐藏，保留布局占位但不参与像素对比
+        - 动态文本/图片: 清空内容 + 半透明黑色背景
+        """
         for selector in self.mask_selectors:
             page.evaluate("""(selector) => {
                 document.querySelectorAll(selector).forEach(el => {
-                    el.style.backgroundColor = '#000000';
-                    el.style.opacity = '0.5';
-                    el.textContent = '';
+                    const tag = el.tagName;
+                    if (tag === 'CANVAS' || tag === 'SVG') {
+                        // 图表类元素：隐藏渲染内容，保留布局占位
+                        el.style.visibility = 'hidden';
+                    } else {
+                        el.style.backgroundColor = '#000000';
+                        el.style.opacity = '0.5';
+                        el.textContent = '';
+                    }
                 });
             }""", selector)
 
@@ -132,7 +143,17 @@ class VisualTestBase:
 
         # 导航到测试页面
         full_url = self.get_full_url()
-        page.goto(full_url, wait_until="networkidle")
+        response = page.goto(full_url, wait_until="networkidle")
+
+        # HTTP 状态码校验：非 200 一律视为失败，禁止错误页存为基准图
+        if response is None:
+            pytest.fail(f"页面无响应: {full_url}")
+        status = response.status
+        if status != 200:
+            pytest.fail(
+                f"页面返回非 200 状态码 ({status})，拒绝作为视觉基准: {full_url}\n"
+                f"请检查路由是否真实存在，或服务是否正常启动"
+            )
 
         # 等待指定元素出现
         if self.wait_for_selector:
