@@ -185,6 +185,41 @@ async def report_revalidate(month: str):
     return DeliveryReportService().revalidate(month)
 
 
+class IssueResolveRequest(BaseModel):
+    action: str  # confirm | reject
+    operator: str = ""
+
+
+class IssueBatchResolveRequest(BaseModel):
+    issue_ids: list[int]
+    action: str  # confirm | reject
+    operator: str = ""
+
+
+@router.post("/report/review-issues/{month}/{issue_id}/resolve")
+async def report_resolve_issue(month: str, issue_id: int, req: IssueResolveRequest):
+    """单条 issue 状态流转：confirm（确认）或 reject（驳回/误报）。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    try:
+        return DeliveryReportService().resolve_issue(
+            month, issue_id, req.action, req.operator)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/report/review-issues/{month}/batch-resolve")
+async def report_batch_resolve_issues(month: str, req: IssueBatchResolveRequest):
+    """批量处理 issue。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    try:
+        return DeliveryReportService().batch_resolve_issues(
+            month, req.issue_ids, req.action, req.operator)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 @router.get("/report/data/{month}/{sheet}")
 async def report_data(month: str, sheet: str, page: int = 1, page_size: int = 50, search: str = ""):
     """获取某月某 Sheet 的数据（分页 + 搜索）。"""
