@@ -11,12 +11,12 @@
 ) }}
 
 {% call card(title="查询") %}
-<div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+<div class="form-row">
   <div>
-    <label style="font-weight:600;display:block;margin-bottom:0.3rem;">月份</label>
-    <select id="rv-month" class="input" style="max-width:180px;"></select>
-    <label style="font-weight:600;margin-left:1rem;">格式：</label>
-    <select id="rv-format" class="input" style="width:120px;">
+    <label class="field-label">月份</label>
+    <select id="rv-month" class="input" class="maxw-180"></select>
+    <label class="fw-600 ml-2">格式：</label>
+    <select id="rv-format" class="input" class="w-120">
       <option value="YYYYMM">YYYYMM</option>
       <option value="YYYY年MM月">YYYY年MM月</option>
     </select>
@@ -25,14 +25,14 @@
   <button class="btn" onclick="exportRevenue()">导出 Excel</button>
   <button class="btn" onclick="doImport()">从源表导入</button>
 </div>
-<div id="rv-status" style="margin-top:0.8rem;color:var(--c-muted);"></div>
+<div id="rv-status" class="mt-3 text-muted"></div>
 {% endcall %}
 
 {% call card(title="月度汇总") %}
 <div style="height:320px;">
   <canvas id="chart-revenue"></canvas>
 </div>
-<div id="rv-table" style="margin-top:1rem;"></div>
+<div id="rv-table" class="mt-4"></div>
 {% endcall %}
 
 {% call card(title="小计") %}
@@ -73,10 +73,14 @@ async function loadMonths() {
 
 let selectedMonth = '';
 
-async function loadSummary() {
+async function loadSummary(silent) {
   const month = document.getElementById('rv-month').value.trim();
-  if (!month) { alert('请先选择月份'); return; }
   const st = document.getElementById('rv-status');
+  if (!month) {
+    if (!silent) Toast.warning('请先选择月份');
+    st.textContent = '暂无可用月份数据';
+    return;
+  }
   st.textContent = '加载中...';
   try {
     const r = await fetch(`/api/revenue/summary/${month}`);
@@ -133,7 +137,7 @@ function render(d) {
     }
     sh += '</tbody></table></div>';
   }
-  document.getElementById('rv-subtotal').innerHTML = sh || '<p style="color:var(--c-muted);">无小计</p>';
+  document.getElementById('rv-subtotal').innerHTML = sh || '<p class="text-muted">无小计</p>';
 }
 
 async function doImport() {
@@ -152,10 +156,10 @@ async function doImport() {
 
 function exportRevenue() {
   const month = document.getElementById('rv-month').value.trim();
-  if (!month) { alert('请先选择月份'); return; }
+  if (!month) { Toast.warning('请先选择月份'); return; }
   window.location.href = `/api/revenue/export/${month}`;
 }
 
-document.addEventListener('DOMContentLoaded', async () => { await loadMonths(); loadSummary(); });
+document.addEventListener('DOMContentLoaded', async () => { await loadMonths(); loadSummary(true); });
 </script>
 {% endblock %}

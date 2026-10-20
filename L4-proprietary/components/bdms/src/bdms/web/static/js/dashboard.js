@@ -193,7 +193,7 @@ async function editField(table, recordId, field, value) {
     if (result.success) {
         await loadDashboard(currentMonth);
     } else {
-        alert('编辑失败: ' + (result.error || '未知错误'));
+        Toast.error('编辑失败: ' + (result.error || '未知错误'));
     }
 }
 
