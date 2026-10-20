@@ -63,11 +63,19 @@ async def report_generate_progress(job_id: int):
         conn.close()
 
 
+class GenerateRequest(BaseModel):
+    month: str
+    mode: str = "auto"  # auto | read | regenerate
+    refetch_sources: bool = True  # 默认从源系统重新拉取原始数据
+
+
 @router.post("/report/generate")
 async def report_generate(req: GenerateRequest):
     from bdms.modules.delivery_report.service import DeliveryReportService
     try:
-        return DeliveryReportService().generate(normalize_month(req.month), req.mode)
+        return DeliveryReportService().generate(
+            normalize_month(req.month), req.mode,
+            refetch_sources=req.refetch_sources)
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -183,6 +191,17 @@ async def report_revalidate(month: str):
     month = normalize_month(month)
     from bdms.modules.delivery_report.service import DeliveryReportService
     return DeliveryReportService().revalidate(month)
+
+
+@router.get("/report/compare/{month}")
+async def report_compare(month: str):
+    """与手工报表逐项对比。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    try:
+        return DeliveryReportService().compare_with_manual(month)
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 class IssueResolveRequest(BaseModel):

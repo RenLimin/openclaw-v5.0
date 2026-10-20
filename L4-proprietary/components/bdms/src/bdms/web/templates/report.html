@@ -38,7 +38,12 @@
         <option value="regenerate">强制重新生成</option>
       </select>
     </div>
+    <div style="display:flex;align-items:center;gap:0.3rem;">
+      <input type="checkbox" id="refetch-sources" checked>
+      <label for="refetch-sources" style="font-size:0.85rem;color:var(--c-text-secondary);cursor:pointer;">重新拉取源数据</label>
+    </div>
     <button class="btn btn-primary" onclick="confirmNewMonth()">+ 生成月报</button>
+    <button class="btn" onclick="doCompare()" style="margin-left:0.5rem;" id="btn-compare" disabled>📊 对比手工报表</button>
     <span id="load-status" class="text-muted fs-xs"></span>
   </div>
   {% endcall %}
@@ -102,6 +107,15 @@
         <!-- 驳回原因输入 -->
         <div id="reason-input-container" style="margin-top:1rem;display:none;">
           <textarea id="review-reason" class="input" placeholder="请填写驳回原因" rows="3" style="width:100%;"></textarea>
+        </div>
+
+        <!-- 手工报表对比结果 -->
+        <div id="compare-result-card" style="margin-top:1rem;display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+            <strong style="font-size:0.9rem;">📊 与手工报表对比</strong>
+            <span id="compare-summary" class="text-muted" style="font-size:0.8rem;"></span>
+          </div>
+          <div id="compare-result" style="font-size:0.85rem;max-height:300px;overflow-y:auto;"></div>
         </div>
         {% endcall %}
 
@@ -406,6 +420,9 @@ async function doGenerate(month, mode = 'auto') {
   const btnRevalidate = document.getElementById('btn-revalidate');
   const btnRegenerate = document.getElementById('btn-regenerate');
   const btnExport = document.getElementById('btn-export-main');
+  const btnCompare = document.getElementById('btn-compare');
+  const refetchCheckbox = document.getElementById('refetch-sources');
+  const refetch_sources = refetchCheckbox ? refetchCheckbox.checked : true;
 
   if (!st) {
     Toast.error('页面元素加载异常，请刷新后重试');
@@ -439,7 +456,7 @@ async function doGenerate(month, mode = 'auto') {
     const r = await fetch('/api/report/generate', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({month, mode})
+      body: JSON.stringify({month, mode, refetch_sources})
     });
     const d = await r.json();
     currentJobId = d.job_id;
@@ -452,6 +469,7 @@ async function doGenerate(month, mode = 'auto') {
       if (btnRevalidate) btnRevalidate.disabled = false;
       if (btnRegenerate) btnRegenerate.disabled = false;
       if (btnExport) btnExport.disabled = false;
+      if (btnCompare) btnCompare.disabled = false;
       Toast.error(d.detail || d.error || '生成失败');
       return;
     }
@@ -496,6 +514,7 @@ async function doGenerate(month, mode = 'auto') {
     if (btnRevalidate) btnRevalidate.disabled = false;
     if (btnRegenerate) btnRegenerate.disabled = false;
     if (btnExport) btnExport.disabled = false;
+    if (btnCompare) btnCompare.disabled = false;
     Toast.error(`生成失败: ${e.message || e}`);
   }
 }
@@ -577,12 +596,14 @@ async function loadReviewStatus(month) {
     const btnRevalidate = document.getElementById('btn-revalidate');
     const btnExport = document.getElementById('btn-export-main');
     const btnRegenerate = document.getElementById('btn-regenerate');
+    const btnCompare = document.getElementById('btn-compare');
 
     if (btnApprove) btnApprove.disabled = !(['validating', 'reviewing'].includes(status));
     if (btnReject) btnReject.disabled = !(['validating', 'reviewing'].includes(status));
     if (btnRevalidate) btnRevalidate.disabled = ['not_started', 'generating'].includes(status);
     if (btnExport) btnExport.disabled = status !== 'approved';
     if (btnRegenerate) btnRegenerate.disabled = ['not_started', 'generating'].includes(status);
+    if (btnCompare) btnCompare.disabled = ['not_started', 'generating'].includes(status);
 
     // 加载问题到问题 Tab
     if (status === 'validating' || status === 'reviewing') {
@@ -923,6 +944,73 @@ function renderPagination(container, month, sheet, totalPages, current, onClick)
   });
 
   function __pagClick(p) { return p; }
+}
+
+// ========== 手工报表对比 ==========
+async function doCompare() {
+  if (!currentMonth) { Toast.error('请先选择月份'); return; }
+  const btn = document.getElementById('btn-compare');
+  const card = document.getElementById('compare-result-card');
+  const resultEl = document.getElementById('compare-result');
+  const summaryEl = document.getElementById('compare-summary');
+
+  if (btn) btn.disabled = true;
+  if (card) card.style.display = 'block';
+  if (resultEl) resultEl.innerHTML = '<p class="text-muted">正在对比，请稍候...</p>';
+  if (summaryEl) summaryEl.textContent = '';
+
+  try {
+    const r = await fetch(`/api/report/compare/${currentMonth}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || d.error || '对比失败');
+
+    if (d.error) {
+      if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-warning);padding:0.5rem;">⚠️ ${d.error}</div>`;
+      return;
+    }
+
+    // 汇总
+    const totalDiffs = d.total_diff_cells || 0;
+    const matchText = d.all_match ? '✅ 完全一致' : `❌ ${totalDiffs} 处差异`;
+    if (summaryEl) summaryEl.innerHTML = matchText;
+
+    // 各 Sheet 详情
+    let html = '<div style="display:grid;gap:0.5rem;">';
+    for (const [sheet, info] of Object.entries(d.sheets || {})) {
+      let cls = info.status === 'match' ? 'var(--c-success-soft)' : 'var(--c-danger-soft)';
+      let color = info.status === 'match' ? 'var(--c-success)' : 'var(--c-danger)';
+      let icon = info.status === 'match' ? '✅' : '❌';
+      html += `<div style="padding:0.5rem 0.75rem;background:${cls};border-radius:var(--r-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong>${icon} ${sheet}</strong>
+          <span style="color:${color};font-size:0.8rem;">${info.diff_count != null ? info.diff_count + ' 处差异' : info.reason || ''}</span>
+        </div>`;
+      if (info.diffs && info.diffs.length > 0) {
+        html += '<details style="margin-top:0.3rem;"><summary style="cursor:pointer;font-size:0.8rem;color:var(--c-text-secondary);">查看详情</summary>';
+        html += '<table class="table" style="margin-top:0.3rem;font-size:0.8rem;"><thead><tr><th>行</th><th>列</th><th>我方</th><th>手工</th></tr></thead><tbody>';
+        for (const diff of info.diffs) {
+          html += `<tr><td>${diff.row}</td><td>${diff.col}</td>
+            <td style="color:var(--c-primary);font-family:monospace;">${diff.mine === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.mine}</td>
+            <td style="color:var(--c-warning);font-family:monospace;">${diff.manual === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.manual}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        if (info.has_more) {
+          html += '<p style="font-size:0.75rem;color:var(--c-text-muted);margin-top:0.25rem;">仅显示前 50 条差异</p>';
+        }
+        html += '</details>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+
+    if (resultEl) resultEl.innerHTML = html;
+    Toast.success(d.all_match ? '✅ 与手工报表完全一致' : `⚠️ 发现 ${totalDiffs} 处差异`);
+  } catch (e) {
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-danger);padding:0.5rem;">❌ 对比失败: ${e.message}</div>`;
+    Toast.error(`对比失败: ${e.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ========== issue 状态流转（确认/驳回） ==========
