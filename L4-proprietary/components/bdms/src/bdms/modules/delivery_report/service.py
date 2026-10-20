@@ -244,12 +244,9 @@ class DeliveryReportService:
 
     def generate(self, month: str, mode: str = MODE_AUTO,
                  refetch_sources: bool = False) -> dict:
-        """生成/读取交付月报数据。
+        """生成/读取交付月报数据（同步，创建新 job）。
 
-        Args:
-            month: 月份 YYYYMM
-            mode: auto | read | regenerate
-            refetch_sources: 是否从源系统重新拉取原始数据（默认 False）
+        保留给内部/脚本调用。Web API 走 generate_async 立即返回。
         """
         if mode not in (MODE_AUTO, MODE_READ, MODE_REGENERATE):
             raise ValueError(f"未知模式: {mode}")
@@ -260,6 +257,16 @@ class DeliveryReportService:
             conn.commit()
         finally:
             conn.close()
+
+        return self.generate_with_job(job_id, month, mode, refetch_sources=refetch_sources)
+
+    def generate_with_job(self, job_id: int, month: str, mode: str,
+                          refetch_sources: bool = False) -> dict:
+        """在已有 job 上下文中执行生成，分步上报进度。
+
+        供异步调用使用（API 先创建 job 立即返回，后台线程调此方法执行）。
+        """
+        from bdms.core import db as _db
 
         def _progress(pct: int, msg: str):
             c = _db.get_connection(self.db_path)
