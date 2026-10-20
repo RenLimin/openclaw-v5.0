@@ -115,6 +115,16 @@
             <strong style="font-size:0.9rem;">📊 与手工报表对比</strong>
             <span id="compare-summary" class="text-muted" style="font-size:0.8rem;"></span>
           </div>
+          <!-- 对比进度条 -->
+          <div id="compare-progress-container" style="display:none;margin-bottom:0.75rem;">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem;">
+              <span id="compare-progress-text" style="color:var(--c-text-secondary);">准备中...</span>
+              <span id="compare-progress-pct" style="color:var(--c-primary);font-weight:500;">0%</span>
+            </div>
+            <div style="height:6px;background:var(--c-bg-muted);border-radius:var(--r-pill);overflow:hidden;">
+              <div id="compare-progress-bar" style="height:100%;width:0%;background:var(--c-primary);border-radius:var(--r-pill);transition:width 0.3s ease;"></div>
+            </div>
+          </div>
           <div id="compare-result" style="font-size:0.85rem;max-height:300px;overflow-y:auto;"></div>
         </div>
         {% endcall %}
@@ -947,17 +957,39 @@ function renderPagination(container, month, sheet, totalPages, current, onClick)
 }
 
 // ========== 手工报表对比 ==========
+let comparePollTimer = null;
+let currentCompareJobId = null;
+
+function stopComparePolling() {
+  if (comparePollTimer) {
+    clearInterval(comparePollTimer);
+    comparePollTimer = null;
+  }
+}
+
 async function doCompare() {
   if (!currentMonth) { Toast.error('请先选择月份'); return; }
   const btn = document.getElementById('btn-compare');
   const card = document.getElementById('compare-result-card');
   const resultEl = document.getElementById('compare-result');
   const summaryEl = document.getElementById('compare-summary');
+  const progressContainer = document.getElementById('compare-progress-container');
+  const progressBar = document.getElementById('compare-progress-bar');
+  const progressText = document.getElementById('compare-progress-text');
 
   if (btn) btn.disabled = true;
   if (card) card.style.display = 'block';
-  if (resultEl) resultEl.innerHTML = '<p class="text-muted">正在对比，请稍候...</p>';
+  if (resultEl) resultEl.innerHTML = '';
   if (summaryEl) summaryEl.textContent = '';
+
+  // 显示进度条
+  if (progressContainer) progressContainer.style.display = 'block';
+  if (progressBar) { progressBar.style.width = '0%'; }
+  const progressPct = document.getElementById('compare-progress-pct');
+  if (progressPct) progressPct.textContent = '0%';
+  if (progressText) progressText.textContent = '准备中...';
+
+  stopComparePolling();
 
   try {
     const r = await fetch(`/api/report/compare/${currentMonth}`);
@@ -965,52 +997,115 @@ async function doCompare() {
     if (!r.ok) throw new Error(d.detail || d.error || '对比失败');
 
     if (d.error) {
+      if (progressContainer) progressContainer.style.display = 'none';
       if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-warning);padding:0.5rem;">⚠️ ${d.error}</div>`;
       return;
     }
 
-    // 汇总
-    const totalDiffs = d.total_diff_cells || 0;
-    const matchText = d.all_match ? '✅ 完全一致' : `❌ ${totalDiffs} 处差异`;
-    if (summaryEl) summaryEl.innerHTML = matchText;
-
-    // 各 Sheet 详情
-    let html = '<div style="display:grid;gap:0.5rem;">';
-    for (const [sheet, info] of Object.entries(d.sheets || {})) {
-      let cls = info.status === 'match' ? 'var(--c-success-soft)' : 'var(--c-danger-soft)';
-      let color = info.status === 'match' ? 'var(--c-success)' : 'var(--c-danger)';
-      let icon = info.status === 'match' ? '✅' : '❌';
-      html += `<div style="padding:0.5rem 0.75rem;background:${cls};border-radius:var(--r-sm);">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <strong>${icon} ${sheet}</strong>
-          <span style="color:${color};font-size:0.8rem;">${info.diff_count != null ? info.diff_count + ' 处差异' : info.reason || ''}</span>
-        </div>`;
-      if (info.diffs && info.diffs.length > 0) {
-        html += '<details style="margin-top:0.3rem;"><summary style="cursor:pointer;font-size:0.8rem;color:var(--c-text-secondary);">查看详情</summary>';
-        html += '<table class="table" style="margin-top:0.3rem;font-size:0.8rem;"><thead><tr><th>行</th><th>列</th><th>我方</th><th>手工</th></tr></thead><tbody>';
-        for (const diff of info.diffs) {
-          html += `<tr><td>${diff.row}</td><td>${diff.col}</td>
-            <td style="color:var(--c-primary);font-family:monospace;">${diff.mine === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.mine}</td>
-            <td style="color:var(--c-warning);font-family:monospace;">${diff.manual === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.manual}</td></tr>`;
-        }
-        html += '</tbody></table>';
-        if (info.has_more) {
-          html += '<p style="font-size:0.75rem;color:var(--c-text-muted);margin-top:0.25rem;">仅显示前 50 条差异</p>';
-        }
-        html += '</details>';
-      }
-      html += '</div>';
+    // 如果有 job_id，启动轮询等待完成
+    if (d.job_id) {
+      currentCompareJobId = d.job_id;
+      await pollCompareProgress(d.job_id);
+      return;
     }
-    html += '</div>';
 
-    if (resultEl) resultEl.innerHTML = html;
-    Toast.success(d.all_match ? '✅ 与手工报表完全一致' : `⚠️ 发现 ${totalDiffs} 处差异`);
+    // 无 job_id（同步完成）直接渲染
+    renderCompareResult(d);
   } catch (e) {
+    stopComparePolling();
+    if (progressContainer) progressContainer.style.display = 'none';
     if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-danger);padding:0.5rem;">❌ 对比失败: ${e.message}</div>`;
     Toast.error(`对比失败: ${e.message}`);
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+async function pollCompareProgress(jobId) {
+  const progressContainer = document.getElementById('compare-progress-container');
+  const progressBar = document.getElementById('compare-progress-bar');
+  const progressText = document.getElementById('compare-progress-text');
+  const resultEl = document.getElementById('compare-result');
+  const btn = document.getElementById('btn-compare');
+
+  comparePollTimer = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/report/generate-progress/${jobId}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || '查询进度失败');
+
+      // 更新进度条
+      const pct = d.progress || 0;
+      if (progressBar) { progressBar.style.width = pct + '%'; }
+      const pctEl = document.getElementById('compare-progress-pct');
+      if (pctEl) pctEl.textContent = pct + '%';
+      if (progressText) progressText.textContent = d.message || '';
+
+      if (d.status === 'done') {
+        stopComparePolling();
+        if (progressContainer) progressContainer.style.display = 'none';
+        // 拉取最终结果
+        const finalR = await fetch(`/api/report/compare/${currentMonth}`);
+        const finalD = await finalR.json();
+        if (finalR.ok && !finalD.error) {
+          renderCompareResult(finalD);
+        } else {
+          if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-danger);padding:0.5rem;">❌ 对比失败</div>`;
+        }
+        if (btn) btn.disabled = false;
+      } else if (d.status === 'failed') {
+        stopComparePolling();
+        if (progressContainer) progressContainer.style.display = 'none';
+        if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-danger);padding:0.5rem;">❌ 对比失败: ${d.message || ''}</div>`;
+        Toast.error(`对比失败: ${d.message || '未知错误'}`);
+        if (btn) btn.disabled = false;
+      }
+    } catch (e) {
+      console.error('poll compare progress error:', e);
+    }
+  }, 1000);
+}
+
+function renderCompareResult(d) {
+  const resultEl = document.getElementById('compare-result');
+  const summaryEl = document.getElementById('compare-summary');
+
+  // 汇总
+  const totalDiffs = d.total_diff_cells || 0;
+  const matchText = d.all_match ? '✅ 完全一致' : `❌ ${totalDiffs} 处差异`;
+  if (summaryEl) summaryEl.innerHTML = matchText;
+
+  // 各 Sheet 详情
+  let html = '<div style="display:grid;gap:0.5rem;">';
+  for (const [sheet, info] of Object.entries(d.sheets || {})) {
+    let cls = info.status === 'match' ? 'var(--c-success-soft)' : 'var(--c-danger-soft)';
+    let color = info.status === 'match' ? 'var(--c-success)' : 'var(--c-danger)';
+    let icon = info.status === 'match' ? '✅' : '❌';
+    html += `<div style="padding:0.5rem 0.75rem;background:${cls};border-radius:var(--r-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong>${icon} ${sheet}</strong>
+          <span style="color:${color};font-size:0.8rem;">${info.diff_count != null ? info.diff_count + ' 处差异' : info.reason || ''}</span>
+        </div>`;
+    if (info.diffs && info.diffs.length > 0) {
+      html += '<details style="margin-top:0.3rem;"><summary style="cursor:pointer;font-size:0.8rem;color:var(--c-text-secondary);">查看详情</summary>';
+      html += '<table class="table" style="margin-top:0.3rem;font-size:0.8rem;"><thead><tr><th>行</th><th>列</th><th>我方</th><th>手工</th></tr></thead><tbody>';
+      for (const diff of info.diffs) {
+        html += `<tr><td>${diff.row}</td><td>${diff.col}</td>
+            <td style="color:var(--c-primary);font-family:monospace;">${diff.mine === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.mine}</td>
+            <td style="color:var(--c-warning);font-family:monospace;">${diff.manual === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.manual}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      if (info.has_more) {
+        html += '<p style="font-size:0.75rem;color:var(--c-text-muted);margin-top:0.25rem;">仅显示前 200 条差异</p>';
+      }
+      html += '</details>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+
+  if (resultEl) resultEl.innerHTML = html;
+  Toast.success(d.all_match ? '✅ 与手工报表完全一致' : `⚠️ 发现 ${totalDiffs} 处差异`);
 }
 
 // ========== issue 状态流转（确认/驳回） ==========
