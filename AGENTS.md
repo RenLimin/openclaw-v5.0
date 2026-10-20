@@ -109,6 +109,8 @@ Write It Down: "remember this" → update daily file; lesson learned → update 
 
 **测试规范：** Web/安全功能验收必须用真实 HTTP；禁止用 FastAPI TestClient 测试网络安全/Cookie/访问控制；所有 E2E 自测务必使用真实的模拟人工操作的方式进行；E2E 测试必须覆盖真实用户操作路径；后端 API 应同时兼容多种输入格式。 <!-- observed: 2026-10-07 | status: active -->
 
+**进度条铁律：** 所有响应时间超过 10s 的用户操作，必须展示实时进度条（分步进度 + 当前步骤说明），禁止让用户面对空白页面等待。后端用 job 表异步 + 前端轮询模式实现。 <!-- observed: 2026-10-21 | status: active -->
+
 **文档命名：** `DESIGN-OUTLINE-<topic>-<version>.md` / `DESIGN-DETAIL-<module>-<version>.md` / `IMPLEMENTATION-PLAN-<version>.md` / `VERIFICATION-<phase>-<version>.md`
 
 > 2026-09-21 Rex 制定 | 违反此规则 = 开发事故
