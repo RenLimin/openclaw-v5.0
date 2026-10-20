@@ -71,13 +71,51 @@ class GenerateRequest(BaseModel):
 
 @router.post("/report/generate")
 async def report_generate(req: GenerateRequest):
+    """生成月报（异步）— 立即返回 job_id，后台执行，前端轮询进度。
+
+    进度条铁律：>10s 的操作必须有实时进度条。
+    """
+    import threading
     from bdms.modules.delivery_report.service import DeliveryReportService
+    from bdms.core import db as _db
+
+    month = normalize_month(req.month)
+    mode = req.mode
+    refetch = req.refetch_sources
+
+    # 先创建 job，立即返回 job_id（让前端马上能轮询进度）
+    conn = _db.get_connection()
     try:
-        return DeliveryReportService().generate(
-            normalize_month(req.month), req.mode,
-            refetch_sources=req.refetch_sources)
-    except Exception as e:
-        raise HTTPException(500, str(e))
+        job_id = _db.create_job(conn, "delivery_report", month, mode)
+        conn.commit()
+    finally:
+        conn.close()
+
+    # 后台线程执行生成
+    def _run():
+        try:
+            svc = DeliveryReportService()
+            svc.generate_with_job(job_id, month, mode, refetch_sources=refetch)
+        except Exception as e:
+            conn2 = _db.get_connection()
+            try:
+                _db.update_job_status(conn2, job_id, "failed", 0,
+                                      message=str(e)[:500],
+                                      finished_at="datetime('now','localtime')")
+                # 手动设置 finished_at 用 SQL 函数有坑，这里重新更新一下
+                conn2.execute(
+                    "UPDATE job SET status='failed', progress=0, message=?, "
+                    "finished_at=datetime('now','localtime') WHERE id=?",
+                    (str(e)[:500], job_id))
+                conn2.commit()
+            finally:
+                conn2.close()
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+    return {"job_id": job_id, "month": month, "mode": mode,
+            "status": "running", "progress": 0, "message": "已提交，准备生成..."}
 
 
 @router.get("/report/export/{month}")
