@@ -242,8 +242,15 @@ class DeliveryReportService:
     #  原有方法
     # ──────────────────────────────────────────────────────
 
-    def generate(self, month: str, mode: str = MODE_AUTO) -> dict:
-        """生成/读取交付月报数据。"""
+    def generate(self, month: str, mode: str = MODE_AUTO,
+                 refetch_sources: bool = False) -> dict:
+        """生成/读取交付月报数据。
+
+        Args:
+            month: 月份 YYYYMM
+            mode: auto | read | regenerate
+            refetch_sources: 是否从源系统重新拉取原始数据（默认 False）
+        """
         if mode not in (MODE_AUTO, MODE_READ, MODE_REGENERATE):
             raise ValueError(f"未知模式: {mode}")
 
@@ -253,6 +260,14 @@ class DeliveryReportService:
             conn.commit()
         finally:
             conn.close()
+
+        def _progress(pct: int, msg: str):
+            c = _db.get_connection(self.db_path)
+            try:
+                _db.update_job_status(c, job_id, "running", pct, msg)
+                c.commit()
+            finally:
+                c.close()
 
         try:
             has_data = self.engine.has_data(month)
@@ -267,13 +282,39 @@ class DeliveryReportService:
                 action = "read" if has_data else "generated"
 
             if action == "read":
+                _progress(10, "读取历史数据...")
                 data = self.engine.load(month)
                 counts = {k: len(v) for k, v in data.items()}
+                _progress(90, "数据加载完成")
             else:
+                # ── 生成流程：分步进度 ──
+                step = 0
+                total_steps = 5 if refetch_sources else 4
+                base_pct = 5
+
+                if refetch_sources:
+                    _progress(base_pct, "步骤 1/5：从源系统拉取原始数据...")
+                    self._refetch_source_data(month)
+                    step += 1
+                    base_pct = 20
+
+                _progress(base_pct, f"步骤 {step+1}/{total_steps}：加载源数据...")
+                raw_data = self._extract_raw(month)
+                step += 1
+
+                _progress(base_pct + step * 15, f"步骤 {step+1}/{total_steps}：计算核心报表...")
                 computed = self.engine.compute(month)
+                step += 1
+
+                _progress(base_pct + step * 15, f"步骤 {step+1}/{total_steps}：持久化到数据库...")
                 counts = self.engine.persist(month, computed,
                                              overwrite=(mode == MODE_REGENERATE or has_data))
+                step += 1
 
+                _progress(base_pct + step * 15, f"步骤 {step+1}/{total_steps}：执行数据校验...")
+                self._run_validation(month)
+
+            _progress(100, "✅ 生成完成")
             self._finish_job(job_id, "done", 100,
                              message=f"{action}: {sum(counts.values())} 行")
 
@@ -285,10 +326,278 @@ class DeliveryReportService:
                 "sheets": counts, "job_id": job_id,
                 "total_rows": sum(counts.values()),
                 "review_status": "validating",
+                "refetch_sources": refetch_sources,
             }
         except Exception as e:
             self._finish_job(job_id, "failed", 0, message=str(e)[:500])
             raise
+
+    def _extract_raw(self, month: str) -> dict:
+        """提取原始数据（复用 pipeline）。"""
+        from bdms.modules.integration.adapters.pipeline import DeliveryReportPipeline
+        pipeline = DeliveryReportPipeline(self.db_path)
+        return pipeline.extract_raw_data(month)
+
+    def _refetch_source_data(self, month: str) -> dict:
+        """从源系统重新拉取 ONES/OA 等原始数据到 workspace。
+
+        先清空历史导出数据，再重新拉取。
+        返回各数据源拉取结果。
+        """
+        import shutil
+        from pathlib import Path
+        from bdms.core import paths
+
+        results = {}
+
+        # 1. 清空 ONES 历史导出（当月）
+        ones_base = paths.ones_dir()
+        ones_base.mkdir(parents=True, exist_ok=True)
+        patterns = [
+            f"{month}周报-签约项目统计.csv",
+            f"{month}周报-POC&提前实施统计.csv",
+            f"{month}-签约项目异常处置.csv",
+        ]
+        cleared = 0
+        for p in patterns:
+            fp = ones_base / p
+            if fp.exists():
+                fp.unlink()
+                cleared += 1
+        results["ones_cleared"] = cleared
+
+        # 2. 从 ONES 重新拉取（调用 ONES connector）
+        try:
+            from bdms.modules.integration.connectors.ones_connector import ONESConnector
+            conn = ONESConnector()
+            if conn.authenticate():
+                # 签约
+                sign_data = conn.fetch(filter_name="sign", month=month)
+                results["sign_rows"] = len(sign_data) if sign_data else 0
+                # POC
+                poc_data = conn.fetch(filter_name="poc", month=month)
+                results["poc_rows"] = len(poc_data) if poc_data else 0
+                # 异常
+                exc_data = conn.fetch(filter_name="exception", month=month)
+                results["exception_rows"] = len(exc_data) if exc_data else 0
+                results["ones_refetch"] = True
+            else:
+                results["ones_refetch"] = False
+                results["ones_error"] = "认证失败"
+        except Exception as e:
+            results["ones_refetch"] = False
+            results["ones_error"] = str(e)[:200]
+
+        return results
+
+    def _run_validation(self, month: str) -> dict:
+        """执行校验，返回校验结果。"""
+        from bdms.modules.delivery_report.validator import DeliveryReportValidator
+        validator = DeliveryReportValidator(self.db_path)
+        result = validator.collect_suspicious(month)
+        # 同步 pending_fixes
+        conn = _db.get_connection(self.db_path)
+        try:
+            pending_count = conn.execute(
+                "SELECT COUNT(*) FROM dr_import_validation "
+                "WHERE month = ? AND status = 'pending'",
+                (month,)
+            ).fetchone()[0]
+            conn.execute(
+                "UPDATE dr_review_status SET total_errors=?, total_warnings=?, pending_fixes=? "
+                "WHERE month=?",
+                (result["summary"]["total_errors"],
+                 result["summary"]["total_warnings"],
+                 pending_count, month)
+            )
+            conn.commit()
+        finally:
+            conn.close()
+        return result
+
+    def compare_with_manual(self, month: str) -> dict:
+        """与手工报表逐项对比，返回各 Sheet 差异结果。
+
+        使用 openpyxl read_only 模式流式读取，控制内存占用。
+        """
+        from pathlib import Path
+        import openpyxl
+        import datetime as _dt
+        from bdms.core import paths as _paths
+
+        # 1. 先导出我方最新报表
+        from bdms.modules.delivery_report.exporter import DeliveryReportExporter
+        exporter = DeliveryReportExporter(self.db_path)
+        my_path = exporter.export(month)
+
+        # 2. 查找手工报表
+        man_dir = _paths.month_dir(month)
+        man_path = None
+        if man_dir.exists():
+            for p in sorted(man_dir.glob("*交付月报*.xlsx")):
+                if p.name.startswith("~$"):
+                    continue
+                man_path = p
+                break
+        if not man_path:
+            return {"error": f"未找到 {month} 手工报表"}
+
+        # 3. 逐 Sheet 对比（read_only 模式控制内存）
+        SHEETS = ["签约", "POC&提前实施", "异常项目", "确收交接", "验收交接"]
+
+        def _norm(v):
+            if v is None:
+                return None
+            if isinstance(v, _dt.time):
+                return 0 if (v.hour, v.minute, v.second, v.microsecond) == (0, 0, 0, 0) else v
+            if isinstance(v, _dt.datetime):
+                return v.date() if (v.hour, v.minute, v.second, v.microsecond) == (0, 0, 0, 0) else v
+            if isinstance(v, str):
+                s = v.strip()
+                if s == "00:00:00":
+                    return 0
+                return None if s == "" else s
+            return v
+
+        def _eq(a, b):
+            a, b = _norm(a), _norm(b)
+            if a is None and b is None:
+                return True
+            if a is None or b is None:
+                return False
+            # 字符串 HH:MM:SS 与 time 对象互转
+            if isinstance(a, str) and len(a) == 8 and ':' in a and isinstance(b, _dt.time):
+                return a == b.strftime('%H:%M:%S')
+            if isinstance(a, _dt.time) and isinstance(b, str) and len(b) == 8 and ':' in b:
+                return a.strftime('%H:%M:%S') == b
+            # 整数 YYYYMMDD 与 datetime/date 互转
+            if isinstance(a, int) and isinstance(b, _dt.datetime):
+                a_dt = _dt.datetime.strptime(f'{a}', '%Y%m%d')
+                return a_dt.date() == b.date()
+            if isinstance(a, int) and isinstance(b, _dt.date):
+                a_dt = _dt.datetime.strptime(f'{a}', '%Y%m%d').date()
+                return a_dt == b
+            if isinstance(b, int) and isinstance(a, _dt.datetime):
+                b_dt = _dt.datetime.strptime(f'{b}', '%Y%m%d')
+                return a.date() == b_dt.date()
+            if isinstance(b, int) and isinstance(a, _dt.date):
+                b_dt = _dt.datetime.strptime(f'{b}', '%Y%m%d').date()
+                return a == b_dt
+            # 数字类数值容差
+            if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+                return abs(a - b) <= 1e-6
+            # 数字 vs 字符串
+            if isinstance(a, (int, float)) and isinstance(b, str):
+                try:
+                    return abs(a - float(b)) <= 1e-6
+                except Exception:
+                    return False
+            if isinstance(b, (int, float)) and isinstance(a, str):
+                try:
+                    return abs(float(a) - b) <= 1e-6
+                except Exception:
+                    return False
+            return str(a) == str(b)
+
+        results = {}
+        total_diff = 0
+
+        # 分别以 read_only 模式打开，用完即关
+        wb_mine = openpyxl.load_workbook(my_path, data_only=True, read_only=True)
+        try:
+            wb_man = openpyxl.load_workbook(str(man_path), data_only=True, read_only=True)
+            try:
+                for sheet in SHEETS:
+                    mine_sheet = wb_mine[sheet] if sheet in wb_mine.sheetnames else None
+                    man_sheet = wb_man[sheet] if sheet in wb_man.sheetnames else None
+
+                    if not mine_sheet and not man_sheet:
+                        results[sheet] = {"status": "skip", "reason": "双方均无此 Sheet"}
+                        continue
+                    if not mine_sheet:
+                        results[sheet] = {"status": "missing", "side": "mine", "reason": "我方缺少此 Sheet"}
+                        total_diff += 1
+                        continue
+                    if not man_sheet:
+                        results[sheet] = {"status": "missing", "side": "manual", "reason": "手工报表缺少此 Sheet"}
+                        total_diff += 1
+                        continue
+
+                    diffs = []
+                    diff_limit = 200  # 每 Sheet 最多收集 200 条差异
+                    mine_rows = 0
+                    man_rows = 0
+                    mine_cols = 0
+                    man_cols = 0
+
+                    # 流式逐行对比（values_only=True 直接拿值，省内存）
+                    mine_iter = mine_sheet.iter_rows(values_only=True)
+                    man_iter = man_sheet.iter_rows(values_only=True)
+                    row_idx = 0
+
+                    while True:
+                        try:
+                            mine_row = next(mine_iter)
+                        except StopIteration:
+                            mine_row = None
+                        try:
+                            man_row = next(man_iter)
+                        except StopIteration:
+                            man_row = None
+
+                        if mine_row is None and man_row is None:
+                            break
+
+                        row_idx += 1
+                        if mine_row is not None:
+                            mine_rows = row_idx
+                            mine_cols = max(mine_cols, len(mine_row))
+                        if man_row is not None:
+                            man_rows = row_idx
+                            man_cols = max(man_cols, len(man_row))
+
+                        max_col = max(
+                            len(mine_row) if mine_row else 0,
+                            len(man_row) if man_row else 0
+                        )
+                        for c in range(max_col):
+                            mv = mine_row[c] if (mine_row and c < len(mine_row)) else None
+                            hv = man_row[c] if (man_row and c < len(man_row)) else None
+                            if not _eq(mv, hv):
+                                diffs.append({
+                                    "row": row_idx,
+                                    "col": c + 1,
+                                    "mine": str(mv) if mv is not None else "",
+                                    "manual": str(hv) if hv is not None else ""
+                                })
+                                if len(diffs) >= diff_limit:
+                                    break
+                        if len(diffs) >= diff_limit:
+                            # 继续遍历到末尾来统计总行数
+                            pass
+
+                    results[sheet] = {
+                        "status": "match" if len(diffs) == 0 else "diff",
+                        "mine_rows": mine_rows, "manual_rows": man_rows,
+                        "mine_cols": mine_cols, "manual_cols": man_cols,
+                        "diff_count": len(diffs),
+                        "diffs": diffs,
+                        "has_more": len(diffs) >= diff_limit,
+                    }
+                    total_diff += len(diffs)
+            finally:
+                wb_man.close()
+        finally:
+            wb_mine.close()
+
+        return {
+            "month": month,
+            "my_report": str(my_path),
+            "manual_report": str(man_path),
+            "total_diff_cells": total_diff,
+            "all_match": total_diff == 0,
+            "sheets": results,
+        }
 
     def _update_review_status(self, month: str, status: str, counts: dict = None):
         """更新审核状态。"""
