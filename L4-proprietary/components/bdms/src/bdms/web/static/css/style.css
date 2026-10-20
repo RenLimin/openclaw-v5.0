@@ -19,6 +19,12 @@
   --c-warning: #EFBA20;        /* 金 C-05 */
   --c-danger: #DC3545;         /* 功能红 */
 
+  /* --- 功能色浅底色（badge / tag 用）--- */
+  --c-success-soft: #e6f7f4;
+  --c-warning-soft: #fef6e0;
+  --c-danger-soft: #fde8ea;
+  --c-warning-text: #b8890d;
+
   /* --- 中性色：对齐 v2，页面背景偏灰 --- */
   --c-bg: #F0F2F5;
   --c-surface: #FFFFFF;
@@ -425,30 +431,67 @@
   box-shadow: 0 0 0 3px rgba(45, 116, 187, 0.15);
 }
 
-/* ===== Tab 品牌化 ===== */
-.tabs {
-  border-bottom: 2px solid var(--c-border);
-  display: flex;
-  gap: 0;
-  margin-bottom: var(--s-3);
-}
-.tab {
-  padding: var(--s-2) var(--s-5);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  transition: all var(--t-fast);
-  color: var(--c-text-muted);
-  font-weight: 500;
+/* 日期/月份输入框：隐藏原生日历指示器，避免溢出 */
+input[type="date"],
+input[type="month"],
+input[type="datetime-local"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
-  font-size: 0.9rem;
 }
-.tab:hover {
-  color: var(--c-primary);
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
-.tab.active {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
-  font-weight: 600;
+
+/* ===== Tab 品牌化（对齐 web-common .tabs-tab 类名） ===== */
+.tabs-nav {
+    border-bottom: 2px solid var(--c-border);
+    display: flex;
+    gap: 0;
+    margin-bottom: var(--s-3);
+    padding: 0 var(--s-1);
+}
+.tabs-tab {
+    padding: var(--s-3) var(--s-6);
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    background: none;
+    transition: all var(--t-fast);
+    color: var(--c-text-muted);
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    position: relative;
+}
+.tabs-tab:hover {
+    color: var(--c-primary);
+    background: rgba(45, 116, 187, 0.04);
+}
+.tabs-tab.active {
+    color: var(--c-primary);
+    border-bottom-color: var(--c-primary);
+    font-weight: 600;
+    background: rgba(45, 116, 187, 0.06);
+}
+.tabs-tab.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--c-primary) 0%, var(--c-primary-light) 100%);
+    border-radius: 0 0 3px 3px;
 }
 
 /* ===== Badge ===== */
@@ -461,9 +504,86 @@
   line-height: 1.5;
 }
 .badge-primary { background: var(--c-primary-soft); color: var(--c-primary-dark); }
-.badge-success { background: #e6f7f4; color: var(--c-success); }
-.badge-warning { background: #fef6e0; color: #b8890d; }
-.badge-danger { background: #fde8ea; color: var(--c-danger); }
+.badge-success { background: var(--c-success-soft); color: var(--c-success); }
+.badge-warning { background: var(--c-warning-soft); color: var(--c-warning-text); }
+.badge-danger { background: var(--c-danger-soft); color: var(--c-danger); }
+
+/* ===== 通用工具类（抽离高频内联 style）===== */
+.text-muted { color: var(--c-text-muted); }
+.text-center { text-align: center; }
+.text-success { color: var(--c-success); }
+.text-danger { color: var(--c-danger); }
+.text-warning { color: var(--c-warning); }
+.text-primary { color: var(--c-primary); }
+
+.fw-600 { font-weight: 600; }
+.fs-sm { font-size: 0.8rem; }
+.fs-xs { font-size: 0.85rem; }
+.fs-lg { font-size: 1.8rem; }
+
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mt-3 { margin-top: 0.8rem; }
+.mt-4 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 0.3rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.ml-1 { margin-left: 0.5rem; }
+.ml-2 { margin-left: 1rem; }
+
+.w-120 { width: 120px; }
+.w-140 { width: 140px; }
+.w-180 { width: 180px; }
+.w-220 { width: 220px; }
+.maxw-180 { max-width: 180px; }
+
+.cursor-pointer { cursor: pointer; }
+
+/* 表单行布局：筛选区通用 */
+.form-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+/* 明细网格：sheet 明细 / KPI 辅助用 */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+.detail-grid > div {
+  padding: 0.5rem;
+  background: var(--c-surface-secondary);
+  border-radius: var(--r-sm);
+}
+.detail-grid > div strong {
+  color: var(--c-primary);
+}
+
+/* 空状态 / 居中提示 */
+.empty-tip {
+  color: var(--c-text-muted);
+  text-align: center;
+  padding: 1rem;
+}
+.error-tip {
+  color: var(--c-danger);
+  text-align: center;
+}
+.success-tip {
+  color: var(--c-success);
+  text-align: center;
+  padding: 1rem;
+}
+
+/* 表单字段标签 */
+.field-label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.3rem;
+}
 
 /* 折叠态品牌适配 */
 .sidebar.collapsed {
@@ -499,6 +619,10 @@
   --c-primary: #3FA1DA;
   --c-primary-dark: #5bb3e5;
   --c-primary-soft: rgba(63, 161, 218, 0.18);
+  --c-success-soft: rgba(51, 173, 160, 0.15);
+  --c-warning-soft: rgba(239, 186, 32, 0.15);
+  --c-danger-soft: rgba(220, 53, 69, 0.2);
+  --c-warning-text: #f0c940;
   --c-sidebar-bg: linear-gradient(180deg, #0d1f38 0%, #1e3a5f 100%);
 }
 
@@ -531,6 +655,66 @@
   background: var(--c-surface-secondary);
   border-color: var(--c-border-secondary);
   color: var(--c-text);
+}
+
+/* ---- KPI 卡片暗色适配 ---- */
+[data-theme="dark"] .kpi-card {
+  border-color: var(--c-border);
+  background: var(--c-surface);
+}
+[data-theme="dark"] .kpi-card:hover {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .kpi-card .kpi-label {
+  color: var(--c-text-muted);
+}
+
+/* ---- Badge 暗色适配 ---- */
+[data-theme="dark"] .badge-primary {
+  background: var(--c-primary-soft);
+  color: var(--c-primary);
+}
+[data-theme="dark"] .badge-success {
+  background: var(--c-success-soft);
+  color: var(--c-success);
+}
+[data-theme="dark"] .badge-warning {
+  background: var(--c-warning-soft);
+  color: var(--c-warning-text);
+}
+[data-theme="dark"] .badge-danger {
+  background: var(--c-danger-soft);
+  color: #ff6b7a;
+}
+
+/* ---- 导航磁贴暗色适配 ---- */
+[data-theme="dark"] .nav-tile {
+  border-color: var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+[data-theme="dark"] .nav-tile:hover {
+  border-color: var(--c-primary);
+  color: var(--c-primary);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+}
+[data-theme="dark"] .nav-tile .nav-tile-desc {
+  color: var(--c-text-muted);
+}
+
+/* ---- 状态点暗色适配（发光效果增强可见性）---- */
+[data-theme="dark"] .status-dot.not_started {
+  background: var(--c-text-muted);
+  box-shadow: 0 0 4px rgba(138, 179, 217, 0.4);
+}
+[data-theme="dark"] .status-dot.generating {
+  box-shadow: 0 0 8px rgba(63, 161, 218, 0.6);
+}
+[data-theme="dark"] .status-dot.approved {
+  box-shadow: 0 0 8px rgba(51, 173, 160, 0.6);
+}
+[data-theme="dark"] .status-dot.rejected {
+  box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
 }
 
 /* ===== 响应式：对齐 v2 断点 ===== */
@@ -596,11 +780,14 @@
    对标 dashboard 视觉基准，仅做差异化调整
    ============================================================ */
 
-/* ---- Tabs 容器（web-common 未定义 .tabs 级样式，在此补充） ---- */
+/* ---- Tabs 容器（补充 web-common 未覆盖的布局） ---- */
 .tabs {
   display: flex;
   flex-direction: column;
   gap: var(--s-3);
+}
+.tabs-nav {
+  margin-bottom: 0;
 }
 .tabs-panels { width: 100%; }
 .tabs-panel {

@@ -14,15 +14,15 @@
 {% call card(title="数据范围") %}
 <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
     <label style="font-weight:600;">数据月份：</label>
-    <select id="month-select" class="input" style="max-width:180px;">
+    <select id="month-select" class="input" class="maxw-180">
         <option value="">加载中...</option>
     </select>
-    <label style="font-weight:600;margin-left:1rem;">显示格式：</label>
-    <select id="month-format" class="input" style="width:140px;">
+    <label class="fw-600 ml-2">显示格式：</label>
+    <select id="month-format" class="input" class="w-140">
         <option value="YYYYMM">YYYYMM</option>
         <option value="YYYY年MM月">YYYY年MM月</option>
     </select>
-    <span id="load-status" style="color:var(--c-muted);font-size:0.85rem;"></span>
+    <span id="load-status" class="text-muted fs-xs"></span>
 </div>
 {% endcall %}
 
@@ -38,7 +38,7 @@
 
 {% call card(title="月度趋势（计划 vs 实际）") %}
 <div class="card chart-container"><div class="chart-body" style="height: 320px;"><canvas id="chart-trend"></canvas></div></div>
-<div id="trend-table" style="margin-top:1rem;"></div>
+<div id="trend-table" class="mt-4"></div>
 {% endcall %}
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
@@ -54,13 +54,13 @@
 <div class="card chart-container"><div class="chart-body" style="height: 300px;"><canvas id="chart-dept"></canvas></div></div>
 {% endcall %}
 
-<div id="drill-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-  <div style="background:var(--c-surface,#fff);border-radius:8px;max-width:90vw;max-height:85vh;overflow:auto;padding:1.5rem;min-width:640px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+<div class="modal-overlay" id="drill-modal" data-modal role="dialog" aria-modal="true">
+  <div class="modal-content" style="max-width:90vw;min-width:640px;">
+    <div class="modal-header">
       <h3 id="drill-title" style="margin:0;">明细</h3>
-      <button class="btn btn-sm" onclick="closeDrill()">关闭</button>
+      <button class="modal-close" aria-label="关闭">×</button>
     </div>
-    <div id="drill-body">加载中...</div>
+    <div class="modal-body" id="drill-body">加载中...</div>
   </div>
 </div>
 {% endblock %}
@@ -78,7 +78,7 @@ async function init() {
   try {
     await loadMonths();
     await reloadDashboard(false);
-  } catch(e) { console.error(e); }
+  } catch(e) { Toast.error('页面初始化失败: ' + (e.message || e)); }
 }
 
 function fmtMonth(mm, format) {
@@ -199,7 +199,7 @@ function renderKpis(k) {
   host.innerHTML = cards.map(([label, val, icon, variant]) =>
     `<div class="stat-card ${variant}" onclick="drillKpi('${label}')" style="cursor:pointer;transition:transform 0.15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
       <div style="font-size:1.4rem;">${icon}</div>
-      <div style="font-size:0.8rem;color:var(--c-muted);">${label}</div>
+      <div class="fs-sm text-muted">${label}</div>
       <div style="font-size:1.35rem;font-weight:700;">${val}</div>
     </div>`
   ).join("");
@@ -288,14 +288,14 @@ function renderDept(d) {
 function table(headers, rows) {
   let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
     headers.map(x => `<th>${x}</th>`).join("") + '</tr></thead><tbody>';
-  if (!rows.length) h += `<tr><td colspan="${headers.length}" style="color:var(--c-muted);">暂无数据</td></tr>`;
+  if (!rows.length) h += `<tr><td colspan="${headers.length}" class="text-muted">暂无数据</td></tr>`;
   rows.forEach(r => { h += '<tr>' + r.map(c => `<td>${c ?? "-"}</td>`).join("") + "</tr>"; });
   return h + "</tbody></table></div>";
 }
 
 async function drill(dimension, value) {
   const month = currentMonth();
-  document.getElementById("drill-modal").style.display = "flex";
+  Modal.open('drill-modal');
   document.getElementById("drill-title").textContent = `${dimension}: ${value}`;
   document.getElementById("drill-body").textContent = "加载中...";
   try {
@@ -306,12 +306,12 @@ async function drill(dimension, value) {
     const d = await r.json();
     if (!r.ok) { document.getElementById("drill-body").textContent = `⚠️ ${d.error}`; return; }
     const rows = d.rows || d.items || [];
-    if (!rows.length) { document.getElementById("drill-body").innerHTML = '<p style="color:var(--c-muted);">无匹配明细</p>'; return; }
+    if (!rows.length) { document.getElementById("drill-body").innerHTML = '<p class="text-muted">无匹配明细</p>'; return; }
     const cols = d.columns || Object.keys(rows[0]);
     document.getElementById("drill-body").innerHTML = table(cols, rows.slice(0,200).map(x => cols.map(c => x[c])));
   } catch(e) { document.getElementById("drill-body").textContent = `加载失败: ${e}`; }
 }
 
-function closeDrill() { document.getElementById("drill-modal").style.display = "none"; }
+function closeDrill() { Modal.close('drill-modal'); }
 </script>
 {% endblock %}
