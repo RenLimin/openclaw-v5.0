@@ -402,22 +402,91 @@ async function pollGenerateProgress() {
     const progressBar = document.querySelector('.progress-fill');
     const st = document.getElementById('status-text');
     const progressLabel = document.querySelector('.progress-label');
-    
+    const progressContainer = document.getElementById('progress-container');
+    const statusCard = document.getElementById('status-card');
+    const btnRevalidate = document.getElementById('btn-revalidate');
+    const btnRegenerate = document.getElementById('btn-regenerate');
+    const btnExport = document.getElementById('btn-export-main');
+    const btnCompare = document.getElementById('btn-compare');
+
     const progress = d.progress || 0;
     const stepName = getStepName(progress);
     const statusText = `${stepName} (${progress}%)`;
-    
+
     if (progressBar) progressBar.style.width = progress + '%';
     if (progressLabel) progressLabel.textContent = statusText;
-    if (st) st.textContent = statusText;
-    
-    // 完成或失败后停止轮询
-    if (d.status === 'done' || d.status === 'failed') {
+    if (st && d.status === 'running') st.textContent = statusText;
+
+    // 完成或失败后停止轮询并处理
+    if (d.status === 'done') {
       stopGeneratePolling();
+      handleGenerateSuccess(d);
+    } else if (d.status === 'failed') {
+      stopGeneratePolling();
+      handleGenerateFailed(d.message || '生成失败');
     }
   } catch (e) {
     // 静默忽略轮询错误
   }
+}
+
+// 生成成功处理
+async function handleGenerateSuccess(d) {
+  const st = document.getElementById('status-text');
+  const progressContainer = document.getElementById('progress-container');
+  const statusCard = document.getElementById('status-card');
+  const btnRevalidate = document.getElementById('btn-revalidate');
+  const btnRegenerate = document.getElementById('btn-regenerate');
+  const btnExport = document.getElementById('btn-export-main');
+  const btnCompare = document.getElementById('btn-compare');
+
+  if (st) st.textContent = '✅ 生成完成';
+  const progressBar = document.querySelector('.progress-fill');
+  if (progressBar) progressBar.style.width = '100%';
+
+  // 延迟半秒后隐藏进度条，让用户看到 100%
+  setTimeout(() => {
+    if (progressContainer) progressContainer.style.display = 'none';
+  }, 500);
+
+  // 恢复按钮状态
+  if (btnRevalidate) btnRevalidate.disabled = false;
+  if (btnRegenerate) btnRegenerate.disabled = false;
+  if (btnExport) btnExport.disabled = false;
+  if (btnCompare) btnCompare.disabled = false;
+
+  // 重新加载月份列表
+  loadMonths();
+  // 加载审核状态 + Sheet 明细
+  if (currentMonth) {
+    await loadReviewStatus(currentMonth);
+    loadSheetDetail(currentMonth);
+  }
+  // 滚动到状态卡片
+  if (statusCard) statusCard.scrollIntoView({behavior: 'smooth'});
+  // toast 通知
+  Toast.success('生成完成');
+}
+
+// 生成失败处理
+function handleGenerateFailed(errorMsg) {
+  const st = document.getElementById('status-text');
+  const progressContainer = document.getElementById('progress-container');
+  const btnRevalidate = document.getElementById('btn-revalidate');
+  const btnRegenerate = document.getElementById('btn-regenerate');
+  const btnExport = document.getElementById('btn-export-main');
+  const btnCompare = document.getElementById('btn-compare');
+
+  if (st) st.textContent = `❌ 生成失败: ${errorMsg}`;
+  if (progressContainer) progressContainer.style.display = 'none';
+
+  // 恢复按钮状态
+  if (btnRevalidate) btnRevalidate.disabled = false;
+  if (btnRegenerate) btnRegenerate.disabled = false;
+  if (btnExport) btnExport.disabled = false;
+  if (btnCompare) btnCompare.disabled = false;
+
+  Toast.error(`生成失败: ${errorMsg}`);
 }
 
 async function doGenerate(month, mode = 'auto') {
@@ -469,9 +538,8 @@ async function doGenerate(month, mode = 'auto') {
       body: JSON.stringify({month, mode, refetch_sources})
     });
     const d = await r.json();
-    currentJobId = d.job_id;
 
-    if (!r.ok) {
+    if (!r.ok || !d.job_id) {
       st.textContent = `⚠️ ${d.detail || d.error || '生成失败'}`;
       if (progressContainer) progressContainer.style.display = 'none';
       stopGeneratePolling();
@@ -484,37 +552,10 @@ async function doGenerate(month, mode = 'auto') {
       return;
     }
 
-    // 完成时进度条拉满
-    if (progressBar) progressBar.style.width = '100%';
-    st.innerHTML = `✅ <strong>${d.action}</strong> 完成，合计 <strong>${d.total_rows}</strong> 行`;
+    // 真异步：立即返回 job_id，后续进度和完成/失败由轮询处理
+    currentJobId = d.job_id;
+    st.textContent = `🚀 任务已提交，正在生成（${mode}）...`;
 
-    // 延迟半秒后隐藏进度条，让用户看到 100%
-    setTimeout(() => {
-      if (progressContainer) progressContainer.style.display = 'none';
-    }, 500);
-    stopGeneratePolling();
-
-    // 显示 Sheet 明细
-    const sheetDetail = document.getElementById('sheet-detail');
-    if (sheetDetail && d.sheets) {
-      let h = '<div class="detail-grid">';
-      for (const [k, v] of Object.entries(d.sheets)) {
-        h += `<div style="padding:0.5rem;background:var(--c-surface-2);border-radius:var(--r-sm);">${k}: <strong style="color:var(--c-primary);">${v}</strong> 行</div>`;
-      }
-      h += '</div>';
-      sheetDetail.innerHTML = h;
-      const sdCard = sheetDetail.closest('.card');
-      if (sdCard) sdCard.style.display = 'block';
-    }
-
-    // 重新加载月份列表
-    loadMonths();
-    // 加载审核状态
-    await loadReviewStatus(month);
-    // 滚动到状态卡片
-    if (statusCard) statusCard.scrollIntoView({behavior: 'smooth'});
-    // toast 通知
-    Toast.success('生成完成');
   } catch (e) {
     stopGeneratePolling();
     console.error('doGenerate error:', e);
