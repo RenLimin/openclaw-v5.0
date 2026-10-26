@@ -642,6 +642,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 健康管理系统 | — | `L3-business/components/health-management/` | 体检/健康计划/用药/指标/风险评估/档案管理 | ✅ 已上线 |
 | 办公业务组件 | ADR-029 | `L3-business/components/office-business/` | 合同/方案/报告/演示模板 + 角色定义 + 变量系统 | ✅ 已上线 |
 | 家庭理财引擎 | ADR-026/027 | `L3-business/components/finance-engine/` | 账户/贷款/保险/投资/利率/建议 6 大引擎 + Web UI | ✅ 已上线 |
+| 通用合同管理专家 | — | `L3-business/components/contract-management/` | 通用合同管理纯逻辑核心（状态机 / 风险规则 / 分级审批 / 金额工具 / OA 连接器抽象），CLM-GEN-001 | 🚧 建设中 |
 
 > **命名对齐**：`finance_engine` 是 `finance-engine` 的 symlink，两者等价。
 
@@ -657,6 +658,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 家庭理财实例引擎 | ADR-027 | `L4-proprietary/components/fin-l4/` | FIN-L4 专有实例：Rex 家庭理财系统（CLI + Web UI + 测试数据） | ✅ 已上线 |
 | 收入确认引擎 | — | `L4-proprietary/components/revenue-recognition/` | ASC 606 / IFRS 15 收入确认：合同识别→履约义务→价格分配→时点/时段确认→报表（v1 + v2 双版本） | ✅ 已上线 |
 | CISSP 学习系统(v1) | — | `L4-proprietary/components/.deprecated/cissp-learning/` | 已被 cissp-trainer(v2) 替代 | 🗑️ 已废弃 |
+| Bangcle 合同管理专家 | — | `L4-proprietary/components/bangcle-contract/` | 泛微 OA + 企业微信集成，合同全文扫描解析 + 产品知识库参照分析，CLM-BANGCLE-001 | 🚧 建设中 |
 
 **L4 层技能**（`L4-proprietary/skills/`）:
 
@@ -1022,18 +1024,59 @@ L4 专有业务
 | 09-28 | E2E 测试数据污染生产列表 | 测试写入未清理 | 清理 + 备份 | 测试后必须 review 清理脏数据 |
 | 09-28 | model-scheduling 修复 6 次才彻底 | 一天 7 个 commit 导致配置混乱 | 限制每日 commit 数 | 一天不超过 3 个功能 commit |
 
-### 7.4 文档命名规范
+### 7.4 统一命名规则（强制）
+
+> **Rex 拍板**（2026-10-27）：系统架构文档须包含统一风格的命名规则。新增组件必须遵守。
+
+#### 7.4.1 目录 / 组件命名
+
+| 层级 | 位置 | 规则 | 示例 |
+|---|---|---|---|
+| L2 | `L2-infra/components/<name>` | 全小写 kebab-case，名词性，基础设施能力 | `ai-knowledge-base` / `model-scheduling` |
+| L3 | `L3-business/components/<name>` | 全小写 kebab-case，通用业务能力 | `contract-management` / `finance-engine` |
+| L4 | `L4-proprietary/components/<name>` | 全小写 kebab-case；Bangcle 专有实例以 `bangcle-` 前缀 | `bangcle-contract` / `product-kb` |
+
+规则：
+- 一律 **kebab-case**（小写 + 连字符），不用下划线/驼峰/空格
+- 名称用**名词/名词短语**，不带动词、版本号、公司名以外的限定词
+- L4 专有实例默认加 `bangcle-` 前缀以区分通用组件（历史命名如 `product-kb` 保留兼容）
+
+#### 7.4.2 组件编码（ID）
+
+| 层级 | 前缀 | 格式 | 示例 |
+|---|---|---|---|
+| L2 | `INFRA-` | `<PREFIX><DOMAIN>-<NNN>` | `INFRA-KB-001` |
+| L3 | 业务域缩写 | `<DOMAIN>-GEN-<NNN>` | `CLM-GEN-001` |
+| L4 | 业务域缩写 | `<DOMAIN>-BANGCLE-<NNN>` | `CLM-BANGCLE-001` |
+
+- 编码大写、连字符分隔；`GEN` = 通用（L3），`BANGCLE` = Bangcle 实例（L4）
+- 历史编码（如 `SCA-001`、`ADR-018`）在原文档保留，新组件统一按本表
+
+#### 7.4.3 文档命名规范
 
 | 类型 | 命名规则 | 示例 |
 |------|---------|------|
-| 需求 | `PRD-<topic>-<version>.md` | `PRD-v2.1.md` |
-| 大纲 | `DESIGN-OUTLINE-<topic>-<version>.md` | `DESIGN-OUTLINE-v2.1.md` |
-| 详细设计 | `DESIGN-DETAIL-<module>-<version>.md` | `DESIGN-DETAIL-DELIVERY-REPORT-v2.1.md` |
-| 测试方案 | `VERIFICATION-<topic>-<version>.md` | `VERIFICATION-v2.1.md` |
-| 操作手册 | `OPERATIONS-<topic>-<version>.md` | `OPERATIONS-v2.1.md` |
-| 开发计划 | `IMPLEMENTATION-PLAN-<version>.md` | `IMPLEMENTATION-PLAN-v2.1.md` |
-| 验收报告 | `VERIFICATION-<phase>-<version>.md` | `VERIFICATION-Phase1-v2.1.md` |
+| 需求 | `PRD-<topic>-<version>.md` | `PRD-v1.0.md` |
+| 大纲 | `DESIGN-OUTLINE-<topic>-<version>.md` | `DESIGN-OUTLINE-v1.0.md` |
+| 详细设计 | `DESIGN-DETAIL-<module>-<version>.md` | `DESIGN-DETAIL-CONTRACT-STATE-v1.0.md` |
+| 测试方案 | `VERIFICATION-<topic>-<version>.md` | `VERIFICATION-v1.0.md` |
+| 操作手册 | `OPERATIONS-<topic>-<version>.md` | `OPERATIONS-v1.0.md` |
+| 开发计划 | `IMPLEMENTATION-PLAN-<version>.md` | `IMPLEMENTATION-PLAN-v1.0.md` |
+| 验收报告 | `VERIFICATION-<phase>-<version>.md` | `VERIFICATION-Phase1-v1.0.md` |
 | 变更记录 | `CHANGELOG-<topic>.md` | `CHANGELOG.md` |
+
+- version 语义化：`v1.0` 起，小修订 `v1.1`，大版本 `v2.0`
+
+#### 7.4.4 Python 包 / 模块 / CLI 命名
+
+| 对象 | 规则 | 示例 |
+|---|---|---|
+| Python 包目录 | snake_case | `contract_management/` |
+| 模块文件 | snake_case | `state_machine.py` |
+| CLI 命令 | 小写，组件简称 + `ctl` | `contractctl` |
+| 类名 | PascalCase 名词 | `ContractService` |
+| 函数/变量 | snake_case | `get_approval_config` |
+| 常量 | UPPER_SNAKE | `DEFAULT_APPROVAL_LEVELS` |
 
 ### 7.5 操作手册模板（最低要求）
 
@@ -1174,6 +1217,52 @@ L4 专有业务
 | 工具来源 | 运行时 built-in + approved plugins | 绕过 L1 抽象层 |
 
 ---
+## 10. 发布管理（Release Management）
+
+> **Rex 拍板**（2026-10-27）：系统架构的调整及更新须按 release management 思路管理版本编号。适用于：架构文档本身、组件资产、配置变更。
+
+### 10.1 版本编号（语义化版本 SemVer）
+
+| 对象 | 规则 | 示例 |
+|---|---|---|
+| 架构文档 | `<major>.<minor>`，变更历史 §12 每行登记日期+版本+变更 | `5.1` → 组件清单增改 → `5.2` |
+| 组件文档 | `v<major>.<minor>`，小修订 `v1.1`，大版本 `v2.0` | `PRD-v1.0.md` → `PRD-v1.1.md` |
+| 组件编码 | 不变更（编码标识身份，不随版本变化） | `CLM-GEN-001` |
+| Release 标签 | `v<组件>-<版本>`，git tag 管理 | `vbangcle-contract-1.0` |
+| ADR | 递增序号，状态 accepted/proposed/superseded | `ADR-034` |
+
+### 10.2 Release 流程（组件级）
+
+```
+1. 设计冻结   — PRD + OUTLINE 经 Rex 审核通过 → 进入开发
+2. 开发       — 按 IMPLEMENTATION-PLAN 分 Phase 实现
+3. 验证       — VERIFICATION 自动化 + 人工验收全绿
+4. 发布       — 打 git tag + 更新架构文档组件清单状态 ✅
+5. 变更记录   — 架构文档 §12 变更历史登记一行
+```
+
+### 10.3 架构文档变更规则
+
+1. **任何架构调整**（新增/废弃组件、分层变更、契约变更）→ 必须：
+   - 更新对应章节 + 变更历史 §12 新增一行（日期 + 版本 + 变更摘要）
+   - 涉及契约/决策变更时同步新增/更新 ADR
+2. **版本号递增规则**：
+   - minor 递增：组件清单增改、文档补齐、状态更新
+   - major 递增：分层结构变更、范式转换（如 ADR-012 4 层→5 层）
+3. **变更历史格式**（已有 §12 表，保持一致）：
+   `| 日期 | 版本 | 变更 |`
+
+### 10.4 组件资产版本状态
+
+| 状态 | 含义 | 架构文档标记 |
+|---|---|---|
+| 📐 设计态 | 仅设计文档，未开发 | `📐 设计态` |
+| 🚧 建设中 | 开发进行中，未验收 | `🚧 建设中` |
+| ✅ 已上线 | 验证通过，可交付 | `✅ 已上线` |
+| 🗑️ 已废弃 | 被替代/下线 | `🗑️ 已废弃` |
+
+---
+
 
 ## 11. 术语表
 
@@ -1198,6 +1287,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-27 | **5.2** | **分层合同管理专家立项 + 命名规则 + 发布管理**：① 新增 L3 `contract-management`（CLM-GEN-001）与 L4 `bangcle-contract`（CLM-BANGCLE-001，泛微 OA + 企业微信，MVP 聚焦全文扫描解析 + 产品知识库参照）；② §7.4 扩展统一命名规则（目录 kebab-case / 组件编码 / 文档命名 / Python 命名）；③ 新增 §10 发布管理（SemVer + Release 流程 + 变更规则）；④ 历史资产备份 `backups/contract-approval-legacy-20261027/`。 |
 | 2026-10-04 | **4.7** | **全量资产 5 件套补齐 + 垃圾清理 + 架构文档对齐**：① L3 7 个组件 PRD + OUTLINE + VERIF + OPS（28 份）；② L2 19 个组件 VERIFICATION.md + OPERATIONS.md（38 份）；③ cissp-learning 移至 L4/.deprecated；④ revenue-recognition 补入 L4 清单；⑤ AGENTS.md 瘦身 24679→11175；⑥ 清理 __pycache__/ .pyc / .bak / /tmp 垃圾；⑦ 资产清单 §7.6 全部标记 ✅。 |
 | 2026-09-11 | **3.9** | **L0/L1 文档补齐 + L2 全量对齐**：① L0-gateway（auth-gateway/channel-router/session-manager）纳入架构文档，L0 双子层（Install + Gateway）正式定义；② L1-runtime 路径对齐（`adapters/<runtime>/` → `L1-runtime/adapters/<runtime>/`），纳入 4 个 L1 自建组件（tool-policy/context-bus/agent-registry/telemetry）；③ L2 DESIGN.md 从 3/26 → 18/18（0 缺失）；④ 纳入 13 个未声明 L2 组件；⑤ 命名对齐：config-management→config, sandbox-isolation→sandbox；⑥ 清理空目录 + __pycache__；⑦ 删除 L3-business 空目录。 |
 | 2026-08-21 | 0.1 | 初版骨架(4 层架构 + 契约 + 演进路线) |

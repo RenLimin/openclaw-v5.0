@@ -1,0 +1,172 @@
+/* ============================================================
+   Office Contract Web UI — 业务特有样式
+   基础样式复用 L2 web-common 组件库
+   ============================================================ */
+
+:root {
+    /* 合同状态专属色 */
+    --c-st-draft:      #6b7280;
+    --c-st-review:     #2563eb;
+    --c-st-approved:   #059669;
+    --c-st-signed:     #0891b2;
+    --c-st-archived:   #6b7280;
+    --c-st-rejected:   #dc2626;
+}
+
+[data-theme="dark"] {
+    --c-st-draft:      #9ca3af;
+    --c-st-review:     #60a5fa;
+    --c-st-approved:   #34d399;
+    --c-st-signed:     #22d3ee;
+    --c-st-archived:   #9ca3af;
+    --c-st-rejected:   #f87171;
+}
+
+/* ── 合同状态徽章 ── */
+.badge.status-draft { background: rgba(107, 114, 128, 0.1); color: var(--c-st-draft); }
+.badge.status-review { background: rgba(37, 99, 235, 0.1); color: var(--c-st-review); }
+.badge.status-approved,
+.badge.status-signed,
+.badge.status-archived { background: rgba(5, 150, 105, 0.1); color: var(--c-st-approved); }
+.badge.status-rejected { background: rgba(220, 38, 38, 0.1); color: var(--c-st-rejected); }
+
+/* ── 统计卡片入场动画延迟 ── */
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.2s; }
+.stat-card:nth-child(5) { animation-delay: 0.25s; }
+.stat-card:nth-child(6) { animation-delay: 0.3s; }
+
+/* ── 趋势图 ── */
+.trend-chart {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 100%;
+    padding: var(--s-4) 0;
+}
+.trend-bar {
+    flex: 1;
+    background: var(--c-primary);
+    border-radius: 3px 3px 0 0;
+    min-height: 2px;
+    transition: all var(--t-base);
+    position: relative;
+    opacity: 0.7;
+}
+.trend-bar:hover { opacity: 1; }
+.trend-bar:hover::after {
+    content: attr(data-count);
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--c-text);
+    color: var(--c-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ── 风险扫描结果 ── */
+.risk-summary {
+    display: flex;
+    gap: var(--s-6);
+    margin-bottom: var(--s-5);
+    padding: var(--s-4);
+    background: var(--c-surface-2);
+    border-radius: var(--r-md);
+    flex-wrap: wrap;
+}
+.risk-overall { text-align: center; min-width: 100px; }
+.risk-overall .risk-level {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.risk-overall .risk-label {
+    font-size: 0.75rem;
+    color: var(--c-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.risk-level.high { color: var(--c-danger); }
+.risk-level.medium { color: var(--c-warning); }
+.risk-level.low { color: var(--c-success); }
+
+.risk-counts {
+    display: flex;
+    gap: var(--s-5);
+    align-items: center;
+    flex-wrap: wrap;
+}
+.risk-count-item { text-align: center; }
+.risk-count-item .num {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+.risk-count-item .label {
+    font-size: 0.7rem;
+    color: var(--c-muted);
+    text-transform: uppercase;
+}
+
+.risk-findings {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.risk-finding {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+    padding: var(--s-3);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    transition: all var(--t-fast);
+}
+.risk-finding:hover { background: var(--c-surface-2); }
+.risk-finding-icon {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700;
+    flex-shrink: 0;
+}
+.risk-finding-icon.pass { background: rgba(16, 185, 129, 0.15); color: var(--c-success); }
+.risk-finding-icon.warning { background: rgba(245, 158, 11, 0.15); color: var(--c-warning); }
+.risk-finding-icon.fail { background: rgba(239, 68, 68, 0.15); color: var(--c-danger); }
+.risk-finding-body { flex: 1; }
+.risk-finding-title { font-weight: 600; font-size: 0.88rem; color: var(--c-text); }
+.risk-finding-cat { font-size: 0.72rem; color: var(--c-muted); margin-left: var(--s-2); }
+.risk-finding-law { font-size: 0.75rem; color: var(--c-muted); margin-top: 2px; font-family: var(--font-mono); }
+
+/* ── 风险规则页 ── */
+.rule-item {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    padding: var(--s-3) var(--s-4);
+    border: 1px solid var(--c-border);
+    border-radius: var(--r-sm);
+    margin-bottom: var(--s-2);
+    transition: all var(--t-fast);
+}
+.rule-item:hover { background: var(--c-surface-2); }
+.rule-toggle { flex-shrink: 0; }
+.rule-info { flex: 1; }
+.rule-name { font-weight: 600; font-size: 0.9rem; }
+.rule-desc { font-size: 0.78rem; color: var(--c-muted); }
+.rule-weight { font-family: var(--font-mono); font-size: 0.85rem; color: var(--c-muted); }
+
+/* ── 表单按钮行 ── */
+.form-actions {
+    display: flex;
+    gap: var(--s-3);
+    justify-content: flex-end;
+}

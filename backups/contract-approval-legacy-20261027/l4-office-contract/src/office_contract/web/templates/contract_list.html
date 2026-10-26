@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, filter_bar, table, pagination, badge with context %}
+
+{% block content %}
+{{ page_header(
+    title="合同列表",
+    subtitle="管理所有合同审批流程",
+    actions=[{"label": "新建合同", "url": "/new", "variant": "primary", "icon": "➕"}]
+) }}
+
+<!-- 筛选栏 -->
+{{ filter_bar(
+    fields=[
+        {"type": "select", "label": "状态", "id": "filterStatus", "placeholder": "全部", "options": [
+            ("draft", "起草中"),
+            ("review1", "一级审批"),
+            ("review2", "二级审批"),
+            ("review3", "三级审批"),
+            ("approved", "已通过"),
+            ("signed", "已签署"),
+            ("archived", "已归档"),
+            ("rejected", "已驳回"),
+        ]},
+        {"type": "text", "label": "客户名称", "id": "filterPartyB", "placeholder": "搜索客户..."},
+        {"type": "number", "label": "最小金额", "id": "filterMinAmount", "placeholder": "0"},
+        {"type": "number", "label": "最大金额", "id": "filterMaxAmount", "placeholder": ""},
+        {"type": "date", "label": "开始日期", "id": "filterDateFrom", "range_group": "contract_date", "shortcuts": true},
+        {"type": "date", "label": "结束日期", "id": "filterDateTo", "range_group": "contract_date", "shortcuts": true},
+    ],
+    submit_onclick="loadContracts(1)",
+    reset_onclick="resetFilters()"
+) }}
+
+<!-- 合同表格 -->
+{% call card(class_="mb-0") %}
+    <div class="card-title">
+        <span>合同清单</span>
+        <span id="totalInfo" class="text-muted" style="text-transform: none; font-weight: 400; font-size: 0.85rem;">--</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="table" id="contractTable">
+            <thead>
+                <tr>
+                    <th>合同号</th>
+                    <th>合同名称</th>
+                    <th>客户</th>
+                    <th class="num">金额</th>
+                    <th>状态</th>
+                    <th>当前审批人</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="contractTableBody">
+                <tr><td colspan="8" class="text-muted" style="text-align:center; padding: 30px;">加载中...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="paginationContainer"></div>
+{% endcall %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentPage = 1;
+const pageSize = 20;
+
+async function loadContracts(page = 1) {
+    currentPage = page;
+    const params = new URLSearchParams({
+        page: page,
+        page_size: pageSize,
+    });
+    
+    const status = document.getElementById('filterStatus').value;
+    const partyB = document.getElementById('filterPartyB').value;
+    const minAmount = document.getElementById('filterMinAmount').value;
+    const maxAmount = document.getElementById('filterMaxAmount').value;
+    const dateFrom = document.getElementById('filterDateFrom').value;
+    const dateTo = document.getElementById('filterDateTo').value;
+    
+    if (status) params.set('status', status);
+    if (partyB) params.set('party_b', partyB);
+    if (minAmount) params.set('min_amount', minAmount);
+    if (maxAmount) params.set('max_amount', maxAmount);
+    if (dateFrom) params.set('date_from', dateFrom);
+    if (dateTo) params.set('date_to', dateTo);
+    
+    try {
+        const res = await fetch(`/api/contracts?${params.toString()}`);
+        const data = await res.json();
+        renderTable(data);
+        renderPagination(data);
+    } catch (e) {
+        showToast('加载失败: ' + e.message, 'error');
+    }
+}
+
+function renderTable(data) {
+    const tbody = document.getElementById('contractTableBody');
+    const items = data.items || [];
+    
+    if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-muted" style="text-align:center; padding: 30px;">暂无数据</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = items.map(c => `
+        <tr>
+            <td style="font-family: var(--font-mono); font-size: 0.85rem;">${c.contract_no}</td>
+            <td>${c.title}</td>
+            <td>${c.party_b}</td>
+            <td class="num mono">${formatAmount(c.amount)}</td>
+            <td><span class="${statusBadgeClass(c.status)}">${statusLabels[c.status] || c.status}</span></td>
+            <td>${c.current_approver || '--'}</td>
+            <td style="font-size: 0.82rem; color: var(--c-muted);">${c.created_at ? c.created_at.substring(0, 16).replace('T', ' ') : '--'}</td>
+            <td>
+                <div class="actions">
+                    <a href="/contracts/${c.id}" class="btn btn-sm">查看</a>
+                    ${c.status === 'draft' ? `<button class="btn btn-sm btn-primary" onclick="submitContract(${c.id})">提交</button>` : ''}
+                    ${c.status && c.status.startsWith('review') ? `<button class="btn btn-sm btn-success" onclick="quickApprove(${c.id})">通过</button>` : ''}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    
+    document.getElementById('totalInfo').textContent = `共 ${data.total} 条`;
+}
+
+function renderPagination(data) {
+    const pag = document.getElementById('paginationContainer');
+    const totalPages = data.total_pages || 1;
+    const current = data.page || 1;
+    
+    if (totalPages <= 1) {
+        pag.innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    html += `<button class="btn btn-sm" ${current <= 1 ? 'disabled' : ''} onclick="loadContracts(${current - 1})">上一页</button>`;
+    html += `<span class="page-info">第 ${current} / ${totalPages} 页</span>`;
+    html += `<button class="btn btn-sm" ${current >= totalPages ? 'disabled' : ''} onclick="loadContracts(${current + 1})">下一页</button>`;
+    
+    pag.innerHTML = `<div class="pagination">${html}</div>`;
+}
+
+function resetFilters() {
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterPartyB').value = '';
+    document.getElementById('filterMinAmount').value = '';
+    document.getElementById('filterMaxAmount').value = '';
+    document.getElementById('filterDateFrom').value = '';
+    document.getElementById('filterDateTo').value = '';
+    loadContracts(1);
+}
+
+async function submitContract(id) {
+    if (!confirm('确定提交审批吗？')) return;
+    try {
+        const res = await fetch(`/api/contracts/${id}/submit`, { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('提交成功', 'success');
+            loadContracts(currentPage);
+        } else {
+            showToast(data.detail || data.error || '提交失败', 'error');
+        }
+    } catch (e) {
+        showToast('提交失败: ' + e.message, 'error');
+    }
+}
+
+async function quickApprove(id) {
+    const name = prompt('请输入审批人姓名:');
+    if (!name) return;
+    const role = prompt('请输入审批人角色:', '销售经理');
+    if (!role) return;
+    const comment = prompt('审批意见(可选):') || '';
+    
+    try {
+        const res = await fetch(`/api/contracts/${id}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approver_name: name, approver_role: role, comment }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('审批通过', 'success');
+            loadContracts(currentPage);
+        } else {
+            showToast(data.detail || data.error || '审批失败', 'error');
+        }
+    } catch (e) {
+        showToast('审批失败: ' + e.message, 'error');
+    }
+}
+
+// 从 URL 参数初始化筛选
+function initFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    if (status) {
+        document.getElementById('filterStatus').value = status;
+    }
+}
+
+initFromUrl();
+loadContracts(1);
+</script>
+{% endblock %}
