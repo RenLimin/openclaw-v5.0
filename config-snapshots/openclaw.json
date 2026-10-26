@@ -20,21 +20,23 @@
       "workspace": "/Users/bangcle/.openclaw/workspace",
       "compaction": {
         "mode": "safeguard",
-        "keepRecentTokens": 30000,
-        "maxActiveTranscriptBytes": "6mb",
+        "keepRecentTokens": 40000,
+        "maxActiveTranscriptBytes": "1mb",
         "midTurnPrecheck": {
           "enabled": true
         },
         "memoryFlush": {
           "model": "longcat/LongCat-2.0",
           "softThresholdTokens": "<REDACTED>",
-          "forceFlushTranscriptBytes": "200kb"
+          "forceFlushTranscriptBytes": "100kb"
         },
         "qualityGuard": {
           "maxRetries": 3
         },
-        "model": "longcat/LongCat-2.0",
-        "notifyUser": true
+        "thinkingLevel": "off",
+        "model": "coding-plan/doubao-seed-2-1-turbo",
+        "notifyUser": true,
+        "enabled": true
       },
       "contextPruning": {
         "mode": "cache-ttl",
@@ -65,7 +67,11 @@
       "systemAgent": {
         "agentId": "<REDACTED>"
       },
-      "bootstrapMaxChars": 15000
+      "bootstrapMaxChars": 12000,
+      "contextInjection": "continuation-skip",
+      "contextLimits": {
+        "postCompactionMaxChars": 30000
+      }
     },
     "entries": {
       "main": {
@@ -337,7 +343,7 @@
               "cacheRead": 0,
               "cacheWrite": 0
             },
-            "contextWindow": 1048576,
+            "contextWindow": 262144,
             "maxTokens": 131072
           }
         ]
@@ -558,13 +564,15 @@
     }
   },
   "tools": {
-    "profile": "coding",
+    "profile": "full",
     "alsoAllow": [
       "tavily_search",
       "tavily_extract",
       "message",
       "group:messaging",
-      "wecom-cli"
+      "wecom-cli",
+      "wecom-openclaw-plugin",
+      "imap"
     ],
     "sandbox": {
       "tools": {
@@ -615,7 +623,10 @@
         "enabled": true
       },
       "context-guardian": {
-        "enabled": true
+        "enabled": true,
+        "config": {
+          "effectiveContextWindow": 196608
+        }
       }
     },
     "enabled": true,

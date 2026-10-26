@@ -54,6 +54,7 @@ class TestBDMSRevenue(VisualTestBase):
     """BDMS 确收汇总"""
     url = "http://127.0.0.1:8000/revenue"
     viewport = (1440, 900)
+    threshold = 0.01  # 1% 容忍度：表格数据内容会变，允许一定差异
     wait_for_selector = "body"
 
     def test_page(self, page):
@@ -64,6 +65,7 @@ class TestBDMSRevenueCompare(VisualTestBase):
     """BDMS 对比分析"""
     url = "http://127.0.0.1:8000/revenue/compare"
     viewport = (1440, 900)
+    threshold = 0.01  # 1% 容忍度：对比内容会变，允许一定差异
     wait_for_selector = "body"
 
     def test_page(self, page):
@@ -74,6 +76,7 @@ class TestBDMSMasterData(VisualTestBase):
     """BDMS 图例基础数据"""
     url = "http://127.0.0.1:8000/master-data"
     viewport = (1440, 900)
+    threshold = 0.01  # 1% 容忍度：表格数据内容会变，允许一定差异
     wait_for_selector = "body"
 
     def test_page(self, page):
