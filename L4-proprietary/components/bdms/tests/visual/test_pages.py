@@ -30,10 +30,11 @@ class TestBDMSDashView(VisualTestBase):
 
 
 class TestBDMSError(VisualTestBase):
-    """BDMS 错误页"""
+    """BDMS 错误页（404 是预期状态，允许截基准图）"""
     url = "http://127.0.0.1:8000/nonexistent-page"
     viewport = (1440, 900)
     wait_for_selector = "body"
+    allowed_status_codes = {200, 404}
 
     def test_page(self, page):
         self.assert_visual_match(page, "error")

@@ -21,6 +21,8 @@ class VisualTestBase:
     - [可选] mask_selectors: 需要隐藏的动态内容 CSS 选择器列表，默认 []
     - [可选] wait_for_selector: 等待该选择器出现再截图，默认 None
     - [可选] base_url: 测试服务器基础 URL，默认 http://127.0.0.1:8000
+    - [可选] allowed_status_codes: 允许的 HTTP 状态码集合，默认 {200}。
+      错误页测试（如 404 页面视觉验证）应设为 {200, 404}。
     """
 
     url: str = ""
@@ -31,6 +33,7 @@ class VisualTestBase:
     wait_for_selector: str | None = None
     full_page: bool = False  # 是否整页截图
     settle_time: float = 0.0  # 截图前稳定等待秒数（等图表动画/异步渲染完成）
+    allowed_status_codes: set[int] = {200}  # 允许的 HTTP 状态码
 
     def get_full_url(self) -> str:
         """获取完整测试 URL"""
@@ -145,13 +148,13 @@ class VisualTestBase:
         full_url = self.get_full_url()
         response = page.goto(full_url, wait_until="networkidle")
 
-        # HTTP 状态码校验：非 200 一律视为失败，禁止错误页存为基准图
+        # HTTP 状态码校验：非允许状态码一律视为失败，禁止错误页存为基准图
         if response is None:
             pytest.fail(f"页面无响应: {full_url}")
         status = response.status
-        if status != 200:
+        if status not in self.allowed_status_codes:
             pytest.fail(
-                f"页面返回非 200 状态码 ({status})，拒绝作为视觉基准: {full_url}\n"
+                f"页面返回非允许状态码 ({status})，拒绝作为视觉基准: {full_url}\n"
                 f"请检查路由是否真实存在，或服务是否正常启动"
             )
 

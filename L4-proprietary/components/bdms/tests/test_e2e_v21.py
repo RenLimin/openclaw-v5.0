@@ -243,17 +243,44 @@ class TestE2EDeliveryReport:
         assert isinstance(body["months"], list)
 
     def test_dr02_generate(self, client):
-        """E2E-DR-01b: 生成月报（月份格式 YYYYMM）。"""
+        """E2E-DR-01b: 生成月报（月份格式 YYYYMM，异步 + 进度轮询）。
+
+        10/21 真异步改造后：/api/report/generate 立即返回 job_id，
+        后台线程执行生成，前端轮询 /report/generate-progress/{job_id}。
+        """
         r = client.post("/api/report/generate", json={"month": "202606"})
         assert r.status_code == 200
         body = r.json()
-        assert "sheets" in body or "action" in body
+        assert "job_id" in body, body
         assert body["month"] == "202606"
+        job_id = body["job_id"]
+
+        # 轮询 job 进度直到 done/failed（最大 60s）
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            p = client.get(f"/api/report/generate-progress/{job_id}")
+            assert p.status_code == 200
+            status = p.json().get("status")
+            if status in ("done", "failed", "error"):
+                assert status == "done", p.text
+                break
+            time.sleep(1)
+        else:
+            pytest.fail(f"job {job_id} 60s 内未完成: {p.text}")
 
     def test_dr03_export(self, client):
         """E2E-DR-01c: 导出 Excel（流式下载，YYYYMM 格式）。"""
-        # 先确保生成过
-        client.post("/api/report/generate", json={"month": "202606"})
+        # 先确保生成过（提交 + 轮询完成）
+        r = client.post("/api/report/generate", json={"month": "202606"})
+        assert r.status_code == 200
+        job_id = r.json()["job_id"]
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            p = client.get(f"/api/report/generate-progress/{job_id}")
+            status = p.json().get("status")
+            if status in ("done", "failed", "error"):
+                break
+            time.sleep(1)
         r = client.get("/api/report/export/202606")
         # 200 = 文件，404 = 无数据，都算正常
         assert r.status_code in (200, 404, 204), f"status={r.status_code} {r.text[:200]}"

@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-21 10:53 UTC+08:00
+最后生成：2026-10-26 12:23 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -76,8 +76,8 @@ _自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 
 | 配置项 | 值 |
 |---|---|
-| `tools.profile` | `coding` |
-| `tools.alsoAllow` | `tavily_search`, `tavily_extract`, `message`, `group:messaging`, `wecom-cli`, `wecom-openclaw-plugin` |
+| `tools.profile` | `full` |
+| `tools.alsoAllow` | `tavily_search`, `tavily_extract`, `message`, `group:messaging`, `wecom-cli`, `wecom-openclaw-plugin`, `imap` |
 
 > `alsoAllow` 是 profile 之上的显式例外，理由见 [EXP-20260821-001](../knowledge-base/by-category/project-experience/correct/EXP-20260821-001-tavily-tools-also-allow.md)。
 
@@ -92,6 +92,7 @@ _自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 | `CODING_PLAN_API_KEY` | secret | team |
 | `DEEPSEEK_API_KEY` | secret | team |
 | `IAM_BASIC` | env | team |
+| `IAM_EMAIL_API` | secret | team |
 | `LONGCAT_API_KEY` | secret | team |
 | `OA_BASIC` | env | team |
 | `ONES_BASIC` | env | team |
@@ -112,6 +113,8 @@ _自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 | `~/.openclaw/secrets/backup.key` | `600` | 65 B |
 | `~/.openclaw/secrets/gateway.auth.token` | `600` | 48 B |
 | `~/.openclaw/secrets/iam.basic` | `600` | 18 B |
+| `~/.openclaw/secrets/iam.email_password` | `600` | 16 B |
+| `~/.openclaw/secrets/iam.email_username` | `600` | 21 B |
 | `~/.openclaw/secrets/iam.password` | `600` | 8 B |
 | `~/.openclaw/secrets/iam.username` | `600` | 9 B |
 | `~/.openclaw/secrets/memory.search.remote.apiKey` | `600` | 9 B |
@@ -214,8 +217,8 @@ _自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9d6768ee` |
-| Commit 数 | 472 |
+| HEAD | `09b64913` |
+| Commit 数 | 473 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
