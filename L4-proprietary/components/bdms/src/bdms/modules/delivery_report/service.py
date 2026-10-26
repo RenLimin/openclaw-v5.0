@@ -322,11 +322,14 @@ class DeliveryReportService:
                 self._run_validation(month)
 
             _progress(100, "✅ 生成完成")
+
+            # 关键时序：先落库审核状态（含全量校验明细，耗时较长），
+            # 再把 job 标记为 done。否则前端轮询到 done 后立即查询
+            # review-status 会读到 not_started（状态尚未 commit），UI 被刷成
+            # 灰色未生成态且无重试，表现为“生成完成但界面不刷新”。
+            self._update_review_status(month, "validating", counts=counts)
             self._finish_job(job_id, "done", 100,
                              message=f"{action}: {sum(counts.values())} 行")
-
-            # 更新审核状态为 validating（等待人工审核）
-            self._update_review_status(month, "validating", counts=counts)
 
             return {
                 "month": month, "mode": mode, "action": action,

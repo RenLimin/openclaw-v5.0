@@ -72,13 +72,13 @@
   <!-- Tab 导航 -->
   <div class="tabs" data-tabs id="report-tabs" data-default-tab="generate" data-tabs-key="report-active-tab">
     <div class="tabs-nav" role="tablist">
-      <button type="button" class="tabs-tab" role="tab" data-tab="generate" aria-selected="false" tabindex="-1">生成 & 状态</button>
+      <button type="button" class="tabs-tab" role="tab" data-tab="generate" aria-selected="false" tabindex="-1">报告生成</button>
       <button type="button" class="tabs-tab" role="tab" data-tab="browse" aria-selected="false" tabindex="-1">数据浏览</button>
       <button type="button" class="tabs-tab" role="tab" data-tab="issues" aria-selected="false" tabindex="-1">问题清单</button>
     </div>
     <div class="tabs-panels">
 
-      <!-- Tab 1: 生成 & 状态 -->
+      <!-- Tab 1: 报告生成 -->
       <div class="tabs-panel" role="tabpanel" data-panel="generate" hidden>
 
         <!-- 生成状态卡 -->
@@ -430,6 +430,18 @@ async function pollGenerateProgress() {
   }
 }
 
+// 生成后刷新审核状态（带兜底重试）
+// 正常时序下一次到位；极端情况下后端状态尚未 commit（not_started），
+// 自动延迟重试，避免界面永久停在未生成态。
+async function refreshReviewStatusAfterGenerate(month, attempt = 0) {
+  await loadReviewStatus(month);
+  const txt = document.getElementById('status-text')?.textContent || '';
+  if (txt === statusLabel('not_started') && attempt < 5) {
+    await new Promise(r => setTimeout(r, 600));
+    return refreshReviewStatusAfterGenerate(month, attempt + 1);
+  }
+}
+
 // 生成成功处理
 async function handleGenerateSuccess(d) {
   const st = document.getElementById('status-text');
@@ -443,6 +455,8 @@ async function handleGenerateSuccess(d) {
   if (st) st.textContent = '✅ 生成完成';
   const progressBar = document.querySelector('.progress-fill');
   if (progressBar) progressBar.style.width = '100%';
+  const progressLabelDone = document.querySelector('.progress-label');
+  if (progressLabelDone) progressLabelDone.textContent = '完成 (100%)';
 
   // 延迟半秒后隐藏进度条，让用户看到 100%
   setTimeout(() => {
@@ -455,11 +469,11 @@ async function handleGenerateSuccess(d) {
   if (btnExport) btnExport.disabled = false;
   if (btnCompare) btnCompare.disabled = false;
 
-  // 重新加载月份列表
-  loadMonths();
-  // 加载审核状态 + Sheet 明细
+  // 重新加载月份列表（await：确保 regenerate 后最新 row_counts 就绪）
+  await loadMonths();
+  // 加载审核状态 + Sheet 明细；状态查询带兜底重试，防止极端时序下读到 not_started
   if (currentMonth) {
-    await loadReviewStatus(currentMonth);
+    await refreshReviewStatusAfterGenerate(currentMonth);
     loadSheetDetail(currentMonth);
   }
   // 滚动到状态卡片
