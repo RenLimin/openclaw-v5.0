@@ -581,6 +581,64 @@ def scan_temp_files_cleanup():
     return errors
 
 
+def scan_plugin_channel_health():
+    """检查插件与渠道健康状态（覆盖 wecom 等 channel 的 configured-unavailable 盲区）
+
+    来源：2026-10-27 wecom-openclaw-plugin missing-openclaw-peer-link 事件 —
+    此前 scan_errors 只扫 cron/LLM/provider/context，插件 degraded 无任何预警。
+    判定依据：
+    - `openclaw status` 的 Degraded plugins 行（configured-unavailable）
+    - `openclaw channels status --probe` 的 channel 状态（非 works 视为异常）
+    """
+    errors = []
+
+    # 1) Degraded plugins（openclaw status 面板）
+    output, rc = run_cmd("openclaw status 2>&1", timeout=30)
+    if rc == 0:
+        degraded_section = False
+        for line in output.split("\n"):
+            low = line.lower()
+            if "degraded plugins" in low:
+                degraded_section = True
+                continue
+            if degraded_section:
+                # 面板行以 │ 开头，遇到空行或下一条目即结束
+                if "│" not in line or "│" in line and not line.strip().startswith("│"):
+                    pass
+                if "configured-unavailable" in low:
+                    m = re.search(r'·\s*(\S+)', line)
+                    plugin_name = m.group(1) if m else "unknown"
+                    errors.append({
+                        "type": "plugin_degraded",
+                        "name": plugin_name,
+                        "detail": f"插件 {plugin_name} configured-unavailable（payload 校验失败），需 openclaw doctor --fix 后在 Gateway 进程外重启",
+                    })
+                    degraded_section = False  # 只取首个命中行即可
+
+    # 2) Channel 状态（channels status --probe）
+    probe, rc2 = run_cmd("openclaw channels status --probe 2>&1", timeout=60)
+    if rc2 == 0:
+        for line in probe.split("\n"):
+            low = line.lower()
+            # 期望形态: "- 企业微信 default (企业微信): enabled, configured, running, works"
+            if ":" in line and any(kw in low for kw in ["channel", "wecom", "weixin", "default"]):
+                # 跳过非 channel 行的误报（如 "Gateway reachable." / "Checking channel status"）
+                if "reachable" in low or "checking" in low or "status (probe)" in low:
+                    continue
+                # 健康 = 含 works 或 running；只有出现明确故障词才算异常
+                healthy = ("works" in low) or ("running" in low)
+                failed = any(kw in low for kw in ["failed", "error", "unavailable", "disabled", "not configured", "broken"])
+                if failed or not healthy:
+                    name_part = line.split(":")[0].strip("- ").strip()
+                    errors.append({
+                        "type": "channel_unhealthy",
+                        "name": name_part,
+                        "detail": f"渠道 {name_part} 异常: {line.strip()[:150]}",
+                    })
+
+    return errors
+
+
 def scan_provider_health():
     """检查 Provider 健康状态"""
     errors = []
@@ -793,6 +851,18 @@ def auto_fix(errors):
             "detail": "Run 'openclaw cron runs <id>' for details"
         })
 
+    # 处置 4: 插件 degraded / channel 不健康 → 提示 doctor --fix + 独立终端重启
+    plugin_errors = [e for e in errors if e.get("type") == "plugin_degraded"]
+    channel_errors = [e for e in errors if e.get("type") == "channel_unhealthy"]
+    if plugin_errors or channel_errors:
+        names = [e.get("name", "unknown") for e in plugin_errors + channel_errors]
+        fixes.append({
+            "action": "plugin_doctor_fix",
+            "reason": f"Detected {len(plugin_errors)} plugin degraded + {len(channel_errors)} channel unhealthy: {', '.join(names)}",
+            "detail": "在 Gateway 进程外的独立终端执行: openclaw gateway stop && openclaw doctor --fix && openclaw gateway start && openclaw gateway status。注意: doctor --fix 拒绝从 gateway 进程树内运行。",
+            "executed": False
+        })
+
     return fixes
 
 
@@ -805,6 +875,7 @@ def main():
     all_errors.extend(scan_cron_errors())
     all_errors.extend(scan_llm_timeouts())
     all_errors.extend(scan_provider_health())
+    all_errors.extend(scan_plugin_channel_health())
     all_errors.extend(scan_context_overflow())
 
     # 输出结果
