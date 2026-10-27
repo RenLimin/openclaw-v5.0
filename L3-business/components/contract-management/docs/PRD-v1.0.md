@@ -67,7 +67,7 @@
 
 ## 4. 验收标准
 
-1. ✅ `grep sqlite3 core/*.py` 无结果；`grep "L4\|office-contract\|bangcle" core/*.py` 无结果
+1. ✅ `grep sqlite3 contract_management/*.py` 无结果；`grep "office-contract\|bangcle" contract_management/*.py` 无结果
 2. ✅ 状态机：7 态流转合法路径 + 非法路径全部拒绝（ValueError）
 3. ✅ 分级：默认 <10万(1级)/10-50万(2级)/50-200万(3级)/>200万(4级)，注入自定义表生效
 4. ✅ 风险扫描：22 条规则全部可触发、输出结构化 RiskReport；custom_rules 覆盖默认

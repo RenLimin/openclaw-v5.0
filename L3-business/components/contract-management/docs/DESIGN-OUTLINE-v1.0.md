@@ -49,20 +49,20 @@
 
 | 模块 | 职责 | 副作用 |
 |---|---|---|
-| `core/models.py` | 6 个 dataclass（Contract/ApprovalConfig/ApprovalRecord/AuditLogEntry/RiskFinding/RiskReport）+ 状态枚举 + 流转图 | 零 |
-| `core/state_machine.py` | 状态机 + 金额→层级映射 + 流转校验 + 动作计算（submit/approve/reject/sign/archive） | 零 |
-| `core/risk_engine.py` | 22 条《民法典》规则 + 综合评级（high/medium/low） | 零 |
-| `core/amount_utils.py` | 金额转中文大写 | 零 |
-| `core/contract_parser.py` | 28 类核心条款解析 | 零 |
-| `core/audit_standard.py` | 43 项审核标准 / 17 类别 | 零 |
-| `core/contract_auditor.py` | 逐条审核逻辑 | 零（CLI 入口除外） |
+| `contract_management/models.py` | 6 个 dataclass（Contract/ApprovalConfig/ApprovalRecord/AuditLogEntry/RiskFinding/RiskReport）+ 状态枚举 + 流转图 | 零 |
+| `contract_management/state_machine.py` | 状态机 + 金额→层级映射 + 流转校验 + 动作计算（submit/approve/reject/sign/archive） | 零 |
+| `contract_management/risk_engine.py` | 22 条《民法典》规则 + 综合评级（high/medium/low） | 零 |
+| `contract_management/amount_utils.py` | 金额转中文大写 | 零 |
+| `contract_management/contract_parser.py` | 28 类核心条款解析 | 零 |
+| `contract_management/audit_standard.py` | 43 项审核标准 / 17 类别 | 零 |
+| `contract_management/contract_auditor.py` | 逐条审核逻辑 | 零（CLI 入口除外） |
 | `tests/` | 单元测试（不依赖 DB/文件/网络） | — |
 
 **目录结构**（对齐 finance-engine 的 L3 规范）：
 
 ```
 L3-business/components/contract-management/
-├── core/
+├── contract_management/
 │   ├── __init__.py          # 公共 API 导出
 │   ├── models.py
 │   ├── state_machine.py
@@ -151,8 +151,8 @@ draft → review1 → review2 → review3 → approved → signed → archived
 
 | 模块 | 职责 |
 |---|---|
-| `core/oa/base.py`（OaProvider ABC） | 抽象接口：`get_contract_attachment` / `query_process` / `push_result` / `register_callback`；**放 L3 作为通用模式，具体厂商实现放 L4 注入** |
-| `core/risk/dual_track.py` | 双轨风险引擎：阈值规则（确定性，22条）+ 语义判断（LLM，可配置开关） |
+| `contract_management/oa/base.py`（OaProvider ABC） | 抽象接口：`get_contract_attachment` / `query_process` / `push_result` / `register_callback`；**放 L3 作为通用模式，具体厂商实现放 L4 注入** |
+| `contract_management/risk/dual_track.py` | 双轨风险引擎：阈值规则（确定性，22条）+ 语义判断（LLM，可配置开关） |
 
 ### 9.2 新增设计原则
 

@@ -45,7 +45,7 @@ python3 -m pytest L3-business/components/contract-management/tests/ -q
 python3 -m tests.test_purity   # 或 pytest tests/test_purity.py
 ```
 
-纯净性 AST 扫描判定：遍历 `core/**/*.py` 的所有 `ast.Import/ast.ImportFrom`，命中黑名单模块即失败；`oa/base.py` 仅允许 `abc`、`typing`。
+纯净性 AST 扫描判定：遍历 `contract_management/**/*.py` 的所有 `ast.Import/ast.ImportFrom`，命中黑名单模块即失败；`oa/base.py` 仅允许 `abc`、`typing`。
 
 ---
 
@@ -126,7 +126,7 @@ python3 -m tests.test_purity   # 或 pytest tests/test_purity.py
 
 - pytest 全绿（用例数以最终落地为准，目标 ≥ 50）
 - test_purity 零告警
-- 覆盖率：`core/` 行覆盖 ≥ 95%，分支 ≥ 90%
+- 覆盖率：`contract_management/` 行覆盖 ≥ 95%，分支 ≥ 90%
 - 黄金基准 100% 匹配
 
 未满足任一项，不得进入"开发完成"，不允许提交实现代码合并。

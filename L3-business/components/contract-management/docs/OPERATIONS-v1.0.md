@@ -26,7 +26,7 @@
 
 ```
 contract-management/
-├── core/
+├── contract_management/
 │   ├── __init__.py        # 公共 API 导出
 │   ├── models.py
 │   ├── state_machine.py
@@ -47,7 +47,7 @@ from contract_management import (
 )
 ```
 
-- 由 L4 把 `core/` 所在路径加入 `sys.path`（或组件以包方式安装）；L3 自身不提供 setup 安装脚本，沿用工作区分层直接引用约定。
+- 由 L4 把 `contract_management/` 组件根加入 `sys.path`（或组件以包方式安装）；L3 自身不提供 setup 安装脚本，沿用工作区分层直接引用约定。
 - 调用方负责传入数据、持久化结果；L3 不做任何 I/O。
 
 ---

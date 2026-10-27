@@ -16,8 +16,8 @@
 
 | Phase | 内容 | 产出 | 准入/验收 | 工时(h) |
 |---|---|---|---|---|
-| L3-P1 | 骨架 + 旧 core 迁移 | `core/{models,state_machine,risk_engine,amount_utils}.py` | 文件落位、import 通过 | 1.0 |
-| L3-P2 | OA 抽象 + 公共导出 | `core/oa/base.py`、`__init__.py` | DETAIL §6/§7 符号齐全 | 0.5 |
+| L3-P1 | 骨架 + 旧 core 迁移 | `contract_management/{models,state_machine,risk_engine,amount_utils}.py` | 文件落位、import 通过 | 1.0 |
+| L3-P2 | OA 抽象 + 公共导出 | `contract_management/oa/base.py`、`__init__.py` | DETAIL §6/§7 符号齐全 | 0.5 |
 | L3-P3 | 测试建设 | `tests/` 6 文件（契约/纯净/状态/风险/金额/幂等） | VERIFICATION §2 | 2.0 |
 | L3-P4 | 纯净性 + 契约校准 | AST 扫描、签名 inspect、规则 id 对齐 | AC-1/2/3 全过 | 1.0 |
 | L3-P5 | 自测 + 黄金基准 | pytest 全绿、覆盖率达标 | VERIFICATION §7 门槛 | 1.0 |

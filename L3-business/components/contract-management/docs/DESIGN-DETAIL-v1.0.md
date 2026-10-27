@@ -17,18 +17,18 @@
 
 | 文件 | 职责 | 公开符号 |
 |---|---|---|
-| `core/models.py` | 数据模型 + 状态常量 | 见 §2 |
-| `core/state_machine.py` | 分级配置 + 状态机函数 + OO 包装 | 见 §3 |
-| `core/risk_engine.py` | 风险规则 + 扫描引擎 | 见 §4 |
-| `core/amount_utils.py` | 金额中文大写 | 见 §5 |
-| `core/oa/base.py` | OA 连接器抽象（ABC，零实现） | 见 §6 |
-| `core/__init__.py` | 公共 API 导出 | 见 §7 |
+| `contract_management/models.py` | 数据模型 + 状态常量 | 见 §2 |
+| `contract_management/state_machine.py` | 分级配置 + 状态机函数 + OO 包装 | 见 §3 |
+| `contract_management/risk_engine.py` | 风险规则 + 扫描引擎 | 见 §4 |
+| `contract_management/amount_utils.py` | 金额中文大写 | 见 §5 |
+| `contract_management/oa/base.py` | OA 连接器抽象（ABC，零实现） | 见 §6 |
+| `contract_management/__init__.py` | 公共 API 导出 | 见 §7 |
 
-**依赖铁律**：模块间仅允许 `state_machine/risk_engine → models`、`__init__ → 全部`。禁止反向、禁止任何 import L4、禁止 import `os/sys/subprocess/socket/urllib/sqlite3`（`oa/base.py` 仅允许 `abc`/`typing`）。
+**依赖铁律**：模块间仅允许 `state_machine/risk_engine → models`、`__init__ → 全部`（均为包内相对引用）。禁止反向、禁止任何 import L4、禁止 import `os/sys/subprocess/socket/urllib/sqlite3`（`oa/base.py` 仅允许 `abc`/`typing`）。
 
 ---
 
-## 2. 数据模型契约（`core/models.py`）
+## 2. 数据模型契约（`contract_management/models.py`）
 
 仅依赖 `dataclasses` / `typing` / `datetime`。所有 dataclass 为可变 dataclass 但语义上 L3 函数**不修改入参**。
 
@@ -68,7 +68,7 @@ VALID_TRANSITIONS: dict[str, set[str]] = {
 
 ---
 
-## 3. 状态机契约（`core/state_machine.py`）
+## 3. 状态机契约（`contract_management/state_machine.py`）
 
 ### 3.1 分级表类型与默认值
 
@@ -141,7 +141,7 @@ class ApprovalStateMachine:
 
 ---
 
-## 4. 风险引擎契约（`core/risk_engine.py`）
+## 4. 风险引擎契约（`contract_management/risk_engine.py`）
 
 ### 4.1 规则类型
 
@@ -196,7 +196,7 @@ def scan_text_dict(text: str,
 
 ---
 
-## 5. 金额工具契约（`core/amount_utils.py`）
+## 5. 金额工具契约（`contract_management/amount_utils.py`）
 
 ```python
 def amount_to_chinese(amount: float) -> str: ...
@@ -213,7 +213,7 @@ def amount_to_chinese(amount: float) -> str: ...
 
 ---
 
-## 6. OA 连接器抽象（`core/oa/base.py`）
+## 6. OA 连接器抽象（`contract_management/oa/base.py`）
 
 仅用 `abc` + `typing`，**无任何实现、无网络/文件调用**。厂商实现放 L4。
 
@@ -236,7 +236,7 @@ class OaProvider(ABC):
 
 ---
 
-## 7. 公共 API 导出（`core/__init__.py`）
+## 7. 公共 API 导出（`contract_management/__init__.py`）
 
 ```python
 __all__ = [
