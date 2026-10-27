@@ -214,6 +214,17 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py start \
 
 ## 异常自动处置
 
+### Gateway 重启安全铁律 ★★★（2026-10-27）
+
+- **所有 agent / 脚本主动发起的重启，必须走**
+  `L2-infra/components/gateway-safety/scripts/safe_restart.sh`（它先跑 pre-restart guard）。
+  ❌ 禁止裸调 `openclaw gateway restart`——会绕过 guard、可能打断进行中的压缩/关键工作。
+- **Guard 判据**：`~/.openclaw/state/compaction-state.json`，由 `compaction-guard` hook
+  （`hooks/compaction-guard/`，订阅 `session:compact:before/after`）维护。`running` 标记超 6 分钟视为 stale。
+- **config-patch 触发的内部自动重启拦不住**（OpenClaw 无外部否决点；in-process hook 只能观察、无法 cancel）。
+  对策：改 config 前手动跑 guard；能用热加载（如 compaction 设置）就不要硬重启。
+- 事故记录：20:15/20:54 多次 compaction 180s 超时；21:15 扫描器把一次超时重复计数 5 次并裸调 restart 自杀式重启。已修：timeoutSeconds=300 + 按分钟去重 + 重启走 guard。
+
 ### LLM Request Timeout 自动恢复
 1. `openclaw gateway status` → 不健康则 restart
 2. `curl` 测试 provider endpoint → 不可达则切 fallback

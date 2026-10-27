@@ -9,10 +9,19 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 WORKSPACE = "/Users/bangcle/.openclaw/workspace"
 LOG_FILE = f"{WORKSPACE}/memory/error-scan-latest.json"
+
+# Real Gateway log (launchd redirect). The old ~/.openclaw/logs/gateway*.log is
+# only a stale restart log and was why compaction timeouts went undetected.
+GATEWAY_LOG = os.path.expanduser("~/Library/Logs/openclaw/gateway.log")
+# Must be >= agents.defaults.compaction.timeoutSeconds (300), else the
+# scanner's own compact subprocess gets killed before the engine can finish.
+COMPACT_SUBPROC_TIMEOUT = 320
+# Only report a compaction failure if it occurred within this window.
+COMPACTION_FAIL_WINDOW_SEC = 30 * 60
 
 
 def run_cmd(cmd, timeout=15):
@@ -173,25 +182,120 @@ def _count_recent_failures(job_id, limit=5):
 
 
 def scan_llm_timeouts():
-    """扫描 LLM 超时错误（从 gateway 日志中检测）"""
-    errors = []
+    """扫描通用 LLM 请求超时（从真实 gateway 日志检测）。
 
-    # 检查 gateway 日志中的超时
-    log_output, rc = run_cmd(
-        "ls -lt ~/.openclaw/logs/gateway*.log 2>/dev/null | head -1 | awk '{print $NF}'"
+    只匹配高置信标记，并按"分钟桶"去重——同一次超时会在日志里产生
+    embedded run end / lane task error / failed before reply 等多行，
+    旧实现把这些当成 N 个独立超时，导致计数虚高并触发不必要的自动重启
+    （2026-10-27 21:15 自杀式重启事故）。
+
+    compaction 超时由 scan_compaction_failures 专门处理，这里排除。
+    """
+    if not os.path.exists(GATEWAY_LOG):
+        return []
+
+    tail, _ = run_cmd(f"tail -4000 {GATEWAY_LOG} 2>/dev/null", timeout=15)
+    if not tail:
+        return []
+
+    ts_re = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
+    # 高置信：明确声明 LLM 请求超时的终态行
+    sig_re = re.compile(
+        r"Embedded agent failed before reply: LLM request timed out"
+        r"|lane task error: .*error=\"LLM request timed out"
     )
-    if rc == 0 and log_output:
-        # 检查最近 100 行中的超时错误
-        recent, _ = run_cmd(f"tail -100 {log_output} 2>/dev/null | grep -i 'timeout\\|LLM.*time\\|request.*time'")
-        if recent:
-            for line in recent.split("\n")[:5]:
-                errors.append({
-                    "type": "llm_timeout",
-                    "detail": line.strip()[:200],
-                    "source": "gateway_log"
-                })
+    window_cut = datetime.now(timezone.utc).timestamp() - COMPACTION_FAIL_WINDOW_SEC
+    buckets = {}
+    for line in tail.split("\n"):
+        if "compaction" in line.lower() or "compact" in line.lower():
+            continue
+        if not sig_re.search(line):
+            continue
+        m = ts_re.match(line)
+        if not m:
+            continue
+        try:
+            t = datetime.fromisoformat(m.group(1)).timestamp()
+        except ValueError:
+            continue
+        if t < window_cut:
+            continue
+        # 按分钟桶去重；同一分钟内的多行视为同一事件
+        bucket = int(t // 60)
+        if bucket not in buckets:
+            buckets[bucket] = line.strip()[:200]
 
-    return errors
+    return [
+        {"type": "llm_timeout", "detail": v, "source": "gateway_log"}
+        for v in sorted(buckets.values())
+    ]
+
+
+def scan_compaction_failures():
+    """直接从 gateway 日志识别压缩失败事件。
+
+    解析 `[compaction-diag] end ... outcome=failed reason=...` 行，
+    只报告最近 COMPACTION_FAIL_WINDOW_SEC 内的事件，并区分：
+      - reason=timeout  → compaction_timeout
+      - 其他（rate_limit / unknown / draining）→ compaction_failed
+
+    之前扫描器只看 sessions list 的 token 阈值，且读的是陈旧日志路径，
+    因此压缩超时完全漏判。
+    """
+    errors = []
+    if not os.path.exists(GATEWAY_LOG):
+        return errors
+
+    tail, _ = run_cmd(f"tail -4000 {GATEWAY_LOG} 2>/dev/null", timeout=15)
+    if not tail:
+        return errors
+
+    cutoff = datetime.now(timezone.utc).timestamp() - COMPACTION_FAIL_WINDOW_SEC
+    diag_re = re.compile(r"\[compaction-diag\] end (.*)")
+    ts_re = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:?\d{2}|Z)?)")
+    seen_diag = set()
+    for line in tail.split("\n"):
+        m = diag_re.search(line)
+        if not m:
+            continue
+        tsm = ts_re.match(line)
+        if not tsm:
+            continue
+        ts = tsm.group(1)
+        try:
+            t = datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            continue
+        if t < cutoff:
+            continue
+        fields = m.group(1)
+        if "outcome=failed" not in fields:
+            continue
+        # 去重：同一 diagId 只报一次
+        dm = re.search(r"diagId=(\S+)", fields)
+        diag_id = dm.group(1) if dm else fields[:60]
+        if diag_id in seen_diag:
+            continue
+        seen_diag.add(diag_id)
+
+        reason_m = re.search(r"reason=(\S+)", fields)
+        reason = reason_m.group(1) if reason_m else "unknown"
+        sess_m = re.search(r"sessionKey=(\S+)", fields)
+        dur_m = re.search(r"durationMs=(\d+)", fields)
+        prov_m = re.search(r"provider=(\S+)", fields)
+        etype = "compaction_timeout" if reason == "timeout" else "compaction_failed"
+        errors.append({
+            "type": etype,
+            "reason": reason,
+            "session_key": sess_m.group(1) if sess_m else None,
+            "provider": prov_m.group(1) if prov_m else None,
+            "duration_ms": int(dur_m.group(1)) if dur_m else None,
+            "detail": line.strip()[:240],
+            "source": "gateway_log",
+        })
+    # 只保留最近 10 条，最新在前
+    errors.reverse()
+    return errors[:10]
 
 
 def scan_provider_config_full_chain():
@@ -675,7 +779,9 @@ def auto_fix(errors):
     context_errors = [e for e in errors if "context_" in e.get("type")]
     provider_errors = [e for e in errors if "provider" in e.get("type") or "api_key" in e.get("type") or "asset" in e.get("type")]
     cron_errors = [e for e in errors if e.get("type") == "cron_error"]
-    
+    # 压缩超时/失败：绝不自动重启（重启会进一步打断压缩，形成恶性循环）
+    compaction_errors = [e for e in errors if e.get("type") in ("compaction_timeout", "compaction_failed")]
+
     # 处置 0: 上下文溢出/高压力 → 三层自动恢复
     if context_errors:
         # 按严重程度排序：error > warn
@@ -699,7 +805,7 @@ def auto_fix(errors):
                 "layer": "layer1_compact"
             })
 
-            rc = run_cmd(f'openclaw sessions compact "{session_key}" 2>/dev/null', timeout=120)[1]
+            rc = run_cmd(f'openclaw sessions compact "{session_key}" 2>/dev/null', timeout=COMPACT_SUBPROC_TIMEOUT)[1]
             fixes[-1]["executed"] = True
             fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
 
@@ -727,7 +833,7 @@ def auto_fix(errors):
                             })
                             rc = run_cmd(
                                 f'openclaw sessions compact "{session_key}" --max-lines 200 2>/dev/null',
-                                timeout=120
+                                timeout=COMPACT_SUBPROC_TIMEOUT
                             )[1]
                             fixes[-1]["executed"] = True
                             fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
@@ -766,22 +872,46 @@ def auto_fix(errors):
                 "reason": "High context pressure detected, preemptive compaction",
                 "executed": False
             })
-            rc = run_cmd(f'openclaw sessions compact "{session_key}" 2>/dev/null', timeout=120)[1]
+            rc = run_cmd(f'openclaw sessions compact "{session_key}" 2>/dev/null', timeout=COMPACT_SUBPROC_TIMEOUT)[1]
             fixes[-1]["executed"] = True
             fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
     
 
-    # 处置 1: LLM 超时 → 重启 Gateway
+    # 处置 1: LLM 超时 → 通过 safe_restart.sh 重启（先过 pre-restart guard）
+    # 绝不裸调 `openclaw gateway restart`——那会绕过 guard，可能打断正在进行的
+    # 压缩/关键工作（2026-10-27 21:15 扫描器自身触发的自杀式重启事故）。
     if timeout_errors:
         fixes.append({
-            "action": "gateway_restart",
-            "reason": f"Detected {len(timeout_errors)} LLM timeout(s)",
+            "action": "gateway_restart_guarded",
+            "reason": f"Detected {len(timeout_errors)} distinct LLM timeout minute(s)",
             "executed": False
         })
-        # 实际执行重启
-        rc = run_cmd("openclaw gateway restart 2>&1")[1]
+        safe_restart = (
+            f"bash {WORKSPACE}/L2-infra/components/gateway-safety/scripts/safe_restart.sh"
+        )
+        # 不经 guard 硬阻断（压缩中）则不重启；best-effort，结果如实记录
+        rc = run_cmd(f"{safe_restart} 2>&1", timeout=120)[1]
         fixes[-1]["executed"] = True
-        fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
+        fixes[-1]["result"] = "success" if rc == 0 else f"not restarted (rc={rc}; guard may have blocked, or restart failed)"
+
+    # 处置 1b: 压缩超时/失败 → 绝不自动重启，只记录与提示
+    # 重启会打断正在进行的压缩（2026-10-27 20:24 事故），且 Gateway 重启后
+    # 大上下文仍在，下次压缩依旧超时，形成死循环。
+    if compaction_errors:
+        timeouts = [e for e in compaction_errors if e.get("type") == "compaction_timeout"]
+        n = len(compaction_errors)
+        fixes.append({
+            "action": "compaction_failure_flagged",
+            "reason": f"Detected {n} compaction failure(s) ({len(timeouts)} timeout)",
+            "detail": (
+                "Do NOT auto-restart. Recommended manual path: 1) confirm timeoutSeconds is 300 "
+                "(hot-reloaded); 2) let the in-session auto-compaction retry, or manually run "
+                "'openclaw sessions compact <key>'; 3) if it still times out, switch the session to "
+                "a larger-context model (e.g. longcat/LongCat-2.0) before compacting; 4) only if a "
+                "restart is truly needed, use L2-infra/components/gateway-safety/scripts/safe_restart.sh."
+            ),
+            "executed": False,
+        })
 
     # 处置 2: Provider 错误 / API Key 错误 / 资产错误 → 记录并建议检查
     if provider_errors:
@@ -874,6 +1004,7 @@ def main():
     all_errors = []
     all_errors.extend(scan_cron_errors())
     all_errors.extend(scan_llm_timeouts())
+    all_errors.extend(scan_compaction_failures())
     all_errors.extend(scan_provider_health())
     all_errors.extend(scan_plugin_channel_health())
     all_errors.extend(scan_context_overflow())
