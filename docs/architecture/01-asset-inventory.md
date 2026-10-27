@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-27 21:44 UTC+08:00
+最后生成：2026-10-27 21:57 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -56,6 +56,7 @@
 | L4 专有业务 | `bdms-web-ui-design` |  | `L4-proprietary/skills/bdms-web-ui-design` |
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
+| L4 专有业务 | `product-kb` | Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索 | `L4-proprietary/skills/product-kb` |
 | L3 通用业务 | `bangcle-customer-profile` | Bangcle 客户画像分析：基于项目工作项/评论/附件与知识库，输出客户画像，重点为客户环境（云/OS/CPU/中间件/数据库/网络... | `L3-business/skills/bangcle-customer-profile` |
 | L3 通用业务 | `bangcle-obligation-summary` | Bangcle 项目履约义务汇总：按最终用户名称/客户名称检索全部项目履约义务工作项，罗列所属产线、标题、状态，下钻子交付/子验收任务... | `L3-business/skills/bangcle-obligation-summary` |
 | L3 通用业务 | `bangcle-project-retrospective` | Bangcle 项目复盘建议：在项目信息汇总基础上做深度分析，对照标准产品/服务基线与 PMBOK 知识域，输出产品差异/优化空间与项... | `L3-business/skills/bangcle-project-retrospective` |
@@ -68,7 +69,7 @@
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 15 个（L2: 6, L3: 5, L4: 4, 根目录: 0）_
+_自建技能总计: 16 个（L2: 6, L3: 5, L4: 5, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -131,9 +132,9 @@ _自建技能总计: 15 个（L2: 6, L3: 5, L4: 4, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 1800s | `isolated` |
 | session-auto-retry | ✅ | 每 600s | `isolated` |
 | quota-restore-check | ✅ | 每 1800s | `isolated` |
+| 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 1800s | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 
 ## 文档资产
@@ -221,8 +222,8 @@ _自建技能总计: 15 个（L2: 6, L3: 5, L4: 4, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `f517d534` |
-| Commit 数 | 480 |
+| HEAD | `081187e6` |
+| Commit 数 | 481 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
