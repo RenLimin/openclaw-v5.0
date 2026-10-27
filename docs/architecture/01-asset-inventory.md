@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-27 01:52 UTC+08:00
+最后生成：2026-10-27 20:24 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -39,13 +39,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 104 个（可用 93）
+**总计** 108 个（可用 97）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 25 | 插件附带技能 |
+| `openclaw-extra` | 29 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -56,6 +56,10 @@
 | L4 专有业务 | `bdms-web-ui-design` |  | `L4-proprietary/skills/bdms-web-ui-design` |
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
+| L3 通用业务 | `bangcle-customer-profile` | Bangcle 客户画像分析：基于项目工作项/评论/附件与知识库，输出客户画像，重点为客户环境（云/OS/CPU/中间件/数据库/网络... | `L3-business/skills/bangcle-customer-profile` |
+| L3 通用业务 | `bangcle-obligation-summary` | Bangcle 项目履约义务汇总：按最终用户名称/客户名称检索全部项目履约义务工作项，罗列所属产线、标题、状态，下钻子交付/子验收任务... | `L3-business/skills/bangcle-obligation-summary` |
+| L3 通用业务 | `bangcle-project-retrospective` | Bangcle 项目复盘建议：在项目信息汇总基础上做深度分析，对照标准产品/服务基线与 PMBOK 知识域，输出产品差异/优化空间与项... | `L3-business/skills/bangcle-project-retrospective` |
+| L3 通用业务 | `bangcle-project-summary` | Bangcle 项目信息汇总：基于项目交付实施情况，从 ONES 等系统汇总客户名下全部项目/产品/工作项/交付物/责任人，输出结构化... | `L3-business/skills/bangcle-project-summary` |
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
 | L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
 | L2 基础设施 | `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 | `L2-infra/skills/ocr-digitalization` |
@@ -64,7 +68,7 @@
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
+_自建技能总计: 15 个（L2: 6, L3: 5, L4: 4, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -127,8 +131,8 @@ _自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 |
 |---|---|---|---|
-| quota-restore-check | ✅ | 每 1800s | `isolated` |
 | session-auto-retry | ✅ | 每 600s | `isolated` |
+| quota-restore-check | ✅ | 每 1800s | `isolated` |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | cron `0 */2 * * *` | `isolated` |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
 
@@ -217,8 +221,8 @@ _自建技能总计: 11 个（L2: 6, L3: 1, L4: 4, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `15448751` |
-| Commit 数 | 476 |
+| HEAD | `27dc4732` |
+| Commit 数 | 477 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

@@ -162,6 +162,7 @@ You're a participant, not Rex's voice. **Respond when:** directly mentioned, can
 - `L4-proprietary/skills/` — 专有业务
 - 注册路径：`openclaw.json` → `skills.load.extraDirs`
 - `~/.openclaw/skills/` + `~/.openclaw/plugin-skills/` 是系统级目录，勿动
+- ⚠️ **根 `skills/`（沙箱内）是 OpenClaw 同步托管目录**（受 `.openclaw-sync.json` 管理），手动新建的技能会被周期同步清空。新建 skill 一律写入上面三个分层目录，写后即校验存在性。 <!-- observed: 2026-10-27 | status: active -->
 
 **Voice storytelling:** `sag` (ElevenLabs TTS) — 当前不可用，缺 `ELEVENLABS_API_KEY`。
 
