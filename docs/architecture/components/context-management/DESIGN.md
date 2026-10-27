@@ -1,9 +1,9 @@
 # L2 上下文管理 — 设计文档
 
-> 版本：v4.0
+> 版本：v4.1
 > 创建日期：2026-09-01
-> 最近修订：2026-10-10
-> 状态：✅ 已上线（五道防线 + token 感知路由升级）
+> 最近修订：2026-10-27
+> 状态：✅ 已上线（五道防线 + token 感知路由 + 压缩超时/重启安全修复）
 > 层级：L2 基础设施层
 > ADR：ADR-032 上下文溢出自动恢复
 
@@ -71,6 +71,7 @@ proxy.py 在转发请求时从 payload 中提取 token 数传给 router。
   "compaction": {
     "mode": "safeguard",
     "notifyUser": true,           // 压缩时通知用户
+    "timeoutSeconds": 300,        // v4.1: 180→300。大窗口模型摘要常 >180s，旧值必超时（2026-10-27 事故）。热加载生效
     "keepRecentTokens": 80000,    // v4.0: 从 120k 降到 80k，让压缩器更早触发
     "maxActiveTranscriptBytes": "2mb",
     "midTurnPrecheck": { "enabled": true },
@@ -128,7 +129,21 @@ proxy.py 在转发请求时从 payload 中提取 token 数传给 router。
 | MEMORY/AGENTS 定期归档 | 项目上下文膨胀是溢出主因，定期瘦身 |
 | Flash 模型关闭 memory search | 小窗口模型减少额外注入 |
 
-### 2.2 溢出防护状态机
+### 2.2 压缩超时与重启安全（v4.1 新增）
+
+**事故背景**：2026-10-27 晚连续多次 compaction 在 180s 处 `reason=timeout` 失败；随后 config-patch 触发的重启又打断了进行中的压缩（`gateway is draining for restart`），形成"压缩超时 → 重启 → 大上下文仍在 → 再超时"的恶性循环。
+
+**两层修复**：
+
+1. **超时窗口**：`compaction.timeoutSeconds` 180→300（热加载）。修复后实测 21:43 一次真实压缩成功（153,877→68,860 tokens）。
+2. **重启前 guard**：任何主动重启必须经 `L2-infra/components/gateway-safety/scripts/safe_restart.sh`，其先跑 `pre_restart_guard.py`：
+   - 判据：`compaction-guard` hook（订阅 `session:compact:before/after`）维护的 `~/.openclaw/state/compaction-state.json`
+   - 有新鲜 in-flight 压缩 → rc=1 **硬阻断**（`--force` 也无法覆盖）；标记超 6 分钟视为 stale
+   - 错误扫描器检测到 compaction 失败时**绝不自动重启**，只记录并给出手动路径
+
+> **边界**：config-patch 触发的进程内自动重启无外部否决点（in-process hook 只能观察、无法 cancel）。对策：改 config 前手动跑 guard、优先热加载。详见 [error-handling DESIGN](error-handling/DESIGN.md) §4.5。
+
+### 2.3 溢出防护状态机
 
 ```
 NORMAL → WARN(80%) → ERROR(95%) → RECOVERED
@@ -226,3 +241,4 @@ OpenClaw 原生不支持 compaction fallbacks（schema 中 `compaction.model` �
 | 2026-10-07 | v2.1 | 新增第三层阶梯式自动恢复：解决保留元数据过多导致的自动压缩失效问题，按 `/compact` → `/reset` → `/new` 顺序尝试恢复 |
 | 2026-10-10 | v3.0 | **四层防护体系升级**：配置优化（contextPruning cache-ttl + notifyUser + bootstrapMaxChars）+ Context Guardian 插件 + cron 三层兜底 + 用户规范；状态机简化为 WARN/ERROR 两级；统一阈值为 80%/95% |
 | 2026-10-10 | v4.0 | **五道防线最终升级**：第 0 层路由层 token 感知兜底（model-scheduling 联动）；keepRecentTokens 从 120k→80k；注入参数优化（bootstrapTotalMaxChars + contextInjection + postCompactionMaxChars）；从根本上解决"压缩器说没东西可压"的死局 |
+| 2026-10-27 | v4.1 | **压缩超时/重启安全修复**：timeoutSeconds 180→300（热加载，实测压缩成功）；新增 compaction-guard hook + pre-restart guard + safe_restart.sh，主动重启硬阻断 in-flight 压缩；error-scan 2h→30m |

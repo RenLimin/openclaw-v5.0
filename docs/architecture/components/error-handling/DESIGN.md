@@ -1,9 +1,9 @@
 # L2 错误自动处理组件 — 设计
 
-> **状态**: ✅ 已上线 (2026-09-01) — cron 已重建（错误扫描每 2h + provider 探测每小时）
+> **状态**: ✅ 已上线 (2026-10-27 修订) — 错误扫描每 30m + 重启走 guard + compaction 失败检测
 > **ADR**: [ADR-202608-014](../../../knowledge-base/by-category/project-experience/adr/ADR-202608-014-error-auto-handling.md)
 > **层级**: L2 基础设施层
-> **创建**: 2026-08-24
+> **创建**: 2026-08-24 · **最近修订**: 2026-10-27
 
 ## 1. 问题定义
 
@@ -117,13 +117,25 @@ Agent 运行过程中会产生各类错误和警告:**没有自动处理机制**
 | 记忆检索健康监控 | ✅ after: 2, mode: announce |
 | 每日观测摘要 | ✅ after: 2, mode: announce |
 
-### 4.4 错误处理脚本(可选增强)
+### 4.4 错误处理脚本（已落地）
 
-`scripts/observability/error_handler.py`:
-- 扫描会话错误日志
-- 按 Error Contract 分级
-- 执行预定义的自愈规则
-- 产出结构化报告
+`L2-infra/scripts/error_handler/scan_errors.py`（cron 实际入口，每 30m）:
+- 读取**真实日志** `~/Library/Logs/openclaw/gateway.log`（旧实现误读陈旧的 `~/.openclaw/logs/gateway*.log`，导致压缩超时漏判）
+- 检测 cron 失败 / LLM 超时 / compaction 失败 / provider 健康 / 上下文溢出
+- LLM 超时**按分钟桶去重**（同一事件在日志里有多行，旧实现重复计数 5 次并触发误重启）
+- compaction 失败独立分类（`compaction_timeout` / `compaction_failed`），**绝不自动重启**
+- 自动重启强制走 `safe_restart.sh`（先过 pre-restart guard），不再裸调 `openclaw gateway restart`
+- compact 子进程超时 320s（≥ compaction.timeoutSeconds=300，旧值 120s 会先于压缩器被杀死）
+
+### 4.5 Gateway 重启安全（2026-10-27 新增）
+
+| 资产 | 路径 | 职责 |
+|---|---|---|
+| `compaction-guard` hook | `hooks/compaction-guard/` | 订阅 `session:compact:before/after`，把 in-flight 压缩写入 `~/.openclaw/state/compaction-state.json` |
+| pre-restart guard | `L2-infra/components/gateway-safety/scripts/pre_restart_guard.py` | 有新鲜 in-flight 压缩 → rc=1 硬阻断；标记超 6 分钟视为 stale |
+| safe restart wrapper | `L2-infra/components/gateway-safety/scripts/safe_restart.sh` | 先跑 guard，通过后才执行 `openclaw gateway restart` |
+
+**已知边界**：config-patch 触发的进程内自动重启无外部否决点，in-process hook 只能观察无法 cancel。缓解：改 config 前手动跑 guard、优先热加载。
 
 ## 5. 验证标准
 
@@ -140,3 +152,9 @@ Agent 运行过程中会产生各类错误和警告:**没有自动处理机制**
 | 通知风暴 | 同类错误合并通知,cooldown 5min |
 | 误判正常为错误 | 分级阈值保守,宁可漏报不误报 |
 | 自愈循环 | 重试上限 2 次,超过则人工介入 |
+
+## 7. 修订记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-10-27 | 修正日志路径；新增 compaction 失败检测与去重；重启改走 guard；error-scan 2h→30m；cron delivery 显式 wecom/1313；新增 gateway-safety 组件与 compaction-guard hook |

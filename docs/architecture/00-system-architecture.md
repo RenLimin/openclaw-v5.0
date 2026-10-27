@@ -891,6 +891,25 @@ L4 专有业务
 
 **已分类的历史错误**: 见 ADR-011 §6.4
 
+### 5.6 Gateway 重启安全与压缩守护（2026-10-27）
+
+> 详见 [error-handling DESIGN](components/error-handling/DESIGN.md) §4.5 与 [context-management DESIGN](components/context-management/DESIGN.md) §2.2
+
+**问题**：自动压缩在 180s 硬超时处反复失败；config-patch 触发的重启又打断进行中的压缩（`gateway is draining for restart`），形成"超时 → 重启 → 大上下文仍在 → 再超时"循环。
+
+**机制**：
+
+| 层 | 资产 | 职责 |
+|---|---|---|
+| 判据 | `compaction-guard` hook（`hooks/compaction-guard/`） | 订阅 `session:compact:before/after`，写 `~/.openclaw/state/compaction-state.json` |
+| 拦截 | `pre_restart_guard.py` | 有新鲜 in-flight 压缩 → rc=1 硬阻断；超 6 分钟视为 stale |
+| 入口 | `safe_restart.sh` | 所有主动重启必先过 guard |
+| 配置 | `compaction.timeoutSeconds=300` | 180→300，热加载 |
+
+**铁律**：agent/脚本发起的重启一律走 `safe_restart.sh`，禁止裸调 `openclaw gateway restart`（会绕过 guard）。错误扫描器检测到压缩失败时**绝不自动重启**。
+
+**架构边界**：config-patch 触发的进程内自动重启**无外部否决点**，in-process hook 只能观察、无法 cancel。缓解仅能靠"改配置前手动跑 guard + 优先热加载"。硬缺口需上游暴露 pre-restart veto 扩展点或改核心。
+
 ---
 
 ## 6. 演进路线

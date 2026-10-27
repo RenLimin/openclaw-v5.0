@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-27 22:03 UTC+08:00
+最后生成：2026-10-27 22:04 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -130,12 +130,22 @@ _自建技能总计: 16 个（L2: 6, L3: 5, L4: 5, 根目录: 0）_
 
 ## L2 — 调度资产 (Cron)
 
-| 名称 | 启用 | 调度 | 目标 |
-|---|---|---|---|
-| quota-restore-check | ✅ | 每 1800s | `isolated` |
-| session-auto-retry | ✅ | 每 600s | `isolated` |
-| 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 1800s | `isolated` |
-| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` |
+| 名称 | 启用 | 调度 | 目标 | 投递 |
+|---|---|---|---|---|
+| quota-restore-check | ✅ | 每 1800s | `isolated` | wecom/1313 |
+| session-auto-retry | ✅ | 每 600s | `isolated` | wecom/1313 |
+| 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 1800s | `isolated` | wecom/1313 |
+| Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
+
+## L2 — 重启安全与压缩守护
+
+| 资产 | 路径 | 职责 |
+|---|---|---|
+| compaction-guard hook | `hooks/compaction-guard/` | 订阅 session:compact:before/after，将 in-flight 压缩写入状态文件 |
+| pre-restart guard | `L2-infra/components/gateway-safety/scripts/pre_restart_guard.py` | 有新鲜 in-flight 压缩则 rc=1 硬阻断；标记超 6 分钟视为 stale |
+| safe restart wrapper | `L2-infra/components/gateway-safety/scripts/safe_restart.sh` | 先跑 guard，通过后才执行 openclaw gateway restart |
+
+> config-patch 触发的进程内自动重启无外部否决点，仅能事前 guard + 优先热加载。
 
 ## 文档资产
 
@@ -222,8 +232,8 @@ _自建技能总计: 16 个（L2: 6, L3: 5, L4: 5, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `8a6ae5e0` |
-| Commit 数 | 482 |
+| HEAD | `613dbfac` |
+| Commit 数 | 483 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

@@ -359,8 +359,8 @@ def render_cron(data: dict) -> list[str]:
         lines += ["_(无调度任务)_", ""]
         return lines
 
-    lines.append("| 名称 | 启用 | 调度 | 目标 |")
-    lines.append("|---|---|---|---|")
+    lines.append("| 名称 | 启用 | 调度 | 目标 | 投递 |")
+    lines.append("|---|---|---|---|---|")
     for j in jobs:
         schedule = j.get("schedule") or {}
         kind = schedule.get("kind", "?")
@@ -372,12 +372,50 @@ def render_cron(data: dict) -> list[str]:
             desc = f"一次性 {schedule.get('at', '?')}"
         else:
             desc = kind
+        delivery = j.get("delivery") or {}
+        dch = delivery.get("channel") or "—"
+        dto = delivery.get("to")
+        delivery_desc = f"{dch}/{dto}" if dch != "—" and dto else dch
         lines.append(
             f"| {j.get('displayName') or j.get('name', '?')} | "
             f"{'✅' if j.get('enabled') else '—'} | {desc} | "
-            f"`{j.get('sessionTarget', '?')}` |"
+            f"`{j.get('sessionTarget', '?')}` | {delivery_desc} |"
         )
     lines.append("")
+    return lines
+
+
+def render_safety() -> list[str]:
+    """Gateway 重启安全与压缩守护资产（2026-10-27 新增）。"""
+    root = Path(__file__).resolve().parents[3]
+    rows = [
+        (
+            "compaction-guard hook",
+            "hooks/compaction-guard/",
+            "订阅 session:compact:before/after，将 in-flight 压缩写入状态文件",
+        ),
+        (
+            "pre-restart guard",
+            "L2-infra/components/gateway-safety/scripts/pre_restart_guard.py",
+            "有新鲜 in-flight 压缩则 rc=1 硬阻断；标记超 6 分钟视为 stale",
+        ),
+        (
+            "safe restart wrapper",
+            "L2-infra/components/gateway-safety/scripts/safe_restart.sh",
+            "先跑 guard，通过后才执行 openclaw gateway restart",
+        ),
+    ]
+    lines = ["## L2 — 重启安全与压缩守护", ""]
+    lines.append("| 资产 | 路径 | 职责 |")
+    lines.append("|---|---|---|")
+    for name, rel, desc in rows:
+        mark = "" if (root / rel).exists() else " ⚠️缺失"
+        lines.append(f"| {name}{mark} | `{rel}` | {desc} |")
+    lines += [
+        "",
+        "> config-patch 触发的进程内自动重启无外部否决点，仅能事前 guard + 优先热加载。",
+        "",
+    ]
     return lines
 
 
@@ -470,6 +508,7 @@ def build_document(data: dict) -> str:
         render_tools(data),
         render_credentials(data),
         render_cron(data),
+        render_safety(),
         render_docs(),
         render_repo(data),
     ):
