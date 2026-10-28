@@ -29,10 +29,15 @@ from datetime import datetime, timedelta
 WORKSPACE = Path("/Users/bangcle/.openclaw/workspace")
 TRACKER_SCRIPT = WORKSPACE / "L2-infra/components/session-recovery/scripts/task_tracker.py"
 LOG_FILE = WORKSPACE / "memory" / "session-retry.log"
+STATE_DIR = Path(os.path.expanduser("~/.openclaw/state"))
+BLOCK_NOTIFY_FILE = STATE_DIR / "session-retry-blocked-notified.json"
 
 # 配置
 MAX_RETRIES = 2
 MIN_RETRY_INTERVAL_MIN = 5  # 两次重试最小间隔
+
+# 仅收集需要推送给 Rex 的精简事件；正常巡检保持静默。
+NOTIFICATIONS = []
 
 
 def _now():
@@ -40,11 +45,17 @@ def _now():
 
 
 def _log(msg):
+    """写日志文件，不进 stdout（避免正常巡检刷屏/推送）。"""
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     line = f"[{_now()}] {msg}\n"
     with open(LOG_FILE, "a") as f:
         f.write(line)
-    print(line, end="")
+
+
+def notify(msg):
+    """登记一条需要让 Rex 看到的精简通知。"""
+    NOTIFICATIONS.append(msg)
+    _log(f"NOTIFY: {msg}")
 
 
 def _run(cmd, timeout=30):
@@ -189,84 +200,103 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current
         return False
 
 
+def _mark_blocked_notified(task_id):
+    """记录已对某任务发过 blocked 通知；返回是否为首次。"""
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    notified = set()
+    if BLOCK_NOTIFY_FILE.exists():
+        try:
+            notified = set(json.loads(BLOCK_NOTIFY_FILE).get("tasks", []))
+        except Exception:
+            notified = set()
+    first = task_id not in notified
+    if first:
+        notified.add(task_id)
+        BLOCK_NOTIFY_FILE.write_text(json.dumps({"tasks": sorted(notified)}, ensure_ascii=False))
+    return first
+
+
 def check_and_retry(apply=False):
-    """主流程：检测主会话失败并尝试重试"""
+    """主流程：检测主会话失败并尝试重试。正常巡检静默，只输出关键事件。"""
     _log("=== 会话失败检测 ===")
 
     # 1. 读 current-task
     task = get_current_task()
     if not task:
-        _log("ℹ️ 没有进行中的任务，跳过")
+        _log("没有进行中的任务，静默跳过")
         return True
 
     task_id = task.get("task_id")
     fail_count = task.get("failure_count", 0)
     task_name = task.get("name", "")
-    _log(f"📋 当前任务: {task_name} ({task_id}), 已失败 {fail_count} 次")
+    _log(f"当前任务: {task_name} ({task_id}), 已失败 {fail_count} 次")
 
     # 2. 检查是否已达最大重试次数
     # 达到上限是正常终态（等人工介入），非脚本错误 → 返回 True（exit 0）
-    # 避免被 OpenClaw 计为 consecutiveErrors 导致自动化自动禁用
+    # 避免被 OpenClaw 计为 consecutiveErrors 导致自动化自动禁用；仅首次推送提醒
     if fail_count >= MAX_RETRIES:
-        _log(f"🛑 已达最大重试次数 ({MAX_RETRIES})，停止自动重试，等人工介入")
+        _log(f"已达最大重试次数 ({MAX_RETRIES})，停止自动重试，等人工介入")
+        if _mark_blocked_notified(task_id):
+            notify(f"🛑 任务「{task_name}」已自动重试 {MAX_RETRIES} 次仍失败，已暂停，需人工介入。")
         return True
 
     # 3. 检查主会话状态
     main_session = "agent:main:main"
     is_failed, error, last_run = check_session_failed(main_session)
 
-    # 子会话失败只做信息记录，不触发主会话重试
-    # （子会话有自己的任务卡，归 taskflow 管）
+    # 子会话失败只做信息记录，不触发主会话重试（子会话有自己的任务卡）
     failed_subs = find_failed_sessions()
     if failed_subs:
-        _log(f"ℹ️ 发现 {len(failed_subs)} 个失败子会话（仅记录，不自动重试）:")
-        for s in failed_subs[:5]:
-            when = datetime.fromtimestamp(s["updated_at"]).strftime("%H:%M:%S") if s["updated_at"] else "?"
-            _log(f"   - {s['name']} status={s['status']}, updated={when}")
+        _log(f"发现 {len(failed_subs)} 个失败子会话（仅记录，不自动重试）")
 
     if not is_failed:
-        _log("✅ 主会话运行正常，无需重试")
+        _log("主会话运行正常，无需重试")
         return True
 
     # 4. 检查最小间隔（距离上次失败）
     if last_run:
         elapsed = datetime.now().timestamp() - last_run
         if elapsed < MIN_RETRY_INTERVAL_MIN * 60:
-            _log(f"⏳ 距上次失败仅 {int(elapsed)}s，小于 {MIN_RETRY_INTERVAL_MIN}min，再等等")
+            _log(f"距上次失败仅 {int(elapsed)}s，小于 {MIN_RETRY_INTERVAL_MIN}min，再等等")
             return True
 
     # 5. 执行重试
-    _log(f"🔄 准备重试（当前失败计数: {fail_count}, 上限: {MAX_RETRIES}）")
-    
+    _log(f"准备重试（当前失败计数: {fail_count}, 上限: {MAX_RETRIES}）")
+
     if not apply:
-        _log("  [dry-run] 跳过实际重试，加 --apply 执行")
+        _log("[dry-run] 跳过实际重试，加 --apply 执行")
         return True
 
-    # 更新失败计数
     fail_reason = error or "检测到会话运行失败"
     increment_fail(fail_reason)
-    
-    # 唤醒主会话
+
     task["failure_count"] = fail_count + 1
-    wake_session(main_session, task, task["failure_count"], fail_reason)
-    
-    _log(f"✅ 重试已触发 (第 {task['failure_count']} 次)")
+    ok = wake_session(main_session, task, task["failure_count"], fail_reason)
+    _log(f"重试触发结果: {'ok' if ok else 'failed'}")
+    if ok:
+        notify(f"🔄 任务「{task_name}」检测到失败，已自动重试（第 {task['failure_count']} 次）。")
+    else:
+        notify(f"⚠️ 任务「{task_name}」失败且自动唤醒未成功，需人工查看。")
     return True
 
 
 def main():
-    parser = argparse.ArgumentParser(description="会话失败自动重试检测器")
+    parser = argparse.ArgumentParser(description="会话失败自动重试检测器（正常巡检静默）")
     parser.add_argument("--apply", action="store_true", help="实际执行重试（默认 dry-run）")
     parser.add_argument("--session", default="agent:main:main", help="要检测的会话 key")
     args = parser.parse_args()
 
     try:
         ok = check_and_retry(apply=args.apply)
+        # 仅输出关键通知；无事件则零输出（不推送）
+        if NOTIFICATIONS:
+            print("\n".join(NOTIFICATIONS))
         sys.exit(0 if ok else 1)
     except Exception as e:
-        _log(f"❌ 检测脚本异常: {e}")
+        _log(f"检测脚本异常: {e}")
         import traceback
         _log(traceback.format_exc())
+        print(f"⚠️ 会话重试检测脚本异常: {e}")
         sys.exit(1)
 
 
