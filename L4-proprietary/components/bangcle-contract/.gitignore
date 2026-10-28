@@ -1,0 +1,18 @@
+# 数据（可重建）
+data/*.db
+data/staging/
+data/reports/
+data/tmp/
+data/cache/
+
+# 构建/测试
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+docs/_build/
+build/
+dist/
+*.egg-info/
