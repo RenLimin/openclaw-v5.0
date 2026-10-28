@@ -138,12 +138,71 @@ python3 scripts/snapshot_config.py --diff     # 显示当前配置与上次快�
 □ 建设类交付：已实测验证 → 直接 commit + push（§1.5 授权）
 ```
 
-## 4. 相关
+## 4. 凭据存储与 Git 提交（安全红线）
+
+> 触发：2026-10-28 历史中检出明文 IAM/ONES 密码与硬编码 JWT secret，
+> 已用 `git filter-repo` 重写全部历史清除。本节防止再次发生。
+
+### 4.1 凭据只允许存三处
+
+| 位置 | 用途 | 是否入库 |
+|---|---|---|
+| `~/.openclaw/secrets/` | 本地账密/token（`iam.username`、`iam.password`、`ones.basic` 等） | ❌ 永不 |
+| Secret Store（SQLite） | 系统托管凭据，经 repository 读写 | ❌ 二进制 db 不入库 |
+| 环境变量 | CI / 临时覆盖（如 `DMS_JWT_SECRET`） | ❌ 仅运行时 |
+
+**禁止**：把任何凭据、API key、token、私钥字面量写进被 git 跟踪的文件
+（含 `.py/.json/.yaml/.md`、含 `backups/` 与文档示例）。
+
+### 4.2 代码只"读取"，不"内嵌"
+
+```python
+# ✅ 正确：读 secrets 文件
+user = (Path.home() / ".openclaw/secrets/iam.username").read_text().strip()
+
+# ✅ 正确：读配置/环境
+secret = get_jwt_secret()          # 来自 config / DMS_JWT_SECRET
+
+# ❌ 错误：字面量
+JWT_SECRET = "actual-secret-value"
+```
+
+### 4.3 提交前自动阻断
+
+pre-commit hook 第 0 步自动扫描暂存区，命中明文凭据即 **阻断提交**：
+
+- 扫描器：`L2-infra/components/config/secret-scan/secret_scan.py`
+- 覆盖：AWS/GitHub/Google/Slack key、JWT、PEM 私钥、各类 `password/token/secret = "..."`
+- 智能放行：占位符（`change-in-production`/`example`）、代码引用（`getenv`/函数调用）、
+  测试目录内明显夹具密码（`testpass`/`wrongpass`）
+
+```bash
+# 手动扫暂存区
+python3 L2-infra/components/config/secret-scan/secret_scan.py
+
+# 手动扫指定文件
+python3 L2-infra/components/config/secret-scan/secret_scan.py --files a.py b.json
+
+# 误报放行（追加白名单正则）
+python3 L2-infra/components/config/secret-scan/secret_scan.py --allow-pattern '^company-'
+```
+
+### 4.4 万一泄漏的处置
+
+1. **立即改密 / 轮换 key**（历史清不清，先让旧凭据作废——这是最实际的一步）
+2. 评估是否需重写历史；需要时用 `git filter-repo`，且：
+   - 重写前 `git bundle create backup.bundle --all` 全量备份
+   - 在 fresh clone 操作，重写后验证「所有物理对象」零命中
+   - `git push --force` + `--force --tags`，并同步所有克隆重新对齐
+3. 注意：旧提交 SHA 在 GitHub GC 前仍可能被按 SHA 访问，**改密不可省**
+
+## 5. 相关
 
 - 资产清单自动更新：`.git/hooks/pre-commit`（见 `scripts/install-hooks.sh`）
 - 凭据管理：`ADR-202608-005`、`scripts/credentials.sh`
 - 配置踩坑：`EXP-20260821-003`（配置被覆盖）、`EXP-20260822-004`（实测优于文档）
 
-## 5. 变更历史
+## 6. 变更历史
 
 - 2026-08-22: 创建。起因是 compaction 配置静默丢失事故 + Rex 要求统一 commit 规则
+- 2026-10-28: 新增 §4 凭据存储与提交规范（filter-repo 清历史后建立防泄密机制）

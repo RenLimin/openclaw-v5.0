@@ -3,14 +3,28 @@
 # 安装: .git/hooks/pre-commit (本文件由 workspace 管理, 见 L2-infra/components/config/install-hooks.sh)
 #
 # 行为:
+#   0. 明文凭据扫描 —— 命中即阻断 (安全红线, 最高优先)
 #   1. 重生成资产清单, 有变化则自动加入本次提交
 #   2. 检查 ~/.openclaw/openclaw.json 是否有未快照的变更, 仅提醒
 #   3. 知识库 schema 校验 + INDEX.md 派生小节同步 (ADR-003 阶段 2)
-#   1/2 不阻塞; 3 仅在有阻塞性错误时阻塞 (非法 layer/stage/重复 ID)
+#   1/2 不阻塞; 0/3 命中阻塞性错误时阻塞提交
 
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
+
+# --- 0. 明文凭据扫描 (安全红线; 命中即阻断, 先于一切自动 add) ---
+SECRET_SCANNER="L2-infra/components/config/secret-scan/secret_scan.py"
+if [ -f "$SECRET_SCANNER" ]; then
+    if ! python3 "$SECRET_SCANNER"; then
+        echo ""
+        echo "❌ pre-commit 拦截: 暂存区疑似含明文凭据"
+        echo "    凭据只能存 ~/.openclaw/secrets/ 或 Secret Store, 代码只读取。"
+        echo "    确属误报: 在 secret_scan.py 规则中放行; 紧急可 --no-verify (事后必须补扫)。"
+        exit 1
+    fi
+    echo "✅ 暂存区密钥扫描通过"
+fi
 
 # --- 1. 资产清单 ---
 echo "🔄 正在重生成系统资产清单..."
