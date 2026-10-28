@@ -22,7 +22,7 @@ _DEFAULTS: dict[str, Any] = {
     "jwt_expire_hours": 24,
     # API
     "api_host": "127.0.0.1",
-    "api_port: int = 8080,
+    "api_port": 8000,
     "api_cors_origins": ["*"],
     # 租户
     "default_tenant": "system",
@@ -64,7 +64,7 @@ def _load_env_overrides() -> dict[str, Any]:
     """从环境变量加载配置（前缀 DMS_）。
 
     例: DMS_JWT_SECRET=xxx → {"jwt_secret": "xxx"}
-         DMS_API_PORT=8080 → {"api_port": 8080}
+         DMS_API_PORT=8000 → {"api_port": 8000}
          DMS_MODULES_ENABLED=project,task → {"modules_enabled": ["project", "task"]]
     """
     overrides: dict[str, Any] = {}
@@ -105,7 +105,7 @@ class AppConfig:
     jwt_expire_hours: int = 24
     # API
     api_host: str = "127.0.0.1"
-    api_port: int = 8080
+    api_port: int = 8000
     api_cors_origins: list[str] = field(default_factory=lambda: ["*"])
     # 租户
     default_tenant: str = "system"

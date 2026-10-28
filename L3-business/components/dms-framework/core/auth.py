@@ -39,8 +39,18 @@ def get_jwt_expire_hours() -> int:
     return _get_config().jwt_expire_hours
 
 
+def _bootstrap_jwt_secret() -> str:
+    """模块级兼容密钥：优先环境变量，否则生成进程级随机密钥（不落盘、不硬编码）。
+
+    历史上此处硬编码过固定密钥，已清除；新部署请通过 DMS_JWT_SECRET 注入。
+    未配置时每次进程启动随机生成，意味着重启后旧 token 失效（可接受的安全默认）。
+    """
+    import os
+    return os.environ.get("DMS_JWT_SECRET") or secrets.token_urlsafe(48)
+
+
 # 向后兼容的模块级变量
-JWT_SECRET = "REDACTED_SECRET"
+JWT_SECRET = _bootstrap_jwt_secret()
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 24
 
