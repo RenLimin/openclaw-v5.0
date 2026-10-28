@@ -19,6 +19,35 @@ from pathlib import Path
 from typing import Optional
 
 COOKIE_FILE = Path.home() / ".openclaw" / "data" / "iam_cookies.json"
+SECRETS_DIR = Path.home() / ".openclaw" / "secrets"
+
+
+def iam_credentials() -> tuple:
+    """从 secrets 读取 IAM (username, password)，无则返回空串。"""
+    u = SECRETS_DIR / "iam.username"
+    w = SECRETS_DIR / "iam.password"
+    return (
+        u.read_text(encoding="utf-8").strip() if u.exists() else "",
+        w.read_text(encoding="utf-8").replace("\n", "").strip() if w.exists() else "",
+    )
+
+
+def ones_credentials() -> tuple:
+    """从 secrets 读取 ONES (email, password)。
+
+    优先 ones.basic（两行 email/password），回退 iam.email_username/email_password。
+    """
+    basic = SECRETS_DIR / "ones.basic"
+    if basic.exists():
+        lines = basic.read_text(encoding="utf-8").strip().splitlines()
+        if len(lines) >= 2:
+            return lines[0].strip(), lines[1].strip()
+    e = SECRETS_DIR / "iam.email_username"
+    w = SECRETS_DIR / "iam.email_password"
+    return (
+        e.read_text(encoding="utf-8").strip() if e.exists() else "",
+        w.read_text(encoding="utf-8").strip() if w.exists() else "",
+    )
 COOKIE_TTL = 12 * 3600  # 12 小时
 
 # Cookie 域名 keys

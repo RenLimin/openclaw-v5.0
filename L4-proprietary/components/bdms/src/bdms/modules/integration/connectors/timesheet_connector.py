@@ -15,6 +15,7 @@ from ..base import BaseConnector, ConnectorRegistry
 from .local_import_connector import LocalImportConnector
 from ..adapters.browser_adapter import (
     BrowserAdapter, login_iam, ensure_logged_in, TIMESHEET_BASE, IAM_BASE,
+    _iam_credentials,
 )
 
 logger = logging.getLogger(__name__)
@@ -87,8 +88,9 @@ class TimesheetConnector(BaseConnector):
             try:
                 # Step 1: 登录 IAM
                 adapter.navigate(f"{IAM_BASE}/#/login")
-                adapter.fill("input[type=text]", "limin.ren")
-                adapter.fill("input[type=password]", "REDACTED_SECRET")
+                _iam_user, _iam_pass = _iam_credentials()
+                adapter.fill("input[type=text]", _iam_user)
+                adapter.fill("input[type=password]", _iam_pass)
                 adapter.click("button >> nth=1")
                 adapter.wait_for_url("**/home/**")
                 time.sleep(3)

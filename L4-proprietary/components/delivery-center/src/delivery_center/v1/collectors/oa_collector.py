@@ -43,6 +43,7 @@ from .iam_auth import (
     ensure_logged_in,
     inject_cookies_to_context,
     is_cookie_valid,
+    iam_credentials,
 )
 
 OA_BASE = "https://oa.bangcle.com"
@@ -52,9 +53,8 @@ DOWNLOAD_DIR = Path.home() / ".openclaw" / "data" / "oa_exports"
 # 合同台账 Cube 报表 ID（仅用于 frame 识别，不用于 URL 跳转）
 _CONTRACT_LEDGER_CUSTOMID = "179"
 
-# IAM 凭据（沿用原有硬编码，与 .bak 一致；外部不应再改这里）
-_IAM_USERNAME = "limin.ren"
-_IAM_PASSWORD = "REDACTED_SECRET"
+# IAM 凭据只从 ~/.openclaw/secrets 读取（禁止硬编码明文）
+_IAM_USERNAME, _IAM_PASSWORD = iam_credentials()
 
 
 def _ensure_setup():

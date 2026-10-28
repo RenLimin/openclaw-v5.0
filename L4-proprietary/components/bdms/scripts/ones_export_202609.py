@@ -29,8 +29,8 @@ FILTERS = [
     {"name": "abnormal", "tab": 10, "file": "ones_abnormal_202609.csv"},
 ]
 
-IAM_USER = "limin.ren"
-IAM_PASS = "REDACTED_SECRET"
+IAM_USER = (Path.home() / ".openclaw" / "secrets" / "iam.username").read_text(encoding="utf-8").strip()
+IAM_PASS = (Path.home() / ".openclaw" / "secrets" / "iam.password").read_text(encoding="utf-8").strip()
 
 # ── 工具函数 ──────────────────────────────────────────
 

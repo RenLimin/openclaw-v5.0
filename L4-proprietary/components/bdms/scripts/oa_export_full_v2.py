@@ -70,8 +70,10 @@ with sync_playwright() as p:
     time.sleep(2)
 
     # Fill credentials
-    page.locator("input[type=text]").first.fill("limin.ren")
-    page.locator("input[type=password]").first.fill("REDACTED_SECRET")
+    _v2_u = (Path.home() / ".openclaw" / "secrets" / "iam.username").read_text(encoding="utf-8").strip()
+    _v2_p = (Path.home() / ".openclaw" / "secrets" / "iam.password").read_text(encoding="utf-8").strip()
+    page.locator("input[type=text]").first.fill(_v2_u)
+    page.locator("input[type=password]").first.fill(_v2_p)
     page.locator("button:has-text('登录')").first.click()
     # Wait longer for redirect to home after login
     print("  Waiting for redirect after login...")

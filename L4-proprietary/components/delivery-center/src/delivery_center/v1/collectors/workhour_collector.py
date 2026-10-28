@@ -25,7 +25,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from .iam_auth import ensure_logged_in
+from .iam_auth import ensure_logged_in, iam_credentials
 
 IAM_BASE = "https://iam.bangcle.com"
 EXPORT_DIR = Path.home() / ".openclaw" / "data" / "workhour_exports"
@@ -95,8 +95,9 @@ def collect_workhour_data(
             page.goto(f"{IAM_BASE}/#/login", timeout=30000)
             page.wait_for_load_state("networkidle", timeout=15000)
             time.sleep(2)
-            page.locator("input[type=text]").first.fill("limin.ren")
-            page.locator("input[type=password]").first.fill("REDACTED_SECRET")
+            _wh_user, _wh_pass = iam_credentials()
+            page.locator("input[type=text]").first.fill(_wh_user)
+            page.locator("input[type=password]").first.fill(_wh_pass)
             for btn in page.locator("button").all():
                 if "登录" in (btn.text_content() or ""):
                     btn.click()

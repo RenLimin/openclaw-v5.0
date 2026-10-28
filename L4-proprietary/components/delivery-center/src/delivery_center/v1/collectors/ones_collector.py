@@ -9,7 +9,7 @@
 
 ONES 认证方式（两种方案）：
   1. IAM SSO（推荐）：IAM 登录后点击 ONES 面板 → 打开新标签页 → 经过 OA shell 中转 → ONES 自动认证
-  2. 邮箱密码（备用）：直接访问 ONES 登录页，输入 limin.ren@bangcle.com / REDACTED_SECRET
+  2. 邮箱密码（备用）：凭据取自 ~/.openclaw/secrets（ones.basic / iam.email_*）
   - 认证成功后 ONES 设置 ones-lt cookie（= token）
   - 注意：面板点击用 context.on('page') 监听，不能手动检查 context.pages
 
@@ -24,7 +24,9 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from .iam_auth import ensure_logged_in, get_cookie, set_cookie, login_ones
+from .iam_auth import (
+    ensure_logged_in, get_cookie, set_cookie, login_ones, ones_credentials,
+)
 
 ONES_BASE = "https://ones.bangcle.com"
 EXPORT_DIR = Path.home() / ".openclaw" / "data" / "ones_exports"
@@ -87,7 +89,8 @@ def _ensure_ones_logged_in(context, page):
     
     # Cookie 不可用，用邮箱密码登录
     print("[ONES] 邮箱密码登录...")
-    if login_ones("limin.ren@bangcle.com", "REDACTED_SECRET"):
+    _ones_email, _ones_pass = ones_credentials()
+    if login_ones(_ones_email, _ones_pass):
         cookies = _load_ones_cookies()
         _inject_cookies(context, cookies)
         return True
@@ -325,7 +328,8 @@ def load_ones_abnormal_projects() -> "pd.DataFrame":
         cookie_str = "; ".join(f'{c["name"]}={c["value"]}' for c in cookies)
 
         url = "https://ones.bangcle.com/project/api/project/auth/login"
-        payload = json.dumps({"email": "limin.ren@bangcle.com", "password": "REDACTED_SECRET"}).encode()
+        _ones_email, _ones_pass = ones_credentials()
+        payload = json.dumps({"email": _ones_email, "password": _ones_pass}).encode()
         req = urllib.request.Request(url, data=payload, method="POST")
         req.add_header("Content-Type", "application/json")
         req.add_header("Cookie", cookie_str)

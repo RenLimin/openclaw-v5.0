@@ -17,7 +17,15 @@ def login():
     cookie_str = '; '.join(f'{c["name"]}={c["value"]}' for c in cookies)
     
     url = 'https://ones.bangcle.com/project/api/project/auth/login'
-    payload = json.dumps({'email': 'limin.ren@bangcle.com', 'password': 'REDACTED_SECRET'}).encode()
+    _secrets = Path.home() / '.openclaw' / 'secrets'
+    _basic = _secrets / 'ones.basic'
+    if _basic.exists():
+        _lines = _basic.read_text(encoding='utf-8').strip().splitlines()
+        _email, _password = _lines[0].strip(), _lines[1].strip() if len(_lines) >= 2 else ('', '')
+    else:
+        _email = (_secrets / 'iam.email_username').read_text(encoding='utf-8').strip()
+        _password = (_secrets / 'iam.email_password').read_text(encoding='utf-8').strip()
+    payload = json.dumps({'email': _email, 'password': _password}).encode()
     req = urllib.request.Request(url, data=payload, method='POST')
     req.add_header('Content-Type', 'application/json')
     req.add_header('Cookie', cookie_str)
