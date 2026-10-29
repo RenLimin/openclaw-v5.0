@@ -148,8 +148,22 @@ class CalibrationService:
 `_validate_value(sheet, column_name, value)`：
 - 从 `dr_sheet_meta.columns` 推断类型：列名含"日期/时间" → date（正则 + strptime）；
   推断数值列 → numeric；其余 text。
-- 枚举：`签约.履约状态` 等从主数据 legend 配置读取允许集合（沿用 validator 的 ENUM 来源）。
-- 非法 → 抛 `CalibrationError(value=..., code=...)`，API 映射 400。
+- 枚举：允许集合从 `md_reference`（`data_type='legend_config'`）的指定列动态读取。
+  **枚举映射经真实数据校准后仅启用一个安全列**（见 §2.3.1）：
+  `异常项目.状态` ← legend「状态」（8 值，202606 真实 17177 行 100% 命中）。
+- 枚举列非法 → 抛 `CalibrationError(code='INVALID_VALUE')`；类型非法 → `code='INVALID_TYPE'`；API 均映射 400。
+- 非枚举的 text 列：允许集合为空集 → 仅类型（文本）校验、不阻断（与 validator 空集降级同口径）。
+
+#### 2.3.1 枚举列映射（v1.0，唯一启用项）
+
+| 业务 Sheet.列 | legend 来源列 | 合法值 | 真实数据命中 |
+|---|---|---|---|
+| `异常项目.状态` | `状态` | 义务已拆分 / 交付邮件交接中 / 交付邮件已归档 / 实施未开始 / 实施进行中 / 实施已完成 / 验收文件交接中 / 验收文件已归档 | 100% |
+
+**废弃的错误配置**：原 `validator.ENUM_COLS` 中的 `签约.履约状态` —— 真实「签约」表无此列（83 列中不存在），予以删除，不进入映射。
+其余列（如 `异常项目.项目验收状态`）经比对词表不匹配（命中仅 21.6%），本期不启用枚举，避免误报。
+
+> 新增枚举列必须先用真实数据做命中率分析（建议 ≥99% 且无业务越界值），追加到本表并评审后才启用。
 
 ---
 
@@ -186,8 +200,10 @@ def recalculate_after_calibration(self, month: str,
 
 - 抽出 `collect_suspicious_from_df(month, sheets_data, only_sheets=None)`，
   现有 `collect_suspicious(month)` 改为"load 数据后调用它"，保持规则单份实现。
-- 规则（非空/类型/去重/行数偏差）逻辑不变。
-- 入参为 effective 数据集 → 校准值自然参与规则判定。
+- 规则（非空/类型/去重/行数偏差）逻辑不变；**新接入 `validate_enum`**：
+  对启用映射的枚举列（v1.0：`异常项目.状态`）执行 R10 枚举检查，
+  允许集合由 `_load_enum_options(sheet, column)` 从 `md_reference` legend 动态读取。
+- 入参为 effective 数据集 → 校准值自然参与规则判定（含枚举）。
 
 ### 3.3 异步与进度
 
@@ -286,7 +302,18 @@ def recalculate_after_calibration(self, month: str,
 ```
 > 前端"数据浏览"硬编码 5 项下拉改为调用本接口。
 
-### 4.6 校准台账（预览/JSON）
+### 4.6 枚举选项（校准对话框下拉数据源）
+`GET /api/report/enum-options/{month}/{sheet}/{column}`
+```json
+// 200（枚举列）
+{"sheet":"异常项目","column":"状态","options":["义务已拆分","交付邮件交接中","交付邮件已归档","实施未开始","实施进行中","实施已完成","验收文件交接中","验收文件已归档"]}
+// 200（非枚举列）
+{"sheet":"签约","column":"合同编号","options":[]}
+```
+- 枚举选项由 `md_reference` legend（`data_type='legend_config'`）对应列动态读取，按 sort_order 排序；
+  非枚举列返回空数组，前端据此渲染 `<input>` 而非 `<select>`（见 §5.1）。
+
+### 4.7 校准台账（预览/JSON）
 `GET /api/report/calibration-ledger/{month}`
 ```json
 {
@@ -296,13 +323,13 @@ def recalculate_after_calibration(self, month: str,
 }
 ```
 
-### 4.7 导出（既有端点增强，不新增路径）
+### 4.8 导出（既有端点增强，不新增路径）
 `GET /api/report/export/{month}`
 - 各 Sheet 数据来自 **effective**；已校准单元格加批注（openpyxl Comment：`原值→新值 / 人 / 时间`）。
 - 末尾追加「**校准台账**」Sheet（= `ledger_rows`）。
 - 当无任何 active 校准时，台账 Sheet 仍可输出表头+0 行（或省略；取**省略**，避免空 Sheet）。
 
-### 4.8 错误响应统一
+### 4.9 错误响应统一
 ```json
 {"detail": {"code": "INVALID_TYPE"|"LOCKED"|"EMPTY_REASON"|"NOT_FOUND", "message": "..."}}
 ```
@@ -314,7 +341,8 @@ def recalculate_after_calibration(self, month: str,
 ### 5.1 校准对话框（问题清单 + 数据浏览共用）
 字段：
 - 只读：月份 / Sheet / 行号 / 列名 / 规则说明 / **原始值**；
-- 输入：校准值（日期列→`<input type=date>`；数值→`type=number>`；枚举→`<select>`；文本→`<input>`）；
+- 输入：校准值（日期列→`<input type=date>`；数值→`type=number>`；枚举列→`<select>`；文本→`<input>`）。
+  v1.0 仅 `异常项目.状态` 为枚举列，选项来自 §2.3.1 的 8 个合法值，通过新接口 `GET /api/report/enum-options/{month}/{sheet}/{column}` 动态加载；
 - 必填：原因（常用原因下拉 + 自定义）；
 - 按钮：保存 / 取消；保存成功 toast 并刷新问题列表与 KPI。
 
@@ -372,13 +400,19 @@ def recalculate_after_calibration(self, month: str,
 | AC-03 自动重校验 | §3、§4.1 recalculation |
 | AC-05 留痕完整 | §1.1/1.2、§4.3 |
 | AC-06/07 撤销/修改 | §2.1 upsert/revoke、§4.2、§1.2 history |
-| AC-08 导出+台账 | §4.7、§4.6 |
+| AC-08 导出+台账 | §4.8、§4.7 |
 | AC-09 15 Sheet 动态 | §4.5、§5.2 |
-| AC-10 非法值拒绝 | §2.3、§4.8 |
+| AC-10 非法值拒绝 | §2.3/§2.3.1、§3.2、§4.9 |
 
 ---
 
 ## 变更记录
+
+- v1.0 → v1.0.1（2026-10-29）：枚举强校验订正——废弃不存在的 `签约.履约状态` 配置，
+  改为真实数据验证过的 `异常项目.状态`（legend「状态」8 值 100% 命中）；
+  新增 §2.3.1 映射表、§4.6 enum-options 端点；§3.2 接入 validate_enum；
+  前端枚举 `<select>` 仅对映射列生效；VERIFICATION 同步更新。
+- v1.0：初版（2026-10-28）。
 
 - 2026-10-28 v1.0：Jerry 初稿。确定 `dr_calibration`(+history) 表、部分唯一索引、
   CalibrationService 签名、7+1 个 API 契约、增量重校验与 job 阈值、旧路径 3 处收敛、

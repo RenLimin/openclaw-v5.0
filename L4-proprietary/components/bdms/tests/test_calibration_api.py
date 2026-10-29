@@ -33,6 +33,30 @@ for p in (str(_SRC), str(_ROOT)):
 from bdms.core import db as _db
 
 
+_STATUS_8 = ["义务已拆分", "交付邮件交接中", "交付邮件已归档", "实施未开始",
+             "实施进行中", "实施已完成", "验收文件交接中", "验收文件已归档"]
+
+
+def _seed_legend(db_path):
+    """向临时库 md_reference 写 legend_config 状态 8 值。"""
+    import json
+    conn = _db.get_connection(db_path)
+    try:
+        conn.execute("DELETE FROM md_reference WHERE data_type='legend_config'")
+        conn.execute(
+            "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+            "VALUES ('legend_config', '__header__', '表头行', ?, 0, 0)",
+            (json.dumps({"状态": "状态"}, ensure_ascii=False),))
+        for i, v in enumerate(_STATUS_8, 1):
+            conn.execute(
+                "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+                "VALUES ('legend_config', ?, ?, ?, ?, 1)",
+                (v, v, json.dumps({"状态": v}, ensure_ascii=False), i))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _free_port():
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
@@ -66,9 +90,15 @@ def server(tmp_path):
             "所属产线": ["L1", "L2"],
             "签约日期": ["2026/6/3", "bad-date"],
         }),
+        "异常项目": pd.DataFrame({
+            "项目名称": ["P-X"],
+            "异常报备日期": ["2026/6/1"],
+            "状态": ["实施未开始"],
+        }),
     }
     from bdms.modules.delivery_report.engine import DeliveryReportEngine
     DeliveryReportEngine(db_path).persist("202610", raw)
+    _seed_legend(db_path)
 
     # 生产路径落 issue 明细（validating）
     from bdms.modules.delivery_report.service import DeliveryReportService
@@ -147,11 +177,8 @@ def test_submit_invalid_date_400(server):
         "corrected_value": "not-a-date", "reason": "x", "operator": "op"})
     assert r.status_code == 400
     body = r.json()
-    # 统一错误：error.detail.code 或 error.code 两种形态都接受
-    detail = body.get("error", body.get("detail", {}))
-    code = detail.get("code") if isinstance(detail, dict) else None
-    assert code in ("INVALID_TYPE", None)
-    assert "error" in body
+    # 全局 handler 统一包装：{"error": {"code", "message"}}
+    assert body["error"]["code"] == "INVALID_TYPE"
 
 
 def test_submit_empty_reason_400(server):
@@ -236,7 +263,50 @@ def test_sheets_dynamic(server):
     assert sh["month"] == "202610"
     names = [s["name"] for s in sh["sheets"]]
     assert "签约" in names
-    assert len(names) >= 1
+    assert "异常项目" in names
+    assert len(names) >= 2
+
+
+# ─── 5. 枚举选项（A-15 / A-16，DESIGN-DETAIL §4.6 / §2.3.1）───
+
+def test_enum_options_mapped_column(server):
+    """A-15：枚举列 `异常项目.状态` 返回 legend 8 值。"""
+    client, _ = server
+    r = client.get("/api/report/enum-options/202610/异常项目/状态")
+    assert r.status_code == 200
+    opts = r.json()["options"]
+    assert len(opts) == 8
+    assert "实施未开始" in opts and "义务已拆分" in opts
+
+
+def test_enum_options_non_mapped_column(server):
+    """A-15b：非枚举列返回空数组（前端据此渲染 input 而非 select）。"""
+    client, _ = server
+    r = client.get("/api/report/enum-options/202610/签约/合同编号")
+    assert r.status_code == 200
+    assert r.json()["options"] == []
+
+
+def test_submit_invalid_enum_400(server):
+    """A-16：枚举列提交非法值 → 400 INVALID_VALUE，不落库。"""
+    client, _ = server
+    r = client.post("/api/report/calibrations/202610", json={
+        "sheet": "异常项目", "row_index": 0, "column_name": "状态",
+        "corrected_value": "不存在的状态", "reason": "x", "operator": "op"})
+    assert r.status_code == 400
+    assert r.json()["error"]["code"] == "INVALID_VALUE"
+    lst = client.get("/api/report/calibrations/202610").json()
+    assert lst["total"] == 0
+
+
+def test_submit_valid_enum_ok(server):
+    """A-16b：枚举列合法值保存成功。"""
+    client, _ = server
+    r = client.post("/api/report/calibrations/202610", json={
+        "sheet": "异常项目", "row_index": 0, "column_name": "状态",
+        "corrected_value": "实施已完成", "reason": "状态修正", "operator": "op"})
+    assert r.status_code == 200
+    assert r.json()["calibration"]["status"] == "active"
 
 
 # ─── 4. approved 锁定 ───
@@ -251,6 +321,4 @@ def test_submit_locked_after_approve(server):
         "corrected_value": "2026-06-05", "reason": "修正", "operator": "op"})
     assert r.status_code == 400
     body = r.json()
-    detail = body.get("error", body.get("detail", {}))
-    code = detail.get("code") if isinstance(detail, dict) else None
-    assert code in ("LOCKED", None)
+    assert body["error"]["code"] == "LOCKED"

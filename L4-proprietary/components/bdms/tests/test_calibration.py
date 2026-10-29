@@ -55,6 +55,42 @@ def svc(seeded):
     return CalibrationService(seeded)
 
 
+def _seed_legend(db_path, col_values):
+    """向 md_reference 写 legend_config（枚举允许集合），模拟 seed_legend。"""
+    conn = _db.get_connection(db_path)
+    try:
+        conn.execute("DELETE FROM md_reference WHERE data_type='legend_config'")
+        conn.execute(
+            "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+            "VALUES ('legend_config', '__header__', '表头行', ?, 0, 0)",
+            (json.dumps({"状态": "状态"}, ensure_ascii=False),))
+        for i, v in enumerate(col_values, 1):
+            conn.execute(
+                "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+                "VALUES ('legend_config', ?, ?, ?, ?, 1)",
+                (v, v, json.dumps({"状态": v}, ensure_ascii=False), i))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+_STATUS_8 = ["义务已拆分", "交付邮件交接中", "交付邮件已归档", "实施未开始",
+             "实施进行中", "实施已完成", "验收文件交接中", "验收文件已归档"]
+
+
+@pytest.fixture
+def enum_seeded(db_path):
+    """异常项目 sheet + legend 状态列 8 值（对齐 DESIGN-DETAIL §2.3.1）。"""
+    raw = {"异常项目": pd.DataFrame({
+        "项目名称": ["P-X", "P-Y"],
+        "异常报备日期": ["2026/6/1", "2026/6/2"],
+        "状态": ["实施未开始", "义务已拆分"],
+    })}
+    DeliveryReportEngine(db_path).persist("202610", raw)
+    _seed_legend(db_path, _STATUS_8)
+    return db_path
+
+
 def _raw_cell(db_path, sheet, row, col):
     conn = _db.get_connection(db_path)
     try:
@@ -175,6 +211,38 @@ def test_accept_valid_numeric_and_text(svc):
     svc.upsert("202610", "签约", 2, "金额", "300.5", "r", "op")
     svc.upsert("202610", "签约", 0, "项目名称", "新项目名", "r", "op")
     assert svc.overview("202610")["active_calibrations"] == 2
+
+
+# ─── 4.1 枚举校验（U-10，DESIGN-DETAIL §2.3.1）───
+
+def test_reject_invalid_enum_value(enum_seeded):
+    svc = CalibrationService(enum_seeded)
+    with pytest.raises(CalibrationError) as ei:
+        svc.upsert("202610", "异常项目", 0, "状态",
+                   "不存在的状态", "r", "op")
+    assert ei.value.code == "INVALID_VALUE"
+
+
+def test_accept_valid_enum_value(enum_seeded):
+    svc = CalibrationService(enum_seeded)
+    r = svc.upsert("202610", "异常项目", 0, "状态",
+                   "实施已完成", "状态修正", "op")
+    assert r["status"] == "active"
+
+
+def test_enum_legacy_dead_config_removed():
+    """废弃配置：签约.履约状态 列不存在，映射表不应再包含。"""
+    from bdms.modules.delivery_report.validator import ENUM_COLS
+    assert "签约" not in ENUM_COLS or "履约状态" not in ENUM_COLS.get("签约", {})
+    assert ENUM_COLS.get("异常项目", {}).get("状态") == "状态"
+
+
+def test_enum_non_mapped_column_still_text(enum_seeded):
+    """非映射 text 列不因 legend 存在而误阻断（降级口径）。"""
+    svc = CalibrationService(enum_seeded)
+    svc.upsert("202610", "异常项目", 0, "项目名称",
+               "全新项目名", "改名", "op")
+    assert svc.overview("202610")["active_calibrations"] == 1
 
 
 def test_reject_empty_reason(svc):

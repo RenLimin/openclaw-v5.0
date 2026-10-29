@@ -401,7 +401,13 @@ class CalibrationService:
             if not _NUMERIC_RE.match(value):
                 raise CalibrationError(
                     f"数值格式非法：{value}", code="INVALID_TYPE", value=value)
-        # text：直接通过。枚举本期 legend 为空集，不额外阻断（沿用 validator ENUM 来源）。
+        # 枚举：仅 ENUM_COLS 映射列，允许集合与 validator 同源（legend_config）
+        from bdms.modules.delivery_report.validator import get_enum_options
+        allowed = get_enum_options(self.db_path, sheet, column_name)
+        if allowed and value not in allowed:
+            raise CalibrationError(
+                f"枚举值非法：{value}（允许：{' / '.join(allowed)}）",
+                code="INVALID_VALUE", value=value)
 
 
 def _coerce_to_dtype(dtype, value: str):

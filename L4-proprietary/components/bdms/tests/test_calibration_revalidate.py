@@ -60,6 +60,84 @@ def cs(seeded):
     return CalibrationService(seeded)
 
 
+def _seed_legend(db_path, col_values):
+    """向 md_reference 写 legend_config（枚举允许集合）。"""
+    import json
+    conn = _db.get_connection(db_path)
+    try:
+        conn.execute("DELETE FROM md_reference WHERE data_type='legend_config'")
+        conn.execute(
+            "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+            "VALUES ('legend_config', '__header__', '表头行', ?, 0, 0)",
+            (json.dumps({"状态": "状态"}, ensure_ascii=False),))
+        for i, v in enumerate(col_values, 1):
+            conn.execute(
+                "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+                "VALUES ('legend_config', ?, ?, ?, ?, 1)",
+                (v, v, json.dumps({"状态": v}, ensure_ascii=False), i))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+_STATUS_8 = ["义务已拆分", "交付邮件交接中", "交付邮件已归档", "实施未开始",
+             "实施进行中", "实施已完成", "验收文件交接中", "验收文件已归档"]
+
+
+@pytest.fixture
+def enum_seeded(db_path):
+    """异常项目数据：行0 状态合法、行1 状态非法（触发 R10 枚举）。"""
+    raw = {"异常项目": pd.DataFrame({
+        "项目名称": ["P-X", "P-Y"],
+        "异常报备日期": ["2026/6/1", "2026/6/2"],
+        "状态": ["实施未开始", "不存在的状态"],
+    })}
+    DeliveryReportEngine(db_path).persist("202610", raw)
+    _seed_legend(db_path, _STATUS_8)
+    return db_path
+
+
+# ─── 枚举接入重校验管线（DESIGN-DETAIL §3.2）───
+
+def test_validator_reports_enum_issue(enum_seeded):
+    """生成/重校验管线：非法枚举值被 collect_suspicious 标记为 enum。"""
+    from bdms.modules.delivery_report.validator import DeliveryReportValidator
+    result = DeliveryReportValidator(enum_seeded).collect_suspicious("202610")
+    enum_issues = [e for e in result["errors"]
+                   if e.get("issue") == "enum" and e.get("col") == "状态"]
+    assert len(enum_issues) == 1
+    assert enum_issues[0]["row"] == 1
+    assert enum_issues[0]["value"] == "不存在的状态"
+
+
+def test_calibration_fixes_enum_issue_via_revalidate(enum_seeded):
+    """校准非法枚举 → 重校验后 enum issue 消失（闭环）。"""
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    svc = DeliveryReportService(enum_seeded)
+    cs = CalibrationService(enum_seeded)
+    # 先重校验落 issue
+    svc.revalidate("202610")
+    conn = _db.get_connection(enum_seeded)
+    try:
+        pending = conn.execute(
+            "SELECT COUNT(*) n FROM dr_import_validation "
+            "WHERE month='202610' AND status='pending' AND rule_code='enum'").fetchone()["n"]
+    finally:
+        conn.close()
+    assert pending == 1
+    # 校准为合法值 → 增量重校验
+    cs.upsert("202610", "异常项目", 1, "状态", "实施已完成", "状态修正", "op")
+    svc.recalculate_after_calibration("202610", [("异常项目", 1)], operator="op")
+    conn = _db.get_connection(enum_seeded)
+    try:
+        n = conn.execute(
+            "SELECT COUNT(*) n FROM dr_import_validation "
+            "WHERE month='202610' AND status='pending' AND rule_code='enum'").fetchone()["n"]
+    finally:
+        conn.close()
+    assert n == 0
+
+
 def _pending_count(seeded, month="202610"):
     conn = _db.get_connection(seeded)
     try:

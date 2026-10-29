@@ -10,6 +10,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -27,15 +28,50 @@ REQUIRED_COLS: Dict[str, List[str]] = {
     "验收交接": ["合同编号", "验收日期"],
 }
 
-# 枚举约束（黄金基准 Sheet-15 图例）
-ENUM_COLS: Dict[str, Dict[str, List[str]]] = {
-    "签约": {
-        "履约状态": [],  # 动态：从 md_reference legend_config 读取
+# 枚举约束（黄金基准 Sheet-15 图例；业务列 → legend 列名）
+# v1.0.1 订正：废弃不存在的「签约.履约状态」；仅启用真实数据验证过的映射
+# （202606 真实 17177 行 100% 命中，见 DESIGN-DETAIL-MANUAL-CALIBRATION §2.3.1）。
+# 新增枚举列必须先用真实数据做命中率分析（建议 ≥99%）并更新设计文档后启用。
+ENUM_COLS: Dict[str, Dict[str, str]] = {
+    "异常项目": {
+        "状态": "状态",
     },
 }
 
 _DATE_RE = re.compile(r"^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$")
 _NUMERIC_RE = re.compile(r"^-?\d+(\.\d+)?$")
+
+
+def get_enum_options(db_path, sheet: str, column: str) -> List[str]:
+    """从 md_reference legend_config 读取枚举允许集合（保序去重）。
+
+    仅对 ENUM_COLS 映射列生效；非映射列返回空（空集=不做枚举阻断，
+    与校准保存前置的降级口径一致）。模块级函数供 validator 与
+    CalibrationService 共用同一枚举源。
+    """
+    legend_col = ENUM_COLS.get(sheet, {}).get(column)
+    if not legend_col:
+        return []
+    conn = _db.get_connection(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT extra FROM md_reference "
+            "WHERE data_type='legend_config' AND enabled=1 "
+            "ORDER BY sort_order").fetchall()
+    finally:
+        conn.close()
+    options: List[str] = []
+    seen = set()
+    for r in rows:
+        try:
+            extra = json.loads(r["extra"])
+        except (ValueError, TypeError):
+            continue
+        v = extra.get(legend_col, "")
+        if isinstance(v, str) and v.strip() and v.strip() not in seen:
+            seen.add(v.strip())
+            options.append(v.strip())
+    return options
 
 
 class DeliveryReportValidator:
@@ -47,6 +83,10 @@ class DeliveryReportValidator:
     # ========================================================
     # 单条规则
     # ========================================================
+
+    def _load_enum_options(self, sheet: str, column: str) -> List[str]:
+        """实例便捷方法：委托模块级 get_enum_options。"""
+        return get_enum_options(self.db_path, sheet, column)
 
     def validate_not_null(self, df: pd.DataFrame,
                           required_cols: List[str]) -> List[Dict]:
@@ -191,6 +231,15 @@ class DeliveryReportValidator:
                         "issue": f"行数偏差 {rc['deviation']*100:.0f}%"
                                  f"（上月 {prev}，本月 {len(df)}）",
                     })
+            # 枚举（R10：仅 ENUM_COLS 映射列，从 legend 动态读允许集合）
+            enum_map: Dict[str, List[str]] = {}
+            for col in ENUM_COLS.get(sheet, {}):
+                allowed = self._load_enum_options(sheet, col)
+                if allowed:
+                    enum_map[col] = allowed
+            if enum_map:
+                for e in self.validate_enum(df, enum_map):
+                    errors.append({"sheet": sheet, **e})
 
         return {
             "errors": errors,

@@ -314,7 +314,10 @@ async def report_calibration_submit(month: str, req: CalibrationRequest):
             month, req.sheet, req.row_index, req.column_name,
             req.corrected_value, req.reason, req.operator, req.issue_id)
     except CalibrationError as e:
-        raise HTTPException(400, detail=e.to_dict() if hasattr(e, "to_dict") else str(e))
+        # to_dict() 返回 {"detail": {...}}；HTTPException 会再包一层，
+        # 这里取内层保证响应体为 {"detail": {"code", "message"}}（对齐 §4.9）
+        raise HTTPException(400, detail=e.to_dict()["detail"]
+                            if hasattr(e, "to_dict") else str(e))
 
     affected = [(req.sheet, req.row_index)]
     if len(affected) <= SYNC_LIMIT:
@@ -378,6 +381,20 @@ async def report_sheets(month: str):
         raise HTTPException(404, f"{month} 无 Sheet 数据")
     return {"month": month,
             "sheets": [{"name": r["sheet"], "rows": r["row_count"]} for r in rows]}
+
+
+@router.get("/report/enum-options/{month}/{sheet}/{column}")
+async def report_enum_options(month: str, sheet: str, column: str):
+    """枚举列合法值（校准对话框下拉数据源，DESIGN-DETAIL §4.6）。
+
+    仅对 ENUM_COLS 映射列返回非空 options；非映射列返回空数组，
+    前端据此渲染 <input> 而非 <select>。
+    """
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.validator import get_enum_options
+    options = get_enum_options(None, sheet, column)  # None → 默认生产库路径
+    return {"month": month, "sheet": sheet, "column": column,
+            "options": options}
 
 
 @router.get("/report/calibration-ledger/{month}")

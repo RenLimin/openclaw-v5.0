@@ -1348,23 +1348,55 @@ function openCalibrationForCell(row, col) {
   _populateCalModal();
 }
 
-function _populateCalModal() {
+let _calPopulateSeq = 0;  // 异步 populate 竞态保护
+
+async function _populateCalModal() {
   const c = _calContext;
+  const seq = ++_calPopulateSeq;
   document.getElementById('cal-month').value = c.month;
   document.getElementById('cal-sheet').value = c.sheet;
   document.getElementById('cal-row').value = c.row_index;
   document.getElementById('cal-col').value = c.column_name;
   document.getElementById('cal-original').value = c.original_value == null ? '' : c.original_value;
-  document.getElementById('cal-value').value = '';
   document.getElementById('cal-reason').value = '';
   document.getElementById('cal-reason-preset').value = '';
-  const input = document.getElementById('cal-value');
-  input.type = _calInputType(c.column_name);
-  document.getElementById('cal-hint').textContent =
-    input.type === 'date' ? '日期格式：YYYY-MM-DD' :
-    input.type === 'number' ? '数值格式：纯数字（可含小数）' : '';
+
+  // 枚举列 → <select>（选项来自 enum-options 端点）；否则 → 按类型 <input>
+  const holder = document.getElementById('cal-value');
+  const parent = holder.parentNode;
+  let options = [];
+  try {
+    const r = await fetch(`/api/report/enum-options/${c.month}/${encodeURIComponent(c.sheet)}/${encodeURIComponent(c.column_name)}`);
+    if (r.ok) options = (await r.json()).options || [];
+  } catch (e) { options = []; }
+  if (seq !== _calPopulateSeq) return;  // 已被更新请求覆盖
+
+  if (options.length) {
+    const sel = document.createElement('select');
+    sel.id = 'cal-value';
+    sel.className = 'input';
+    sel.innerHTML = '<option value="">-- 请选择 --</option>'
+      + options.map(o => `<option value="${o}">${o}</option>`).join('');
+    parent.replaceChild(sel, holder);
+    document.getElementById('cal-hint').textContent =
+      `枚举列：可选 ${options.length} 个合法值`;
+  } else {
+    const inp = document.createElement('input');
+    inp.id = 'cal-value';
+    inp.className = 'input';
+    inp.placeholder = '修正后的值';
+    inp.type = _calInputType(c.column_name);
+    parent.replaceChild(inp, holder);
+    document.getElementById('cal-hint').textContent =
+      inp.type === 'date' ? '日期格式：YYYY-MM-DD' :
+      inp.type === 'number' ? '数值格式：纯数字（可含小数）' : '';
+  }
+
   openModal('calibration-modal');
-  setTimeout(() => input.focus(), 50);
+  setTimeout(() => {
+    const el = document.getElementById('cal-value');
+    if (el) el.focus();
+  }, 50);
 }
 
 // 常用原因联动

@@ -24,6 +24,32 @@ for p in (str(_SRC), str(_ROOT)):
 
 from bdms.core import db as _db
 
+from bdms.core import db as _db
+
+_STATUS_8 = ["义务已拆分", "交付邮件交接中", "交付邮件已归档", "实施未开始",
+             "实施进行中", "实施已完成", "验收文件交接中", "验收文件已归档"]
+
+
+def _seed_legend(dbp):
+    """向临时库 md_reference 写 legend_config（状态 8 值）。"""
+    import json
+    conn = _db.get_connection(dbp)
+    try:
+        conn.execute("DELETE FROM md_reference WHERE data_type='legend_config'")
+        conn.execute(
+            "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+            "VALUES ('legend_config', '__header__', '表头行', ?, 0, 0)",
+            (json.dumps({"状态": "状态"}, ensure_ascii=False),))
+        for i, v in enumerate(_STATUS_8, 1):
+            conn.execute(
+                "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
+                "VALUES ('legend_config', ?, ?, ?, ?, 1)",
+                (v, v, json.dumps({"状态": v}, ensure_ascii=False), i))
+        conn.commit()
+    finally:
+        conn.close()
+
+
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_makereport(item, call):
     out = yield
@@ -64,8 +90,13 @@ def server(tmp_path_factory):
         "所属产线": ["产线A", "产线B"],
         "签约日期": ["2026/6/3", "bad-date"],
         "金额": ["100", "200"],
+    }), "异常项目": pd.DataFrame({
+        "项目名称": ["P-X", "P-Y"],
+        "异常报备日期": ["2026/6/1", "2026/6/2"],
+        "状态": ["实施未开始", "义务已拆分"],
     })}
     DeliveryReportEngine(dbp).persist("202610", raw)
+    _seed_legend(dbp)
     # 落 issue（走生产 validating 路径）
     from bdms.modules.delivery_report.service import DeliveryReportService
     DeliveryReportService(dbp).revalidate("202610")
@@ -184,3 +215,43 @@ def test_e04_calibrate_from_browse_cell(page):
     page.wait_for_selector('#review-issues-stats')
     page.wait_for_function(
         """() => document.getElementById('review-issues-stats').innerText.includes('待处理 0')""")
+
+
+def test_e11_enum_select_from_browse(page):
+    """E-11：数据浏览「异常项目.状态」单元格 → 校准框渲染 <select> 8 项 → 选合法值保存。"""
+    page.click('.tabs-tab[data-tab="browse"]')
+    page.wait_for_selector('#data-table-container table tbody tr')
+    # 切到异常项目 sheet（value 匹配，option 文本含行数后缀）
+    page.select_option('#view-sheet', value='异常项目')
+    page.wait_for_function(
+        """() => {
+          const heads = [...document.querySelectorAll('#data-table-container table thead th')];
+          return heads.some(h => h.innerText.trim() === '状态');
+        }""")
+    # 点第 1 数据行的「状态」单元格
+    page.wait_for_function(
+        """() => {
+          const heads = [...document.querySelectorAll('#data-table-container table thead th')];
+          const idx = heads.findIndex(h => h.innerText.trim() === '状态');
+          if (idx < 0) return false;
+          const cell = document.querySelectorAll('#data-table-container table tbody tr')[0].cells[idx];
+          cell.click();
+          return true;
+        }""")
+    page.wait_for_selector('#calibration-modal', state='visible')
+    assert page.input_value('#cal-col') == '状态'
+    # 枚举列应渲染为 <select> 且恰 8 项（含占位 = 9 个 option）
+    page.wait_for_function(
+        """() => {
+          const sel = document.getElementById('cal-value');
+          return sel && sel.tagName === 'SELECT' && sel.options.length === 9;
+        }""")
+    opts = page.locator('#cal-value option')
+    texts = [opts.nth(i).inner_text() for i in range(opts.count())]
+    assert texts[0] == '-- 请选择 --'
+    assert '实施未开始' in texts and '义务已拆分' in texts
+    # 选合法值 + 填原因保存
+    page.select_option('#cal-value', label='实施已完成')
+    page.fill('#cal-reason', '状态修正')
+    page.click('#calibration-modal button:has-text("保存校准")')
+    page.wait_for_selector('#toastContainer >> text=校准已保存')
