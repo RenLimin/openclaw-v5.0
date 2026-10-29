@@ -145,7 +145,7 @@ class PriceImporter:
                     code=product_code,
                     version_latest=version,
                     type_=product_type,
-                    status=sale_status.strip() if sale_status else "正常销售",
+                    status=("第三方产品/服务" if "非梆梆" in product_name else (sale_status.strip() if sale_status else "正常销售")),
                     summary=service_desc
                 )
                 stats["products"] += 1

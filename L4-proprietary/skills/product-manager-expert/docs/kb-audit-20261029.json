@@ -30,11 +30,6 @@
       "message": "无chunk文档(共32): 前20 [2066, 2147, 2152, 2248, 2289, 2328, 2332, 2354, 2379, 2380, 2382, 2388, 2393, 2400, 2402, 2404, 2424, 2427, 2433, 2443]"
     },
     {
-      "level": "warn",
-      "category": "EMBED",
-      "message": "doc_chunk.embedding 全为空(0/6195) — 语义检索降级为纯FTS"
-    },
-    {
       "level": "info",
       "category": "RELATION",
       "message": "kb_relation 表为空(0行) — 知识图谱关系未构建"
@@ -42,7 +37,7 @@
   ],
   "severity": {
     "error": 0,
-    "warn": 3,
+    "warn": 2,
     "info": 3
   }
 }
