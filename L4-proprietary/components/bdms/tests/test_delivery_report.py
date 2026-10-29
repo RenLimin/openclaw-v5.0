@@ -137,7 +137,7 @@ class TestSuspiciousFlow:
         ])
         assert result["applied"] == 1
 
-        # 验证修复生效
+        # 收敛语义：写校准覆盖层，原始行永不修改
         import json
         conn = _db.get_connection(db_path)
         row = conn.execute(
@@ -145,7 +145,13 @@ class TestSuspiciousFlow:
         ).fetchone()
         conn.close()
         data = json.loads(row[0])
-        assert data["合同编号"] == "FIXED-001"
+        assert data["合同编号"] == ""  # 原始行未变
+
+        # 校准表有生效记录
+        from bdms.modules.delivery_report.calibration import CalibrationService
+        lst = CalibrationService(db_path).list_calibrations("202606", status="active")
+        assert lst["total"] == 1
+        assert lst["items"][0]["corrected_value"] == "FIXED-001"
 
 
 # ─── 3. DASHBOARD 连接器 ───

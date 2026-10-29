@@ -844,6 +844,54 @@ CREATE INDEX IF NOT EXISTS idx_dr_review_month ON dr_review_status(month);
 CREATE INDEX IF NOT EXISTS idx_dr_review_status ON dr_review_status(status);
 """
 
+# ===== 人工数据校准覆盖层 v1.0 =====
+
+DR_CALIBRATION_SCHEMA = """
+-- 人工校准覆盖层（原始 dr_sheet_row 永不修改）
+CREATE TABLE IF NOT EXISTS dr_calibration (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    month TEXT NOT NULL,
+    sheet TEXT NOT NULL,
+    row_index INTEGER NOT NULL,
+    column_name TEXT NOT NULL,
+    original_value TEXT,              -- 提交时 dr_sheet_row 原值快照
+    corrected_value TEXT NOT NULL,    -- 当前生效校准值
+    previous_value TEXT,              -- 上一条校准值（修改留痕），首次为空
+    reason TEXT NOT NULL,             -- 校准原因（必填）
+    operator TEXT NOT NULL,           -- 操作人
+    status TEXT NOT NULL DEFAULT 'active',  -- active / revoked
+    issue_id INTEGER,                 -- 关联触发的 dr_import_validation.id（可空）
+    created_at TEXT DEFAULT (datetime('now','localtime')),
+    updated_at TEXT DEFAULT (datetime('now','localtime')),
+    resolved_at TEXT                  -- 撤销时间
+);
+CREATE INDEX IF NOT EXISTS idx_dr_cal_month ON dr_calibration(month, status);
+CREATE INDEX IF NOT EXISTS idx_dr_cal_lookup ON dr_calibration(month, sheet, row_index);
+
+-- 同一单元格同时至多一条 active；revoked 历史行可留存多行。
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dr_cal_active
+    ON dr_calibration(month, sheet, row_index, column_name)
+    WHERE status = 'active';
+
+-- 撤销/修改留痕归档表
+CREATE TABLE IF NOT EXISTS dr_calibration_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    calibration_id INTEGER NOT NULL,
+    month TEXT NOT NULL,
+    sheet TEXT NOT NULL,
+    row_index INTEGER NOT NULL,
+    column_name TEXT NOT NULL,
+    original_value TEXT,
+    corrected_value TEXT,             -- 被替换/撤销的那个校准值
+    reason TEXT,
+    operator TEXT,
+    change_type TEXT NOT NULL,        -- revise / revoke
+    created_at TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_dr_cal_hist
+    ON dr_calibration_history(month, sheet, row_index);
+"""
+
 # ===== 确收分析 v2.1 新增表 =====
 
 RR_EXT_SCHEMA = """

@@ -22,6 +22,9 @@ MODE_AUTO = "auto"
 MODE_READ = "read"
 MODE_REGENERATE = "regenerate"
 
+# 校准后重校验：受影响行数 <= SYNC_LIMIT 时同步执行，否则走异步 job
+SYNC_LIMIT = 200
+
 
 class DeliveryReportService:
     """交付月报编排服务（人机协作模式）。"""
@@ -208,35 +211,212 @@ class DeliveryReportService:
             conn.close()
 
     def revalidate(self, month: str) -> dict:
-        """人工触发：重新校验（修正后验证）。"""
+        """人工触发：重新校验（修正后验证）。
+
+        走完整 _update_review_status('validating')：DELETE 再重写
+        dr_import_validation 明细 + 同步 KPI（保证问题清单与汇总一致）。
+        """
         validator = DeliveryReportValidator(self.db_path)
         result = validator.collect_suspicious(month)
+        # 全量重写明细 + KPI（含 pending_fixes 重算）
+        self._update_review_status(month, "validating")
 
         conn = _db.get_connection(self.db_path)
         try:
-            conn.execute(
-                "UPDATE dr_review_status SET status='validating', "
-                "total_errors=?, total_warnings=?, updated_at=datetime('now','localtime') "
-                "WHERE month=?",
-                (result["summary"]["total_errors"],
-                 result["summary"]["total_warnings"],
-                 month)
-            )
-            # 重算 pending_fixes（取明细表 pending 状态数）
+            status_row = conn.execute(
+                "SELECT total_errors, total_warnings, pending_fixes "
+                "FROM dr_review_status WHERE month=?", (month,)
+            ).fetchone()
+            pending_count = status_row["pending_fixes"] if status_row else 0
+        finally:
+            conn.close()
+
+        return {"month": month, "validation": result, "pending_fixes": pending_count}
+
+    # ──────────────────────────────────────────────────────
+    #  校准后重校验闭环（人工校准 v1.0）
+    # ──────────────────────────────────────────────────────
+
+    def recalculate_after_calibration(self, month: str,
+                                      affected: List[tuple],
+                                      operator: str = "") -> dict:
+        """校准保存后自动重校验（合并语义，不清空人工 confirmed/rejected）。
+
+        affected: [(sheet, row_index), ...] 本次校准涉及的位置
+
+        流程：
+          1. engine 读 raw → CalibrationService.apply_overlays → effective
+          2. validator 全量校验 effective（KPI 用全量；问题流转只动受影响行）
+          3. 受影响行的 issue 合并：
+             - 仍违规 → 保持 pending，刷新 message/original_value
+             - 不再违规 → 转 confirmed（自动修复），记 operator/resolved_at
+             - 新增违规 → 插入 pending
+          4. 重算 dr_review_status KPI
+
+        返回 {resolved_issues, remaining_pending, review_status, validation}
+        """
+        from bdms.modules.delivery_report.calibration import CalibrationService
+
+        engine = DeliveryReportEngine(self.db_path)
+        raw = engine.load(month)
+        eff_result = CalibrationService(self.db_path).apply_overlays(month, raw)
+        # apply_overlays 返回 {sheet: df, '__warnings__': [...]}，过滤内部 key
+        effective = {k: v for k, v in eff_result.items()
+                     if not str(k).startswith("__")}
+
+        validator = DeliveryReportValidator(self.db_path)
+        result = validator.collect_suspicious_from_df(month, effective)
+
+        # 新校验结果按 (sheet, row, rule) 建索引
+        new_errors: Dict[tuple, dict] = {}
+        for e in result["errors"]:
+            key = (e.get("sheet"), e.get("row"), e.get("issue"))
+            new_errors[key] = e
+
+        affected_set = {(s, int(r)) for s, r in affected}
+        affected_sheets = {s for s, _ in affected_set}
+
+        conn = _db.get_connection(self.db_path)
+        resolved = 0
+        try:
+            # 取出受影响行在受影响 Sheet 上的既有 issue（跳过人工 rejected）
+            rows = []
+            for sheet in affected_sheets:
+                rows += conn.execute(
+                    "SELECT * FROM dr_import_validation "
+                    "WHERE month = ? AND sheet = ? AND row_index >= 0 "
+                    "AND status != 'rejected'",
+                    (month, sheet),
+                ).fetchall()
+
+            for r in rows:
+                key = (r["sheet"], r["row_index"], r["rule_code"])
+                if (r["sheet"], r["row_index"]) not in affected_set:
+                    continue  # 只动受影响行
+                if key in new_errors:
+                    # 仍违规：保持 pending，刷新 message/original_value
+                    ne = new_errors[key]
+                    if r["status"] != "pending" or r["message"] != ne.get("issue", ""):
+                        conn.execute(
+                            "UPDATE dr_import_validation SET status='pending', "
+                            "message=?, original_value=?, operator=? "
+                            "WHERE id = ?",
+                            (str(ne.get("issue", ""))[:500],
+                             str(ne.get("value", ""))[:500] if ne.get("value") is not None else "",
+                             operator, r["id"]),
+                        )
+                else:
+                    # 不再违规：转 confirmed（自动修复）
+                    if r["status"] != "confirmed":
+                        conn.execute(
+                            "UPDATE dr_import_validation SET status='confirmed', "
+                            "operator=?, resolved_at=datetime('now','localtime') "
+                            "WHERE id = ?",
+                            (operator, r["id"]),
+                        )
+                        resolved += 1
+
+            # 新增违规（受影响行出现新问题）→ 插入 pending
+            for key, ne in new_errors.items():
+                sheet, row, rule = key
+                if (sheet, row) not in affected_set:
+                    continue
+                exists = conn.execute(
+                    "SELECT id FROM dr_import_validation "
+                    "WHERE month=? AND sheet=? AND row_index=? AND rule_code=? "
+                    "AND status != 'rejected'",
+                    (month, sheet, row, rule),
+                ).fetchone()
+                if not exists:
+                    conn.execute(
+                        "INSERT INTO dr_import_validation "
+                        "(month, sheet, row_index, column_name, rule_code, severity, "
+                        " message, original_value, corrected_value, status, operator) "
+                        "VALUES (?,?,?,?,?,?,?,?,?, 'pending', ?)",
+                        (month, sheet, row, rule,
+                         ne.get("col", ""), "error",
+                         str(ne.get("issue", ""))[:500],
+                         str(ne.get("value", ""))[:500] if ne.get("value") is not None else "",
+                         "", operator),
+                    )
+
+            # 重算 KPI（全量 effective 的 summary + 明细 pending 数）
             pending_count = conn.execute(
                 "SELECT COUNT(*) FROM dr_import_validation "
-                "WHERE month = ? AND status = 'pending'",
-                (month,)
+                "WHERE month = ? AND status = 'pending'", (month,),
             ).fetchone()[0]
             conn.execute(
-                "UPDATE dr_review_status SET pending_fixes = ? WHERE month = ?",
-                (pending_count, month)
+                "UPDATE dr_review_status SET status='validating', "
+                "total_errors=?, total_warnings=?, pending_fixes=?, "
+                "updated_at=datetime('now','localtime') WHERE month=?",
+                (result["summary"]["total_errors"],
+                 result["summary"]["total_warnings"],
+                 pending_count, month),
             )
             conn.commit()
         finally:
             conn.close()
 
-        return {"month": month, "validation": result, "pending_fixes": pending_count}
+        return {
+            "resolved_issues": resolved,
+            "remaining_pending": pending_count,
+            "review_status": {
+                "total_errors": result["summary"]["total_errors"],
+                "total_warnings": result["summary"]["total_warnings"],
+                "pending_fixes": pending_count,
+            },
+            "validation": result,
+        }
+
+    def recalculate_after_calibration_async(self, month: str,
+                                            affected: List[tuple],
+                                            operator: str = "") -> dict:
+        """大批量校准重校验：建 job 异步执行，前端轮询进度（进度条铁律）。"""
+        import threading
+
+        conn = _db.get_connection(self.db_path)
+        try:
+            job_id = _db.create_job(conn, "calibration", month, "revalidate")
+            conn.commit()
+        finally:
+            conn.close()
+
+        def _progress(pct: int, msg: str):
+            c = _db.get_connection(self.db_path)
+            try:
+                _db.update_job_status(c, job_id, "running", pct, msg)
+                c.commit()
+            finally:
+                c.close()
+
+        def _run():
+            try:
+                _progress(10, "步骤 1/4：应用校准覆盖层...")
+                engine = DeliveryReportEngine(self.db_path)
+                raw = engine.load(month)
+                from bdms.modules.delivery_report.calibration import CalibrationService
+                eff_all = CalibrationService(self.db_path).apply_overlays(month, raw)
+                eff = {k: v for k, v in eff_all.items()
+                       if not str(k).startswith("__")}
+
+                _progress(40, "步骤 2/4：重校验有效数据集...")
+                validator = DeliveryReportValidator(self.db_path)
+                result = validator.collect_suspicious_from_df(month, eff)
+
+                _progress(70, "步骤 3/4：流转问题状态...")
+                self.recalculate_after_calibration(month, affected, operator)
+
+                _progress(100, "步骤 4/4：完成")
+                self._finish_job(job_id, "done", 100,
+                                message="重校验完成", output_path=None)
+            except Exception as e:
+                self._finish_job(job_id, "failed", 0, message=str(e)[:500],
+                                 output_path=None)
+
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        return {"job_id": job_id, "month": month, "status": "running",
+                "progress": 0, "message": "已提交重校验，准备执行..."}
 
     # ──────────────────────────────────────────────────────
     #  原有方法
@@ -753,7 +933,19 @@ class DeliveryReportService:
         validator = DeliveryReportValidator(self.db_path)
 
         if fixes:
-            validator.apply_manual_fixes(month, fixes)
+            # 旧"直接改 dr_sheet_row"路径收敛：改走校准覆盖层（原始层永不修改）
+            from .calibration import CalibrationService
+            _cs = CalibrationService(self.db_path)
+            for fix in fixes:
+                if fix.get("sheet") is None or fix.get("row_index") is None \
+                        or fix.get("col") is None:
+                    continue
+                _cs.upsert(
+                    month, fix["sheet"], fix["row_index"], fix["col"],
+                    str(fix.get("value") or ""),
+                    str(fix.get("reason") or "legacy-manual-fix"),
+                    str(fix.get("operator") or "legacy"),
+                )
 
         if not self.engine.has_data(month):
             result = self.generate(month, mode=MODE_REGENERATE)
@@ -773,5 +965,22 @@ class DeliveryReportService:
         return DeliveryReportValidator(self.db_path).collect_suspicious(month)
 
     def apply_fixes(self, month: str, fixes: List[Dict]) -> dict:
-        """单独应用人工调整。"""
-        return DeliveryReportValidator(self.db_path).apply_manual_fixes(month, fixes)
+        """应用人工调整（收敛：走校准覆盖层，不直接改 dr_sheet_row）。
+
+        兼容旧签名；语义改为写入校准表，原始行永不修改。
+        """
+        from .calibration import CalibrationService
+        _cs = CalibrationService(self.db_path)
+        applied = 0
+        for fix in fixes:
+            if fix.get("sheet") is None or fix.get("row_index") is None \
+                    or fix.get("col") is None:
+                continue
+            _cs.upsert(
+                month, fix["sheet"], fix["row_index"], fix["col"],
+                str(fix.get("value") or ""),
+                str(fix.get("reason") or "legacy-manual-fix"),
+                str(fix.get("operator") or "legacy"),
+            )
+            applied += 1
+        return {"applied": applied, "total": len(fixes)}

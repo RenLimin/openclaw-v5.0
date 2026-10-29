@@ -137,7 +137,7 @@ class DeliveryReportValidator:
 
     def collect_suspicious(self, month: str,
                            sheets_data: Optional[Dict[str, pd.DataFrame]] = None) -> Dict:
-        """收集某月全部存疑数据。
+        """收集某月全部存疑数据（从 DB 读原始数据）。
 
         Args:
             month: YYYYMM
@@ -145,11 +145,24 @@ class DeliveryReportValidator:
         """
         if sheets_data is None:
             sheets_data = self._load_from_db(month)
+        return self.collect_suspicious_from_df(month, sheets_data)
 
+    def collect_suspicious_from_df(self, month: str,
+                                   sheets_data: Dict[str, pd.DataFrame],
+                                   only_sheets: Optional[set] = None) -> Dict:
+        """对传入的数据集执行校验规则（规则单份实现，供校准重校验增量复用）。
+
+        Args:
+            month: YYYYMM
+            sheets_data: 待校验的数据集（可为原始或校准后 effective）
+            only_sheets: 只校验指定 Sheet 集合；None 表示全部
+        """
         errors: List[Dict] = []
         warnings: List[Dict] = []
 
         for sheet, df in sheets_data.items():
+            if only_sheets is not None and sheet not in only_sheets:
+                continue
             if not isinstance(df, pd.DataFrame) or df.empty:
                 continue
             # 非空
@@ -189,46 +202,28 @@ class DeliveryReportValidator:
         }
 
     def apply_manual_fixes(self, month: str, fixes: List[Dict]) -> Dict:
-        """应用人工调整（存疑数据处理）。
+        """[DEPRECATED] 旧人工调整路径 —— 已收敛到校准覆盖层。
 
-        fixes: [{"sheet": str, "row_index": int, "col": str, "value": any}]
-
-        直接更新 dr_sheet_row 的 data JSON。
+        不再直接 UPDATE dr_sheet_row（原始行永不修改）；
+        委托 CalibrationService.upsert 写校准表。保留签名兼容。
         """
-        conn = _db.get_connection(self.db_path)
+        from .calibration import CalibrationService
+        _cs = CalibrationService(self.db_path)
         applied = 0
-        try:
-            for fix in fixes:
-                sheet = fix.get("sheet")
-                row_index = fix.get("row_index")
-                col = fix.get("col")
-                value = fix.get("value")
-                if sheet is None or row_index is None or col is None:
-                    continue
-
-                row = conn.execute(
-                    "SELECT data FROM dr_sheet_row "
-                    "WHERE month = ? AND sheet = ? AND row_index = ?",
-                    (month, sheet, row_index),
-                ).fetchone()
-                if not row:
-                    continue
-
-                import json
-                data = json.loads(row[0])
-                old_value = data.get(col)
-                data[col] = value
-                conn.execute(
-                    "UPDATE dr_sheet_row SET data = ? "
-                    "WHERE month = ? AND sheet = ? AND row_index = ?",
-                    (json.dumps(data, ensure_ascii=False, default=str),
-                     month, sheet, row_index),
-                )
-                applied += 1
-            conn.commit()
-            return {"applied": applied, "total": len(fixes)}
-        finally:
-            conn.close()
+        for fix in fixes:
+            sheet = fix.get("sheet")
+            row_index = fix.get("row_index")
+            col = fix.get("col")
+            if sheet is None or row_index is None or col is None:
+                continue
+            _cs.upsert(
+                month, sheet, row_index, col,
+                str(fix.get("value") or ""),
+                str(fix.get("reason") or "legacy-manual-fix"),
+                str(fix.get("operator") or "legacy"),
+            )
+            applied += 1
+        return {"applied": applied, "total": len(fixes)}
 
     # ========================================================
     # 内部工具

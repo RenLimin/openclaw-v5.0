@@ -137,10 +137,15 @@ async def report_export_sheet(month: str, sheet: str, search: str = ""):
     import csv
     month = normalize_month(month)
     from bdms.modules.delivery_report.engine import DeliveryReportEngine
+    from bdms.modules.delivery_report.calibration import CalibrationService
     engine = DeliveryReportEngine()
-    data = engine.load(month)
-    if sheet not in data:
+    raw = engine.load(month)
+    if sheet not in raw:
         raise HTTPException(404, f"{month} 无 {sheet} 数据")
+    # BR-07：导出与浏览同口径，统一经校准解析层
+    eff_all = CalibrationService().apply_overlays(month, raw)
+    data = {k: v for k, v in eff_all.items()
+            if not str(k).startswith("__")}
     df = data[sheet]
     
     # 搜索过滤
@@ -277,15 +282,143 @@ async def report_batch_resolve_issues(month: str, req: IssueBatchResolveRequest)
         raise HTTPException(400, str(e))
 
 
+# ========== 人工校准 API（v1.0）==========
+
+class CalibrationRequest(BaseModel):
+    sheet: str
+    row_index: int
+    column_name: str
+    corrected_value: str
+    reason: str
+    operator: str = "gateway-owner"
+    issue_id: Optional[int] = None
+
+
+class CalibrationRevokeRequest(BaseModel):
+    sheet: str
+    row_index: int
+    column_name: str
+    operator: str = "gateway-owner"
+
+
+@router.post("/report/calibrations/{month}")
+async def report_calibration_submit(month: str, req: CalibrationRequest):
+    """提交/修改校准；小批量同步重校验，大批量返回 job_id 走轮询。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.calibration import (
+        CalibrationService, CalibrationError)
+    from bdms.modules.delivery_report.service import (
+        DeliveryReportService, SYNC_LIMIT)
+    try:
+        result = CalibrationService().upsert(
+            month, req.sheet, req.row_index, req.column_name,
+            req.corrected_value, req.reason, req.operator, req.issue_id)
+    except CalibrationError as e:
+        raise HTTPException(400, detail=e.to_dict() if hasattr(e, "to_dict") else str(e))
+
+    affected = [(req.sheet, req.row_index)]
+    if len(affected) <= SYNC_LIMIT:
+        recalc = DeliveryReportService().recalculate_after_calibration(
+            month, affected, operator=req.operator)
+        return {"ok": True, "calibration": result, "recalculation": recalc}
+    else:
+        async_result = DeliveryReportService().recalculate_after_calibration_async(
+            month, affected, operator=req.operator)
+        return {"ok": True, "calibration": result, **async_result}
+
+
+@router.post("/report/calibrations/{month}/revoke")
+async def report_calibration_revoke(month: str, req: CalibrationRevokeRequest):
+    """撤销校准（同步重校验）。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.calibration import (
+        CalibrationService, CalibrationError)
+    from bdms.modules.delivery_report.service import DeliveryReportService
+    try:
+        result = CalibrationService().revoke(
+            month, req.sheet, req.row_index, req.column_name, req.operator)
+    except CalibrationError as e:
+        raise HTTPException(400, detail=str(e))
+    recalc = DeliveryReportService().recalculate_after_calibration(
+        month, [(req.sheet, req.row_index)], operator=req.operator)
+    return {"ok": True, "calibration": result, "recalculation": recalc}
+
+
+@router.get("/report/calibrations/{month}")
+async def report_calibration_list(month: str, sheet: str = None,
+                                  row_index: int = None, status: str = None):
+    """查询校准记录（支持 sheet/row/status 过滤）。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.calibration import CalibrationService
+    return CalibrationService().list_calibrations(
+        month, sheet=sheet, row_index=row_index, status=status)
+
+
+@router.get("/report/calibrations/{month}/overview")
+async def report_calibration_overview(month: str):
+    """校准总览/KPI。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.calibration import CalibrationService
+    return CalibrationService().overview(month)
+
+
+@router.get("/report/sheets/{month}")
+async def report_sheets(month: str):
+    """动态返回当月实际 Sheet 列表（补齐 15 个，供数据浏览下拉）。"""
+    month = normalize_month(month)
+    conn = _db.get_connection()
+    try:
+        rows = conn.execute(
+            "SELECT sheet, row_count FROM dr_sheet_meta "
+            "WHERE month = ? ORDER BY rowid", (month,)
+        ).fetchall()
+    finally:
+        conn.close()
+    if not rows:
+        raise HTTPException(404, f"{month} 无 Sheet 数据")
+    return {"month": month,
+            "sheets": [{"name": r["sheet"], "rows": r["row_count"]} for r in rows]}
+
+
+@router.get("/report/calibration-ledger/{month}")
+async def report_calibration_ledger(month: str, format: str = "json"):
+    """校准台账（JSON 预览 / xlsx 导出）。"""
+    month = normalize_month(month)
+    from bdms.modules.delivery_report.calibration import CalibrationService
+    rows = CalibrationService().ledger_rows(month)
+    columns = ["月份", "Sheet", "行号", "列名", "原始值", "校准值",
+               "操作人", "校准时间", "校准原因", "状态"]
+    if format == "xlsx":
+        import io
+        import pandas as pd
+        from fastapi.responses import Response
+        buf = io.BytesIO()
+        df = pd.DataFrame(rows, columns=columns)
+        with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="校准台账")
+        buf.seek(0)
+        filename = f"校准台账_{month}.xlsx"
+        return Response(
+            content=buf.getvalue(),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return {"month": month, "columns": columns, "rows": rows}
+
+
 @router.get("/report/data/{month}/{sheet}")
 async def report_data(month: str, sheet: str, page: int = 1, page_size: int = 50, search: str = ""):
     """获取某月某 Sheet 的数据（分页 + 搜索）。"""
     month = normalize_month(month)
     from bdms.modules.delivery_report.engine import DeliveryReportEngine
+    from bdms.modules.delivery_report.calibration import CalibrationService
     engine = DeliveryReportEngine()
-    data = engine.load(month)
-    if sheet not in data:
+    raw = engine.load(month)
+    if sheet not in raw:
         raise HTTPException(404, f"{month} 无 {sheet} 数据")
+    # 统一走校准解析层（数据浏览展示校准后值，口径与导出一致）
+    eff_all = CalibrationService().apply_overlays(month, raw)
+    data = {k: v for k, v in eff_all.items()
+            if not str(k).startswith("__")}
     df = data[sheet]
     
     # 搜索过滤（全字段模糊匹配）
@@ -301,6 +434,10 @@ async def report_data(month: str, sheet: str, page: int = 1, page_size: int = 50
     start = (page - 1) * page_size
     end = start + page_size
     page_df = df.iloc[start:end]
+    # 暴露原始行号（0-based，定位校准单元格用；搜索过滤后 index 仍指向原始位置）
+    page_rows = page_df.fillna("").to_dict(orient="records")
+    for rec, idx in zip(page_rows, page_df.index):
+        rec["row_index"] = int(idx)
     return {
         "month": month,
         "sheet": sheet,
@@ -308,8 +445,8 @@ async def report_data(month: str, sheet: str, page: int = 1, page_size: int = 50
         "page": page,
         "page_size": page_size,
         "total_pages": (total + page_size - 1) // page_size,
-        "columns": list(page_df.columns),
-        "rows": page_df.fillna("").to_dict(orient="records"),
+        "columns": list(page_df.columns) + ["row_index"],
+        "rows": page_rows,
     }
 
 

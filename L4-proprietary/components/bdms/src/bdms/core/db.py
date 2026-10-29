@@ -156,6 +156,7 @@ def init_db(db_path: Optional[Path] = None) -> None:
         AS_SCHEMA, CH_SCHEMA, INT_SCHEMA, KB_SCHEMA,
         DASH_V2_SCHEMA, OUTBOX_SCHEMA, IMPORT_ERRORS_SCHEMA,
         DR_EXT_SCHEMA, RR_EXT_SCHEMA, PF_SCHEMA,
+        DR_CALIBRATION_SCHEMA,
     )
     conn = get_connection(db_path)
     try:
@@ -178,6 +179,7 @@ def init_db(db_path: Optional[Path] = None) -> None:
         conn.executescript(OUTBOX_SCHEMA)
         conn.executescript(IMPORT_ERRORS_SCHEMA)
         conn.executescript(DR_EXT_SCHEMA)
+        conn.executescript(DR_CALIBRATION_SCHEMA)
         conn.executescript(RR_EXT_SCHEMA)
         conn.executescript(PF_SCHEMA)
         seed_defaults(conn)
@@ -484,3 +486,103 @@ def list_jobs(conn: sqlite3.Connection, module: str = None,
     else:
         rows = conn.execute("SELECT * FROM job ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [dict(r) for r in rows]
+
+
+# ============================================================
+#  人工校准（dr_calibration）读写助手 — v1.0
+# ============================================================
+
+def get_active_calibrations(conn: sqlite3.Connection, month: str) -> list[dict]:
+    """返回某月全部 active 校准。"""
+    rows = conn.execute(
+        "SELECT * FROM dr_calibration WHERE month = ? AND status = 'active' "
+        "ORDER BY sheet, row_index, column_name",
+        (month,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_calibration(conn: sqlite3.Connection, month: str, sheet: str,
+                    row_index: int, column_name: str) -> Optional[dict]:
+    """定位某单元格的 active 校准（无则 None）。"""
+    row = conn.execute(
+        "SELECT * FROM dr_calibration "
+        "WHERE month=? AND sheet=? AND row_index=? AND column_name=? "
+        "AND status='active'",
+        (month, sheet, row_index, column_name),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def insert_calibration(conn: sqlite3.Connection, month: str, sheet: str,
+                       row_index: int, column_name: str,
+                       original_value: Optional[str], corrected_value: str,
+                       reason: str, operator: str,
+                       issue_id: Optional[int] = None) -> int:
+    """插入一条 active 校准，返回新 id。"""
+    cur = conn.execute(
+        "INSERT INTO dr_calibration "
+        "(month, sheet, row_index, column_name, original_value, corrected_value, "
+        " reason, operator, status, issue_id) "
+        "VALUES (?,?,?,?,?,?,?,?, 'active', ?)",
+        (month, sheet, row_index, column_name, original_value, corrected_value,
+         reason, operator, issue_id),
+    )
+    return cur.lastrowid
+
+
+def revise_calibration(conn: sqlite3.Connection, cal_id: int,
+                       new_corrected_value: str) -> None:
+    """修改校准：旧 corrected_value 落 previous_value，写新值。"""
+    conn.execute(
+        "UPDATE dr_calibration SET previous_value = corrected_value, "
+        "corrected_value = ?, updated_at = datetime('now','localtime') "
+        "WHERE id = ?",
+        (new_corrected_value, cal_id),
+    )
+
+
+def revoke_calibration(conn: sqlite3.Connection, cal_id: int) -> None:
+    """撤销校准：status->revoked。"""
+    conn.execute(
+        "UPDATE dr_calibration SET status='revoked', "
+        "resolved_at = datetime('now','localtime'), "
+        "updated_at = datetime('now','localtime') WHERE id = ?",
+        (cal_id,),
+    )
+
+
+def insert_calibration_history(conn: sqlite3.Connection, cal_id: int,
+                               month: str, sheet: str, row_index: int,
+                               column_name: str, original_value: Optional[str],
+                               corrected_value: Optional[str], reason: Optional[str],
+                               operator: Optional[str], change_type: str) -> None:
+    """写撤销/修改留痕（change_type: revise / revoke）。"""
+    conn.execute(
+        "INSERT INTO dr_calibration_history "
+        "(calibration_id, month, sheet, row_index, column_name, original_value, "
+        " corrected_value, reason, operator, change_type) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (cal_id, month, sheet, row_index, column_name, original_value,
+         corrected_value, reason, operator, change_type),
+    )
+
+
+def list_calibrations(conn: sqlite3.Connection, month: str,
+                      sheet: Optional[str] = None,
+                      row_index: Optional[int] = None,
+                      status_filter: Optional[str] = None) -> list[dict]:
+    """查询校准记录（支持 sheet/row/status 过滤）。"""
+    sql = "SELECT * FROM dr_calibration WHERE month = ?"
+    params: list = [month]
+    if sheet:
+        sql += " AND sheet = ?"
+        params.append(sheet)
+    if row_index is not None:
+        sql += " AND row_index = ?"
+        params.append(row_index)
+    if status_filter:
+        sql += " AND status = ?"
+        params.append(status_filter)
+    sql += " ORDER BY sheet, row_index, column_name"
+    return [dict(r) for r in conn.execute(sql, params).fetchall()]

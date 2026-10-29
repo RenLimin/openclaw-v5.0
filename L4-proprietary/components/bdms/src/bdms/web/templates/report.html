@@ -141,6 +141,7 @@
       <!-- Tab 2: 数据浏览 -->
       <div class="tabs-panel" role="tabpanel" data-panel="browse" hidden>
         {% call card(title="数据浏览", actions=[
+            {"label": "📋 校准台账", "onclick": "openCalibrationLedger()"},
             {"label": "导出当前", "onclick": "exportCurrent()"}
         ]) %}
         <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
@@ -214,6 +215,68 @@
   <p class="text-muted">在上方输入月份，一键生成月度交付报表</p>
 </div>
 
+{% call modal(id="calibration-modal", title="人工校准") %}
+  <div style="display:grid;gap:0.75rem;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div>
+        <label class="field-label">月份</label>
+        <input id="cal-month" class="input" readonly style="background:var(--c-surface);">
+      </div>
+      <div>
+        <label class="field-label">Sheet</label>
+        <input id="cal-sheet" class="input" readonly style="background:var(--c-surface);">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div>
+        <label class="field-label">行号</label>
+        <input id="cal-row" class="input" readonly style="background:var(--c-surface);">
+      </div>
+      <div>
+        <label class="field-label">列名</label>
+        <input id="cal-col" class="input" readonly style="background:var(--c-surface);">
+      </div>
+    </div>
+    <div>
+      <label class="field-label">原始值（只读）</label>
+      <input id="cal-original" class="input" readonly style="background:var(--c-surface);">
+    </div>
+    <div>
+      <label class="field-label">校准值 <span style="color:var(--c-danger);">*</span></label>
+      <input id="cal-value" class="input" placeholder="修正后的值">
+      <p id="cal-hint" class="text-muted" style="font-size:0.8rem;margin-top:0.25rem;"></p>
+    </div>
+    <div>
+      <label class="field-label">校准原因 <span style="color:var(--c-danger);">*</span></label>
+      <select id="cal-reason-preset" class="input" style="margin-bottom:0.4rem;">
+        <option value="">常用原因...</option>
+        <option>源表数据有误</option>
+        <option>日期格式错误</option>
+        <option>人工补充缺失值</option>
+        <option>金额计算修正</option>
+      </select>
+      <input id="cal-reason" class="input" placeholder="填写具体原因（必填）">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:0.5rem;padding-top:0.5rem;">
+      <button class="btn" onclick="closeModal('calibration-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveCalibration()">保存校准</button>
+    </div>
+  </div>
+{% endcall %}
+
+<!-- 校准台账对话框 -->
+{% call modal(id="ledger-modal", title="📋 校准台账", size="xl") %}
+<div style="font-size:0.875rem;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+    <span id="ledger-stats" class="text-muted" style="font-size:0.8125rem;">加载中...</span>
+    <button class="btn btn-sm btn-success" onclick="exportLedger()">📤 导出台账 Excel</button>
+  </div>
+  <div id="ledger-table-container" style="max-height:420px;overflow-y:auto;">
+    <p class="text-muted" class="text-center" style="padding:1rem;">加载中...</p>
+  </div>
+</div>
+{% endcall %}
+
 {{ confirm_modal() }}
 {{ toast_container() }}
 {{ modal_toast_js() }}
@@ -266,14 +329,23 @@ let currentMonth = null;
 let currentPage = 1;
 let totalPages = 1;
 
-// ========== Tab 切换（使用标准 tabs 组件事件） ==========
+// ========== Tab 切换（点击真实 tab，由 tabs.js 统一激活） ==========
 function switchTab(tabName) {
-  const tabsEl = document.getElementById('report-tabs');
-  if (tabsEl) {
-    tabsEl.dispatchEvent(new CustomEvent('tabs:activate', { detail: { tab: tabName } }));
-  }
-  window.location.hash = `#${tabName}`;
+  const tab = document.querySelector(`#report-tabs .tabs-tab[data-tab="${tabName}"]`);
+  if (tab) tab.click();  // tabs.js 激活并发 tabs:change
 }
+
+// 切换到某 Tab 后按需加载该 Tab 数据（监听标准 tabs:change 事件）
+document.addEventListener('DOMContentLoaded', () => {
+  const tabsEl = document.getElementById('report-tabs');
+  if (!tabsEl) return;
+  tabsEl.addEventListener('tabs:change', (e) => {
+    const name = e.detail && e.detail.tab;
+    if (!currentMonth) return;
+    if (name === 'browse') loadTable();
+    else if (name === 'issues') loadReviewIssues();
+  });
+});
 
 // 初始化 Tab 从 hash
 function initTabFromHash() {
@@ -330,6 +402,24 @@ async function loadMonths() {
   }
 }
 
+async function loadSheets(month) {
+  const sel = document.getElementById('view-sheet');
+  if (!sel) return;
+  try {
+    const r = await fetch(`/api/report/sheets/${month}`);
+    if (!r.ok) throw new Error('加载 Sheet 列表失败');
+    const d = await r.json();
+    const cur = sel.value;
+    sel.innerHTML = d.sheets.map(sh =>
+      `<option value="${sh.name}">${sh.name}（${sh.rows} 行）</option>`).join('');
+    // 保持当前选中（若还存在）
+    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+  } catch (e) {
+    // 接口失败时保留原硬编码选项（不阻塞浏览）
+    console.warn('loadSheets:', e.message);
+  }
+}
+
 function selectMonth(month) {
   if (!month) { currentMonth = null; return; }
   currentMonth = month;
@@ -346,6 +436,9 @@ function selectMonth(month) {
 
   // 加载审核状态
   loadReviewStatus(month);
+
+  // 动态 Sheet 下拉（数据浏览；硬编码 5 项改为接口驱动）
+  loadSheets(month);
 
   // 如果在浏览或问题 Tab，自动加载数据
   const activeTab = getActiveTab();
@@ -842,16 +935,24 @@ async function fetchPage(month, sheet, page) {
     }
 
     const cols = d.columns;
+    const dataCols = cols.filter(c => c !== 'row_index');
+    _browseCols = dataCols;
+    _browseRows = d.rows;  // 全局缓存：onclick 只传数组下标，不内联 JSON
     let html = `<p style="margin-bottom:0.5rem;">共 <strong>${d.total}</strong> 行${search ? `（搜索: "${search}"）` : ''}，第 ${d.page}/${d.total_pages} 页</p>`;
     html += '<div class="table-wrapper"><table class="table"><thead><tr>';
-    cols.forEach(c => html += `<th>${c}</th>`);
+    dataCols.forEach(c => html += `<th>${c}</th>`);
+    html += '<th style="width:70px;">校准</th>';
     html += '</tr></thead><tbody>';
-    d.rows.forEach(row => {
+    d.rows.forEach((row, ri) => {
       html += '<tr>';
-      cols.forEach(c => {
+      dataCols.forEach((c, ci) => {
         const v = row[c];
-        html += `<td title="${v}">${String(v).substring(0,50)}${String(v).length > 50 ? '...' : ''}</td>`;
+        const cell = String(v).substring(0,50) + (String(v).length > 50 ? '...' : '');
+        // 单元格可点：发起该单元格校准（只传行/列下标）
+        html += `<td title="${String(v).replace(/"/g,'&quot;')}" onclick="openCalibrationAtBrowse(${ri}, ${ci})" style="cursor:pointer;" onmouseover="this.style.background='var(--c-surface)'" onmouseout="this.style.background=''">${cell}</td>`;
       });
+      // 校准操作列：发起该行第一列校准（点击单元格可改其他列）
+      html += `<td><button class="btn btn-sm" onclick="openCalibrationAtBrowse(${ri}, 0)">校准</button></td>`;
       html += '</tr>';
     });
     html += '</tbody></table></div>';
@@ -951,11 +1052,17 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
     let html = `<div class="table-wrapper"><table class="table"><thead><tr>
       <th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th><th>操作</th></tr></thead><tbody>`;
 
-    d.issues.forEach(issue => {
+    _issueCache = d.issues;  // 全局缓存：onclick 只传下标，不内联 JSON
+
+    d.issues.forEach((issue, ii) => {
       const severityColor = issue.severity === 'ERROR' ? 'var(--c-danger)' : 'var(--c-warning)';
       const isPending = issue.status === 'pending';
+      const calBtn = issue.column_name
+        ? `<button class="btn btn-sm btn-primary" onclick="openCalibrationAtIssue(${ii})" style="margin-right:0.25rem;">校准</button>`
+        : '';
       const actionBtns = isPending
-        ? `<button class="btn btn-sm btn-success" onclick="resolveIssue(${issue.id}, 'confirm')" style="margin-right:0.25rem;">确认</button>`
+        ? calBtn
+          + `<button class="btn btn-sm btn-success" onclick="resolveIssue(${issue.id}, 'confirm')" style="margin-right:0.25rem;">确认</button>`
           + `<button class="btn btn-sm" onclick="resolveIssue(${issue.id}, 'reject')" style="border-color:var(--c-danger);color:var(--c-danger);">驳回</button>`
         : `<span class="text-muted" style="font-size:0.85rem;">${issue.status === 'confirmed' ? '✅ 已确认' : '🗑 已驳回'}</span>`;
       html += `<tr>
@@ -1186,5 +1293,193 @@ async function resolveIssue(issueId, action) {
     }
   });
 }
+
+// ========== 人工校准（v1.0）==========
+let _calContext = null;  // {month, sheet, row_index, column_name, original_value}
+let _issueCache = [];    // 问题清单缓存（onclick 按下标取，不内联 JSON）
+let _browseRows = [];    // 数据浏览行缓存
+let _browseCols = [];    // 数据浏览列缓存
+
+function _calInputType(col) {
+  // 与后端口径一致：日期/时间列 → date；金额/数量/天数/人数/成本 → number
+  if (/日期|时间/.test(col)) return 'date';
+  if (/金额|数量|天数|人数|成本/.test(col)) return 'number';
+  return 'text';
+}
+
+function openCalibrationAtIssue(ii) {
+  const issue = _issueCache[ii];
+  if (!issue) return;
+  openCalibrationForIssue(issue);
+}
+
+function openCalibrationAtBrowse(ri, ci) {
+  const row = _browseRows[ri];
+  const col = _browseCols[ci];
+  if (!row || !col) return;
+  openCalibrationForCell(row, col);
+}
+
+function openCalibrationForIssue(issue) {
+  if (!currentMonth) return;
+  _calContext = {
+    month: currentMonth,
+    sheet: issue.sheet,
+    row_index: issue.row_index,
+    column_name: issue.column_name,
+    original_value: issue.original_value,
+    issue_id: issue.id,
+  };
+  _populateCalModal();
+}
+
+function openCalibrationForCell(row, col) {
+  if (!currentMonth) return;
+  const month = currentMonth;
+  const sheet = document.getElementById('view-sheet').value;
+  _calContext = {
+    month: month,
+    sheet: sheet,
+    row_index: row.row_index,
+    column_name: col,
+    original_value: row[col] === '' ? null : row[col],
+    issue_id: null,
+  };
+  _populateCalModal();
+}
+
+function _populateCalModal() {
+  const c = _calContext;
+  document.getElementById('cal-month').value = c.month;
+  document.getElementById('cal-sheet').value = c.sheet;
+  document.getElementById('cal-row').value = c.row_index;
+  document.getElementById('cal-col').value = c.column_name;
+  document.getElementById('cal-original').value = c.original_value == null ? '' : c.original_value;
+  document.getElementById('cal-value').value = '';
+  document.getElementById('cal-reason').value = '';
+  document.getElementById('cal-reason-preset').value = '';
+  const input = document.getElementById('cal-value');
+  input.type = _calInputType(c.column_name);
+  document.getElementById('cal-hint').textContent =
+    input.type === 'date' ? '日期格式：YYYY-MM-DD' :
+    input.type === 'number' ? '数值格式：纯数字（可含小数）' : '';
+  openModal('calibration-modal');
+  setTimeout(() => input.focus(), 50);
+}
+
+// 常用原因联动
+document.addEventListener('DOMContentLoaded', () => {
+  const preset = document.getElementById('cal-reason-preset');
+  if (preset) {
+    preset.addEventListener('change', function() {
+      if (this.value) document.getElementById('cal-reason').value = this.value;
+    });
+  }
+});
+
+async function saveCalibration() {
+  const c = _calContext;
+  if (!c) return;
+  const corrected_value = document.getElementById('cal-value').value.trim();
+  const reason = document.getElementById('cal-reason').value.trim();
+  if (!reason) { Toast.error('请填写校准原因'); return; }
+  try {
+    const r = await fetch(`/api/report/calibrations/${c.month}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        sheet: c.sheet, row_index: c.row_index, column_name: c.column_name,
+        corrected_value: corrected_value, reason: reason,
+        operator: 'gateway-owner', issue_id: c.issue_id
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      const detail = d.detail || d.error || {};
+      const code = typeof detail === 'object' ? detail.code : null;
+      const msg = typeof detail === 'object' ? (detail.message || JSON.stringify(detail)) : (detail || '保存失败');
+      Toast.error(`❌ ${code ? '[' + code + '] ' : ''}${msg}`);
+      return;
+    }
+    Toast.success('✅ 校准已保存，并触发自动重校验');
+    closeModal('calibration-modal');
+    // 刷新相关视图
+    if (typeof loadReviewIssues === 'function') loadReviewIssues();
+    if (typeof loadReviewStatus === 'function') loadReviewStatus(c.month);
+    if (typeof loadTable === 'function' && document.getElementById('view-sheet')) {
+      const activeTab = getActiveTab ? getActiveTab() : '';
+      if (activeTab === 'browse') loadTable();
+    }
+    if (typeof loadCalibrationOverview === 'function') loadCalibrationOverview(c.month);
+  } catch (e) {
+    Toast.error(`❌ 保存失败: ${e.message}`);
+  }
+}
+
+async function revokeCalibration(month, sheet, row_index, column_name) {
+  showConfirm('撤销校准', `确定撤销该单元格（${sheet} 第${row_index}行 ${column_name}）的校准？撤销后恢复原始值。`, async function() {
+    try {
+      const r = await fetch(`/api/report/calibrations/${month}/revoke`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({sheet: sheet, row_index: row_index, column_name: column_name, operator: 'gateway-owner'})
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || d.error || '撤销失败');
+      Toast.success('✅ 校准已撤销，原始值恢复');
+      if (typeof loadReviewIssues === 'function') loadReviewIssues();
+      if (typeof loadReviewStatus === 'function') loadReviewStatus(month);
+      if (typeof loadTable === 'function') loadTable();
+    } catch (e) {
+      Toast.error(`❌ 撤销失败: ${e.message}`);
+    }
+  });
+}
+
+// ========== 校准台账 ==========
+async function openCalibrationLedger() {
+  if (!currentMonth) { Toast.error('请先选择月份'); return; }
+  openModal('ledger-modal');
+  const container = document.getElementById('ledger-table-container');
+  const stats = document.getElementById('ledger-stats');
+  container.innerHTML = '<p class="text-muted" class="text-center" style="padding:1rem;">加载中...</p>';
+  try {
+    const r = await fetch(`/api/report/calibration-ledger/${currentMonth}`);
+    if (!r.ok) throw new Error('加载台账失败');
+    const d = await r.json();
+    const rows = d.rows || [];
+    const activeCount = rows.filter(x => x[9] === 'active').length;
+    stats.textContent = `共 ${rows.length} 条校准记录（生效 ${activeCount} / 已撤销 ${rows.length - activeCount}）`;
+    if (!rows.length) {
+      container.innerHTML = '<p class="text-muted" class="text-center" style="padding:1rem;">暂无校准记录</p>';
+      return;
+    }
+    const cols = ['月份','Sheet','行号','列名','原始值','校准值','操作人','校准时间','校准原因','状态','操作'];
+    let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
+    cols.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr></thead><tbody>';
+    rows.forEach(x => {
+      const isActive = x[9] === 'active';
+      html += `<tr>
+        <td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]}</td>
+        <td title="${x[4]}">${String(x[4]).substring(0,30)}</td>
+        <td title="${x[5]}" style="font-weight:500;">${String(x[5]).substring(0,30)}</td>
+        <td>${x[6]}</td><td>${x[7]}</td><td title="${x[8]}">${String(x[8]).substring(0,20)}</td>
+        <td>${isActive ? '<span style="color:var(--c-success);">生效</span>' : '<span class="text-muted">已撤销</span>'}</td>
+        <td>${isActive ? `<button class="btn btn-sm" onclick="revokeCalibration('${x[0]}','${x[1]}',${x[2]},'${x[3]}')" style="border-color:var(--c-danger);color:var(--c-danger);">撤销</button>` : ''}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<p class="error-tip">⚠️ ${e.message}</p>`;
+  }
+}
+
+function exportLedger() {
+  if (!currentMonth) return;
+  window.location.href = `/api/report/calibration-ledger/${currentMonth}?format=xlsx`;
+}
+
 </script>
 {% endblock %}

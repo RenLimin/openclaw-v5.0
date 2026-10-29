@@ -11,6 +11,7 @@ from typing import Optional
 
 import pandas as pd
 from openpyxl import Workbook
+from openpyxl.comments import Comment
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 from bdms.core import db as _db
@@ -97,11 +98,17 @@ class DeliveryReportExporter:
                         self._write_stats_sheet(wb, sheet, df)
                     continue
 
-                # 核心数据 Sheet
+                # 核心数据 Sheet：原始 → effective（校准覆盖层唯一口径）
                 columns, rows = _db.load_sheet_rows(conn, month, sheet, prefix="dr")
                 if not rows:
                     continue
                 df = pd.DataFrame(rows, columns=columns)
+                from .calibration import CalibrationService
+                _cs = CalibrationService(self.db_path)
+                _active_map = _cs.get_active_map(month)
+                if _active_map:
+                    _eff_all = _cs.apply_overlays(month, {sheet: df})
+                    df = _eff_all.get(sheet, df)
                 # 去重列名（解决 pandas _dedupe_columns 产生的 .1 后缀）
                 seen = {}
                 clean_cols = []
@@ -117,13 +124,43 @@ class DeliveryReportExporter:
                 
                 # SUBTOTAL 公式列配置
                 subtotal_cols = SUBTOTAL_FORMULA_COLS.get(sheet)
+                active_map = _cs.get_active_map(month) if _active_map else {}
                 self._write_sheet(
                     wb, sheet, df,
                     title=title_dt if sheet in titled else None,
                     subtotal_cols=subtotal_cols,
+                    active_map=active_map,
                 )
         finally:
             conn.close()
+
+        # 校准台账 Sheet（对齐 DESIGN-DETAIL §4.7：有记录才追加）
+        try:
+            from .calibration import CalibrationService
+            ledger_rows = CalibrationService(self.db_path).ledger_rows(month)
+            if ledger_rows:
+                ws = wb.create_sheet("校准台账")
+                headers = ["月份", "Sheet", "行号", "列名", "原始值", "校准值",
+                           "操作人", "校准时间", "校准原因", "状态"]
+                for ci, h in enumerate(headers, start=1):
+                    cell = ws.cell(row=1, column=ci, value=h)
+                    cell.font = HEADER_FONT
+                    cell.fill = HEADER_FILL
+                    cell.alignment = HEADER_ALIGN
+                    cell.border = BORDER
+                for ri, row in enumerate(ledger_rows, start=2):
+                    for ci, v in enumerate(row, start=1):
+                        cell = ws.cell(row=ri, column=ci, value=v)
+                        cell.font = DATA_FONT
+                        cell.alignment = DATA_ALIGN
+                ws.freeze_panes = "A2"
+                for ci in range(1, len(headers) + 1):
+                    ws.column_dimensions[
+                        ws.cell(row=1, column=ci).column_letter].width = 14
+        except Exception as _e:  # 台账 Sheet 失败不影响主导出（旧库无表时优雅跳过）
+            import logging
+            if "no such table" not in str(_e):
+                logging.getLogger(__name__).warning("校准台账导出失败: %s", _e)
 
         target = Path(out_path) if out_path else output_path(f"交付月报_{month}.xlsx")
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -168,7 +205,8 @@ class DeliveryReportExporter:
 
     @staticmethod
     def _write_sheet(wb: Workbook, sheet_name: str, df: pd.DataFrame,
-                     title=None, subtotal_cols=None) -> None:
+                     title=None, subtotal_cols=None,
+                     active_map: Optional[dict] = None) -> None:
         """写入单个 Sheet（带表头样式 + 冻结首行 + 自动列宽）。
 
         title 不为空时先在 r1 写入日期标题，表头下移到 r2
@@ -203,15 +241,34 @@ class DeliveryReportExporter:
             cell.alignment = HEADER_ALIGN
             cell.border = BORDER
 
-        # 数据
+        # 数据（含校准批注）
         n_data_rows = len(df)
         import datetime as _dt
+        active_map = active_map or {}
+        # (row_index → {column_name: cal}) 快速索引
+        cal_by_row = {}
+        for (sh, ri, col), cal in active_map.items():
+            if sh != sheet_name:
+                continue
+            cal_by_row.setdefault(ri, {})[col] = cal
         for row_idx, record in enumerate(df.itertuples(index=False),
                                         start=header_row + 1):
+            data_row_index = row_idx - header_row - 1  # 0-based 原始行号
+            row_cals = cal_by_row.get(data_row_index, {})
             for col_idx, value in enumerate(record, start=1):
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.font = DATA_FONT
                 cell.alignment = DATA_ALIGN
+                col_name = str(df.columns[col_idx - 1])
+                cal = row_cals.get(col_name)
+                if cal:
+                    orig = cal.get("original_value") or "-"
+                    newv = cal.get("corrected_value", "")
+                    op = cal.get("operator") or "-"
+                    ts = cal.get("updated_at") or "-"
+                    cell.comment = Comment(
+                        f"校准: {orig} → {newv}\n操作人: {op}\n时间: {ts}",
+                        "BDMS", height=90, width=240)
 
         # 日期归一化：DB 落盘经 json.dumps(default=str) 后 datetime 变字符串
         # "YYYY-MM-DD 00:00:00" → 原生 datetime（对齐人工基准）
