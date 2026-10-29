@@ -12,10 +12,10 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 5.7 (2026-10-29 — 立项 L2 workspace-temp-cleanup / INFRA-CLN-001（workspace 临时资产标记约定+系统级定期清理，规划态）；§7.4 新增 §7.4.5 临时/工作产物统一约定) |
+| 文档版本 | 5.8 (2026-10-29 — L2 workspace-temp-cleanup / INFRA-CLN-001 建设完成转已上线：tempcleanctl + cron 03:30 isolated + verify 接入错误扫描；立 ADR-034) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
-| 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
+| 决策状态 | 5 层架构已锁定(ADR-012); 34 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
 | 配套文档 | `../knowledge-base/README.md` |
 | 待办 | 详见演进路线各阶段（L3 已完成，知识库自建系统 0/7 触发条件暂缓） |
 
@@ -439,7 +439,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 知识库能力 | 010 | `L2-infra/components/knowledge-base/` | 通用向量知识库(解析/分块/向量化/索引/检索/管理) + kb_index 工具 | 43 个单元测试 + pre-commit 阻塞 |
 | Office 文档生成 | 011 | `L2-infra/components/office-generation/` | unified SDK: create/read/update/parse/convert (v2.0.0) + 6 库工具链(python-docx/docxtpl/openpyxl/xlsxwriter/pandas/python-pptx) + pptxgenjs-pro 技能 | 6/6 库实测通过 |
 | 文档数字化(OCR) | 023 | `L2-infra/components/ocr-digitalization/` | L2标准组件: OCREngine统一API + 4后端自动发现 + 预处理管线 + 质量评分 + 后处理纠错 + PDF原生提取 | v2.0升级 · 113个测试通过 |
-| Workspace 临时清理 | ADR(待立) | `L2-infra/components/workspace-temp-cleanup/` | L2标准组件(规划态 INFRA-CLN-001): 临时资产标记约定(目录命名+`.openclaw-temp.json`) + cron isolated 定期清理(trash, 只删已标记) | 📐 规划态(待设计) |
+| Workspace 临时清理 | 034 | `L2-infra/components/workspace-temp-cleanup/` | L2标准组件 INFRA-CLN-001: tempcleanctl（识别/判定/dry-run/trash 执行/verify）+ 临时资产标记约定(目录命名+`.openclaw-temp.json`) + cron isolated 每日03:30 清理 | 13 tests 全绿 · cron 手动 run 端到端 ok |
 
 **已建设组件清单**(详细):
 
@@ -1354,6 +1354,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-29 | **5.8** | **INFRA-CLN-001 建设完成转已上线**：① 实现 `tempcleanctl`（4 子命令 dry-run/clean/list/verify + 退出码 0/1/2/3；识别器/判定器/报告器/执行器；fail-closed：未标记不删、只 trash 禁 rm、trash 缺失中止、越界拒绝、symlink 不跟随）；② 13 个测试全绿（真实文件系统 + 真实 trash + 黄金基准）；③ 注册 cron isolated 每日 03:30 `clean --yes`，实删 announce WeCom 1313，无删除静默；④ `verify` 自检接入错误扫描（每 30m）；⑤ 立 **ADR-034**。 |
 | 2026-10-29 | **5.7** | **立项 L2 Workspace 临时清理 + 临时资产统一约定**：① 新增 L2 组件 `workspace-temp-cleanup`（INFRA-CLN-001，📐 规划态）——临时资产标记约定 + cron isolated 系统级定期清理（trash、只删已标记、dry-run 先行）；② §7.4 新增 **§7.4.5 临时/工作产物统一约定**：统一临时区（analysis_output / scripts/tmp / tmp / scratch）、双标记方式（目录命名 + `.openclaw-temp.json`）、默认 TTL（中间数据 7 天 / 台账报表 30 天）、正式交付物直接 commit 不进清理。本版本仅登记+约定，不含实现。 |
 | 2026-10-29 | **5.6** | **Bangcle 合同管理专家统一入口**：① 新增 L4 技能 `contract-manager-expert`（CME-001），确立为 L4 层 Bangcle「合同管理相关」统一入口（核心职责=合同智能审查/风险/标的参照直接产出，路由 `bangcle-contract`；审批框架→`contract-approval` L3；通用纯逻辑/规则库→`contract-management` L3；Office 审批流→`office-contract`；标的匹配→`product-kb`；产品/PPT/项目/收入列入边界外）；② `bangcle-contract`（CLM-BANGCLE-001）状态 🚧建设中 → ✅已上线（P8 验收通过，125 passed/覆盖率95%）；③ L3 `contract-management`（CLM-GEN-001）状态 → 已上线（73 passed，核心纯逻辑建成）；④ L4 技能表补 CME-001；⑤ §7.6 覆盖表补 bangcle-contract 5 件套 + contract-management。 |
 | 2026-10-29 | **5.5** | **Bangcle 项目管理专家统一入口**：① 新增 L4 技能 `bangcle-project-manager-expert`（PJME-001），确立为 L4 层 Bangcle「项目管理相关」统一入口（路由表：交付台账/履约义务/项目复盘/客户画像 → L3 四技能；交付月报/工时/交接 → delivery-center；ONES 数据 → ones-browser-export；产品/合同/PPT 列入边界外）；② 架构文档首次补登 **L3 层技能表**（项目管理四技能 + contract-approval）；③ L3 四技能 SKILL.md 加统一入口反向指针；④ PME 边界表中项目管理四行收敛为指向 PJME-001 单行。 |
