@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "path": "analysis_output/",
+      "kind": "ledger",
+      "ttl_days": 30,
+      "created": "2026-10-29",
+      "source_task": "task-20261029-huaxia-ledger",
+      "note": "华夏银行信用卡中心交付台账（PJME 查询输出物）+ ones_raw 原始 JSON；30 天后由 INFRA-CLN-001 清理"
+    }
+  ]
+}

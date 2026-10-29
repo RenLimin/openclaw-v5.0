@@ -55,3 +55,6 @@ L4-proprietary/components/*/src/output/*
 L4-proprietary/components/*/output/*
 !L4-proprietary/components/*/src/output/*.md
 **/~$*.xlsx
+
+# 临时资产区（INFRA-CLN-001 §7.4.5 统一约定）
+analysis_output/
