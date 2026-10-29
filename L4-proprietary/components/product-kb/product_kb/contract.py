@@ -9,9 +9,13 @@ from .db import ProductKBDB
 
 class ContractMatcher:
     def __init__(self, db: ProductKBDB, match_threshold: float = 0.5,
-                 weights: Dict = None):
+                 confirm_threshold: float = 0.85, weights: Dict = None):
         self.db = db
         self.match_threshold = match_threshold
+        # 名称确认带：match_threshold <= score < confirm_threshold 视为"名称近似，
+        # 需人工确认"（matched=True + 软告警，供上层判 partial），避免近似名被
+        # 直接认领为完全满足；score >= confirm_threshold 才算名称高置信。
+        self.confirm_threshold = confirm_threshold
         self.weights = weights or {
             "name_similarity": 0.6,
             "version_match": 0.3,
@@ -103,6 +107,20 @@ class ContractMatcher:
                 "product": dict(best_product) if best_product else None,
                 "sku": None,
                 "alert": "低匹配度，需人工确认"
+            }
+
+        # 名称确认带：召回成功但相似度未达"高置信" → 软告警 partial，
+        # 不认领具体 SKU / 不做价格红线判定，交人工确认。
+        if best_score < self.confirm_threshold:
+            return {
+                "input_name": input_name,
+                "input_model": input_model,
+                "input_price": input_price,
+                "matched": True,
+                "score": best_score,
+                "product": dict(best_product),
+                "sku": None,
+                "alert": "名称近似，需人工确认（相似度 %.0f%%）" % (best_score * 100)
             }
 
         # Find best matching SKU for this product

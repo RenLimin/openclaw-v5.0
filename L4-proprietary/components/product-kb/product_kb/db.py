@@ -337,8 +337,15 @@ class ProductKBDB:
 
     # --- Query operations ---
     @staticmethod
-    def _sanitize_fts_query(query: str) -> str:
-        """Sanitize a user query for FTS5 MATCH: strip FTS5 special chars and quote terms."""
+    def _sanitize_fts_query(query: str, *, prefix: bool = False) -> str:
+        """Sanitize a user query for FTS5 MATCH: strip FTS5 special chars and quote terms.
+
+        Args:
+            prefix: True 时追加 ``*`` 前缀通配。FTS5 unicode61 对中文按整串生成
+                    单个 token，纯 phrase 只能整名精确命中；prefix 让"同系列前缀名"
+                    （如 安全测评服务 → 安全测评服务企业版/专业版）可被召回，
+                    供合同标的"近似匹配"使用。语义 chunks 搜索仍用 phrase（prefix=False）。
+        """
         # FTS5 special characters that break MATCH syntax
         q = re.sub(r'["\'()\[\]{}*?:^#-]', ' ', query)
         # Collapse whitespace
@@ -346,13 +353,18 @@ class ProductKBDB:
         if not q:
             return '""'
         # Wrap full string as a phrase to treat it as literal tokens
-        return '"' + q.replace('"', ' ') + '"'
+        phrase = '"' + q.replace('"', ' ') + '"'
+        return phrase + '*' if prefix else phrase
 
     def fts_search_products(self, query: str, limit: int = 20) -> List[int]:
-        """FTS search products by name, return product ids"""
+        """FTS search products by name, return product ids.
+
+        用 prefix 匹配召回同系列近似名（中文 unicode61 整串单 token 的对策），
+        由上层 ContractMatcher 按相似度分数区分 satisfied / partial / unsatisfied。
+        """
         if not self.conn:
             self.connect()
-        clean = self._sanitize_fts_query(query)
+        clean = self._sanitize_fts_query(query, prefix=True)
         cursor = self.conn.execute("""
         SELECT rowid FROM product_fts WHERE name MATCH ? LIMIT ?
         """, (clean, limit))
