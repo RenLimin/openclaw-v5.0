@@ -7,11 +7,10 @@
   KB-05 停售（SKU sale_status != 启用 → alert 含 SKU 状态）
   KB-06 db 不可达（run_kb_match referenced=False，不中断）
 
-KB-02（FTS 近似候选 score≈0.5 → partial）：
-  当前 product-kb 的 fts_search_products 把输入整体包成 phrase，
-  unicode61 对中文按整串一个 token，只有整名命中才有候选，
-  故"低相似度候选"路径在不改共享搜索行为的前提下不可达。
-  见 test_kb02_structural_note 留证。
+KB-02（近似名召回 score∈[0.5,0.85) → partial，软告警需人工确认）：
+  product-kb fts_search_products 已改 prefix 召回同系列近似名，
+  ContractMatcher 新增名称确认带 [0.5,0.85)：matched=True + 「名称近似，需人工确认」，
+  L4 decide_satisfaction 据此判 partial；score≥0.85 才 satisfied。
 """
 import os
 import sys
@@ -108,13 +107,22 @@ def test_kb06_db_unreachable_no_crash(tmp_path):
     assert review.satisfaction == "unsatisfied"
 
 
-def test_kb02_structural_note(kb_db):
-    """留证：phrase-FTS 下'近似候选 score≈0.5'不产生（KB-02 partial 不可达）。
+def test_kb02_approx_name_partial(kb_db):
+    """KB-02：近似（前缀）名召回成功但相似度未达高置信 → partial，需人工确认。
 
-    共享 product-kb 搜索改为 OR-token 才能产出低相似候选；属跨组件行为变更，
-    需 Rex 拍板。本测试锁定当前事实，避免后续误以为 partial 已生效。
+    不直接认领 SKU / 不做价格红线判定；避免近似名被误当完全满足。
     """
-    r = _review(kb_db, "梆梆安全测评")  # 部分名
-    # phrase 匹配无候选 → 直接 unmatched（而非 partial）
+    r = _review(kb_db, "梆梆安全测评")  # 部分前缀名
+    assert r.matched is True
+    assert 0.5 <= r.score < 0.85
+    assert r.alert and "名称近似" in r.alert and "人工确认" in r.alert
+    assert r.sku is None                       # 确认带不下发 SKU
+    assert decide_satisfaction([r]) == "partial"
+
+
+def test_kb02_longer_unknown_prefix_not_recalled(kb_db):
+    """前缀型查询不会让'更长但不存在'的名字误召回真实短名产品。"""
+    r = _review(kb_db, "梆梆安全测评服务量子冰箱增强包")
+    # 文档名需以整个查询开头 → 无此产品 → unmatched
     assert r.matched is False
     assert decide_satisfaction([r]) == "unsatisfied"

@@ -240,3 +240,63 @@ def test_classify_error_http_statuses():
     assert H.classify_error({}, 403) == "permission"
     assert H.classify_error({}, 500) == "error"
     assert H.classify_error({}, 200) is None
+
+
+# ---------- 2026-10-29 真实 OA 修复回归 ----------
+
+def test_lenient_json_loads_accepts_bare_numeric_keys():
+    """泛微 Cube mainFields 返回对象裸数字键 {1:"x"}（宽松 JSON）。"""
+    text = '{"fields":{"field32891":{"showname":"合同名","value":"a"}},"map":{1:"uf_xsht_fxxx_cphfwmc1"}}'
+    data = CubeClient._lenient_json_loads(text)
+    assert data["map"]["1"] == "uf_xsht_fxxx_cphfwmc1"
+
+
+def test_lenient_json_loads_returns_none_on_garbage():
+    """非 JSON（登录页 HTML）→ None，交由上层判会话失效。"""
+    assert CubeClient._lenient_json_loads("<html>login</html>") is None
+
+
+def test_extract_main_fields_accepts_fields_dict():
+    """实测 mainFields：{"fields": {"field32891": {...}, ...}} dict 形态。"""
+    obj = {
+        "fields": {
+            "field32891": {"fieldlabelname": "合同下单日期", "fieldvalue": "2026-10-27"},
+            "field32892": {"showname": "税率", "value": "1"},
+        },
+        "status": "1",
+    }
+    out = H.extract_main_fields(obj)
+    assert out.get("合同下单日期") == "2026-10-27"
+    assert out.get("税率") == "1"
+
+
+def test_extract_main_fields_does_not_leak_top_level_fields_key():
+    """顶层 fields 键不得被误当字段提取（旧缺陷：主字段只剩一个假键 'fields'）。"""
+    obj = {"fields": {"field32891": {"fieldlabelname": "合同下单日期", "fieldvalue": "2026-10-27"}}}
+    out = H.extract_main_fields(obj)
+    assert "fields" not in out
+    assert out.get("合同下单日期") == "2026-10-27"
+
+
+def test_verify_oa_session_returns_false_without_session(monkeypatch):
+    """会话验证诚实性：无有效 storage_state 时必须返回 False（不假报成功）。
+
+    _verify_oa_session 用 CubeClient 默认 storage_state（cube.DEFAULT_STORAGE_STATE）。
+    指向不存在文件 → _load_state 抛 CubeAuthError → 返回 False；不发网络请求。
+    """
+    import tempfile, os
+    from pathlib import Path
+    from services.oa import browser_fallback as B
+    from services.oa import cube as C
+    fake = Path(tempfile.mkdtemp()) / "missing-state.json"
+    monkeypatch.setattr(C, "DEFAULT_STORAGE_STATE", fake)
+    assert B._verify_oa_session() is False
+
+
+def test_click_oa_app_card_script_is_es5():
+    """换票点击脚本必须 ES5（Playwright evaluate 约束）。"""
+    from services.oa import browser_fallback as B
+    import re
+    # 提取 _click_oa_app_card 里的 JS 字符串，粗查无 ES6 语法
+    src = open(B.__file__, encoding="utf-8").read()
+    assert "const " not in src and "let " not in src and "=>" not in src

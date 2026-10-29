@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import string
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -194,6 +195,20 @@ class CubeClient:
 
     # ---------- 基础 GET ----------
 
+    @staticmethod
+    def _lenient_json_loads(text: str) -> Optional[Any]:
+        """宽松 JSON：泛微 Cube 的 mainFields 等返回对象裸数字键 {1:"x"}。
+
+        严格 json.loads 会失败；把对象数字键补引号后重试。
+        Returns:
+            解析结果 dict；仍失败返回 None（交由上层判登录页/错误）。
+        """
+        fixed = re.sub(r'([,{]\s*)(\d+)(\s*:)', r'\1"\2"\3', text)
+        try:
+            return json.loads(fixed)
+        except ValueError:
+            return None
+
     def _new_nonces(self) -> Dict[str, str]:
         key = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(6))
         uuid = "".join(random.choice("0123456789ABCDEF") for _ in range(32))
@@ -212,16 +227,19 @@ class CubeClient:
         try:
             data = resp.json()
         except ValueError:
-            # 非 JSON：多为登录页 HTML
-            if http_status in (401, 440):
-                raise CubeAuthError("会话失效 HTTP %s" % http_status)
-            if http_status == 403:
-                raise CubePermissionError("账号无权限 HTTP 403")
-            if "login" in resp.text[:2000].lower():
-                raise CubeAuthError("返回登录页（会话失效）")
-            raise CubeError(
-                "非 JSON 响应 HTTP %s (%s)" % (http_status, path)
-            )
+            # 泛微 Cube 宽松 JSON：对象裸数字键 {1:"x"} 不引号（实测 mainFields）
+            data = CubeClient._lenient_json_loads(resp.text)
+            if data is None:
+                # 非 JSON：多为登录页 HTML
+                if http_status in (401, 440):
+                    raise CubeAuthError("会话失效 HTTP %s" % http_status)
+                if http_status == 403:
+                    raise CubePermissionError("账号无权限 HTTP 403")
+                if "login" in resp.text[:2000].lower():
+                    raise CubeAuthError("返回登录页（会话失效）")
+                raise CubeError(
+                    "非 JSON 响应 HTTP %s (%s)" % (http_status, path)
+                )
 
         kind = H.classify_error(data, http_status)
         if kind == "auth":

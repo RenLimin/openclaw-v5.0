@@ -235,6 +235,23 @@ def extract_main_fields(obj: Any) -> Dict[str, str]:
                     result[name] = _to_text(_scalar_value(f))
         if result:
             return result
+    if isinstance(fields, dict):
+        # 实测 mainFields：{"fields": {"field32891": {...}, ...}}
+        # 每个子对象含字段显示名与值（或 showname/值嵌在 browser 字段对象内）
+        for fid, f in fields.items():
+            if not isinstance(f, dict):
+                continue
+            name = _field_display_name(f)
+            val = _scalar_value(f)
+            if val is None:
+                # 兼容 {"showname": ..., "value": {...}} 或浏览器字段对象
+                val = f.get("showname")
+                if isinstance(val, dict):
+                    val = val.get("showvalue") or val.get("value") or ""
+            if name:
+                result[name] = _to_text(val)
+        if result:
+            return result
 
     # datas 行（字段 id -> 值），名称映射从 fieldAttr / fieldMap
     label_map = _field_label_map(obj)
@@ -252,7 +269,7 @@ def extract_main_fields(obj: Any) -> Dict[str, str]:
 
     # fieldNNNN -> {name,value} 或直接值
     for k, v in obj.items():
-        if not str(k).startswith("field"):
+        if not str(k).startswith("field") or k in ("fields",):
             continue
         if isinstance(v, dict):
             label = _field_display_name(v) or str(k)

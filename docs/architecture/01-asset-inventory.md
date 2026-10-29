@@ -233,8 +233,8 @@ _自建技能总计: 17 个（L2: 6, L3: 5, L4: 6, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `953b4cc` |
-| Commit 数 | 493 |
+| HEAD | `250d419` |
+| Commit 数 | 494 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
