@@ -6,9 +6,28 @@
 | 版本 | v1.0 |
 | 组件编码 | bangcle-contract（CLM-BANGCLE-001） |
 | 依据 | PRD-v1.0 §10 + DESIGN-DETAIL-v1.0 |
-| 状态 | 待审核 |
+| 状态 | ✅ 通过（Rex 2026-10-29 验收拍板） |
 
 > 范围 = **MVP 四步分析闭环**。验收铁律：E2E 用真实文件/真实 product-kb DB/真实（或录制回放的）OA 会话，不用 mock 冒充业务结论；合同原文不外发。
+
+## 0. 验收结论（2026-10-29 实测）
+
+| AC | 结论 | 证据 |
+|---|---|---|
+| AC-1 四步闭环 | ✅ | 真实技术服务合同 ingest→digitize→risk→kb_match→report |
+| AC-2 风险结构化 | ✅ | 黄金基准 22 条 rule_id **100% 匹配**，法条仅来自 L3 `CHECK_RULES` |
+| AC-3 product-kb 满足度 | ✅ | KB-01~06 连真实 `product_kb.db`；含 KB-02 近似名 partial、停售 SKU unsatisfied |
+| AC-4 OA Cube 拉取 | ✅ | 真实 billid 15134：186 主字段/3 附件/10 明细表；TC-OA-01~03 真跑通过 |
+| AC-5 原文不外发 | ✅ | socket 层守卫：运行期无外部连接 + 外发字节不含合同特征串；链路无公网模型 endpoint |
+| AC-6 审计 append-only | ✅ | 仅 INSERT；审查/匹配落 SQLite |
+| AC-7 CLI + 进度 | ✅ | `init-db/review/report/oa-login` 真跑；xlsx 可 openpyxl 回读 3 Sheet；stdout 分步进度 |
+| AC-8 幂等 | ✅ | 同文件连审 3 次风险结论/满足度稳定；黄金基准连跑 3 次一致 |
+| AC-9 层级单向 | ✅ | L4→L3/L2，无反向引用；L3 无禁用模块；22 规则不被改写 |
+
+**测试总览**：bangcle-contract **125 passed, 0 skipped**（OA 会话有效期内全绿）；product-kb 7 passed。
+**覆盖率**：核心编排（contract_review + repository）**95%**（473 statements / 26 miss，门槛 ≥85%）。
+
+> **OA 会话有效期更正（实测）**：约 **2 小时 idle 超时**，非此前侦察记录的 12h。落盘 cookie 均为 session cookie（expires=-1），失效由泛微 e-cology 服务端控制，客户端不可改。会话失效时 TC-OA-01~03 自动 skip 留证（禁止伪 pass），重跑 `contractctl oa-login`（消耗一次 IMAP 验证码）即恢复真跑。
 
 ---
 
@@ -145,3 +164,4 @@ contractctl report <review_id> --format xlsx
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-10-27 | v1.0 | 初版：MVP 四步闭环 E2E + Cube/浏览器双路径 + 不外发安全测试 |
+| 2026-10-29 | v1.0 | P8 验收闭环：补 §0 实测结论（125 passed/覆盖率95%/9 条 AC 全通过）；状态转"通过"；OA 有效期更正为实测约 2h idle |
