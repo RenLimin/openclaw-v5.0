@@ -56,21 +56,34 @@ def cmd_review(args) -> int:
     if args.oa_billid:
         _progress("从 OA Cube 拉取合同 (billid=%s)" % args.oa_billid)
         from services.oa.entry import get_contract_with_fallback
+        from contract_review.oa_text import digitize_oa_data
+        from contract_review.digitize import DigitizedText
+        import shutil
         import tempfile
         tmp = tempfile.mkdtemp(prefix="clm_oa_")
-        data = get_contract_with_fallback(args.oa_billid, tmp)
-        text = ""
-        card_txt = data.get("card_text_snippet", "")
-        if card_txt:
-            text = card_txt
-        else:
-            # 结构化主字段拼成文本（无原文时的兜底）
-            lines = []
-            for k, v in (data.get("main_fields") or {}).items():
-                lines.append("%s：%s" % (k, v))
-            text = "\n".join(lines)
         contract_ref = "billid:%s" % args.oa_billid
-        ocr_method = "oa_cube"
+        try:
+            data = get_contract_with_fallback(args.oa_billid, tmp)
+            # 1) 优先用合同附件原文走全文管线（pdf/docx/扫描件）
+            oa_dt = digitize_oa_data(data)
+            if oa_dt is not None:
+                text = oa_dt
+                ocr_method = oa_dt.method
+                ocr_conf = oa_dt.ocr_confidence
+            else:
+                # 2) 无可用原文 → 回退卡片摘要 / 主字段拼接文本
+                card_txt = data.get("card_text_snippet", "")
+                fallback = card_txt or ""
+                if not fallback:
+                    lines = []
+                    for k, v in (data.get("main_fields") or {}).items():
+                        lines.append("%s：%s" % (k, v))
+                    fallback = "\n".join(lines)
+                text = fallback
+                ocr_method = "oa_cube"
+        finally:
+            # 即用即焚：附件原文只在临时目录短暂存在，读完（或失败）即删
+            shutil.rmtree(tmp, ignore_errors=True)
     else:
         _progress("摄取文件")
         ingested = ingest_file(args.file)
@@ -81,12 +94,14 @@ def cmd_review(args) -> int:
         ocr_method = dt.method
         ocr_conf = dt.ocr_confidence
 
-    _progress("浅解析条款")
-    parsed = parse_shallow(text)
-    _progress("风险扫描")
+    # 归一化为 DigitizedText（OA 全文路径已是；字段摘要/本地上传路径是 str）
     from contract_review.digitize import DigitizedText
     if isinstance(text, str):
         text = DigitizedText(full_text=text, method=ocr_method or "oa_cube")
+
+    _progress("浅解析条款")
+    parsed = parse_shallow(text.full_text)
+    _progress("风险扫描")
     risk = run_risk(text)
     _progress("产品/服务参照")
     text_str = text.full_text if hasattr(text, "full_text") else text

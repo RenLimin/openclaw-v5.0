@@ -79,6 +79,8 @@ contractctl report <review_id> --format xlsx
 
 输出：分步进度（数字化/风险/参照匹配/报告）+ `overall_risk / satisfaction / report_path`。
 
+> **OA 审查取数顺序**（2026-10-29 起）：① 优先把合同**附件原文**（pdf/docx/扫描件）数字化走全文管线（method=`oa_attachment`，与本地上传同口径）；② 无可用附件时回退卡片摘要 / 主字段拼接文本（method=`oa_cube`）。早期版本只审字段摘要、不审正文的偏差已修复。
+
 ---
 
 ## 5. OA / 凭据运行说明
@@ -113,6 +115,7 @@ contractctl report <review_id> --format xlsx
 - 合同原文全程本地，不发公网模型；语义轨关闭。
 - 审计 append-only；幂等键 `billid + event_id`（回写功能本期不开放）。
 - 同意/驳回等决策由人做出，本组件只产出解析/比对/建议。
+- **OA 附件即用即焚**：OA 拉取的合同原文只在系统临时目录（`$TMPDIR/clm_oa_*`，非 git workspace）短暂落盘；数字化读出全文后 `finally` 立即 `rmtree` 删除，审查失败也删，**不长期留存、不入库**。本地上传件仍落 `data/staging/<sha1>`（gitignored）供取证，两条路径策略不同。
 
 ---
 
@@ -122,3 +125,4 @@ contractctl report <review_id> --format xlsx
 |---|---|---|
 | 2026-10-27 | v1.0 | 初版：MVP 分析闭环运维 + Cube/浏览器兜底排查 |
 | 2026-10-29 | v1.0 | 更正 OA 会话有效期为实测约 2h idle（原误记 12h）；补换票/落盘/验证码/DOM 判定/E2E skip 等运维事实 |
+| 2026-10-29 | v1.0 | OA 审查改用合同附件**原文全文**（原仅审卡片字段摘要）；附件临时目录**即用即焚**（finally rmtree，不留存/不入库）；新增 `contract_review/oa_text.py` + 5 条回归（含临时目录焚毁集成测试），全量 127 passed |
