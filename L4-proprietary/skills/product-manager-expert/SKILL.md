@@ -1,6 +1,6 @@
 ---
 name: product-manager-expert
-description: "Bangcle 产品管理专家 — L4 层 Bangcle 业务统一入口。面向客户/售前的产品咨询解答、跨产品组合方案、产品知识库检准与维护；并路由到 Bangcle 域其他技能（product-kb 产品查询、bangcle-contract 合同、bangcle-ppt 演示、L3 项目技能）。当用户提出任何 Bangcle 产品/方案/售前相关需求、或要求检准产品知识库时使用。"
+description: "Bangcle 产品管理专家 — L4 层 Bangcle 产品相关的统一入口。产品咨询解答、跨产品组合方案、产品知识库检准与维护、产品/SKU/价格/合同标的匹配查询路由（product-kb）。当用户提出 Bangcle 产品、功能、方案、价格、标的匹配相关需求，或要求检准产品知识库时使用。合同审批、PPT、项目交付管理不属于本入口。"
 homepage:
 metadata:
   openclaw:
@@ -14,30 +14,43 @@ metadata:
 
 # Bangcle 产品管理专家 (Product Manager Expert)
 
-面向 Bangcle 产品体系（8 产品线 / 37 分类 / 193 产品 / 385 SKU / 900+ 文档）的产品专家角色，同时是 **L4 层 Bangcle 业务统一入口**：
-**精准解答产品咨询、跨产品组合方案、知识库记录检准与维护**，并按需求路由到 Bangcle 域其他能力。
+面向 Bangcle 产品体系（8 产品线 / 37 分类 / 193 产品 / 385 SKU / 900+ 文档）的产品专家角色，同时是 **L4 层 Bangcle「产品相关」的统一入口**：
+**精准解答产品咨询、跨产品组合方案、知识库记录检准与维护**，并路由产品域的数据查询能力。
 
-## 一、Bangcle 域统一入口路由表（强制）
+> 边界：本入口只管**产品相关**（产品/功能/SKU/价格/方案/合同标的匹配/知识库维护）。合同审批、PPT 生成、项目交付管理不属本入口（见 §边界外）。
 
-任何 Bangcle 相关需求，先按下表路由。命中本技能核心职责（产品咨询/方案/检准）→ 本技能直接处理；否则转对应技能/组件。
+## 一、产品相关统一入口路由表（强制）
 
-| 需求类型 | 处理技能/组件 | 层 | 说明 |
-|---|---|---|---|
-| 产品咨询解答 / 功能描述查询 | **本技能** + `product-kb` | L4 | 本技能做专家判断，product-kb 做数据检索 |
-| 跨产品组合方案 / 售前方案 | **本技能** | L4 | 核心职责 |
-| 产品知识库检准 / 数据修复 | **本技能**（scripts/audit_kb.py） | L4 | 核心职责 |
-| 产品/型号/合同标的匹配查询 | `product-kb` | L4 | 直接数据操作 |
-| 销售合同审批 / 合同审查 | `bangcle-contract`（CLM-BANGCLE-001） | L4 | 泛微 OA + 企微集成 |
-| 通用合同审批流程（L3 框架） | `contract-approval` | L3 | 纯逻辑框架 |
-| PPT 生成 / 官方模板 | `bangcle-ppt` | L4 | VI 规范 |
-| 项目交付汇总 / 台账 | `bangcle-project-summary` | L3 | ONES 数据 |
-| 客户画像 / 需求与安全等级 | `bangcle-customer-profile` | L3 | 售前输入 |
-| 履约义务 / 授权维保到期 | `bangcle-obligation-summary` | L3 | 项目经理视角 |
-| 项目复盘 / lessons learned | `bangcle-project-retrospective` | L3 | 项目集治理 |
-| ONES 数据导出 | `ones-browser-export` | L4 | 浏览器自动化 |
-| 收入确认 / 报表 | `revenue-recognition`（组件） | L4 | ASC 606 / IFRS 15 |
+任何 **Bangcle 产品相关**需求，先按下表路由。命中本技能核心职责（产品咨询/方案/检准）→ 本技能直接处理；产品数据查询 → product-kb。
 
-**分层原则**：L4 专有业务（产品/合同/PPT/ONES）在本技能路由；L3 通用业务（项目管理 4 技能）按需跨层调用（L4→L3 允许）。命中多个需求 → 本技能统一协调。
+| 产品相关需求 | 处理 | 说明 |
+|---|---|---|
+| 产品咨询解答 / 功能描述查询 | **本技能** + `product-kb` | 本技能做专家判断，product-kb 做数据检索 |
+| 跨产品组合方案 / 售前产品方案 | **本技能** | 核心职责 |
+| 产品知识库检准 / 数据修复 | **本技能**（scripts/audit_kb.py） | 核心职责 |
+| 产品/型号/SKU 查询 | `product-kb`（PKB-001） | 数据操作 |
+| 价格查询 / 销售状态（正常/受控/报备） | `product-kb` | 数据操作 |
+| 合同标的匹配（合同条款→产品匹配） | `product-kb`（contract 模块） | 仅"标的匹配"环节；合同审批流程见 §边界外 |
+| 产品文档检索 / 白皮书章节查询 | `product-kb` | 数据操作 |
+
+命中多个产品需求 → 本技能统一协调。跨到非产品域（合同审批/PPT/项目）→ 按 §边界外 提示用户转对应能力，本入口不代办。
+
+
+## 边界外（不属于本入口）
+
+| 需求 | 去向 | 层 |
+|---|---|---|
+| 销售合同审批 / 合同审查流程 | `bangcle-contract`（CLM-BANGCLE-001） | L4 |
+| 通用合同审批框架 | `contract-approval` | L3 |
+| PPT 生成 / 官方模板 | `bangcle-ppt`（CPT-012） | L4 |
+| 项目交付汇总 / 台账 | `bangcle-project-summary` | L3 |
+| 客户画像 / 客户安全需求 | `bangcle-customer-profile` | L3 |
+| 履约义务 / 授权维保到期 | `bangcle-obligation-summary` | L3 |
+| 项目复盘 | `bangcle-project-retrospective` | L3 |
+| ONES 数据导出 | `ones-browser-export` | L4 |
+| 收入确认 / 报表 | `revenue-recognition`（组件） | L4 |
+
+> 注意：`bangcle-contract` 在审查中会**调用 product-kb 做合同标的参照**——这是组件间数据复用，不改变本入口"仅产品相关"的边界。
 
 ## 二、产品咨询解答流程
 
@@ -97,4 +110,4 @@ python3 /Users/bangcle/.openclaw/workspace/L4-proprietary/skills/product-manager
 
 - 产品咨询：结论有文档出处、区分平台/版本/销售状态、无依据处明确标注。
 - 检准：脚本可复跑、报告含分级问题清单、修复项可追溯（备份+变更记录）。
-- 统一入口：任何 Bangcle 需求能按 §一 路由表定位到正确技能/组件。
+- 统一入口：任何 Bangcle **产品相关**需求能按 §一 路由表定位；非产品需求按 §边界外 正确分流、不越界代办。
