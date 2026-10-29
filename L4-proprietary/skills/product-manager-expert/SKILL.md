@@ -43,10 +43,7 @@ metadata:
 | 销售合同审批 / 合同审查流程 | `bangcle-contract`（CLM-BANGCLE-001） | L4 |
 | 通用合同审批框架 | `contract-approval` | L3 |
 | PPT 生成 / 官方模板 | `bangcle-ppt`（CPT-012） | L4 |
-| 项目交付汇总 / 台账 | `bangcle-project-summary` | L3 |
-| 客户画像 / 客户安全需求 | `bangcle-customer-profile` | L3 |
-| 履约义务 / 授权维保到期 | `bangcle-obligation-summary` | L3 |
-| 项目复盘 | `bangcle-project-retrospective` | L3 |
+| 项目交付管理（台账/履约/复盘/客户画像） | `bangcle-project-manager-expert`（PJME-001，L4 项目管理统一入口） | L4 |
 | ONES 数据导出 | `ones-browser-export` | L4 |
 | 收入确认 / 报表 | `revenue-recognition`（组件） | L4 |
 

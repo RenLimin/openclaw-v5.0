@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 5.4 (2026-10-29 — 范围修正：product-manager-expert(PME-001) 收窄为 L4 层 Bangcle「产品相关」统一入口，仅覆盖产品/功能/SKU/价格/方案/标的匹配/知识库维护；合同、PPT、项目管理不属本入口) |
+| 文档版本 | 5.5 (2026-10-29 — 新增 L4 Bangcle 项目管理专家统一入口 bangcle-project-manager-expert / PJME-001，路由 L3 项目管理四技能+BDMS+ONES；架构文档补登 L3 层技能表) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
 | 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
@@ -646,6 +646,18 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 
 > **命名对齐**：`finance_engine` 是 `finance-engine` 的 symlink，两者等价。
 
+**L3 层技能**（`L3-business/skills/`）:
+
+| 技能 | 目录 | 职责 | 状态 |
+|---|---|---|---|
+| **bangcle-project-summary** | `L3-business/skills/bangcle-project-summary/` | 项目信息汇总：汇总项目交付实施情况，输出结构化交付台账（其他项目管理技能的事实基线） | ✅ 已上线 |
+| **bangcle-obligation-summary** | `L3-business/skills/bangcle-obligation-summary/` | 项目履约义务汇总：为指定项目经理服务，参考历史项目交付情况，汇总履约义务/子任务/授权维保到期 | ✅ 已上线 |
+| **bangcle-project-retrospective** | `L3-business/skills/bangcle-project-retrospective/` | 项目复盘建议：项目/项目集复盘，优化后续项目交付方案与项目计划 | ✅ 已上线 |
+| **bangcle-customer-profile** | `L3-business/skills/bangcle-customer-profile/` | 客户画像分析：制定客户画像（环境/要求/定制/安全等级/安全需求） | ✅ 已上线 |
+| **contract-approval** | `L3-business/skills/contract-approval/` | 销售合同审批工作流（L3 纯逻辑技能，L4 实例见 bangcle-contract） | ✅ 已上线 |
+
+> L3 项目管理四技能（summary/obligation/retrospective/customer-profile）统一由 L4 入口 `bangcle-project-manager-expert`（PJME-001）路由协调。
+
 ### L4 专有业务组件
 
 | 组件 | ADR | DESIGN.md | 说明 | 状态 |
@@ -665,6 +677,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 
 | 技能 | 目录 | 职责 | 状态 |
 |---|---|---|---|
+| **bangcle-project-manager-expert** | `L4-proprietary/skills/bangcle-project-manager-expert/` | **Bangcle 项目管理相关统一入口**：意图识别+路由协调 L3 项目管理四技能（台账/履约/复盘/客户画像）+ delivery-center(BDMS) + ones-browser-export（PJME-001，不管产品/合同/PPT） | ✅ 已上线 |
 | **product-manager-expert** | `L4-proprietary/skills/product-manager-expert/` | **Bangcle 产品相关统一入口**：产品咨询解答、跨产品组合方案、知识库检准与维护 + product-kb 数据查询路由（PME-001，不管合同/PPT/项目） | ✅ 已上线 |
 | **product-kb** | `L4-proprietary/skills/product-kb/` | Bangcle 产品知识库：产品信息查询、合同标的匹配、文档知识检索（PKB-001） | ✅ 已上线 |
 | **bangcle-ppt** | `L4-proprietary/skills/bangcle-ppt/` | Bangcle PPT 模板系统：官方 VI 规范的 PPT 生成能力（CPT-012） | ✅ 已上线 |
@@ -1312,6 +1325,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-29 | **5.5** | **Bangcle 项目管理专家统一入口**：① 新增 L4 技能 `bangcle-project-manager-expert`（PJME-001），确立为 L4 层 Bangcle「项目管理相关」统一入口（路由表：交付台账/履约义务/项目复盘/客户画像 → L3 四技能；交付月报/工时/交接 → delivery-center；ONES 数据 → ones-browser-export；产品/合同/PPT 列入边界外）；② 架构文档首次补登 **L3 层技能表**（项目管理四技能 + contract-approval）；③ L3 四技能 SKILL.md 加统一入口反向指针；④ PME 边界表中项目管理四行收敛为指向 PJME-001 单行。 |
 | 2026-10-29 | **5.4** | **范围修正：PME 收窄为「产品相关」统一入口**：5.3 误将 `product-manager-expert`（PME-001）定位为整个 Bangcle 业务域统一入口；现按 Rex 修正收窄为 **L4 层 Bangcle「产品相关」统一入口**——仅覆盖产品咨询/功能/跨产品方案/SKU/价格/合同标的匹配/知识库检准，路由对象只有 `product-kb`；合同审批（bangcle-contract）、PPT（bangcle-ppt）、项目交付管理（L3 4 技能）列入 §边界外，不在本入口代办。product-kb(PKB-001) 组件登记与 L4 技能表补全（5.3 的其余内容）保持有效。 |
 | 2026-10-29 | **5.3** | **Bangcle 产品管理专家统一入口**：① 新增 L4 技能 `product-manager-expert`（PME-001）并确立为 **L4 层 Bangcle 业务统一入口**（含 Bangcle 域技能/组件路由表：产品咨询/方案/检准核心职责 + product-kb / bangcle-contract / bangcle-ppt / L3 项目技能路由）；② L4 组件清单补入 `product-kb`（PKB-001，产品知识库）；③ L4 技能表由 2 项补全为 6 项（product-manager-expert / product-kb / bangcle-ppt / ones-browser-export / bdms-web-ui-design / fin-l4）；④ §7.6 资产覆盖表补 product-kb 5 件套 ✅。 |
 | 2026-10-27 | **5.2** | **分层合同管理专家立项 + 命名规则 + 发布管理**：① 新增 L3 `contract-management`（CLM-GEN-001）与 L4 `bangcle-contract`（CLM-BANGCLE-001，泛微 OA + 企业微信，MVP 聚焦全文扫描解析 + 产品知识库参照）；② §7.4 扩展统一命名规则（目录 kebab-case / 组件编码 / 文档命名 / Python 命名）；③ 新增 §10 发布管理（SemVer + Release 流程 + 变更规则）；④ 历史资产备份 `backups/contract-approval-legacy-20261027/`。 |
