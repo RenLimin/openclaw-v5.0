@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-29 13:46 UTC+08:00
+最后生成：2026-10-29 15:56 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -57,7 +57,7 @@
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
 | L4 专有业务 | `product-kb` | Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索 | `L4-proprietary/skills/product-kb` |
-| L4 专有业务 | `product-manager-expert` | Bangcle 产品管理专家 — 产品咨询解答、跨产品组合方案、产品知识库检准与维护。查询产品/方案时用 product-kb；检准知... | `L4-proprietary/skills/product-manager-expert` |
+| L4 专有业务 | `product-manager-expert` | Bangcle 产品管理专家 — L4 层 Bangcle 业务统一入口。面向客户/售前的产品咨询解答、跨产品组合方案、产品知识库检准... | `L4-proprietary/skills/product-manager-expert` |
 | L3 通用业务 | `bangcle-customer-profile` | Bangcle 客户画像分析：业务目标是制定客户画像，基于项目工作项/评论/附件与知识库，输出客户画像，重点为客户环境（云/OS/CP... | `L3-business/skills/bangcle-customer-profile` |
 | L3 通用业务 | `bangcle-obligation-summary` | Bangcle 项目履约义务汇总：业务目标是为指定的项目经理服务，参考历史项目的交付情况，按最终用户/客户检索全部项目履约义务工作项，... | `L3-business/skills/bangcle-obligation-summary` |
 | L3 通用业务 | `bangcle-project-retrospective` | Bangcle 项目复盘建议：业务目标是对项目或项目集（Program）做复盘，输出产品差异/优化空间与项目管理复盘（含责任方建议），... | `L3-business/skills/bangcle-project-retrospective` |
@@ -233,8 +233,8 @@ _自建技能总计: 17 个（L2: 6, L3: 5, L4: 6, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `0e506ff` |
-| Commit 数 | 495 |
+| HEAD | `0a14f9d` |
+| Commit 数 | 496 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

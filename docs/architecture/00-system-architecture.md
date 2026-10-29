@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 5.1 (2026-10-17 — Web UI 设计开发能力体系建设：ADR-033 + web-common v2.0 + 视觉回归测试 + UI 验收体系) |
+| 文档版本 | 5.3 (2026-10-29 — Bangcle 产品管理专家统一入口：product-manager-expert(PME-001) 确立为 L4 Bangcle 统一入口 + product-kb(PKB-001) 纳入 L4 组件清单 + L4 技能表补全) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
 | 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
@@ -658,13 +658,18 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 家庭理财实例引擎 | ADR-027 | `L4-proprietary/components/fin-l4/` | FIN-L4 专有实例：Rex 家庭理财系统（CLI + Web UI + 测试数据） | ✅ 已上线 |
 | 收入确认引擎 | — | `L4-proprietary/components/revenue-recognition/` | ASC 606 / IFRS 15 收入确认：合同识别→履约义务→价格分配→时点/时段确认→报表（v1 + v2 双版本） | ✅ 已上线 |
 | CISSP 学习系统(v1) | — | `L4-proprietary/components/.deprecated/cissp-learning/` | 已被 cissp-trainer(v2) 替代 | 🗑️ 已废弃 |
+| Bangcle 产品知识库 | — | `L4-proprietary/components/product-kb/` | 产品信息查询、合同标的匹配、文档知识检索（8 产品线 / 37 分类 / 193 产品 / 385 SKU / 900+ 文档），PKB-001 | ✅ 已上线 |
 | Bangcle 合同管理专家 | — | `L4-proprietary/components/bangcle-contract/` | 泛微 OA + 企业微信集成，合同全文扫描解析 + 产品知识库参照分析，CLM-BANGCLE-001 | 🚧 建设中 |
 
 **L4 层技能**（`L4-proprietary/skills/`）:
 
 | 技能 | 目录 | 职责 | 状态 |
 |---|---|---|---|
+| **product-manager-expert** | `L4-proprietary/skills/product-manager-expert/` | **Bangcle 业务统一入口**：产品咨询解答、跨产品组合方案、知识库检准与维护 + Bangcle 域技能路由（PME-001） | ✅ 已上线 |
+| **product-kb** | `L4-proprietary/skills/product-kb/` | Bangcle 产品知识库：产品信息查询、合同标的匹配、文档知识检索（PKB-001） | ✅ 已上线 |
+| **bangcle-ppt** | `L4-proprietary/skills/bangcle-ppt/` | Bangcle PPT 模板系统：官方 VI 规范的 PPT 生成能力（CPT-012） | ✅ 已上线 |
 | **ones-browser-export** | `L4-proprietary/skills/ones-browser-export/` | ONES 浏览器自动化数据导出（osascript 控制 Chrome 导出 CSV） | ✅ 已上线 |
+| **bdms-web-ui-design** | `L4-proprietary/skills/bdms-web-ui-design/` | BDMS 交付中心 Web UI 设计规范 | ✅ 已上线 |
 | **fin-l4** | `L4-proprietary/skills/fin-l4/` | 家庭及个人理财技能层（FIN-L4）：记账/预算/投资/债务/保险/税务 6 大模块 | ✅ 已上线 |
 
 **已废弃组件**:
@@ -1170,6 +1175,7 @@ L4 专有业务
 | L4 | fin-l4 | ✅ | ✅ | ✅ | ✅ (189/189) | ✅ | ✅ 完成 |
 | L4 | office-contract | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L4 | revenue-recognition | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L4 | product-kb | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 
 > **2026-10-04 进度**：全部 33 个资产（L2: 19, L3: 7, L4: 7）5 件套全部补齐。
 
@@ -1306,6 +1312,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-29 | **5.3** | **Bangcle 产品管理专家统一入口**：① 新增 L4 技能 `product-manager-expert`（PME-001）并确立为 **L4 层 Bangcle 业务统一入口**（含 Bangcle 域技能/组件路由表：产品咨询/方案/检准核心职责 + product-kb / bangcle-contract / bangcle-ppt / L3 项目技能路由）；② L4 组件清单补入 `product-kb`（PKB-001，产品知识库）；③ L4 技能表由 2 项补全为 6 项（product-manager-expert / product-kb / bangcle-ppt / ones-browser-export / bdms-web-ui-design / fin-l4）；④ §7.6 资产覆盖表补 product-kb 5 件套 ✅。 |
 | 2026-10-27 | **5.2** | **分层合同管理专家立项 + 命名规则 + 发布管理**：① 新增 L3 `contract-management`（CLM-GEN-001）与 L4 `bangcle-contract`（CLM-BANGCLE-001，泛微 OA + 企业微信，MVP 聚焦全文扫描解析 + 产品知识库参照）；② §7.4 扩展统一命名规则（目录 kebab-case / 组件编码 / 文档命名 / Python 命名）；③ 新增 §10 发布管理（SemVer + Release 流程 + 变更规则）；④ 历史资产备份 `backups/contract-approval-legacy-20261027/`。 |
 | 2026-10-04 | **4.7** | **全量资产 5 件套补齐 + 垃圾清理 + 架构文档对齐**：① L3 7 个组件 PRD + OUTLINE + VERIF + OPS（28 份）；② L2 19 个组件 VERIFICATION.md + OPERATIONS.md（38 份）；③ cissp-learning 移至 L4/.deprecated；④ revenue-recognition 补入 L4 清单；⑤ AGENTS.md 瘦身 24679→11175；⑥ 清理 __pycache__/ .pyc / .bak / /tmp 垃圾；⑦ 资产清单 §7.6 全部标记 ✅。 |
 | 2026-09-11 | **3.9** | **L0/L1 文档补齐 + L2 全量对齐**：① L0-gateway（auth-gateway/channel-router/session-manager）纳入架构文档，L0 双子层（Install + Gateway）正式定义；② L1-runtime 路径对齐（`adapters/<runtime>/` → `L1-runtime/adapters/<runtime>/`），纳入 4 个 L1 自建组件（tool-policy/context-bus/agent-registry/telemetry）；③ L2 DESIGN.md 从 3/26 → 18/18（0 缺失）；④ 纳入 13 个未声明 L2 组件；⑤ 命名对齐：config-management→config, sandbox-isolation→sandbox；⑥ 清理空目录 + __pycache__；⑦ 删除 L3-business 空目录。 |
