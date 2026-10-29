@@ -672,6 +672,19 @@ def scan_temp_files_cleanup():
                 "detail": f"Found {count} untracked files in workspace. Recommend commit or cleanup."
             })
     
+    # INFRA-CLN-001 临时资产清理自检（trash 可用 / registry 合法 / gitignore 覆盖）
+    tc_verify = run_cmd(
+        "python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py "
+        "--root /Users/bangcle/.openclaw/workspace verify")[1]
+    if tc_verify != 0:
+        out, _ = run_cmd(
+            "python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py "
+            "--root /Users/bangcle/.openclaw/workspace verify 2>&1")
+        errors.append({
+            "type": "tempclean_verify_failed",
+            "detail": f"INFRA-CLN-001 verify 失败: {out.strip()[:200]}"
+        })
+
     # 检查日志文件大小 (gateway logs) — 仅当 >100M 时报 error
     output, rc = run_cmd("du -sm ~/.openclaw/logs/ 2>/dev/null | awk '{print $1}'")
     if rc == 0 and output.strip():
