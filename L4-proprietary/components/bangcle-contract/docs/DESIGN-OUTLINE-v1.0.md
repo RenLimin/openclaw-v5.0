@@ -6,7 +6,7 @@
 | 版本 | v1.0 |
 | 层级 | L4 专有业务层 |
 | 组件编码 | bangcle-contract（SCA-BANGCLE-001） |
-| 状态 | 待审核 |
+| 状态 | ✅ 通过（Rex 2026-10-29 拍板，详见 VERIFICATION §0） |
 | 依据 | PRD-v1.0 + L3 contract-management OUTLINE-v1.0 + product-kb（ContractMatcher）+ 业界调研 tmp/clm-best-practices.md |
 
 ---
