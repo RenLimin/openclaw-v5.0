@@ -489,6 +489,17 @@ class DeliveryReportService:
                 raw_data = self._extract_raw(month)
                 step += 1
 
+                # 固化源文件：把本次实际使用的源永久归档到 workspace（不入 git）。
+                # best-effort：归档失败不阻断月报生成。refetch 场景下归档的是刚重拉的新源。
+                try:
+                    from bdms.modules.delivery_report.source_snapshot \
+                        import archive_sources
+                    snap = archive_sources(month)
+                    _progress(base_pct + step * 15,
+                              f"步骤 {step+1}/{total_steps}：源文件已归档")
+                except Exception as _snap_err:
+                    snap = {"error": str(_snap_err)[:200]}
+
                 _progress(base_pct + step * 15, f"步骤 {step+1}/{total_steps}：计算核心报表...")
                 computed = self.engine.compute(month)
                 step += 1
