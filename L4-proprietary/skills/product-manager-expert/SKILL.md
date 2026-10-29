@@ -88,6 +88,25 @@ python3 /Users/bangcle/.openclaw/workspace/L4-proprietary/skills/product-manager
 | 🟡 warn | 按业务判断：doc_type 归类→按文件名强规则重分类；无文档产品→服务类维保/定制/第三方占位桶无独立文档属正常（第三方桶自动剔除），在报告标注；embedding 为空→建议重建索引 |
 | 🔵 info | 记录说明：kb_relation 空、version 缺失等 |
 
+### 3. embedding 重建（语义检索恢复）
+
+检准报 `EMBED: doc_chunk.embedding 全为空` 时执行（本地 GGUF 模型，无需外部 API）：
+
+```bash
+# 1. 启动本地 embedding 服务（llama.cpp b10534, embeddinggemma-300m, 注意 ubatch 必须≥2048）
+/Users/bangcle/.openclaw/tools/llama.cpp/b10534/darwin-arm64/llama-server \
+  -m ~/.node-llama-cpp/models/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf \
+  --embedding --port 8123 --ctx-size 2048 --host 127.0.0.1 --batch-size 2048 --ubatch-size 2048
+
+# 2. 全量重建（float64 bytes 写入，对齐 search.py 的 np.frombuffer dtype）
+python3 scripts/rebuild_embeddings.py --db <product-kb>/data/product_kb.db --batch 2
+```
+
+要点：
+- **ubatch 必须 ≥ 2048**：默认 512 时单条 chunk（>512 token）会 500 失败。
+- 实测吞吐 ~37 chunk/s（M 系芯片），6195 chunks 约 3 分钟。
+- 重建前先备份 DB；脚本幂等（只处理 embedding IS NULL 的行）。
+
 ### 3. 已建立的校准规则（2026-10-29）
 
 - **doc_type 合法枚举**：`white_paper / sales_note / func_list / ppt / tech_white_paper / manual / faq / version_note / other`（`version_note` 为实际使用补充，`pdf` 不是角色类型，`user_manual` 并入 `manual`）。
