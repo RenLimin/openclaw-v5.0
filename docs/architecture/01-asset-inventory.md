@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-29 12:24 UTC+08:00
+最后生成：2026-10-29 13:11 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -57,10 +57,10 @@
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
 | L4 专有业务 | `product-kb` | Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索 | `L4-proprietary/skills/product-kb` |
-| L3 通用业务 | `bangcle-customer-profile` | Bangcle 客户画像分析：基于项目工作项/评论/附件与知识库，输出客户画像，重点为客户环境（云/OS/CPU/中间件/数据库/网络... | `L3-business/skills/bangcle-customer-profile` |
-| L3 通用业务 | `bangcle-obligation-summary` | Bangcle 项目履约义务汇总：按最终用户名称/客户名称检索全部项目履约义务工作项，罗列所属产线、标题、状态，下钻子交付/子验收任务... | `L3-business/skills/bangcle-obligation-summary` |
-| L3 通用业务 | `bangcle-project-retrospective` | Bangcle 项目复盘建议：在项目信息汇总基础上做深度分析，对照标准产品/服务基线与 PMBOK 知识域，输出产品差异/优化空间与项... | `L3-business/skills/bangcle-project-retrospective` |
-| L3 通用业务 | `bangcle-project-summary` | Bangcle 项目信息汇总：基于项目交付实施情况，从 ONES 等系统汇总客户名下全部项目/产品/工作项/交付物/责任人，输出结构化... | `L3-business/skills/bangcle-project-summary` |
+| L3 通用业务 | `bangcle-customer-profile` | Bangcle 客户画像分析：业务目标是制定客户画像，基于项目工作项/评论/附件与知识库，输出客户画像，重点为客户环境（云/OS/CP... | `L3-business/skills/bangcle-customer-profile` |
+| L3 通用业务 | `bangcle-obligation-summary` | Bangcle 项目履约义务汇总：业务目标是为指定的项目经理服务，参考历史项目的交付情况，按最终用户/客户检索全部项目履约义务工作项，... | `L3-business/skills/bangcle-obligation-summary` |
+| L3 通用业务 | `bangcle-project-retrospective` | Bangcle 项目复盘建议：业务目标是对项目或项目集（Program）做复盘，输出产品差异/优化空间与项目管理复盘（含责任方建议），... | `L3-business/skills/bangcle-project-retrospective` |
+| L3 通用业务 | `bangcle-project-summary` | Bangcle 项目信息汇总：业务目标是汇总项目交付实施情况，从 ONES 等系统汇总客户名下全部项目/产品/工作项/交付物/责任人，... | `L3-business/skills/bangcle-project-summary` |
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
 | L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
 | L2 基础设施 | `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 | `L2-infra/skills/ocr-digitalization` |
@@ -232,8 +232,8 @@ _自建技能总计: 16 个（L2: 6, L3: 5, L4: 5, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `76dca24` |
-| Commit 数 | 491 |
+| HEAD | `1d9af27` |
+| Commit 数 | 492 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
