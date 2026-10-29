@@ -85,13 +85,14 @@ python3 /Users/bangcle/.openclaw/workspace/L4-proprietary/skills/product-manager
 | 级别 | 处置 |
 |---|---|
 | 🔴 error | 必须修：源文件缺失→核实路径/补录；孤儿引用→清理或重建 |
-| 🟡 warn | 按业务判断：doc_type 归类→按文件名强规则重分类；无文档产品→服务类维保/定制无独立文档属正常，在报告标注；embedding 为空→建议重建索引 |
+| 🟡 warn | 按业务判断：doc_type 归类→按文件名强规则重分类；无文档产品→服务类维保/定制/第三方占位桶无独立文档属正常（第三方桶自动剔除），在报告标注；embedding 为空→建议重建索引 |
 | 🔵 info | 记录说明：kb_relation 空、version 缺失等 |
 
 ### 3. 已建立的校准规则（2026-10-29）
 
 - **doc_type 合法枚举**：`white_paper / sales_note / func_list / ppt / tech_white_paper / manual / faq / version_note / other`（`version_note` 为实际使用补充，`pdf` 不是角色类型，`user_manual` 并入 `manual`）。
 - **pdf 文件重分类**（按文件名）：含"使用手册/操作手册/部署/安装/接入"→`manual`；含"FAQ/常见问题"→`faq`；含"产品介绍/主打胶片/宣传页/彩页/简介/培训"→`sales_note`；软著/专利/检测报告/销售许可证/兼容认证证书→`other`。
+- **第三方占位桶识别**（2026-10-29 新增）：产品名含"非梆梆"的 3 个记账桶（id 191-193：其他（非梆梆产品/定制化开发/服务））用于合同标的归类第三方硬件/外购软件/转包服务，`status` 统一为 **`第三方产品/服务`**（非"未知"）。该状态为合法枚举，检准自动豁免其 summary/文档/目录价检查；导入器 `io.py` 对名称含"非梆梆"者自动写入此状态。
 - 数据库修改前**先备份**：`cp data/product_kb.db data/product_kb.db.bak-<日期>`。
 
 ## 五、常见坑

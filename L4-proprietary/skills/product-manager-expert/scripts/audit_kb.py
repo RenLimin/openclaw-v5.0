@@ -40,6 +40,9 @@ def main():
     cats = cur.execute("SELECT * FROM product_category").fetchall()
 
     valid_p = {r["id"] for r in products}
+    THIRD_PARTY_STATUS = "第三方产品/服务"
+    third_party_p = {r["id"] for r in products if r["status"] == THIRD_PARTY_STATUS}
+
     valid_line = {r["id"] for r in lines}
     valid_cat = {r["id"] for r in cats}
 
@@ -66,8 +69,9 @@ def main():
 
     no_code = [r["id"] for r in products if not r["code"]]
     if no_code: add(WARN, "NULL", f"产品 code 为空: {no_code}")
-    no_summary = [r["id"] for r in products if not r["summary"]]
+    no_summary = [r["id"] for r in products if not r["summary"] and r["id"] not in third_party_p]
     if no_summary: add(WARN, "NULL", f"产品 summary 为空: {no_summary}")
+    if third_party_p: add(INFO, "THIRDPARTY", f"第三方占位桶(无需summary/文档/目录价): {sorted(third_party_p)}")
     no_version = [r["id"] for r in products if not r["version_latest"]]
     if no_version: add(INFO, "NULL", f"产品 version_latest 为空(共{len(no_version)}): 前10 {no_version[:10]}")
 
@@ -97,8 +101,8 @@ def main():
 
     # ---------- C. 覆盖度 ----------
     doc_p = {r["product_id"] for r in docs}
-    no_doc = sorted(valid_p - doc_p)
-    if no_doc: add(WARN, "COVERAGE", f"无文档产品(共{len(no_doc)}): 前20 {no_doc[:20]}")
+    no_doc = sorted((valid_p - doc_p) - third_party_p)
+    if no_doc: add(WARN, "COVERAGE", f"无文档产品(共{len(no_doc)},已剔除第三方占位桶): 前20 {no_doc[:20]}")
 
     chunk_doc_ids = {r["doc_id"] for r in chunks}
     doc_ids = {r["id"] for r in docs}
@@ -120,7 +124,7 @@ def main():
     if bad_idx: add(WARN, "CONSIST", f"chunk_index 不连续文档(共{len(bad_idx)}): {bad_idx[:5]}")
 
     # ---------- D. 数据健康 ----------
-    bad_price = [r["id"] for r in skus if r["unit_price"] is not None and r["unit_price"] <= 0]
+    bad_price = [r["id"] for r in skus if r["unit_price"] is not None and r["unit_price"] <= 0 and r["product_id"] not in third_party_p]
     if bad_price: add(WARN, "PRICE", f"unit_price<=0(共{len(bad_price)}): {bad_price}")
     no_price = [r["id"] for r in skus if r["unit_price"] is None]
     if no_price: add(WARN, "PRICE", f"unit_price为空(共{len(no_price)}): {no_price}")
@@ -134,7 +138,7 @@ def main():
         add(INFO, "RELATION", "kb_relation 表为空(0行) — 知识图谱关系未构建")
 
     status_counts = collections.Counter(r["status"] for r in products)
-    unknown_status = [r["id"] for r in products if r["status"] in ("未知", "unknown", "") or r["status"] is None]
+    unknown_status = [r["id"] for r in products if r["status"] in ("未知", "unknown", "") or r["status"] is None]  # 第三方产品/服务 为合法枚举，不在此列
     if unknown_status: add(WARN, "STATUS", f"产品状态异常(共{len(unknown_status)}): {unknown_status}")
 
     # ---------- 汇总 ----------
