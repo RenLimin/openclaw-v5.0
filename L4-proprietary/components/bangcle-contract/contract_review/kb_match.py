@@ -171,9 +171,11 @@ def decide_satisfaction(results: List[KbMatchResult]) -> str:
             has_hard_fail = True
             continue
         if r.alert:
-            if any(k in (r.alert or "") for k in ("红线", "停售", "无SKU", "SKU状态", "未匹配", "低匹配度")):
-                # 红线/停售/无SKU = 不可满足
-                if "红线" in r.alert or "停售" in r.alert or "无SKU" in r.alert:
+            if any(k in (r.alert or "") for k in ("红线", "停售", "停用", "无SKU", "SKU状态", "未匹配", "低匹配度")):
+                # 红线/停售/停用(SKU状态)/无SKU = 不可满足
+                a = r.alert or ""
+                if ("红线" in a or "停售" in a or "停用" in a
+                        or "无SKU" in a or "SKU状态" in a):
                     has_hard_fail = True
                 else:
                     has_soft_warn = True

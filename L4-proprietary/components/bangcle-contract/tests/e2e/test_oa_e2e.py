@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from conftest import oa_session_available, OA_STATE
+from oa_session import oa_session_available, OA_STATE
 
 pytestmark = pytest.mark.skipif(
     not oa_session_available(),

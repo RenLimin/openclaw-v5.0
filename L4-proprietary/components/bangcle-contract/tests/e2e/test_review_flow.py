@@ -95,3 +95,45 @@ def test_cli_review_idempotent(sample_pdf, tmp_path):
         assert r.returncode == 0, r.stderr
         outs.append([line for line in r.stdout.splitlines() if "综合风险" in line])
     assert outs[0] == outs[1] == outs[2], "三次结果不一致: %s" % outs
+
+
+def test_cli_review_xlsx_readback(sample_pdf, tmp_path):
+    """P8 §8：--format xlsx 真实产出，用 openpyxl 回读三 Sheet（非仅文件存在）。"""
+    import openpyxl
+    db = tmp_path / "xlsx.db"
+    out = tmp_path / "xout"
+    r = subprocess.run(
+        [sys.executable, CLI, "--db", str(db), "--out-dir", str(out),
+         "review", "--file", sample_pdf, "--format", "xlsx"],
+        capture_output=True, text=True, timeout=180,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    files = list(out.glob("*.xlsx"))
+    assert files, "未生成 xlsx 报告"
+    wb = openpyxl.load_workbook(files[0])
+    # 三个 Sheet 齐全
+    assert "概览" in wb.sheetnames and "风险明细" in wb.sheetnames and "KB匹配" in wb.sheetnames
+    # 概览含免责声明 + 综合风险取值合法
+    overview = {wb["概览"].cell(row=i, column=1).value:
+                wb["概览"].cell(row=i, column=2).value
+                for i in range(1, wb["概览"].max_row + 1)}
+    assert overview.get("综合风险") in ("high", "medium", "low")
+    assert "免责声明" in str(overview.get("免责声明", ""))
+    # 风险明细：表头 + 至少 22 条受控规则（finding 数 == 规则库）
+    ws2 = wb["风险明细"]
+    assert ws2.max_row - 1 >= 22
+
+
+def test_cli_review_shows_step_progress(sample_pdf, tmp_path):
+    """P8 §8 / 进度条铁律：stdout 出现分步步骤提示。"""
+    db = tmp_path / "prog.db"
+    out = tmp_path / "pout"
+    r = subprocess.run(
+        [sys.executable, CLI, "--db", str(db), "--out-dir", str(out),
+         "review", "--file", sample_pdf],
+        capture_output=True, text=True, timeout=180,
+    )
+    assert r.returncode == 0, r.stdout + r.stderr
+    # 至少出现多个分步提示（摄取/数字化/解析/风险/参照/报告/持久化）
+    steps = [ln for ln in r.stdout.splitlines() if "…" in ln or "[" in ln]
+    assert len(steps) >= 3, "缺少分步进度提示:\n%s" % r.stdout

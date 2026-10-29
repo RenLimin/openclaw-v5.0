@@ -1,4 +1,4 @@
-"""E2E 配置：sys.path 注入 + OA 会话可用性探测（不可用则 skip，不伪造）。"""
+"""E2E 配置：sys.path 注入 + OA 会话 fixture（不可用则 skip，不伪造）。"""
 import os
 import sys
 
@@ -12,22 +12,16 @@ for p in (COMPONENT_ROOT, L3_ROOT):
     if p not in sys.path:
         sys.path.insert(0, p)
 
-OA_STATE = os.path.expanduser("~/.openclaw/data/clm-oa-recon/state.json")
-
-
-def oa_session_available() -> bool:
-    """探测 OA storage_state 是否可用（仅文件存在性 + 时效近似判断）。"""
-    if not os.path.isfile(OA_STATE):
-        return False
-    import json
-    try:
-        state = json.load(open(OA_STATE, encoding="utf-8"))
-    except Exception:
-        return False
-    cookies = state.get("cookies", [])
-    return any("bangcle.com" in (c.get("domain") or "") for c in cookies)
+from oa_session import OA_STATE, oa_session_available
 
 
 @pytest.fixture
 def oa_state_path():
+    return OA_STATE
+
+
+@pytest.fixture
+def require_oa():
+    if not oa_session_available():
+        pytest.skip("OA storage_state 不可用（E2E 环境不满足，留证跳过，不伪造）")
     return OA_STATE

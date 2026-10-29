@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import (
+from file_fixtures import (
     make_native_pdf,
     make_docx,
     make_text_image,
