@@ -83,10 +83,13 @@ contractctl report <review_id> --format xlsx
 
 ## 5. OA / 凭据运行说明
 
-- OA 为 **泛微 e-cology 9 Cube**，主键 `billid`；会话经 IAM SSO 换票，`storage_state` 有效期约 12h。
-- Cookie/state 存本地 `data/`（gitignored），**绝不入库、不打印**。
+- OA 为 **泛微 e-cology 9 Cube**，主键 `billid`；会话经 IAM SSO 换票（IAM 登录后点「OA协同办公平台」应用卡片换票，直导 OA / 跨 context 注入 cookie 均不建立 ecology 会话）。
+- **会话有效期：实测约 2 小时 idle 超时**（2026-10-29 实测 13:42 建 / 15:43 失效；非早期侦察估的 12h）。落盘 cookie 全为 session cookie（`expires=-1`：`ecology_JSessionid`/`JSESSIONID`/`__randcode__`），由泛微 e-cology 服务端控制，**客户端不可延长**。
+- Cookie/state 存本地 `~/.openclaw/data/clm-oa-recon/state.json`（权限 600，gitignored），**绝不入库、不打印**。
 - Cube REST 失败（403/字段懒加载）自动降级浏览器：CDP Chrome → `iframe#mainFrame` → 取附件。
-- 会话过期自动 IAM 重登（headless + IMAP 读验证码），无需人工。
+- **会话过期需手动重登**：`contractctl oa-login`（headless IAM + IMAP 读验证码）。注意每次重建**消耗一次真实 IMAP 验证码**，非完全无人值守；命令落盘前会用探针 billid 跑 `checkCardRight`，验证通过才报「✅ 已建立」，绝不假成功。
+- **判登录成功看 DOM 不看 URL**：IAM SPA 登录后 URL hash 可能停在 `#/login`，须以页面内容（含「任立民/首页」）为准。
+- **E2E 行为**：OA 会话失效时 TC-OA-01~03 自动 **skip 留证**（禁止伪 pass），刷新会话后即恢复真跑。
 
 ---
 
@@ -95,7 +98,7 @@ contractctl report <review_id> --format xlsx
 | 现象 | 排查 / 处理 |
 |---|---|
 | `product_kb.db` 找不到 | 见 §3 重建；kb_match 会标注"未做参照"而非静默通过 |
-| OA 返回「登录信息超时 002」 | storage_state 失效，跑 `contractctl oa-login` |
+| OA 返回「登录信息超时 002」 | 会话约 2h idle 过期（正常现象），跑 `contractctl oa-login` 重建（耗一次 IMAP 验证码）；E2E 此时自动 skip 留证 |
 | Cube 接口 403 | 账号无该卡片权限或会话异常；系统自动转浏览器；仍失败报"账号权限" |
 | CDP 连不上 9222 | Chrome 未以 remote-debugging 启动；检查 BDMS browser_adapter 启动逻辑；确认 `NO_PROXY=*` |
 | IMAP 取到旧验证码 | 登录脚本须"提交前记基准、只取本次新到、倒序最新"（已在 DETAIL 注明） |
@@ -118,3 +121,4 @@ contractctl report <review_id> --format xlsx
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-10-27 | v1.0 | 初版：MVP 分析闭环运维 + Cube/浏览器兜底排查 |
+| 2026-10-29 | v1.0 | 更正 OA 会话有效期为实测约 2h idle（原误记 12h）；补换票/落盘/验证码/DOM 判定/E2E skip 等运维事实 |
