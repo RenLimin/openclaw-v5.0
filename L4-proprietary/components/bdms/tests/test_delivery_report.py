@@ -100,7 +100,7 @@ class TestSuspiciousFlow:
         import json
         conn = _db.get_connection(db_path)
         try:
-            columns = ["合同编号", "项目名称", "签约日期"]
+            columns = ["ID", "销售合同编号", "标题", "所属产线", "立项日期"]
             conn.execute(
                 "DELETE FROM dr_sheet_row WHERE month = ?", (month,))
             for i, r in enumerate(rows):
@@ -112,19 +112,22 @@ class TestSuspiciousFlow:
             conn.execute(
                 "INSERT OR REPLACE INTO dr_sheet_meta (month, sheet, columns, row_count) "
                 "VALUES (?, '签约', ?, ?)",
-                (month, json.dumps(columns), len(rows)),
+                (month, json.dumps(columns, ensure_ascii=False), len(rows)),
             )
             conn.commit()
         finally:
             conn.close()
 
     def test_collect_suspicious(self, db_path, validator):
+        # v1.1 对齐真实宽表列名（ID/销售合同编号/标题/所属产线/立项日期）
         self._seed_month(db_path, "202606", [
-            {"合同编号": "A", "项目名称": "p1", "签约日期": "2026-06-01"},
-            {"合同编号": "", "项目名称": "p2", "签约日期": "bad-date"},
+            {"ID": "#1", "销售合同编号": "A", "标题": "p1",
+             "所属产线": "L1", "立项日期": "2026-06-01"},
+            {"ID": "#2", "销售合同编号": "", "标题": "p2",
+             "所属产线": "L1", "立项日期": "bad-date"},
         ])
         result = validator.collect_suspicious("202606")
-        assert result["summary"]["total_errors"] >= 2  # 空编号 + 非法日期
+        assert result["summary"]["total_errors"] >= 2  # 空合同编号 + 非法日期
         assert any(e["issue"] == "null" for e in result["errors"])
         assert any(e["issue"] == "type_date" for e in result["errors"])
 

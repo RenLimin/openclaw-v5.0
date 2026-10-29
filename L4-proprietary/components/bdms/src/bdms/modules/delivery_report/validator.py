@@ -19,14 +19,46 @@ import pandas as pd
 
 from bdms.core import db as _db
 
-# 各 Sheet 必填列（黄金基准解析结论）
+# 各 Sheet 必填列。
+# v1.1 订正（2026-10-29，对齐 202606 真实宽表 schema，17181 行实测）：
+#   旧值照黄金基准精简 demo 表列名编写，与真实导出（76 列宽表）严重错位，
+#   导致 2.5 万条误报。以下列名均来自真实 dr_sheet_row.data 表头且空值率为 0。
+#   - 签约/异常项目实为本月全部履约项导出（行数相等 17181/17177），不是仅异常行；
+#   - POC 的「销售合同编号」「BI履约ID」大量为空属正常（未关联合同），不设必填；
+#   - 异常项目「异常报备日期」仅对真正异常行有值，全量导出时整列空 → 不设必填。
 REQUIRED_COLS: Dict[str, List[str]] = {
-    "签约": ["合同编号", "项目名称", "所属产线", "签约日期"],
-    "POC&提前实施": ["合同编号", "项目名称", "所属产线"],
-    "异常项目": ["项目名称", "异常报备日期"],
-    "确收交接": ["合同编号", "确收金额"],
-    "验收交接": ["合同编号", "验收日期"],
+    "签约": ["ID", "销售合同编号", "标题", "所属产线", "立项日期"],
+    "POC&提前实施": ["ID", "标题", "所属产线", "立项日期"],
+    "异常项目": ["ID", "销售合同编号", "客户名称", "标题", "状态"],
+    "确收交接": ["ID", "合同编号", "客户名称", "交接日期", "标题"],
+    "验收交接": ["ID", "合同编号", "客户名称", "交接日期", "标题"],
 }
+
+# 业务唯一键（去重）。
+# v1.1：真实宽表里同一合同编号在确收/验收表天然多行（一合同多履约项/多次交接），
+# 不能拿「合同编号」当唯一键（旧规则误报 876 行）。履约项粒度的唯一键是 ID；
+# 同一 ID 对应不同合同/日期才是真异常（实测确收/验收各 8 行，需人工核对）。
+DUP_KEYS: Dict[str, List[str]] = {
+    "签约": ["ID"],
+    "POC&提前实施": ["ID"],
+    "异常项目": ["ID"],
+    "确收交接": ["ID"],
+    "验收交接": ["ID"],
+}
+
+# 源系统哨兵值：语义等同"空"，不作为必填缺失或类型非法逐条人工处理。
+# （#N/A、Excel 零时刻 00:00:00、NaN/NaT 等，多为公式/导出产物）
+_SENTINELS = {
+    "", "#n/a", "nan", "nat", "#ref!", "#value!", "#div/0!",
+    "null", "none", "00:00:00", "00:00:00.0", "-",
+}
+
+_DATE_RE = re.compile(r"^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$")
+# 带时间后缀：2025-11-14 00:00:00（可截断为日期，视为合法）
+_DATE_TIME_RE = re.compile(r"^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}[ T]\d{1,2}:\d{2}(:\d{1,2})?$")
+# Excel 浮点日期序列：20260609.0（YYYYMMDD，可转日期，视为合法）
+_DATE_FLOAT8_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})(\.0+)?$")
+_NUMERIC_RE = re.compile(r"^-?\d+(\.\d+)?$")
 
 # 枚举约束（黄金基准 Sheet-15 图例；业务列 → legend 列名）
 # v1.0.1 订正：废弃不存在的「签约.履约状态」；仅启用真实数据验证过的映射
@@ -38,8 +70,7 @@ ENUM_COLS: Dict[str, Dict[str, str]] = {
     },
 }
 
-_DATE_RE = re.compile(r"^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$")
-_NUMERIC_RE = re.compile(r"^-?\d+(\.\d+)?$")
+
 
 
 def get_enum_options(db_path, sheet: str, column: str) -> List[str]:
@@ -88,6 +119,18 @@ class DeliveryReportValidator:
         """实例便捷方法：委托模块级 get_enum_options。"""
         return get_enum_options(self.db_path, sheet, column)
 
+    @staticmethod
+    def _is_empty(v: Any) -> bool:
+        """统一空值判定：None / NaN / 空白 / 源系统哨兵值。"""
+        if v is None:
+            return True
+        if isinstance(v, float) and pd.isna(v):
+            return True
+        s = str(v).strip()
+        if not s:
+            return True
+        return s.lower() in _SENTINELS
+
     def validate_not_null(self, df: pd.DataFrame,
                           required_cols: List[str]) -> List[Dict]:
         """R01-R05: 非空检查。返回 [{row, col, value}]。"""
@@ -98,22 +141,26 @@ class DeliveryReportValidator:
                                "issue": "missing_column", "value": None})
                 continue
             for idx, v in df[col].items():
-                if v is None or (isinstance(v, float) and pd.isna(v)) \
-                        or (isinstance(v, str) and not v.strip()):
+                if self._is_empty(v):
                     errors.append({"row": int(idx), "col": col,
-                                   "issue": "null", "value": None})
+                                   "issue": "null",
+                                   "value": None if v is None else str(v)[:50]})
         return errors
 
     def validate_data_type(self, df: pd.DataFrame,
                            col_types: Dict[str, str]) -> List[Dict]:
-        """R06-R09: 数据类型检查（date/numeric/text）。"""
+        """R06-R09: 数据类型检查（date/numeric）。
+
+        v1.1：哨兵值（#N/A / 00:00:00 等）语义为空，跳过（空值归非空规则）；
+        日期宽容接受「带时间后缀」与「Excel float YYYYMMDD」两种可规范化形态。
+        """
         errors = []
         for col, typ in col_types.items():
             if col not in df.columns:
                 continue
             for idx, v in df[col].items():
-                if v is None or (isinstance(v, str) and not v.strip()):
-                    continue  # 空值由非空规则管
+                if self._is_empty(v):
+                    continue  # 空/哨兵由非空规则管
                 s = str(v).strip()
                 if typ == "date" and not self._is_date(s):
                     errors.append({"row": int(idx), "col": col,
@@ -132,7 +179,7 @@ class DeliveryReportValidator:
                 continue
             allowed_set = {str(a).strip() for a in allowed}
             for idx, v in df[col].items():
-                if v is None or (isinstance(v, str) and not v.strip()):
+                if self._is_empty(v):
                     continue
                 if str(v).strip() not in allowed_set:
                     errors.append({"row": int(idx), "col": col,
@@ -215,9 +262,10 @@ class DeliveryReportValidator:
             }
             for e in self.validate_data_type(df, date_cols):
                 errors.append({"sheet": sheet, **e})
-            # 去重（合同编号）
-            if sheet in ("签约", "确收交接", "验收交接"):
-                for e in self.validate_duplicates(df, ["合同编号"]):
+            # 业务唯一键去重（v1.1：履约项粒度 ID，非合同编号）
+            key_cols = DUP_KEYS.get(sheet)
+            if key_cols:
+                for e in self.validate_duplicates(df, key_cols):
                     errors.append({"sheet": sheet, **e})
             # 行数合理性（与上月）
             prev = self._prev_month_rows(month, sheet)
@@ -309,16 +357,29 @@ class DeliveryReportValidator:
 
     @staticmethod
     def _is_date(s: str) -> bool:
+        """宽容日期判定：ISO 分隔 / 带时间后缀 / Excel float(YYYYMMDD)。"""
+        s = str(s).strip()
         if _DATE_RE.match(s):
             try:
-                datetime.strptime(
-                    s.replace("/", "-").replace(".", "-"), "%Y-%m-%d"
-                )
+                datetime.strptime(s.replace("/", "-").replace(".", "-"),
+                                  "%Y-%m-%d")
                 return True
             except ValueError:
                 return False
+        if _DATE_TIME_RE.match(s):
+            head = re.split(r"[ T]", s, 1)[0]
+            try:
+                datetime.strptime(head.replace("/", "-").replace(".", "-"),
+                                  "%Y-%m-%d")
+                return True
+            except ValueError:
+                return False
+        mf = _DATE_FLOAT8_RE.match(s)
+        if mf:
+            mo, da = int(mf.group(2)), int(mf.group(3))
+            return 1 <= mo <= 12 and 1 <= da <= 31
         return False
 
     @staticmethod
     def _is_numeric(s: str) -> bool:
-        return bool(_NUMERIC_RE.match(s))
+        return bool(_NUMERIC_RE.match(str(s).strip()))

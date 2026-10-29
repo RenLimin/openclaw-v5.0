@@ -83,16 +83,19 @@ def server(tmp_path_factory):
     tmp = tmp_path_factory.mktemp("e2e")
     dbp = tmp / "e2e.db"
     _db.init_db(dbp)
-    # 造数据：行0 合同编号空；行1 签约日期非法
+    # v1.1 对齐真实宽表列名：签约行0 销售合同编号空(null)；行1 立项日期非法(type_date)
     raw = {"签约": pd.DataFrame({
-        "合同编号": ["", "C-002"],
-        "项目名称": ["P-1", "P-2"],
+        "ID": ["#1", "#2"],
+        "销售合同编号": ["", "XSZS-002"],
+        "标题": ["P-1", "P-2"],
         "所属产线": ["产线A", "产线B"],
-        "签约日期": ["2026/6/3", "bad-date"],
-        "金额": ["100", "200"],
+        "立项日期": ["2026-06-03", "bad-date"],
     }), "异常项目": pd.DataFrame({
-        "项目名称": ["P-X", "P-Y"],
-        "异常报备日期": ["2026/6/1", "2026/6/2"],
+        "ID": ["#11", "#12"],
+        "销售合同编号": ["X-01", "X-02"],
+        "客户名称": ["客户X", "客户Y"],
+        "标题": ["PX", "PY"],
+        "异常报备日期": ["", ""],
         "状态": ["实施未开始", "义务已拆分"],
     })}
     DeliveryReportEngine(dbp).persist("202610", raw)
@@ -145,12 +148,12 @@ def test_e01_calibrate_from_issues(page):
     rows = page.locator('#review-issues-list table tbody tr')
     assert rows.count() == 2
 
-    # 第一条（行0，合同编号空）点校准
+    # 第一条（行0，销售合同编号空）点校准
     page.locator('#review-issues-list table tbody tr').first.locator(
         'button:has-text("校准")').click()
     page.wait_for_selector('#calibration-modal', state='visible')
     # 校验对话框只读字段
-    assert page.input_value('#cal-col') == '合同编号'
+    assert page.input_value('#cal-col') == '销售合同编号'
     assert page.input_value('#cal-original') == ''
     # 填校准值 + 原因
     page.fill('#cal-value', 'C-FIXED-001')
@@ -193,18 +196,18 @@ def test_e04_calibrate_from_browse_cell(page):
     """E-04：数据浏览点单元格发起校准并保存（行1 bad-date 修正）。"""
     page.click('.tabs-tab[data-tab="browse"]')
     page.wait_for_selector('#data-table-container table tbody tr')
-    # 第二数据行（0-based 行1）的「签约日期」列单元格：用表头定位列号
+    # 第二数据行（0-based 行1）的「立项日期」列单元格：用表头定位列号
     page.wait_for_function(
         """() => {
           const heads = [...document.querySelectorAll('#data-table-container table thead th')];
-          const idx = heads.findIndex(h => h.innerText.trim() === '签约日期');
+          const idx = heads.findIndex(h => h.innerText.trim() === '立项日期');
           if (idx < 0) return false;
           const cell = document.querySelectorAll('#data-table-container table tbody tr')[1].cells[idx];
           cell.click();
           return true;
         }""")
     page.wait_for_selector('#calibration-modal', state='visible')
-    assert page.input_value('#cal-col') == '签约日期'
+    assert page.input_value('#cal-col') == '立项日期'
     assert page.input_value('#cal-row') == '1'
     page.fill('#cal-value', '2026-06-05')
     page.fill('#cal-reason', '日期格式错误修正')
