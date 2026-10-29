@@ -140,6 +140,27 @@ def page(request, server):
         browser.close()
 
 
+def test_e12_issue_cells_highlighted_in_browse(page):
+    """E-12：待审核单元格在数据浏览中高亮+⚠角标，悬浮显示原因（供结合上下文判断）。"""
+    page.click('.tabs-tab[data-tab="browse"]')
+    page.wait_for_selector('#data-table-container table tbody tr')
+    # fixture：签约行0 销售合同编号空(null) + 行1 立项日期非法(type_date) → 本页 2 处
+    page.wait_for_function(
+        "() => document.querySelectorAll('td.cell-issue-pending').length === 2")
+    highlighted = page.locator('td.cell-issue-pending')
+    assert highlighted.count() == 2
+    # 图例计数同步 + 每个高亮格带 ⚠ 角标
+    assert page.locator('#browse-issue-page-count').inner_text() == '2'
+    assert page.locator('td.cell-issue-pending .cell-issue-badge').count() == 2
+    # 悬浮提示含"待审核"原因（&#10; 解码为换行）
+    tip = (highlighted.nth(0).get_attribute('title') or '')
+    assert '待审核' in tip
+    # 点高亮格 → 直接打开该格校准框（看原始上下文后修正）
+    highlighted.nth(0).click()
+    page.wait_for_selector('#calibration-modal', state='visible')
+    assert page.input_value('#cal-col') == '销售合同编号'
+
+
 def test_e01_calibrate_from_issues(page):
     """E-01：问题清单点校准 → 填值+原因 → 保存，问题转 confirmed。"""
     # 月份自动选中 202610；切到问题清单

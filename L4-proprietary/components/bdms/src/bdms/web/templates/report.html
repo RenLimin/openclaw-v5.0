@@ -6,6 +6,27 @@
 {% set active_page = 'report' %}
 
 {% block content %}
+<style>
+  /* 待审核单元格高亮（数据浏览） */
+  td.cell-issue { position: relative; }
+  td.cell-issue-pending {
+    background: rgba(220, 53, 69, 0.12) !important;
+    box-shadow: inset 0 0 0 2px var(--c-danger);
+    font-weight: 600;
+  }
+  td.cell-issue-pending:hover { background: rgba(220, 53, 69, 0.22) !important; }
+  td.cell-issue .cell-issue-badge {
+    display: inline-block; margin-left: 4px; font-size: 0.7rem;
+    line-height: 1; vertical-align: middle;
+  }
+  .cell-issue-legend { display:flex; gap:1rem; align-items:center; flex-wrap:wrap;
+    font-size:0.8rem; color:var(--c-text-secondary); margin:0.25rem 0 0.5rem; }
+  .cell-issue-legend .swatch {
+    display:inline-block; width:12px; height:12px; border-radius:2px;
+    margin-right:4px; vertical-align:middle;
+    background:rgba(220,53,69,0.18); box-shadow: inset 0 0 0 2px var(--c-danger);
+  }
+</style>
 {{ page_header(
     title='交付月报',
     subtitle='生成 / 审核 / 导出 / 浏览月度交付报表（15 Sheet）',
@@ -423,6 +444,7 @@ async function loadSheets(month) {
 function selectMonth(month) {
   if (!month) { currentMonth = null; return; }
   currentMonth = month;
+  _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 切月失效问题缓存
 
   // 更新顶部下拉选中
   const sel = document.getElementById('month-select');
@@ -917,6 +939,8 @@ async function fetchPage(month, sheet, page) {
   try {
     const params = new URLSearchParams({ page, page_size: 50 });
     if (search) params.set('search', search);
+    // 并行拉数据 + 当月问题清单（量小，一次拉全月，翻页/切 sheet 复用缓存）
+    const issuesP = _loadBrowseIssues(month);
     const r = await fetch(`/api/report/data/${month}/${encodeURIComponent(sheet)}?${params.toString()}`);
     if (!r.ok) {
       const err = await r.json();
@@ -924,7 +948,7 @@ async function fetchPage(month, sheet, page) {
       pagContainer.innerHTML = '';
       return;
     }
-    const d = await r.json();
+    const [d, issueMap] = await Promise.all([r.json(), issuesP]);
     currentPage = d.page;
     totalPages = d.total_pages;
 
@@ -938,18 +962,35 @@ async function fetchPage(month, sheet, page) {
     const dataCols = cols.filter(c => c !== 'row_index');
     _browseCols = dataCols;
     _browseRows = d.rows;  // 全局缓存：onclick 只传数组下标，不内联 JSON
+    _browseCellIssues = {};  // "全局行号\x00列" → issue（点击高亮格直接带 issue_id）
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
     let html = `<p style="margin-bottom:0.5rem;">共 <strong>${d.total}</strong> 行${search ? `（搜索: "${search}"）` : ''}，第 ${d.page}/${d.total_pages} 页</p>`;
+    html += `<div class="cell-issue-legend"><span><span class="swatch"></span>待审核单元格（点击查看原因并校准；本页 <span id="browse-issue-page-count">0</span> 处）</span></div>`;
     html += '<div class="table-wrapper"><table class="table"><thead><tr>';
     dataCols.forEach(c => html += `<th>${c}</th>`);
     html += '<th style="width:70px;">校准</th>';
     html += '</tr></thead><tbody>';
+    let pageIssueCount = 0;
     d.rows.forEach((row, ri) => {
       html += '<tr>';
       dataCols.forEach((c, ci) => {
         const v = row[c];
-        const cell = String(v).substring(0,50) + (String(v).length > 50 ? '...' : '');
+        const raw = String(v ?? '');
+        const cell = raw.substring(0,50) + (raw.length > 50 ? '...' : '');
+        const mapKey = `${row.row_index}\u0000${c}`;
+        const issue = issueMap.get(mapKey);
+        let cls = 'cursor-pointer';
+        let badge = '';
+        let tip = esc(raw);
+        if (issue) {
+          pageIssueCount++;
+          _browseCellIssues[mapKey] = issue;
+          cls += ' cell-issue cell-issue-pending';
+          badge = '<span class="cell-issue-badge" title="待审核">⚠️</span>';
+          tip = `⚠️ 待审核：${esc(issue.message || issue.rule_code)}&#10;原值：${esc(raw) || '（空）'}`;
+        }
         // 单元格可点：发起该单元格校准（只传行/列下标）
-        html += `<td title="${String(v).replace(/"/g,'&quot;')}" onclick="openCalibrationAtBrowse(${ri}, ${ci})" style="cursor:pointer;" onmouseover="this.style.background='var(--c-surface)'" onmouseout="this.style.background=''">${cell}</td>`;
+        html += `<td class="${cls}" title="${tip}" onclick="openCalibrationAtBrowse(${ri}, ${ci})" onmouseover="this.style.background='var(--c-surface)'" onmouseout="this.style.background=''">${cell}${badge}</td>`;
       });
       // 校准操作列：发起该行第一列校准（点击单元格可改其他列）
       html += `<td><button class="btn btn-sm" onclick="openCalibrationAtBrowse(${ri}, 0)">校准</button></td>`;
@@ -957,6 +998,8 @@ async function fetchPage(month, sheet, page) {
     });
     html += '</tbody></table></div>';
     container.innerHTML = html;
+    const _pc = document.getElementById('browse-issue-page-count');
+    if (_pc) _pc.textContent = pageIssueCount;
 
     // 分页
     renderPagination(pagContainer, month, sheet, totalPages, currentPage);
@@ -1285,6 +1328,7 @@ async function resolveIssue(issueId, action) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || '处理失败');
       Toast.success(`✅ ${actionLabel}成功${d.changed === false ? '（已处理过）' : ''}`);
+      _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
       // 刷新问题列表 + 顶部 KPI（loadReviewStatus 会重算 total_errors/pending_fixes）
       loadReviewIssues();
       loadReviewStatus(currentMonth);
@@ -1299,6 +1343,27 @@ let _calContext = null;  // {month, sheet, row_index, column_name, original_valu
 let _issueCache = [];    // 问题清单缓存（onclick 按下标取，不内联 JSON）
 let _browseRows = [];    // 数据浏览行缓存
 let _browseCols = [];    // 数据浏览列缓存
+let _browseCellIssues = {};  // "全局行号\u0000列" → issue（本页）
+let _browseIssueCacheMonth = null;  // 问题缓存所属月
+let _browseIssueCachePromise = null;  // 同月复用同一次拉取
+
+// 拉当月全部问题 → 返回 Map("全局行号\u0000列" → issue)，只收当前 sheet
+async function _loadBrowseIssues(month) {
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  if (_browseIssueCacheMonth !== month || !_browseIssueCachePromise) {
+    _browseIssueCacheMonth = month;
+    _browseIssueCachePromise = fetch(`/api/report/review-issues/${month}?status_filter=pending`)
+      .then(r => r.json())
+      .catch(() => ({ issues: [] }));
+  }
+  const d = await _browseIssueCachePromise;
+  const m = new Map();
+  (d.issues || []).forEach(it => {
+    if (it.sheet === sheet)
+      m.set(`${it.row_index}\u0000${it.column_name}`, it);
+  });
+  return m;
+}
 
 function _calInputType(col) {
   // 与后端口径一致：日期/时间列 → date；金额/数量/天数/人数/成本 → number
@@ -1317,7 +1382,8 @@ function openCalibrationAtBrowse(ri, ci) {
   const row = _browseRows[ri];
   const col = _browseCols[ci];
   if (!row || !col) return;
-  openCalibrationForCell(row, col);
+  const hit = _browseCellIssues[`${row.row_index}\u0000${col}`];
+  openCalibrationForCell(row, col, hit || null);
 }
 
 function openCalibrationForIssue(issue) {
@@ -1333,7 +1399,7 @@ function openCalibrationForIssue(issue) {
   _populateCalModal();
 }
 
-function openCalibrationForCell(row, col) {
+function openCalibrationForCell(row, col, issue) {
   if (!currentMonth) return;
   const month = currentMonth;
   const sheet = document.getElementById('view-sheet').value;
@@ -1342,8 +1408,9 @@ function openCalibrationForCell(row, col) {
     sheet: sheet,
     row_index: row.row_index,
     column_name: col,
-    original_value: row[col] === '' ? null : row[col],
-    issue_id: null,
+    original_value: issue ? (issue.original_value || null)
+                          : (row[col] === '' ? null : row[col]),
+    issue_id: issue ? issue.id : null,
   };
   _populateCalModal();
 }
@@ -1435,6 +1502,7 @@ async function saveCalibration() {
     }
     Toast.success('✅ 校准已保存，并触发自动重校验');
     closeModal('calibration-modal');
+    _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
     // 刷新相关视图
     if (typeof loadReviewIssues === 'function') loadReviewIssues();
     if (typeof loadReviewStatus === 'function') loadReviewStatus(c.month);
@@ -1459,6 +1527,7 @@ async function revokeCalibration(month, sheet, row_index, column_name) {
       const d = await r.json();
       if (!r.ok) throw new Error(d.detail || d.error || '撤销失败');
       Toast.success('✅ 校准已撤销，原始值恢复');
+      _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
       if (typeof loadReviewIssues === 'function') loadReviewIssues();
       if (typeof loadReviewStatus === 'function') loadReviewStatus(month);
       if (typeof loadTable === 'function') loadTable();
