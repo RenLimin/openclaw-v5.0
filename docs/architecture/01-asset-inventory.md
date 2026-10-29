@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-29 16:57 UTC+08:00
+最后生成：2026-10-29 17:25 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -39,13 +39,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 110 个（可用 99）
+**总计** 111 个（可用 100）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 31 | 插件附带技能 |
+| `openclaw-extra` | 32 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -55,6 +55,7 @@
 | L4 专有业务 | `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `L4-proprietary/skills/bangcle-ppt` |
 | L4 专有业务 | `bangcle-project-manager-expert` | Bangcle 项目管理专家 — L4 层 Bangcle 项目管理相关的统一入口。识别项目管理意图并路由协调：交付实施台账、履约义务... | `L4-proprietary/skills/bangcle-project-manager-expert` |
 | L4 专有业务 | `bdms-web-ui-design` |  | `L4-proprietary/skills/bdms-web-ui-design` |
+| L4 专有业务 | `contract-manager-expert` | Bangcle 合同管理专家 — L4 层 Bangcle 合同管理相关的统一入口。合同智能审查（全文扫描/数字化/22 条风险规则）... | `L4-proprietary/skills/contract-manager-expert` |
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
 | L4 专有业务 | `product-kb` | Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索 | `L4-proprietary/skills/product-kb` |
@@ -71,7 +72,7 @@
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 18 个（L2: 6, L3: 5, L4: 7, 根目录: 0）_
+_自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -234,8 +235,8 @@ _自建技能总计: 18 个（L2: 6, L3: 5, L4: 7, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `2c3e39f` |
-| Commit 数 | 501 |
+| HEAD | `66cf80d` |
+| Commit 数 | 502 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

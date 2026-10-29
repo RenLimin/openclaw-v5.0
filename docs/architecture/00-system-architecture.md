@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 5.5 (2026-10-29 — 新增 L4 Bangcle 项目管理专家统一入口 bangcle-project-manager-expert / PJME-001，路由 L3 项目管理四技能+BDMS+ONES；架构文档补登 L3 层技能表) |
+| 文档版本 | 5.6 (2026-10-29 — 新增 L4 Bangcle 合同管理专家统一入口 contract-manager-expert / CME-001，路由 bangcle-contract/product-kb/contract-approval/contract-management/office-contract；bangcle-contract 状态转已上线) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
 | 决策状态 | 5 层架构已锁定(ADR-012); 31 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
@@ -642,7 +642,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 健康管理系统 | — | `L3-business/components/health-management/` | 体检/健康计划/用药/指标/风险评估/档案管理 | ✅ 已上线 |
 | 办公业务组件 | ADR-029 | `L3-business/components/office-business/` | 合同/方案/报告/演示模板 + 角色定义 + 变量系统 | ✅ 已上线 |
 | 家庭理财引擎 | ADR-026/027 | `L3-business/components/finance-engine/` | 账户/贷款/保险/投资/利率/建议 6 大引擎 + Web UI | ✅ 已上线 |
-| 通用合同管理专家 | — | `L3-business/components/contract-management/` | 通用合同管理纯逻辑核心（状态机 / 风险规则 / 分级审批 / 金额工具 / OA 连接器抽象），CLM-GEN-001 | 🚧 建设中 |
+| 通用合同管理专家 | — | `L3-business/components/contract-management/` | 通用合同管理纯逻辑核心（状态机 / 风险规则 CHECK_RULES / 分级审批 / 金额工具 / OA 连接器抽象），CLM-GEN-001，73 passed；统一入口 `contract-manager-expert`（CME-001） | ✅ 已上线 |
 
 > **命名对齐**：`finance_engine` 是 `finance-engine` 的 symlink，两者等价。
 
@@ -671,7 +671,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 收入确认引擎 | — | `L4-proprietary/components/revenue-recognition/` | ASC 606 / IFRS 15 收入确认：合同识别→履约义务→价格分配→时点/时段确认→报表（v1 + v2 双版本） | ✅ 已上线 |
 | CISSP 学习系统(v1) | — | `L4-proprietary/components/.deprecated/cissp-learning/` | 已被 cissp-trainer(v2) 替代 | 🗑️ 已废弃 |
 | Bangcle 产品知识库 | — | `L4-proprietary/components/product-kb/` | 产品信息查询、合同标的匹配、文档知识检索（8 产品线 / 37 分类 / 193 产品 / 385 SKU / 900+ 文档），PKB-001 | ✅ 已上线 |
-| Bangcle 合同管理专家 | — | `L4-proprietary/components/bangcle-contract/` | 泛微 OA + 企业微信集成，合同全文扫描解析 + 产品知识库参照分析，CLM-BANGCLE-001 | 🚧 建设中 |
+| Bangcle 合同管理专家 | — | `L4-proprietary/components/bangcle-contract/` | 合同智能审查五步闭环（数字化/22 条风险规则/产品知识库参照）+ 泛微 OA Cube 集成，CLM-BANGCLE-001，125 passed/覆盖率95%；统一入口 `contract-manager-expert`（CME-001） | ✅ 已上线 |
 
 **L4 层技能**（`L4-proprietary/skills/`）:
 
@@ -679,6 +679,7 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 |---|---|---|---|
 | **bangcle-project-manager-expert** | `L4-proprietary/skills/bangcle-project-manager-expert/` | **Bangcle 项目管理相关统一入口**：意图识别+路由协调 L3 项目管理四技能（台账/履约/复盘/客户画像）+ delivery-center(BDMS) + ones-browser-export（PJME-001，不管产品/合同/PPT） | ✅ 已上线 |
 | **product-manager-expert** | `L4-proprietary/skills/product-manager-expert/` | **Bangcle 产品相关统一入口**：产品咨询解答、跨产品组合方案、知识库检准与维护 + product-kb 数据查询路由（PME-001，不管合同/PPT/项目） | ✅ 已上线 |
+| **contract-manager-expert** | `L4-proprietary/skills/contract-manager-expert/` | **Bangcle 合同管理相关统一入口**：合同智能审查/风险扫描/标的参照直接产出，路由协调 contract-approval（L3）/contract-management（L3）/office-contract/product-kb（CME-001，不管产品/PPT/项目/收入） | ✅ 已上线 |
 | **product-kb** | `L4-proprietary/skills/product-kb/` | Bangcle 产品知识库：产品信息查询、合同标的匹配、文档知识检索（PKB-001） | ✅ 已上线 |
 | **bangcle-ppt** | `L4-proprietary/skills/bangcle-ppt/` | Bangcle PPT 模板系统：官方 VI 规范的 PPT 生成能力（CPT-012） | ✅ 已上线 |
 | **ones-browser-export** | `L4-proprietary/skills/ones-browser-export/` | ONES 浏览器自动化数据导出（osascript 控制 Chrome 导出 CSV） | ✅ 已上线 |
@@ -1189,6 +1190,8 @@ L4 专有业务
 | L4 | office-contract | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L4 | revenue-recognition | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L4 | product-kb | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L4 | bangcle-contract | ✅ | ✅ | ✅ | ✅ (125/0skip) | ✅ | ✅ 完成 |
+| L3 | contract-management | ✅ | ✅ | ✅ | ✅ (73/73) | — | ✅ 完成 |
 
 > **2026-10-04 进度**：全部 33 个资产（L2: 19, L3: 7, L4: 7）5 件套全部补齐。
 
@@ -1325,6 +1328,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-29 | **5.6** | **Bangcle 合同管理专家统一入口**：① 新增 L4 技能 `contract-manager-expert`（CME-001），确立为 L4 层 Bangcle「合同管理相关」统一入口（核心职责=合同智能审查/风险/标的参照直接产出，路由 `bangcle-contract`；审批框架→`contract-approval` L3；通用纯逻辑/规则库→`contract-management` L3；Office 审批流→`office-contract`；标的匹配→`product-kb`；产品/PPT/项目/收入列入边界外）；② `bangcle-contract`（CLM-BANGCLE-001）状态 🚧建设中 → ✅已上线（P8 验收通过，125 passed/覆盖率95%）；③ L3 `contract-management`（CLM-GEN-001）状态 → 已上线（73 passed，核心纯逻辑建成）；④ L4 技能表补 CME-001；⑤ §7.6 覆盖表补 bangcle-contract 5 件套 + contract-management。 |
 | 2026-10-29 | **5.5** | **Bangcle 项目管理专家统一入口**：① 新增 L4 技能 `bangcle-project-manager-expert`（PJME-001），确立为 L4 层 Bangcle「项目管理相关」统一入口（路由表：交付台账/履约义务/项目复盘/客户画像 → L3 四技能；交付月报/工时/交接 → delivery-center；ONES 数据 → ones-browser-export；产品/合同/PPT 列入边界外）；② 架构文档首次补登 **L3 层技能表**（项目管理四技能 + contract-approval）；③ L3 四技能 SKILL.md 加统一入口反向指针；④ PME 边界表中项目管理四行收敛为指向 PJME-001 单行。 |
 | 2026-10-29 | **5.4** | **范围修正：PME 收窄为「产品相关」统一入口**：5.3 误将 `product-manager-expert`（PME-001）定位为整个 Bangcle 业务域统一入口；现按 Rex 修正收窄为 **L4 层 Bangcle「产品相关」统一入口**——仅覆盖产品咨询/功能/跨产品方案/SKU/价格/合同标的匹配/知识库检准，路由对象只有 `product-kb`；合同审批（bangcle-contract）、PPT（bangcle-ppt）、项目交付管理（L3 4 技能）列入 §边界外，不在本入口代办。product-kb(PKB-001) 组件登记与 L4 技能表补全（5.3 的其余内容）保持有效。 |
 | 2026-10-29 | **5.3** | **Bangcle 产品管理专家统一入口**：① 新增 L4 技能 `product-manager-expert`（PME-001）并确立为 **L4 层 Bangcle 业务统一入口**（含 Bangcle 域技能/组件路由表：产品咨询/方案/检准核心职责 + product-kb / bangcle-contract / bangcle-ppt / L3 项目技能路由）；② L4 组件清单补入 `product-kb`（PKB-001，产品知识库）；③ L4 技能表由 2 项补全为 6 项（product-manager-expert / product-kb / bangcle-ppt / ones-browser-export / bdms-web-ui-design / fin-l4）；④ §7.6 资产覆盖表补 product-kb 5 件套 ✅。 |

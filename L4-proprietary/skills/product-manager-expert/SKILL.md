@@ -40,8 +40,7 @@ metadata:
 
 | 需求 | 去向 | 层 |
 |---|---|---|
-| 销售合同审批 / 合同审查流程 | `bangcle-contract`（CLM-BANGCLE-001） | L4 |
-| 通用合同审批框架 | `contract-approval` | L3 |
+| 合同审查 / 风险扫描 / 销售合同审批 / 合同生成 | `contract-manager-expert`（CME-001，合同管理统一入口） | L4 |
 | PPT 生成 / 官方模板 | `bangcle-ppt`（CPT-012） | L4 |
 | 项目交付管理（台账/履约/复盘/客户画像） | `bangcle-project-manager-expert`（PJME-001，L4 项目管理统一入口） | L4 |
 | ONES 数据导出 | `ones-browser-export` | L4 |

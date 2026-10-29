@@ -5,6 +5,7 @@ user-invocable: true
 ---
 
 # 销售合同审批模块 (SCA-001)
+> **统一入口**：本技能是 L4 层 **Bangcle 合同管理专家**（`contract-manager-expert`，CME-001）路由协调的专项能力之一；Bangcle 合同管理相关需求（含销售合同审批）从该入口统一识别、路由与协调。
 
 > L4 专有业务层组件，基于《民法典》合同编 + CLM 7 阶段方法论。
 
