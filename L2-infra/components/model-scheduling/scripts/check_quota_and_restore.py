@@ -283,11 +283,54 @@ def update_usage_health(provider: str, status: str, detail: str):
     usage_path.write_text(json.dumps(usage, indent=2, ensure_ascii=False))
 
 
+# ── 状态去重（无变化不反馈）──────────────────────────────
+def _state_file() -> Path:
+    return BASE_DIR / "config" / "quota_state.json"
+
+
+def _load_prev_sig() -> set:
+    try:
+        return set(json.loads(_state_file().read_text()).get("exhausted", []))
+    except Exception:
+        return set()
+
+
+def _save_sig(exhausted_ids: set):
+    try:
+        _state_file().write_text(json.dumps(
+            {"exhausted": sorted(exhausted_ids),
+             "updated": datetime.now().strftime("%Y-%m-%dT%H:%M:%S")},
+            ensure_ascii=False, indent=2))
+    except Exception:
+        pass
+
+
 def main():
     parser = argparse.ArgumentParser(description="检查 deepseek/longCat 额度并恢复 fallback chain")
     parser.add_argument("--dry-run", action="store_true", help="只检查不修改文件")
+    parser.add_argument("--detail", action="store_true",
+                        help="详细输出（每日巡检用）：状态无变化也打印")
     args = parser.parse_args()
 
+    import contextlib
+    import io
+    prev_sig = _load_prev_sig()
+    # 执行体照常跑（含恢复写文件），但把输出先截获，按状态决定是否投递
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        new_sig = _run_checks(args)
+    _save_sig(new_sig)
+
+    changed = new_sig != prev_sig
+    text = buf.getvalue().strip()
+    # 只有「新增耗尽 / 有恢复」或 --detail 才输出；否则零输出 → cron 自动 suppress
+    if (changed or args.detail) and text:
+        print(text)
+    return 0
+
+
+def _run_checks(args) -> set:
+    """执行检查与恢复，返回当前仍耗尽的模型 id 集合。"""
     # 1. 加载配置
     models_data = load_yaml(MODELS_YAML)
     routing_data = load_yaml(ROUTING_YAML)
@@ -317,7 +360,7 @@ def main():
 
     if not exhausted_models:
         print("✅ 没有 exhausted 的 deepseek/longCat 模型，无需恢复")
-        return
+        return set()
 
     print(f"发现 {len(exhausted_models)} 个 exhausted 的目标模型:")
     for m in exhausted_models:
@@ -386,6 +429,8 @@ def main():
         print("耗尽模型:")
         for m in still_exhausted:
             print(f"  - {m['id']}")
+
+    return {m["id"] for m in still_exhausted}
 
 
 if __name__ == "__main__":

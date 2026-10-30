@@ -1009,9 +1009,43 @@ def auto_fix(errors):
     return fixes
 
 
+# ── 状态去重（无变化不反馈）──────────────────────────────
+SCAN_STATE_FILE = f"{WORKSPACE}/memory/error-scan-state.json"
+
+
+def _error_signature(all_errors) -> list:
+    """错误指纹：只取 类型+详情（去掉时间戳等噪声），状态没变则指纹一致。"""
+    return sorted(
+        f"{e.get('type', '')}|{str(e.get('detail', ''))[:120]}"
+        for e in all_errors
+    )
+
+
+def _load_prev_sig():
+    try:
+        with open(SCAN_STATE_FILE) as f:
+            return json.load(f).get("signature", [])
+    except Exception:
+        return None  # None = 首次运行（必须报一次）
+
+
+def _save_sig(sig):
+    try:
+        with open(SCAN_STATE_FILE, "w") as f:
+            json.dump({"signature": sig,
+                       "updated": datetime.now().isoformat()}, f, indent=2)
+    except Exception:
+        pass
+
+
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="系统错误扫描")
+    parser.add_argument("--detail", action="store_true",
+                        help="详细输出（每日巡检用）：状态无变化也打印")
+    args = parser.parse_args()
+
     now = datetime.now().isoformat()
-    print(f"=== System Error Scan ({now}) ===\n")
 
     # 扫描所有错误类型
     all_errors = []
@@ -1022,28 +1056,13 @@ def main():
     all_errors.extend(scan_plugin_channel_health())
     all_errors.extend(scan_context_overflow())
 
-    # 输出结果
-    if all_errors:
-        print(f"⚠️ 发现 {len(all_errors)} 个异常:\n")
-        for err in all_errors:
-            print(f"  [{err['type']}] {err.get('name', '')} — {err['detail'][:100]}")
-
-        # 自动处置
-        print(f"\n--- Auto-Fix ---")
-        fixes = auto_fix(all_errors)
-        for fix in fixes:
-            status = "✅" if fix.get("executed") else "⚠️"
-            print(f"  {status} {fix['action']}: {fix['reason']}")
-            if "result" in fix:
-                print(f"     Result: {fix['result']}")
-    else:
-        print("✅ 系统无异常")
+    fixes = auto_fix(all_errors) if all_errors else []
 
     # 保存结构化结果
     result = {
         "timestamp": now,
         "errors": all_errors,
-        "fixes": auto_fix(all_errors) if all_errors else [],
+        "fixes": fixes,
         "healthy": len(all_errors) == 0
     }
     try:
@@ -1052,9 +1071,28 @@ def main():
     except Exception:
         pass
 
-    # 扫描脚本的任务是"发现并报告异常"，不是"确保系统无异常"
-    # 发现异常是正常输出，不是任务失败 — 任务失败只在脚本本身执行出错时才发生
-    # 异常信息通过 JSON 输出文件和 stdout 传递，cron 应该读这些而不是看 exit code
+    # 输出门禁：只有「错误集合变化（新故障/恢复）」或 --detail 才打印；
+    # 状态没变 → 零输出 → cron 自动 suppress（NO_REPLY）。
+    sig = _error_signature(all_errors)
+    prev_sig = _load_prev_sig()
+    _save_sig(sig)
+    if not args.detail and sig == prev_sig:
+        return 0
+
+    print(f"=== System Error Scan ({now}) ===\n")
+    if all_errors:
+        print(f"⚠️ 发现 {len(all_errors)} 个异常:\n")
+        for err in all_errors:
+            print(f"  [{err['type']}] {err.get('name', '')} — {err['detail'][:100]}")
+        print(f"\n--- Auto-Fix ---")
+        for fix in fixes:
+            status = "✅" if fix.get("executed") else "⚠️"
+            print(f"  {status} {fix['action']}: {fix['reason']}")
+            if "result" in fix:
+                print(f"     Result: {fix['result']}")
+    else:
+        print("✅ 系统无异常")
+
     return 0
 
 

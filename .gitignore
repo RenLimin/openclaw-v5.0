@@ -29,6 +29,7 @@ business/*/logs/
 logs/observability/
 L2-infra/components/model-scheduling/logs/
 L2-infra/components/model-scheduling/config/usage.json
+L2-infra/components/model-scheduling/config/quota_state.json
 *.err
 *.out
 
