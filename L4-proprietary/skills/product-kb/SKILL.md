@@ -19,7 +19,7 @@ metadata:
 ## ⚠️ 关键路径
 
 所有命令必须使用**绝对路径**，否则找不到模块：
-- 项目根: `/Users/bangcle/.openclaw/workspace/L4-proprietary/components/product-kb`
+- 项目根: `../../components/product-kb`
 - 数据库: `./data/product_kb.db`（相对项目根）
 - 入口: `python3 -m product_kb.cli`
 
@@ -82,8 +82,12 @@ A: 产品目录名和价格表族名差异大时会降低匹配率。可在 `pro
 > 本技能输出口径必须遵循以下应答契约（ADR-035 P1/P2 纵切层）：
 >
 > 1. **P1 通用应答契约**（数据源优先级与时效、证据三档【已验证】/【推断】/【缺失】、降级显式声明、落盘与副作用、客户实体归一、风险定级通用规则）：
->    `/Users/bangcle/.openclaw/workspace/L2-infra/prompts/answer-spec-base.md`
+>    `../../../L2-infra/prompts/answer-spec-base.md`
 > 2. **P2 域应答契约**（固定输出维度 + 域风险定级矩阵）：
->    `/Users/bangcle/.openclaw/workspace/L4-proprietary/prompts/product-answer-spec.md`
+>    `../../prompts/product-answer-spec.md`
 >
 > 契约优先于本 SKILL 内任何自定义口径；两者冲突时以契约为准，并提请维护对应 spec。
+>
+> 3. **交付闸门（强制，1.1 新增）**：生成最终结果前，逐项对照 P2 §1.5「维度合格判据」自检，任一 NO 即重做；
+>    复杂任务（>5 步/多数据源）走 P1 §7 plan→validate→execute→verify。
+>    每条关键结论带 `【已验证 日期|来源】/【推断】/【缺失】`，文档出处定位到章节，落盘含溯源链。
