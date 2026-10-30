@@ -23,14 +23,16 @@ assert_block() {
 
 assert_pass  "$FX/good-report.md"
 assert_pass  "$FX/good-degraded.md"
+assert_pass  "$FX/good-report-envelope.md"
 assert_block "$FX/bad-no-timestamp.md"
 assert_block "$FX/bad-silent-degrade.md"
+assert_block "$FX/bad-no-envelope.md"
 
 if [ $fail -ne 0 ]; then
     echo "❌ 应答契约黄金基准失败 — 校验器/契约改动破坏了门禁"
     exit 1
 fi
-echo "✅ 应答契约黄金基准通过（2 PASS / 2 BLOCK 符合预期）"
+echo "✅ 应答契约黄金基准通过（3 PASS / 3 BLOCK 符合预期）"
 
 # --- 运行时守卫单测（hooks/answer-contract-guard）---
 # 仅当 hooks/answer-contract-guard/ 或 prompts 相关被改动时触发。
