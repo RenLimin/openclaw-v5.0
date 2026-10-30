@@ -133,3 +133,14 @@ permissions: [read-only | read-write | admin]
 - [ ] 内置角色定义文件（references/roles/）
 - [ ] 角色自动匹配逻辑
 - [ ] 多角色协作编排
+
+---
+
+## 应答契约适用范围（ADR-035，路由约束）
+
+本技能是角色路由/元技能，自身不产结论，但**分析类角色产出报告时必须带上契约**：
+
+- 分析类角色 `data-analyst` / `report-generator` / `quality-auditor`，以及 `pm-assistant` 做进度/风险汇总时，其报告交付遵循 P1 通用应答契约：关键结论带 `【已验证 日期|来源】/【推断】/【缺失】`、降级带质量信号、含溯源链，并在报告落盘后运行
+  `python3 ../../prompts/tools/check_answer_contract.py <报告路径>`，exit≠0 阻断交付。
+- 运维类、纯执行类角色（sys-admin 重启、db-admin 备份、data-collector 采集）的操作回执豁免。
+- 路由到具体 Bangcle 业务分析时，叠加对应 P2 域契约（项目/合同/产品）。

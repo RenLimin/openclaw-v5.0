@@ -291,3 +291,14 @@ python3 L2-infra/skills/system-health-check/scripts/service_health_check.py --li
 - 每小时跑一次 `service_health_check.py all --l1-only` — 快速存活巡检
 - 每天跑一次 `service_health_check.py all --fix` + 写报告 + 异常告警
 - 每天跑一次 `health_check.py` — 全量系统健康审计
+
+---
+
+## 应答契约适用范围（ADR-035，作用域受限）
+
+本技能是工具+报告混合型。契约**只管分析结论，不管机器回执**：
+
+- ✅ **适用**：当基于检查结果撰写**巡检结论/健康分析报告**（含风险判断如"model-scheduling 30 分钟内 2 次错误""cron timeout"、根因推断、处置建议）时，每条关键结论带 `【已验证 日期|来源命令】/【推断】/【缺失】`，并将报告落盘后运行
+  `python3 ../../prompts/tools/check_answer_contract.py <报告路径>`，exit≠0 即修正后重跑。
+- ⛔ **豁免**：脚本原始 JSON/文本输出、退出码（0/1/2）、"已修复/已重启"等纯操作回执——不要求证据标记，禁止对其跑校验器。
+- 实时命令输出是最高优先级数据源（P1 §1）；引用历史巡检快照须标注数据时间与降级信号。

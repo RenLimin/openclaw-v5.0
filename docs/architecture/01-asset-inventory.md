@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-30 17:15 UTC+08:00
+最后生成：2026-10-30 17:23 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -165,7 +165,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 黄金基准测试 | `L2-infra/prompts/tests/run_tests.sh` | 2 合规必 PASS / 2 违规必 BLOCK + guard 单测；pre-commit 自动运行防门禁退化 |
 | 运行时交付守卫 | `hooks/answer-contract-guard/` | message:sent 审计携带证据标记的交付，写 answer-contract-audit.log；只观察不拦截 |
 
-> 9 个 P3 SKILL 闸门均强制调用校验器（见上方技能清单）。规则即代码（CHECK_RULES）保留在代码层。
+> 12 个 SKILL 引用校验器：9 个分析类强制闸门 + 3 个作用域受限（system-health-check / fin-l4 / role-library，仅约束报告结论、豁免操作回执）。规则即代码（CHECK_RULES）保留在代码层；纯工具型 skill（PDF/OCR/DAG/UI/数据源/PPT 渲染）不挂硬门以防误拦。
 
 ## 文档资产
 
@@ -253,8 +253,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `b0d42a6` |
-| Commit 数 | 533 |
+| HEAD | `26a653b` |
+| Commit 数 | 534 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

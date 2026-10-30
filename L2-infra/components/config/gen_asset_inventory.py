@@ -456,7 +456,7 @@ def render_prompt_governance() -> list[str]:
         lines.append(f"| {name}{mark} | `{rel}` | {desc} |")
     lines += [
         "",
-        "> 9 个 P3 SKILL 闸门均强制调用校验器（见上方技能清单）。规则即代码（CHECK_RULES）保留在代码层。",
+        "> 12 个 SKILL 引用校验器：9 个分析类强制闸门 + 3 个作用域受限（system-health-check / fin-l4 / role-library，仅约束报告结论、豁免操作回执）。规则即代码（CHECK_RULES）保留在代码层；纯工具型 skill（PDF/OCR/DAG/UI/数据源/PPT 渲染）不挂硬门以防误拦。",
         "",
     ]
     return lines
