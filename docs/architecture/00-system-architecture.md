@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 5.8 (2026-10-29 — L2 workspace-temp-cleanup / INFRA-CLN-001 建设完成转已上线：tempcleanctl + cron 03:30 isolated + verify 接入错误扫描；立 ADR-034) |
+| 文档版本 | 5.9 (2026-10-30 — §7.4.1 补充约定：L4 专家统一入口 skill（*-manager-expert/*-expert）不强制 bangcle- 前缀，PME/CME/PJME 三种写法合规，方案 A 合法化现状) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
 | 决策状态 | 5 层架构已锁定(ADR-012); 34 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
@@ -1079,6 +1079,7 @@ L4 专有业务
 - 一律 **kebab-case**（小写 + 连字符），不用下划线/驼峰/空格
 - 名称用**名词/名词短语**，不带动词、版本号、公司名以外的限定词
 - L4 专有实例默认加 `bangcle-` 前缀以区分通用组件（历史命名如 `product-kb` 保留兼容）
+- **L4 专家统一入口（skill）不强制 `bangcle-` 前缀**：`*-manager-expert` / `*-expert` 类统一入口属于 skill（位于 `L4-proprietary/skills/`），用于意图识别与路由协调，与 `L4-proprietary/components/` 下的 Bangcle 专有组件区分；入口名以业务角色命名即可，`product-manager-expert`（PME-001）、`contract-manager-expert`（CME-001）、`bangcle-project-manager-expert`（PJME-001）三种写法均视为合规，不要求统一加前缀（Rex 拍板，2026-10-30，方案 A）
 
 #### 7.4.2 组件编码（ID）
 
@@ -1354,6 +1355,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-30 | **5.9** | **L4 专家统一入口命名约定（方案 A）**：§7.4.1 明确——`*-manager-expert` / `*-expert` 类**统一入口属于 skill**（`L4-proprietary/skills/`），与 `L4-proprietary/components/` 下 Bangcle 专有组件区分，**不强制 `bangcle-` 前缀**，以业务角色命名即可；PME-001 `product-manager-expert`、CME-001 `contract-manager-expert`、PJME-001 `bangcle-project-manager-expert` 三种写法均合规，不重命名、不动引用。解决三入口前缀不统一的历史疑问。 |
 | 2026-10-29 | **5.8** | **INFRA-CLN-001 建设完成转已上线**：① 实现 `tempcleanctl`（4 子命令 dry-run/clean/list/verify + 退出码 0/1/2/3；识别器/判定器/报告器/执行器；fail-closed：未标记不删、只 trash 禁 rm、trash 缺失中止、越界拒绝、symlink 不跟随）；② 13 个测试全绿（真实文件系统 + 真实 trash + 黄金基准）；③ 注册 cron isolated 每日 03:30 `clean --yes`，实删 announce WeCom 1313，无删除静默；④ `verify` 自检接入错误扫描（每 30m）；⑤ 立 **ADR-034**。 |
 | 2026-10-29 | **5.7** | **立项 L2 Workspace 临时清理 + 临时资产统一约定**：① 新增 L2 组件 `workspace-temp-cleanup`（INFRA-CLN-001，📐 规划态）——临时资产标记约定 + cron isolated 系统级定期清理（trash、只删已标记、dry-run 先行）；② §7.4 新增 **§7.4.5 临时/工作产物统一约定**：统一临时区（analysis_output / scripts/tmp / tmp / scratch）、双标记方式（目录命名 + `.openclaw-temp.json`）、默认 TTL（中间数据 7 天 / 台账报表 30 天）、正式交付物直接 commit 不进清理。本版本仅登记+约定，不含实现。 |
 | 2026-10-29 | **5.6** | **Bangcle 合同管理专家统一入口**：① 新增 L4 技能 `contract-manager-expert`（CME-001），确立为 L4 层 Bangcle「合同管理相关」统一入口（核心职责=合同智能审查/风险/标的参照直接产出，路由 `bangcle-contract`；审批框架→`contract-approval` L3；通用纯逻辑/规则库→`contract-management` L3；Office 审批流→`office-contract`；标的匹配→`product-kb`；产品/PPT/项目/收入列入边界外）；② `bangcle-contract`（CLM-BANGCLE-001）状态 🚧建设中 → ✅已上线（P8 验收通过，125 passed/覆盖率95%）；③ L3 `contract-management`（CLM-GEN-001）状态 → 已上线（73 passed，核心纯逻辑建成）；④ L4 技能表补 CME-001；⑤ §7.6 覆盖表补 bangcle-contract 5 件套 + contract-management。 |
