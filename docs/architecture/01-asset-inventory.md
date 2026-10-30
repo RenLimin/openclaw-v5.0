@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-30 16:57 UTC+08:00
+最后生成：2026-10-30 17:15 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -152,6 +152,21 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 > config-patch 触发的进程内自动重启无外部否决点，仅能事前 guard + 优先热加载。
 
+## L2 — Prompt 治理（ADR-035 纵切层）
+
+| 资产 | 路径 | 职责 |
+|---|---|---|
+| ADR-035 决策 | `docs/knowledge-base/by-category/project-experience/adr/ADR-202610-035-prompt-rule-system.md` | Prompt 规则为贯穿 L0~L4 的正交纵切层；P0-P3 四级 + 规则即代码/指令边界 |
+| P1 通用应答契约 | `L2-infra/prompts/answer-spec-base.md` | 证据分级强制时间戳、数据时效/降级、claim-引文绑定、溯源链、交付自检（v1.2） |
+| P2 项目域契约 | `L3-business/prompts/project-answer-spec.md` | 项目/进度/风险维度合格判据（v1.2，跨域机制直接适用 P1） |
+| P2 合同域契约 | `L3-business/prompts/contract-answer-spec.md` | 合同主体/金额/节点/风险维度合格判据（v1.2） |
+| P2 产品域契约 | `L4-proprietary/prompts/product-answer-spec.md` | 产品/需求/文档出处维度合格判据（v1.2） |
+| 应答契约校验器 | `L2-infra/prompts/tools/check_answer_contract.py` | 确定性 fail-closed 校验：无时间戳/无溯源链即 rc=1 阻断；被 9 SKILL 闸门调用 |
+| 黄金基准测试 | `L2-infra/prompts/tests/run_tests.sh` | 2 合规必 PASS / 2 违规必 BLOCK + guard 单测；pre-commit 自动运行防门禁退化 |
+| 运行时交付守卫 | `hooks/answer-contract-guard/` | message:sent 审计携带证据标记的交付，写 answer-contract-audit.log；只观察不拦截 |
+
+> 9 个 P3 SKILL 闸门均强制调用校验器（见上方技能清单）。规则即代码（CHECK_RULES）保留在代码层。
+
 ## 文档资产
 
 | 类别 | 数量 |
@@ -238,8 +253,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `30f5d77` |
-| Commit 数 | 532 |
+| HEAD | `b0d42a6` |
+| Commit 数 | 533 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

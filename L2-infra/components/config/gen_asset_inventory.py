@@ -419,6 +419,49 @@ def render_safety() -> list[str]:
     return lines
 
 
+def render_prompt_governance() -> list[str]:
+    """ADR-035 Prompt 规则体系（P0-P3 纵切层）与应答契约治理资产（2026-10-30）。"""
+    root = Path(__file__).resolve().parents[3]
+    rows = [
+        ("ADR-035 决策",
+         "docs/knowledge-base/by-category/project-experience/adr/ADR-202610-035-prompt-rule-system.md",
+         "Prompt 规则为贯穿 L0~L4 的正交纵切层；P0-P3 四级 + 规则即代码/指令边界"),
+        ("P1 通用应答契约",
+         "L2-infra/prompts/answer-spec-base.md",
+         "证据分级强制时间戳、数据时效/降级、claim-引文绑定、溯源链、交付自检（v1.2）"),
+        ("P2 项目域契约",
+         "L3-business/prompts/project-answer-spec.md",
+         "项目/进度/风险维度合格判据（v1.2，跨域机制直接适用 P1）"),
+        ("P2 合同域契约",
+         "L3-business/prompts/contract-answer-spec.md",
+         "合同主体/金额/节点/风险维度合格判据（v1.2）"),
+        ("P2 产品域契约",
+         "L4-proprietary/prompts/product-answer-spec.md",
+         "产品/需求/文档出处维度合格判据（v1.2）"),
+        ("应答契约校验器",
+         "L2-infra/prompts/tools/check_answer_contract.py",
+         "确定性 fail-closed 校验：无时间戳/无溯源链即 rc=1 阻断；被 9 SKILL 闸门调用"),
+        ("黄金基准测试",
+         "L2-infra/prompts/tests/run_tests.sh",
+         "2 合规必 PASS / 2 违规必 BLOCK + guard 单测；pre-commit 自动运行防门禁退化"),
+        ("运行时交付守卫",
+         "hooks/answer-contract-guard/",
+         "message:sent 审计携带证据标记的交付，写 answer-contract-audit.log；只观察不拦截"),
+    ]
+    lines = ["## L2 — Prompt 治理（ADR-035 纵切层）", ""]
+    lines.append("| 资产 | 路径 | 职责 |")
+    lines.append("|---|---|---|")
+    for name, rel, desc in rows:
+        mark = "" if (root / rel).exists() else " ⚠️缺失"
+        lines.append(f"| {name}{mark} | `{rel}` | {desc} |")
+    lines += [
+        "",
+        "> 9 个 P3 SKILL 闸门均强制调用校验器（见上方技能清单）。规则即代码（CHECK_RULES）保留在代码层。",
+        "",
+    ]
+    return lines
+
+
 def render_docs() -> list[str]:
     """文档资产：扫描文件系统。"""
     lines = ["## 文档资产", ""]
@@ -509,6 +552,7 @@ def build_document(data: dict) -> str:
         render_credentials(data),
         render_cron(data),
         render_safety(),
+        render_prompt_governance(),
         render_docs(),
         render_repo(data),
     ):
