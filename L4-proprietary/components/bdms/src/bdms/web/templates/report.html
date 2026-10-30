@@ -1369,6 +1369,7 @@ async function resolveIssue(issueId, action) {
       if (!r.ok) throw new Error(d.detail || '处理失败');
       Toast.success(`✅ ${actionLabel}成功${d.changed === false ? '（已处理过）' : ''}`);
       _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
+      if (typeof loadSheets === 'function') loadSheets(currentMonth);  // 刷新sheet待审核徽标
       // 刷新问题列表 + 顶部 KPI（loadReviewStatus 会重算 total_errors/pending_fixes）
       loadReviewIssues();
       loadReviewStatus(currentMonth);
@@ -1543,6 +1544,7 @@ async function saveCalibration() {
     Toast.success('✅ 校准已保存，并触发自动重校验');
     closeModal('calibration-modal');
     _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
+    if (typeof loadSheets === 'function') loadSheets(c.month);  // 刷新sheet待审核徽标
     // 刷新相关视图
     if (typeof loadReviewIssues === 'function') loadReviewIssues();
     if (typeof loadReviewStatus === 'function') loadReviewStatus(c.month);
@@ -1568,6 +1570,7 @@ async function revokeCalibration(month, sheet, row_index, column_name) {
       if (!r.ok) throw new Error(d.detail || d.error || '撤销失败');
       Toast.success('✅ 校准已撤销，原始值恢复');
       _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
+      if (typeof loadSheets === 'function') loadSheets(month);  // 刷新sheet待审核徽标
       if (typeof loadReviewIssues === 'function') loadReviewIssues();
       if (typeof loadReviewStatus === 'function') loadReviewStatus(month);
       if (typeof loadTable === 'function') loadTable();
