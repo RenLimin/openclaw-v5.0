@@ -18,7 +18,9 @@ import { mkdirSync, appendFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const AUDIT_DIR = join(homedir(), ".openclaw", "state");
+const AUDIT_DIR = process.env.OPENCLAW_ANSWER_AUDIT_DIR
+  ? process.env.OPENCLAW_ANSWER_AUDIT_DIR
+  : join(homedir(), ".openclaw", "state");
 const AUDIT_FILE = join(AUDIT_DIR, "answer-contract-audit.log");
 
 // Evidence markers that identify an answer-contract-bearing delivery.
