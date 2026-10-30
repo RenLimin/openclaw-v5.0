@@ -120,3 +120,6 @@ python3 cli/contractctl.py report <review_id>
 > 3. **交付闸门（强制，1.1 新增）**：生成最终结果前，逐项对照 P2 §2.5「维度合格判据」自检，任一 NO 即重做；
 >    复杂任务（>5 步/多数据源）走 P1 §7 plan→validate→execute→verify。
 >    每条关键结论带 `【已验证 日期|来源】/【推断】/【缺失】`，降级数据带质量信号，落盘含溯源链。
+>    **fail-closed 机器校验（强制）**：报告落盘后运行
+>    `python3 ../../../L2-infra/prompts/tools/check_answer_contract.py <报告路径>`
+>    exit≠0（BLOCK）→ 修正后重跑，禁止交付；PASS 才算完成。
