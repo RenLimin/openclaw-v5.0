@@ -168,13 +168,16 @@
         <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
           <div>
             <label class="field-label">Sheet：</label>
-            <select id="view-sheet" class="input" class="w-180">
-              <option value="签约">签约</option>
-              <option value="POC&提前实施">POC&提前实施</option>
-              <option value="异常项目">异常项目</option>
-              <option value="确收交接">确收交接</option>
-              <option value="验收交接">验收交接</option>
-            </select>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <select id="view-sheet" class="input" class="w-180" onchange="updateSheetPendingBadge()">
+                <option value="签约">签约</option>
+                <option value="POC&提前实施">POC&提前实施</option>
+                <option value="异常项目">异常项目</option>
+                <option value="确收交接">确收交接</option>
+                <option value="验收交接">验收交接</option>
+              </select>
+              <span id="sheet-pending-badge" style="display:none;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:999px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap;"></span>
+            </div>
           </div>
           <div style="flex:1;min-width:200px;">
             <label class="field-label">搜索：</label>
@@ -423,6 +426,7 @@ async function loadMonths() {
   }
 }
 
+var _sheetList = [];
 async function loadSheets(month) {
   const sel = document.getElementById('view-sheet');
   if (!sel) return;
@@ -430,14 +434,31 @@ async function loadSheets(month) {
     const r = await fetch(`/api/report/sheets/${month}`);
     if (!r.ok) throw new Error('加载 Sheet 列表失败');
     const d = await r.json();
+    _sheetList = d.sheets;
     const cur = sel.value;
-    sel.innerHTML = d.sheets.map(sh =>
-      `<option value="${sh.name}">${sh.name}（${sh.rows} 行）</option>`).join('');
+    sel.innerHTML = d.sheets.map(sh => {
+      const pend = sh.pending ? `  ⚠待审核 ${sh.pending}` : '';
+      return `<option value="${sh.name}">${sh.name}（${sh.rows} 行）${pend}</option>`;
+    }).join('');
     // 保持当前选中（若还存在）
     if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+    updateSheetPendingBadge();
   } catch (e) {
     // 接口失败时保留原硬编码选项（不阻塞浏览）
     console.warn('loadSheets:', e.message);
+  }
+}
+
+function updateSheetPendingBadge() {
+  const badge = document.getElementById('sheet-pending-badge');
+  if (!badge) return;
+  const sel = document.getElementById('view-sheet');
+  const sh = _sheetList.find(s => s.name === sel.value);
+  if (sh && sh.pending > 0) {
+    badge.textContent = `⚠ ${sh.pending} 个待审核`;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
   }
 }
 

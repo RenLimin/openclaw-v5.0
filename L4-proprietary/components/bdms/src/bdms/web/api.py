@@ -367,7 +367,11 @@ async def report_calibration_overview(month: str):
 
 @router.get("/report/sheets/{month}")
 async def report_sheets(month: str):
-    """动态返回当月实际 Sheet 列表（补齐 15 个，供数据浏览下拉）。"""
+    """动态返回当月实际 Sheet 列表（补齐 15 个，供数据浏览下拉）。
+
+    附加每个 Sheet 的待审核(pending)单元格数，前端据此在下拉中提示
+    哪些 Sheet 有问题需处理，无需逐个点入。
+    """
     month = normalize_month(month)
     conn = _db.get_connection()
     try:
@@ -375,12 +379,24 @@ async def report_sheets(month: str):
             "SELECT sheet, row_count FROM dr_sheet_meta "
             "WHERE month = ? ORDER BY rowid", (month,)
         ).fetchall()
+        # 各 Sheet 待审核数（仅 status='pending'）
+        try:
+            pend_rows = conn.execute(
+                "SELECT sheet, COUNT(*) AS c FROM dr_import_validation "
+                "WHERE month = ? AND status = 'pending' GROUP BY sheet",
+                (month,)
+            ).fetchall()
+            pending_map = {r["sheet"]: r["c"] for r in pend_rows}
+        except Exception:
+            pending_map = {}
     finally:
         conn.close()
     if not rows:
         raise HTTPException(404, f"{month} 无 Sheet 数据")
     return {"month": month,
-            "sheets": [{"name": r["sheet"], "rows": r["row_count"]} for r in rows]}
+            "sheets": [{"name": r["sheet"], "rows": r["row_count"],
+                        "pending": pending_map.get(r["sheet"], 0)}
+                       for r in rows]}
 
 
 @router.get("/report/enum-options/{month}/{sheet}/{column}")
