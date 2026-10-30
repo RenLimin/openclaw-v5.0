@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-30 15:14 UTC+08:00
+最后生成：2026-10-30 15:22 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -136,8 +136,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
 | session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
-| quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 7200s | `isolated` | wecom/1313 |
+| quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
 | daily-inspection-detail | ✅ | cron `0 9 * * *` | `isolated` | wecom/1313 |
@@ -156,7 +156,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 30 |
+| ADR（架构决策记录） | 31 |
 | EXP（经验卡片） | 32 |
 | 模板 | 4 |
 
@@ -194,6 +194,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | [`ADR-202609-027-fin-l4-system-design`](../knowledge-base/by-category/project-experience/adr/ADR-202609-027-fin-l4-system-design.md) | accepted |
 | [`ADR-202609-028-l0-installation-layer`](../knowledge-base/by-category/project-experience/adr/ADR-202609-028-l0-installation-layer.md) | proposed |
 | [`ADR-202609-029-l3-office-business-dimension`](../knowledge-base/by-category/project-experience/adr/ADR-202609-029-l3-office-business-dimension.md) | proposed |
+| [`ADR-202610-035-prompt-rule-system`](../knowledge-base/by-category/project-experience/adr/ADR-202610-035-prompt-rule-system.md) | accepted |
 
 ### 经验卡片清单
 
@@ -237,8 +238,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `a382fcd` |
-| Commit 数 | 527 |
+| HEAD | `94a0428` |
+| Commit 数 | 528 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
