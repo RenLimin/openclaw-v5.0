@@ -31,3 +31,15 @@ if [ $fail -ne 0 ]; then
     exit 1
 fi
 echo "✅ 应答契约黄金基准通过（2 PASS / 2 BLOCK 符合预期）"
+
+# --- 运行时守卫单测（hooks/answer-contract-guard）---
+# 仅当 hooks/answer-contract-guard/ 或 prompts 相关被改动时触发。
+if git diff --cached --name-only --diff-filter=ACMR 2>/dev/null | grep -qE "hooks/answer-contract-guard/|prompts/"; then
+    echo "🔄 answer-contract-guard 有改动，运行单测..."
+    if node hooks/answer-contract-guard/test.mjs >/dev/null 2>&1; then
+        echo "✅ answer-contract-guard 单测通过"
+    else
+        echo "❌ answer-contract-guard 单测失败 — hook 判定被改坏"
+        fail=1
+    fi
+fi

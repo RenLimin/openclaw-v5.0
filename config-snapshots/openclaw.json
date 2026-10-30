@@ -36,7 +36,8 @@
         "thinkingLevel": "off",
         "model": "coding-plan/doubao-seed-2-1-turbo",
         "notifyUser": true,
-        "enabled": true
+        "enabled": true,
+        "timeoutSeconds": 300
       },
       "contextPruning": {
         "mode": "cache-ttl",
@@ -121,8 +122,15 @@
       "entries": {
         "session-memory": {
           "enabled": true
+        },
+        "compaction-guard": {
+          "enabled": true
+        },
+        "answer-contract-guard": {
+          "enabled": true
         }
-      }
+      },
+      "enabled": true
     }
   },
   "meta": {
@@ -711,7 +719,8 @@
         "session:agent:main:dashboard:4e7162d1-e85a-4f5a-8e35-895ba432c6ac",
         "session:agent:main:dashboard:2bea653c-3421-4250-9eb1-1f78a558c8f0",
         "session:agent:main:dashboard:84c8cbb2-4bfc-43f8-bc10-64a5b24a1e2b",
-        "session:agent:main:dashboard:262a91a7-53a5-4bd9-baad-65a19ba42373"
+        "session:agent:main:dashboard:262a91a7-53a5-4bd9-baad-65a19ba42373",
+        "session:agent:main:dashboard:b669ddb2-3b01-4583-b4bd-3f8932dc59e9"
       ]
     }
   },
