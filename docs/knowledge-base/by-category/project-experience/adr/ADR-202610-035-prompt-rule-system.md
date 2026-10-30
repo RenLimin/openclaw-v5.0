@@ -68,6 +68,17 @@ Prompt 规则**不构成独立层**，而是贯穿 L0~L4 的纵切约束（与 �
 - **为什么规则即代码**：22 条风险规则需确定性、可测试、rule_id 100% 匹配黄金基准，LLM 生成不稳定。
 - **备选否定**：C 方案（每次提问由用户带口径）——正是本次偏移来源，且与 Rex 短指令提问习惯冲突。
 
+### 4. 数据闭环层：交付质量反馈 → 反哺契约/技能（2026-10-30 增补）
+
+Prompt 治理不能只靠前置闸门，还需从真实交付的**用户纠正**中持续学习。新增 L2 组件 `delivery-quality`：
+
+- `feedback.jsonl`（git-tracked JSONL）**默认记录** Rex 对交付结果的反馈/纠正（规则写入 AGENTS.md P0）。
+- 每周一 10:30 cron `delivery-quality-review`（isolated）跑 `review.py`：按维度/域/严重度聚类、复发根因检测（≥2 次）、高危单次项（high 首次即评估）。
+- review **只生成报告与建议**，不改核心文件；Rex 拍板后收紧 P2「维度合格判据」+ checker、加黄金 fixture、或沉淀 KB。
+- 选 JSONL 而非 SQLite：需 git 版本化/diff/grep/不丢，规避「DB 重制全丢」教训。
+
+闭环：`用户反馈 → feedback.jsonl → 周 review → (P2/checker/fixture/KB) → 更高返回准确率`。
+
 ## 影响与落地
 
 1. `00-system-architecture.md`：§4 横切关注点新增 Prompt 治理行；§8 ADR 表补 ADR-035；§12 变更历史 v5.9 → v6.0。
@@ -75,9 +86,11 @@ Prompt 规则**不构成独立层**，而是贯穿 L0~L4 的纵切约束（与 �
 3. 新建 4 个 spec 文件（P1×1 + P2×3）。
 4. 6 个子 skill（bangcle-project-summary / obligation-summary / project-retrospective / customer-profile / contract-approval / product-kb）+ 3 个入口 skill（PJME/CME/PME）加「应答规范」引用节。
 5. 用茅台案例回跑验证口径一致性。
+6. 新建 L2 `delivery-quality`（feedback.jsonl + record.py + review.py + README/SCHEMA），挂每周 review cron；AGENTS.md 增「默认记录反馈」铁律。
 
 ## 变更记录
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-10-30 | 1.0 | 初始 accepted |
+| 2026-10-30 | 1.1 | 增数据闭环层 delivery-quality（默认记录+周 review+反哺） |

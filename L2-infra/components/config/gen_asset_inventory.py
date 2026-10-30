@@ -447,6 +447,12 @@ def render_prompt_governance() -> list[str]:
         ("运行时交付守卫",
          "hooks/answer-contract-guard/",
          "message:sent 审计携带证据标记的交付，写 answer-contract-audit.log；只观察不拦截"),
+        ("交付质量反馈库",
+         "L2-infra/components/delivery-quality/feedback.jsonl",
+         "默认记录 Rex 交付纠正（record.py），git-tracked JSONL；6 维度/域/严重度结构化"),
+        ("反馈每周 review",
+         "L2-infra/components/delivery-quality/review.py",
+         "聚类+复发根因(≥2)+高危单次(high首次即评估)，只读生成报告，反哺 P2/fixture/KB"),
     ]
     lines = ["## L2 — Prompt 治理（ADR-035 纵切层）", ""]
     lines.append("| 资产 | 路径 | 职责 |")

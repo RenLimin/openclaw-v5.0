@@ -212,6 +212,24 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py start \
 
 **四条铁律：** 参数被解析 ≠ 参数生效；收参数必须用参数；修 bug 要 grep 全调用点；验证覆盖率比验证结论更值得怀疑。
 
+## 交付质量反馈闭环 ★★★（2026-10-30，ADR-035 §4）
+
+**Rex 对交付结果提出问题/纠正/质疑时，默认（无需提醒）把每条反馈记入错误库：**
+
+```bash
+python3 L2-infra/components/delivery-quality/record.py \
+  --domain project|contract|product|cross|other \
+  --dimension data_fidelity|calculation_logic|data_completeness|missing_risk_analysis|missing_context|best_practice_gap|sourcing|format_presentation|other \
+  --severity high|medium|low --target "<对象>" --finding "<问题>" \
+  --root-cause "<初判根因>" --corrective-action "<已纠正动作>" --status corrected
+```
+
+- 当场已纠正的记 `--status corrected`；待处理留 `open`。
+- 一条反馈一条记录，不要合并；finding 写问题本身，不贴敏感数据。
+- 周一 10:30 cron 自动 review（聚类/复发/高危单次）；**复发≥2 或 high 级问题，review 报告提示后由 Rex 拍板**：收紧 P2 契约 + checker、加黄金 fixture、或沉淀 KB。助手不擅自改核心契约文件。
+- 完整规范：`L2-infra/components/delivery-quality/README.md` + `SCHEMA.md`。
+
+
 ## 异常自动处置
 
 ### Gateway 重启安全铁律 ★★★（2026-10-27）
