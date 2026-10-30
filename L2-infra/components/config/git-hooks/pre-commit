@@ -7,7 +7,8 @@
 #   1. 重生成资产清单, 有变化则自动加入本次提交
 #   2. 检查 ~/.openclaw/openclaw.json 是否有未快照的变更, 仅提醒
 #   3. 知识库 schema 校验 + INDEX.md 派生小节同步 (ADR-003 阶段 2)
-#   1/2 不阻塞; 0/3 命中阻塞性错误时阻塞提交
+#   4. 应答契约黄金基准 —— 仅当 prompts/ 下 spec/校验器/测试被改动时触发 (ADR-035 P1 §10)
+#   1/2 不阻塞; 0/3/4 命中阻塞性错误时阻塞提交
 
 set -euo pipefail
 
@@ -78,6 +79,22 @@ if [ -f L2-infra/components/memory-embedding/kb_index.py ] && [ -d docs/knowledg
         echo "❌ 知识库校验失败 — 存在阻塞性错误"
         echo "    修完后重试, 或用 git commit --no-verify 跳过 (不推荐)"
         exit 1
+    fi
+fi
+
+# --- 4. 应答契约黄金基准 (ADR-035 P1 §10 eval 门禁) ---
+# 仅当 P1/P2 spec、校验器或其测试在本次提交中被改动时触发，避免给无关提交加开销。
+CONTRACT_SUITE="L2-infra/prompts/tests/run_tests.sh"
+if [ -f "$CONTRACT_SUITE" ]; then
+    if git diff --cached --name-only --diff-filter=ACMR | grep -qE "^L[234]-[a-z]+/prompts/"; then
+        echo "🔄 应答契约/spec 有改动，运行黄金基准..."
+        if ! bash "$CONTRACT_SUITE"; then
+            echo ""
+            echo "❌ pre-commit 拦截: 应答契约黄金基准失败"
+            echo "    说明对 spec/校验器的改动让合规样例被误拦，或让违规样例被放行。"
+            echo "    修完后重试，或 git commit --no-verify 跳过 (不推荐，门禁可能失效)。"
+            exit 1
+        fi
     fi
 fi
 
