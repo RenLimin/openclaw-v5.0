@@ -1142,14 +1142,18 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
     d.issues.forEach((issue, ii) => {
       const severityColor = issue.severity === 'ERROR' ? 'var(--c-danger)' : 'var(--c-warning)';
       const isPending = issue.status === 'pending';
+      const hasDetail = issue.detail && issue.detail.rows && issue.detail.rows.length;
+      const detailToggle = hasDetail
+        ? `<button class="btn btn-sm" id="detail-toggle-${issue.id}" onclick="toggleIssueDetail(${ii})" style="margin-right:0.25rem;padding:0 0.4rem;" title="查看重复明细">▸ 明细</button>`
+        : '';
       const calBtn = issue.column_name
         ? `<button class="btn btn-sm btn-primary" onclick="openCalibrationAtIssue(${ii})" style="margin-right:0.25rem;">校准</button>`
         : '';
       const actionBtns = isPending
-        ? calBtn
+        ? detailToggle + calBtn
           + `<button class="btn btn-sm btn-success" onclick="resolveIssue(${issue.id}, 'confirm')" style="margin-right:0.25rem;">确认</button>`
           + `<button class="btn btn-sm" onclick="resolveIssue(${issue.id}, 'reject')" style="border-color:var(--c-danger);color:var(--c-danger);">驳回</button>`
-        : `<span class="text-muted" style="font-size:0.85rem;">${issue.status === 'confirmed' ? '✅ 已确认' : '🗑 已驳回'}</span>`;
+        : (detailToggle || `<span class="text-muted" style="font-size:0.85rem;">${issue.status === 'confirmed' ? '✅ 已确认' : '🗑 已驳回'}</span>`);
       html += `<tr>
         <td>${issue.sheet}</td>
         <td>${issue.row_index}</td>
@@ -1159,6 +1163,9 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
         <td>${issue.status}</td>
         <td>${actionBtns}</td>
       </tr>`;
+      if (hasDetail) {
+        html += `<tr id="detail-row-${issue.id}" style="display:none;"><td colspan="7" style="padding:0;">${renderIssueDetail(issue)}</td></tr>`;
+      }
     });
 
     html += '</tbody></table></div>';
@@ -1174,6 +1181,46 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
   } catch (e) {
     container.innerHTML = `<p class="error-tip">⚠️ 加载失败: ${e.message}</p>`;
   }
+}
+
+// ========== ID 重复明细展开 ==========
+function toggleIssueDetail(ii) {
+  const issue = _issueCache[ii];
+  const row = document.getElementById('detail-row-' + issue.id);
+  const btn = document.getElementById('detail-toggle-' + issue.id);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : '';
+  if (btn) btn.textContent = open ? '▸ 明细' : '▾ 收起';
+}
+
+function renderIssueDetail(issue) {
+  const dt = issue.detail;
+  const cols = dt.columns || [];
+  // 结论提示：diff_cols 非空 = 同 ID 挂不同合同/日期，需人工核对；空 = 字段一致的合法重复
+  let verdict;
+  if (dt.diff_cols && dt.diff_cols.length) {
+    verdict = `<span style="color:var(--c-danger);font-weight:600;">⚠ 同一 ID 的 ${dt.diff_cols.join('、')} 不一致，疑似真异常，请核对是否为不同工作项被误赋同一 ID</span>`;
+  } else {
+    verdict = `<span style="color:var(--c-success,green);font-weight:600;">✓ 各行关键字段一致，仅为同一工作项多行，可确认通过</span>`;
+  }
+  let head = '<th style="text-align:left;">行</th>' + cols.map(c => {
+    const mark = dt.diff_cols && dt.diff_cols.includes(c);
+    return `<th style="text-align:left;${mark ? 'color:var(--c-danger);' : ''}">${c}${mark ? ' ⚠' : ''}</th>`;
+  }).join('');
+  let body = dt.rows.map(r => {
+    const tds = cols.map(c => {
+      const mark = dt.diff_cols && dt.diff_cols.includes(c);
+      return `<td style="${mark ? 'color:var(--c-danger);font-weight:600;' : ''}">${r[c] === '' || r[c] == null ? '<span class=\'text-muted\'>—</span>' : r[c]}</td>`;
+    }).join('');
+    return `<tr${r.current ? ' style="background:rgba(255,193,7,0.08);"' : ''}><td>${r.row_index}${r.current ? ' <span class="text-muted">(本条)</span>' : ''}</td>${tds}</tr>`;
+  }).join('');
+  return `<div style="padding:0.75rem 1rem;background:var(--c-bg-subtle,#fafafa);border-top:1px solid var(--c-border,#eee);">
+    <div style="margin-bottom:0.5rem;font-size:0.85rem;">
+      ID <strong>${dt.id}</strong> 共出现 <strong>${dt.occurrences}</strong> 处 · ${verdict}
+    </div>
+    <div class="table-wrapper"><table class="table" style="margin:0;font-size:0.82rem;"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+  </div>`;
 }
 
 // ========== 通用分页渲染 ==========

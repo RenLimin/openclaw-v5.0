@@ -66,6 +66,68 @@ class DeliveryReportService:
         finally:
             conn.close()
 
+    # duplicate 详情展示的关键字段（存在才展示，按此顺序）
+    _DUP_DETAIL_COLS = ["合同编号", "客户名称", "交接日期", "标题"]
+
+    def _enrich_duplicate_details(self, month: str, issues: list[dict]) -> None:
+        """为 rule_code=duplicate 的问题就地附加同 ID 的全部行详情。
+
+        附加字段 detail = {
+          "id", "occurrences", "columns", "rows": [{
+             "row_index", "current", "合同编号"?, ..., "diff_cols": [...]
+          }]
+        }
+        diff_cols 标出该 ID 各行间取值不一致的字段，辅助人工判断
+        是合法重复（字段一致，仅多行）还是真异常（同 ID 挂不同合同/日期）。
+        """
+        dup = [i for i in issues if i.get("rule_code") == "duplicate"
+               and i.get("original_value")]
+        if not dup:
+            return
+        try:
+            sheets_data = self.engine.load(month)  # sheet -> DataFrame
+        except Exception:
+            sheets_data = {}
+        if not sheets_data:
+            return
+
+        # 按 sheet 分组处理，避免重复扫描
+        by_sheet: Dict[str, list[dict]] = {}
+        for it in dup:
+            by_sheet.setdefault(it.get("sheet", ""), []).append(it)
+
+        for sheet, items in by_sheet.items():
+            df = sheets_data.get(sheet)
+            if df is None or "ID" not in df.columns:
+                continue
+            cols = [c for c in self._DUP_DETAIL_COLS if c in df.columns]
+            for it in items:
+                target = str(it.get("original_value", ""))
+                mask = df["ID"].astype(str) == target
+                sub = df[mask]
+                if sub.empty:
+                    continue
+                cur_row = it.get("row_index")
+                rows_out: List[dict] = []
+                for idx, r in sub.iterrows():
+                    rows_out.append({
+                        "row_index": int(idx),
+                        "current": int(idx) == cur_row,
+                        **{c: ("" if r[c] is None else str(r[c])) for c in cols},
+                    })
+                # 不一致字段：任一字段在各行存在 >1 种取值
+                diff_cols = [
+                    c for c in cols
+                    if len({row[c] for row in rows_out}) > 1
+                ]
+                it["detail"] = {
+                    "id": target,
+                    "occurrences": len(rows_out),
+                    "columns": cols,
+                    "diff_cols": diff_cols,
+                    "rows": rows_out,
+                }
+
     def list_review_issues(self, month: str, status_filter: str = None) -> dict:
         """列出某月的所有校验问题。"""
         conn = _db.get_connection(self.db_path)
@@ -77,9 +139,11 @@ class DeliveryReportService:
                 params.append(status_filter)
             sql += " ORDER BY sheet, row_index"
             rows = conn.execute(sql, params).fetchall()
+            issues = [dict(r) for r in rows]
+            self._enrich_duplicate_details(month, issues)
             return {
                 "month": month,
-                "issues": [dict(r) for r in rows],
+                "issues": issues,
                 "total": len(rows),
                 "pending": sum(1 for r in rows if r["status"] == "pending"),
                 "confirmed": sum(1 for r in rows if r["status"] == "confirmed"),
