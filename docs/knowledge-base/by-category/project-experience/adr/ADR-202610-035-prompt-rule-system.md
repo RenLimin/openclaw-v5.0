@@ -73,11 +73,11 @@ Prompt 规则**不构成独立层**，而是贯穿 L0~L4 的纵切约束（与 �
 Prompt 治理不能只靠前置闸门，还需从真实交付的**用户纠正**中持续学习。新增 L2 组件 `delivery-quality`：
 
 - `feedback.jsonl`（git-tracked JSONL）**默认记录** Rex 对交付结果的反馈/纠正（规则写入 AGENTS.md P0）。
-- 每周一 10:30 cron `delivery-quality-review`（isolated）跑 `review.py`：按维度/域/严重度聚类、复发根因检测（≥2 次）、高危单次项（high 首次即评估）。
+- **事件驱动（无 cron）**：每次确认反馈（`record.py` 记录）后立即自动跑 `review.py`：按维度/域/严重度聚类、复发根因检测（≥2 次）、高危单次项（high 首次即评估）。批量导入用 `--no-review`。
 - review **只生成报告与建议**，不改核心文件；Rex 拍板后收紧 P2「维度合格判据」+ checker、加黄金 fixture、或沉淀 KB。
 - 选 JSONL 而非 SQLite：需 git 版本化/diff/grep/不丢，规避「DB 重制全丢」教训。
 
-闭环：`用户反馈 → feedback.jsonl → 周 review → (P2/checker/fixture/KB) → 更高返回准确率`。
+闭环：`用户反馈 → feedback.jsonl → 确认即 review（事件驱动）→ (P2/checker/fixture/KB) → 更高返回准确率`。
 
 ### 5. 输出格式契约：统一信封 + 域内固定内页（2026-10-30 增补）
 
@@ -95,12 +95,13 @@ Prompt 治理不能只靠前置闸门，还需从真实交付的**用户纠正**
 3. 新建 4 个 spec 文件（P1×1 + P2×3）。
 4. 6 个子 skill（bangcle-project-summary / obligation-summary / project-retrospective / customer-profile / contract-approval / product-kb）+ 3 个入口 skill（PJME/CME/PME）加「应答规范」引用节。
 5. 用茅台案例回跑验证口径一致性。
-6. 新建 L2 `delivery-quality`（feedback.jsonl + record.py + review.py + README/SCHEMA），挂每周 review cron；AGENTS.md 增「默认记录反馈」铁律。
+6. 新建 L2 `delivery-quality`（feedback.jsonl + record.py + review.py + README/SCHEMA），反馈确认后即时 review（事件驱动，无 cron）；AGENTS.md 增「默认记录反馈」铁律。
 
 ## 变更记录
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-10-30 | 1.0 | 初始 accepted |
-| 2026-10-30 | 1.1 | 增数据闭环层 delivery-quality（默认记录+周 review+反哺） |
+| 2026-10-30 | 1.1 | 增数据闭环层 delivery-quality（默认记录+反哺） |
+| 2026-10-30 | 1.1a | 优化时机由每周 cron 改为反馈确认后即时执行（事件驱动） |
 | 2026-10-30 | 1.2 | 增输出格式契约 format-spec-base + P2 §4 域内模板（v1.3） |

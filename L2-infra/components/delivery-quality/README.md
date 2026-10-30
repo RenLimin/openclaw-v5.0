@@ -12,7 +12,7 @@ Rex 反馈/纠正
    ▼
 record.py ──► feedback.jsonl（git-tracked JSONL，每行一条）
    │
-   ▼  每周一 10:30 cron（delivery-quality-review，isolated，投 wecom:1313）
+   ▼  每次反馈确认（record 记录）后立即自动触发 review（事件驱动，无 cron）
 review.py ──► reviews/review-YYYYMMDD.md（只读建议，不改核心文件）
    │           · 按维度/域/严重度分布
    │           · 复发根因（≥2 次）
@@ -50,7 +50,11 @@ python3 L2-infra/components/delivery-quality/record.py \
 - `--status`：open（默认）/ corrected / promoted / wontfix
 - id 自动生成 `FB-YYYYMMDD-NN`，时间自动打 Asia/Shanghai
 
-### 手动跑 review
+### 触发时机（事件驱动，非 cron）
+
+- **默认**：每次 `record.py` 记录一条反馈后，**立即自动**跑一次 review（即"确认反馈→即优化"）。
+- 批量导入历史反馈时用 `--no-review` 只记录不触发，导完手动跑一次。
+- 手动跑：
 
 ```bash
 python3 L2-infra/components/delivery-quality/review.py          # 全量，落盘报告

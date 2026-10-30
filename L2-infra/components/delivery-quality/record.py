@@ -6,7 +6,7 @@
             --target SSXM-2026-0525-1294 --finding "类型误标为合同" \
             [--root-cause ...] [--corrective-action ...] [--status open] \
             [--tags t1,t2] [--session key]
-  无 --finding 时从 stdin 读取。
+  无 --finding 时从 stdin 读取。\n  默认记录后立即触发 review（事件驱动）；--no-review 仅记录。
 """
 import argparse, json, sys, datetime
 from pathlib import Path
@@ -54,6 +54,7 @@ def main():
     ap.add_argument("--session", default="")
     ap.add_argument("--tags", default="")
     ap.add_argument("--resolution", default="")
+    ap.add_argument("--no-review", action="store_true", help="记录后不立即触发 review（批量导入用）")
     args = ap.parse_args()
 
     finding = args.finding.strip()
@@ -83,6 +84,15 @@ def main():
     with FB.open("a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     print(f"✅ 已记录 {rec['id']} [{rec['dimension']}/{rec['severity']}] → {FB}")
+
+    # 事件驱动：每次反馈确认（记录）后立即跑一次 review 生成优化建议，不依赖 cron。
+    if not args.no_review:
+        import subprocess
+        r = subprocess.run([sys.executable, str(ROOT / "review.py")],
+                           capture_output=True, text=True)
+        print(r.stdout.strip())
+        if r.returncode != 0:
+            print(r.stderr.strip(), file=sys.stderr)
 
 
 if __name__ == "__main__":

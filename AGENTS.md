@@ -226,7 +226,7 @@ python3 L2-infra/components/delivery-quality/record.py \
 
 - 当场已纠正的记 `--status corrected`；待处理留 `open`。
 - 一条反馈一条记录，不要合并；finding 写问题本身，不贴敏感数据。
-- 周一 10:30 cron 自动 review（聚类/复发/高危单次）；**复发≥2 或 high 级问题，review 报告提示后由 Rex 拍板**：收紧 P2 契约 + checker、加黄金 fixture、或沉淀 KB。助手不擅自改核心契约文件。
+- **每次确认反馈（record 记录）后立即自动跑 review**（事件驱动，record.py 内置触发，无 cron）；review 做聚类/复发/高危单次提示。**复发≥2 或 high 级问题，review 报告提示后由 Rex 拍板**：收紧 P2 契约 + checker、加黄金 fixture、或沉淀 KB。助手不擅自改核心契约文件。
 - 完整规范：`L2-infra/components/delivery-quality/README.md` + `SCHEMA.md`。
 
 

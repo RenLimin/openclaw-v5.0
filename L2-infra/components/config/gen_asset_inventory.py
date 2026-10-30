@@ -453,9 +453,9 @@ def render_prompt_governance() -> list[str]:
         ("交付质量反馈库",
          "L2-infra/components/delivery-quality/feedback.jsonl",
          "默认记录 Rex 交付纠正（record.py），git-tracked JSONL；6 维度/域/严重度结构化"),
-        ("反馈每周 review",
+        ("反馈即时 review",
          "L2-infra/components/delivery-quality/review.py",
-         "聚类+复发根因(≥2)+高危单次(high首次即评估)，只读生成报告，反哺 P2/fixture/KB"),
+         "反馈确认后即时触发(事件驱动,无cron)：聚类+复发根因(≥2)+高危单次，只读报告反哺 P2/fixture/KB"),
     ]
     lines = ["## L2 — Prompt 治理（ADR-035 纵切层）", ""]
     lines.append("| 资产 | 路径 | 职责 |")

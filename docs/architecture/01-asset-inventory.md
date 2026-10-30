@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-30 18:47 UTC+08:00
+最后生成：2026-10-30 18:51 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -141,7 +141,6 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
 | daily-inspection-detail | ✅ | cron `0 9 * * *` | `isolated` | wecom/1313 |
-| delivery-quality-review | ✅ | cron `30 10 * * 1` | `isolated` | wecom/1313 |
 
 ## L2 — 重启安全与压缩守护
 
@@ -167,7 +166,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 黄金基准测试 | `L2-infra/prompts/tests/run_tests.sh` | 2 合规必 PASS / 2 违规必 BLOCK + guard 单测；pre-commit 自动运行防门禁退化 |
 | 运行时交付守卫 | `hooks/answer-contract-guard/` | message:sent 审计携带证据标记的交付，写 answer-contract-audit.log；只观察不拦截 |
 | 交付质量反馈库 | `L2-infra/components/delivery-quality/feedback.jsonl` | 默认记录 Rex 交付纠正（record.py），git-tracked JSONL；6 维度/域/严重度结构化 |
-| 反馈每周 review | `L2-infra/components/delivery-quality/review.py` | 聚类+复发根因(≥2)+高危单次(high首次即评估)，只读生成报告，反哺 P2/fixture/KB |
+| 反馈即时 review | `L2-infra/components/delivery-quality/review.py` | 反馈确认后即时触发(事件驱动,无cron)：聚类+复发根因(≥2)+高危单次，只读报告反哺 P2/fixture/KB |
 
 > 12 个 SKILL 引用校验器：9 个分析类强制闸门 + 3 个作用域受限（system-health-check / fin-l4 / role-library，仅约束报告结论、豁免操作回执）。规则即代码（CHECK_RULES）保留在代码层；纯工具型 skill（PDF/OCR/DAG/UI/数据源/PPT 渲染）不挂硬门以防误拦。
 
@@ -257,8 +256,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `38bccd0` |
-| Commit 数 | 537 |
+| HEAD | `3ad4959` |
+| Commit 数 | 538 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
