@@ -165,31 +165,40 @@
             {"label": "📋 校准台账", "onclick": "openCalibrationLedger()"},
             {"label": "导出当前", "onclick": "exportCurrent()"}
         ]) %}
-        <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;margin-bottom:1rem;">
-          <div>
-            <label class="field-label">Sheet：</label>
-            <div style="display:flex;align-items:center;gap:0.5rem;">
-              <select id="view-sheet" class="input" class="w-180" onchange="updateSheetPendingBadge()">
-                <option value="签约">签约</option>
-                <option value="POC&提前实施">POC&提前实施</option>
-                <option value="异常项目">异常项目</option>
-                <option value="确收交接">确收交接</option>
-                <option value="验收交接">验收交接</option>
-              </select>
-              <span id="sheet-pending-badge" style="display:none;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:999px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap;"></span>
-            </div>
+        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <label class="field-label" style="display:inline;margin:0;">Sheet：</label>
+            <select id="view-sheet" class="input w-180" onchange="updateSheetPendingBadge()">
+              <option value="签约">签约</option>
+              <option value="POC&提前实施">POC&提前实施</option>
+              <option value="异常项目">异常项目</option>
+              <option value="确收交接">确收交接</option>
+              <option value="验收交接">验收交接</option>
+            </select>
+            <span id="sheet-pending-badge" style="display:none;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:999px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap;"></span>
           </div>
-          <div style="flex:1;min-width:200px;">
-            <label class="field-label">搜索：</label>
-            <input id="view-search" type="search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="width:100%;">
+          <div style="flex:1;min-width:200px;display:flex;align-items:center;gap:0.5rem;">
+            <label class="field-label" style="display:inline;margin:0;white-space:nowrap;">搜索：</label>
+            <input id="view-search" type="search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="flex:1;" onkeydown="if(event.key==='Enter')loadTable()">
           </div>
           <button class="btn btn-primary" onclick="loadTable()">查询</button>
         </div>
-        <p style="font-size:0.875rem;">当前月份: <strong id="browse-month-label">--</strong></p>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <p style="margin:0;font-size:0.875rem;">当前月份: <strong id="browse-month-label">--</strong></p>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <label style="font-size:0.8rem;color:#555;white-space:nowrap;">每页
+              <select id="view-page-size" class="input input-sm" style="width:auto;display:inline-block;" onchange="onPageSizeChange()">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select> 条</label>
+            <div id="pagination" style="display:flex;justify-content:flex-end;min-height:0;"></div>
+          </div>
+        </div>
         {% endcall %}
 
         {% call card() %}
-        <div id="pagination" style="display:flex;justify-content:flex-end;min-height:0;"></div>
         <div id="data-table-container">
           <p class="text-muted" class="text-center" style="padding:1rem;">选择月份和 Sheet 查看数据</p>
         </div>
@@ -953,12 +962,23 @@ function getSearchKeyword() {
   return document.getElementById('view-search')?.value?.trim() || '';
 }
 
+function getPageSize() {
+  return parseInt(document.getElementById('view-page-size')?.value || '50', 10);
+}
+
+function onPageSizeChange() {
+  currentPage = 1;
+  const month = currentMonth;
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  if (month) fetchPage(month, sheet, 1);
+}
+
 async function fetchPage(month, sheet, page) {
   const container = document.getElementById('data-table-container');
   const search = getSearchKeyword();
   const pagContainer = document.getElementById('pagination');
   try {
-    const params = new URLSearchParams({ page, page_size: 50 });
+    const params = new URLSearchParams({ page, page_size: getPageSize() });
     if (search) params.set('search', search);
     // 并行拉数据 + 当月问题清单（量小，一次拉全月，翻页/切 sheet 复用缓存）
     const issuesP = _loadBrowseIssues(month);
@@ -1022,8 +1042,9 @@ async function fetchPage(month, sheet, page) {
     const _pc = document.getElementById('browse-issue-page-count');
     if (_pc) _pc.textContent = pageIssueCount;
 
-    // 分页
-    renderPagination(pagContainer, month, sheet, totalPages, currentPage);
+    // 分页（传入 onClick 回调，修复下一页无反应）
+    renderPagination(pagContainer, month, sheet, totalPages, currentPage,
+      (p) => fetchPage(month, sheet, p));
   } catch (e) {
     container.innerHTML = `<p class="error-tip">⚠️ ${e.message}</p>`;
   }
@@ -1162,24 +1183,22 @@ function renderPagination(container, month, sheet, totalPages, current, onClick)
     return;
   }
   let html = '<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">';
-  html += `<button class="btn btn-sm" ${current <= 1 ? 'disabled' : ''} onclick="__pagClick(${current - 1})">上一页</button>`;
+  html += `<button type="button" class="btn btn-sm" data-page="${current - 1}" ${current <= 1 ? 'disabled' : ''}>上一页</button>`;
   html += `<span class="text-muted">第 ${current} / ${totalPages} 页</span>`;
-  html += `<button class="btn btn-sm" ${current >= totalPages ? 'disabled' : ''} onclick="__pagClick(${current + 1})">下一页</button>`;
+  html += `<button type="button" class="btn btn-sm" data-page="${current + 1}" ${current >= totalPages ? 'disabled' : ''}>下一页</button>`;
   html += '</div>';
   container.innerHTML = html;
 
-  // 绑定点击事件
-  const btns = container.querySelectorAll('button');
-  btns.forEach(btn => {
+  // 用事件委托绑定，避免 inline onclick 作用域问题
+  container.querySelectorAll('button[data-page]').forEach(btn => {
     btn.addEventListener('click', function() {
-      const next = parseInt(this.getAttribute('onclick').match(/__pagClick\((\d+)\)/)[1]);
-      if (next >= 1 && next <= totalPages) {
+      if (this.disabled) return;
+      const next = parseInt(this.getAttribute('data-page'), 10);
+      if (next >= 1 && next <= totalPages && typeof onClick === 'function') {
         onClick(next);
       }
     });
   });
-
-  function __pagClick(p) { return p; }
 }
 
 // ========== 手工报表对比 ==========
