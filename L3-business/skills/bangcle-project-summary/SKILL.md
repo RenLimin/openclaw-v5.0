@@ -72,3 +72,14 @@ metadata:
 - [ ] 每条非空数据可追溯到字段或明确标注推断
 - [ ] 台账只陈述交付事实，未越界下管理/画像结论
 - [ ] Excel 行数正确、可打开、无敏感凭据
+
+## 应答规范（ADR-035 强制引用）
+
+> 本技能输出口径必须遵循以下应答契约（ADR-035 P1/P2 纵切层）：
+>
+> 1. **P1 通用应答契约**（数据源优先级与时效、证据三档【已验证】/【推断】/【缺失】、降级显式声明、落盘与副作用、客户实体归一、风险定级通用规则）：
+>    `/Users/bangcle/.openclaw/workspace/L2-infra/prompts/answer-spec-base.md`
+> 2. **P2 域应答契约**（固定输出维度 + 域风险定级矩阵）：
+>    `/Users/bangcle/.openclaw/workspace/L3-business/prompts/project-answer-spec.md`
+>
+> 契约优先于本 SKILL 内任何自定义口径；两者冲突时以契约为准，并提请维护对应 spec。

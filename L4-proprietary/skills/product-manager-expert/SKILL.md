@@ -127,3 +127,14 @@ python3 scripts/rebuild_embeddings.py --db <product-kb>/data/product_kb.db --bat
 - 产品咨询：结论有文档出处、区分平台/版本/销售状态、无依据处明确标注。
 - 检准：脚本可复跑、报告含分级问题清单、修复项可追溯（备份+变更记录）。
 - 统一入口：任何 Bangcle **产品相关**需求能按 §一 路由表定位；非产品需求按 §边界外 正确分流、不越界代办。
+
+## 应答规范（ADR-035 强制引用）
+
+> 本技能输出口径必须遵循以下应答契约（ADR-035 P1/P2 纵切层）：
+>
+> 1. **P1 通用应答契约**（数据源优先级与时效、证据三档【已验证】/【推断】/【缺失】、降级显式声明、落盘与副作用、客户实体归一、风险定级通用规则）：
+>    `/Users/bangcle/.openclaw/workspace/L2-infra/prompts/answer-spec-base.md`
+> 2. **P2 域应答契约**（固定输出维度 + 域风险定级矩阵）：
+>    `/Users/bangcle/.openclaw/workspace/L4-proprietary/prompts/product-answer-spec.md`
+>
+> 契约优先于本 SKILL 内任何自定义口径；两者冲突时以契约为准，并提请维护对应 spec。

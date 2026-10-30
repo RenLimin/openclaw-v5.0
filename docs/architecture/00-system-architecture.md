@@ -12,10 +12,10 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 5.9 (2026-10-30 — §7.4.1 补充约定：L4 专家统一入口 skill（*-manager-expert/*-expert）不强制 bangcle- 前缀，PME/CME/PJME 三种写法合规，方案 A 合法化现状) |
+| 文档版本 | 6.0 (2026-10-30 — ADR-035：Agent Prompt 规则体系（P0-P3 纵切层）与应答契约治理，新增 §4 Prompt 治理行 + §8 ADR-035 + §12 变更) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
-| 决策状态 | 5 层架构已锁定(ADR-012); 34 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线 |
+| 决策状态 | 5 层架构已锁定(ADR-012); 35 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线; Prompt 规则体系 P0-P3 纵切层已定(ADR-035) |
 | 配套文档 | `../knowledge-base/README.md` |
 | 待办 | 详见演进路线各阶段（L3 已完成，知识库自建系统 0/7 触发条件暂缓） |
 
@@ -847,6 +847,7 @@ L4 专有业务
 | **成本** | 资源使用、API 调用、外部服务计费 | 架构预留 | 📋 |
 | **组织协作** | 文档、决策记录、知识沉淀 | 已上线(知识库 + ADR + EXP) | ✅ |
 | **知识管理** | 知识库分层、经验沉淀、ADR | 已上线(轻量方案) | ✅ |
+| **Prompt 治理** | 应答契约(P0-P3)、证据分级、数据时效、降级规则、实体归一 | 已上线(ADR-035, 2026-10-30) | ✅ |
 
 ---
 
@@ -1248,6 +1249,7 @@ L4 专有业务
 | ADR-018 | L4 销售合同审批模块(SCA-001) | 高 | ✅ accepted (2026-09-02) |
 | ADR-026 | L3 家庭及个人理财通用框架(FIN) | 高 | ✅ accepted (2026-09-03) |
 | ADR-028 | L0 系统安装层（注册表+流水线+契约验证） | 高 | 📋 proposed (2026-09-07) |
+| ADR-035 | Agent Prompt 规则体系（P0-P3 纵切层）与应答契约治理 | 高 | ✅ accepted (2026-10-30) |
 
 ---
 
@@ -1355,6 +1357,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-10-30 | **6.0** | **Agent Prompt 规则体系（ADR-035）**：① 确立 Prompt 规则为贯穿 L0~L4 的正交纵切层，内部 P0 身份宪法 / P1 通用应答契约 / P2 域应答契约 / P3 能力技能四级；② 明确「规则即代码」与「规则即指令」边界（22 条 CHECK_RULES 等确定性规则留代码层，证据/维度/定级等约束进 P1/P2）；③ 新增 P1 spec（L2-infra/prompts/answer-spec-base.md）+ P2 三域 spec（L3-business/prompts/project-answer-spec.md、contract-answer-spec.md；L4-proprietary/prompts/product-answer-spec.md）；④ 9 个 skill（4 项目子 skill + contract-approval + product-kb + 3 入口）补「应答规范」强制引用；⑤ 新增 §4 Prompt 治理行、§8 ADR-035、§12 本行；资产清单补 Prompt 资产分类。 |
 | 2026-10-30 | **5.9** | **L4 专家统一入口命名约定（方案 A）**：§7.4.1 明确——`*-manager-expert` / `*-expert` 类**统一入口属于 skill**（`L4-proprietary/skills/`），与 `L4-proprietary/components/` 下 Bangcle 专有组件区分，**不强制 `bangcle-` 前缀**，以业务角色命名即可；PME-001 `product-manager-expert`、CME-001 `contract-manager-expert`、PJME-001 `bangcle-project-manager-expert` 三种写法均合规，不重命名、不动引用。解决三入口前缀不统一的历史疑问。 |
 | 2026-10-29 | **5.8** | **INFRA-CLN-001 建设完成转已上线**：① 实现 `tempcleanctl`（4 子命令 dry-run/clean/list/verify + 退出码 0/1/2/3；识别器/判定器/报告器/执行器；fail-closed：未标记不删、只 trash 禁 rm、trash 缺失中止、越界拒绝、symlink 不跟随）；② 13 个测试全绿（真实文件系统 + 真实 trash + 黄金基准）；③ 注册 cron isolated 每日 03:30 `clean --yes`，实删 announce WeCom 1313，无删除静默；④ `verify` 自检接入错误扫描（每 30m）；⑤ 立 **ADR-034**。 |
 | 2026-10-29 | **5.7** | **立项 L2 Workspace 临时清理 + 临时资产统一约定**：① 新增 L2 组件 `workspace-temp-cleanup`（INFRA-CLN-001，📐 规划态）——临时资产标记约定 + cron isolated 系统级定期清理（trash、只删已标记、dry-run 先行）；② §7.4 新增 **§7.4.5 临时/工作产物统一约定**：统一临时区（analysis_output / scripts/tmp / tmp / scratch）、双标记方式（目录命名 + `.openclaw-temp.json`）、默认 TTL（中间数据 7 天 / 台账报表 30 天）、正式交付物直接 commit 不进清理。本版本仅登记+约定，不含实现。 |

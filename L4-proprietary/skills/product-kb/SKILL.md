@@ -76,3 +76,14 @@ A: 修改价格表 Excel，重新运行 `import_price.sh`。
 
 ### Q: 文档匹配率低？
 A: 产品目录名和价格表族名差异大时会降低匹配率。可在 `product` 表 `aliases` 字段（JSON 数组）添加别名。
+
+## 应答规范（ADR-035 强制引用）
+
+> 本技能输出口径必须遵循以下应答契约（ADR-035 P1/P2 纵切层）：
+>
+> 1. **P1 通用应答契约**（数据源优先级与时效、证据三档【已验证】/【推断】/【缺失】、降级显式声明、落盘与副作用、客户实体归一、风险定级通用规则）：
+>    `/Users/bangcle/.openclaw/workspace/L2-infra/prompts/answer-spec-base.md`
+> 2. **P2 域应答契约**（固定输出维度 + 域风险定级矩阵）：
+>    `/Users/bangcle/.openclaw/workspace/L4-proprietary/prompts/product-answer-spec.md`
+>
+> 契约优先于本 SKILL 内任何自定义口径；两者冲突时以契约为准，并提请维护对应 spec。
