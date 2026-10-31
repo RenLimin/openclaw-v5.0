@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BDMS 交付管理系统 · UI 原型 v1</title>
+<style>
+:root{
+  /* Bangcle VI: C-01 梆梆蓝 / C-02 浅蓝 / C-06 深藏青 / C-05 金 */
+  --c-primary:#2D74BB; --c-primary-d:#1f5c97; --c-navy:#00122B;
+  --c-light-blue:#3FA1DA; --c-cyan:#27AABF; --c-teal:#33ADA0; --c-gold:#EFBA20;
+  --c-bg:#f4f6fb; --c-card:#fff;
+  --c-border:#e5e9f2; --c-text:#1f2733; --c-muted:#8a94a6; --c-danger:#dc2626;
+  --c-warning:#d97706; --c-success:#16a34a; --sidebar-w:236px; --radius:12px;
+  --shadow:0 1px 3px rgba(16,24,40,.06),0 1px 2px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Source Han Sans CN","Source Han Sans SC","Noto Sans CJK SC","Source Han Sans",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--c-bg);color:var(--c-text);font-size:14px;line-height:1.55}
+.app{display:flex;min-height:100vh}
+/* ===== Sidebar ===== */
+.sidebar{width:var(--sidebar-w);background:var(--c-navy);color:#c4ccdb;position:fixed;top:0;bottom:0;
+  left:0;display:flex;flex-direction:column;padding:18px 0;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 20px 18px;border-bottom:1px solid #13243f;margin-bottom:14px}
+.brand .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--c-light-blue),var(--c-primary));
+  display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:#fff;
+  font-family:"Source Han Sans CN","Source Han Sans",sans-serif;box-shadow:0 2px 8px rgba(45,116,187,.45)}
+.brand b{color:#fff;font-size:16px;letter-spacing:.5px}
+.brand small{display:block;color:#7fa0c4;font-size:10.5px;margin-top:1px;letter-spacing:.3px}
+.nav-group{padding:6px 12px}
+.nav-group h4{font-size:11px;color:#5f6d8c;text-transform:uppercase;letter-spacing:1px;padding:8px 10px 6px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;
+  color:#b7c0d4;margin-bottom:2px;font-size:13.5px;transition:.15s;user-select:none}
+.nav-item .ic{width:18px;text-align:center}
+.nav-item:hover{background:rgba(45,116,187,.18);color:#fff}
+.nav-item.active{background:var(--c-primary);color:#fff;font-weight:500}
+/* ===== Main ===== */
+.main{flex:1;margin-left:var(--sidebar-w);display:flex;flex-direction:column;min-width:0}
+.topbar{height:60px;background:var(--c-card);border-bottom:1px solid var(--c-border);display:flex;
+  align-items:center;justify-content:space-between;padding:0 26px;position:sticky;top:0;z-index:10}
+.topbar .crumb{color:var(--c-muted);font-size:13px}
+.topbar .crumb b{color:var(--c-text)}
+.user{display:flex;align-items:center;gap:10px;color:var(--c-muted);font-size:13px}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--c-light-blue),var(--c-primary));
+  color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600}
+.content{padding:26px;flex:1}
+.page{display:none;animation:fade .2s}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.page-head{margin-bottom:20px}
+.page-head h1{font-size:21px;font-weight:650}
+.page-head p{color:var(--c-muted);margin-top:4px;font-size:13px}
+/* ===== Cards / grids ===== */
+.grid{display:grid;gap:16px}
+.g-4{grid-template-columns:repeat(4,1fr)}
+.g-3{grid-template-columns:repeat(3,1fr)}
+.g-2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--c-card);border:1px solid var(--c-border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px}
+.card-title{font-size:14px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;
+  justify-content:space-between}
+.kpi .num{font-size:27px;font-weight:700;letter-spacing:-.5px}
+.kpi .lab{color:var(--c-muted);font-size:13px;margin-top:2px}
+.kpi .delta{font-size:12px;margin-top:8px}
+.up{color:var(--c-success)} .down{color:var(--c-danger)}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:500}
+.tag.blue{background:#e7f1fa;color:#2D74BB}.tag.green{background:#e7f6ee;color:#15803d}
+.tag.amber{background:#fdf2e0;color:#b45309}.tag.red{background:#fdeaea;color:#b91c1c}
+.tag.gray{background:#eef1f6;color:#5b6678}
+/* ===== Table ===== */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--c-border);white-space:nowrap}
+th{background:#f8fafc;color:#5b6678;font-weight:600;font-size:12.5px}
+tbody tr:hover{background:#f9fbff}
+/* ===== Buttons / forms ===== */
+.btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--c-border);background:#fff;
+  color:var(--c-text);padding:7px 14px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s}
+.btn:hover{border-color:#c3ccdd;background:#f7f9fd}
+.btn-primary{background:var(--c-primary);border-color:var(--c-primary);color:#fff}
+.btn-primary:hover{background:var(--c-primary-d)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.btn-success{background:var(--c-success);border-color:var(--c-success);color:#fff}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+select,input{padding:7px 11px;border:1px solid var(--c-border);border-radius:8px;font-size:13px;background:#fff;color:var(--c-text)}
+.spacer{flex:1}
+/* ===== bars / chart mock ===== */
+.bars{display:flex;align-items:flex-end;gap:14px;height:180px;padding-top:10px}
+.bars .bar{flex:1;background:linear-gradient(180deg,var(--c-light-blue),var(--c-primary));border-radius:6px 6px 0 0;
+  position:relative;min-height:8px}
+.bars .bar span{position:absolute;top:-19px;left:0;right:0;text-align:center;font-size:11px;color:var(--c-muted)}
+.bars .bar small{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:11px;color:var(--c-muted)}
+.legend{display:flex;gap:16px;margin-top:26px;font-size:12px;color:var(--c-muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.donut{width:150px;height:150px;border-radius:50%;margin:6px auto;
+  background:conic-gradient(#2D74BB 0 46%,#3FA1DA 46% 70%,#EFBA20 70% 86%,#E7E6E6 86% 100%)}
+.note{font-size:12px;color:var(--c-muted)}
+.proto-flag{position:fixed;right:14px;bottom:14px;background:var(--c-navy);color:#BEE3FA;font-size:11.5px;
+  padding:7px 13px;border-radius:20px;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.detail-panel{background:#f8fafc;border:1px dashed #cbd5e5;border-radius:8px;padding:12px 14px;margin-top:10px}
+.diff{color:var(--c-danger);font-weight:600}
+@media(max-width:1100px){.g-4{grid-template-columns:repeat(2,1fr)}.g-3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">B</div><div><b>Bangcle</b><small>BDMS · 交付管理系统</small></div></div>
+    <nav id="nav"></nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb">BDMS / <b id="crumb">首页概览</b></div>
+      <div class="user"><span>gateway-owner</span><div class="avatar">R</div></div>
+    </header>
+    <main class="content" id="content">
+
+      <!-- ===== HOME / 首页概览 ===== -->
+      <section class="page active" data-page="home">
+        <div class="page-head"><h1>首页概览</h1><p>交付与确收关键指标一览（当前账期 2026-06）</p></div>
+        <div class="grid g-4">
+          <div class="card kpi"><div class="num">17,177</div><div class="lab">本月交付明细行数</div><div class="delta up">▲ 3.2% 环比</div></div>
+          <div class="card kpi"><div class="num">523</div><div class="lab">本月确收交接项</div><div class="delta up">▲ 18 项</div></div>
+          <div class="card kpi"><div class="num">¥ 4,862<span style="font-size:15px">万</span></div><div class="lab">本月确认收入</div><div class="delta down">▼ 6.4% 环比</div></div>
+          <div class="card kpi"><div class="num" style="color:var(--c-warning)">17</div><div class="lab">待处理数据问题</div><div class="delta"><span class="tag amber">需人工审核</span></div></div>
+        </div>
+        <div class="grid g-2" style="margin-top:16px">
+          <div class="card">
+            <div class="card-title">近 6 月确认收入趋势（万元）</div>
+            <div class="bars">
+              <div class="bar" style="height:55%"><span>4120</span><small>1月</small></div>
+              <div class="bar" style="height:68%"><span>4980</span><small>2月</small></div>
+              <div class="bar" style="height:61%"><span>4530</span><small>3月</small></div>
+              <div class="bar" style="height:74%"><span>5310</span><small>4月</small></div>
+              <div class="bar" style="height:70%"><span>5194</span><small>5月</small></div>
+              <div class="bar" style="height:66%"><span>4862</span><small>6月</small></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">交付状态分布</div>
+            <div class="donut"></div>
+            <div class="legend" style="justify-content:center">
+              <span><i style="background:#2D74BB"></i>已完成 46%</span>
+              <span><i style="background:#3FA1DA"></i>进行中 24%</span>
+              <span><i style="background:#EFBA20"></i>风险 16%</span>
+              <span><i style="background:#E7E6E6"></i>未启动 14%</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== REPORT / 交付月报 ===== -->
+      <section class="page" data-page="report">
+        <div class="page-head"><h1>交付月报</h1><p>月度交付数据导入、校验与人工审核</p></div>
+        <div class="toolbar">
+          <label class="note">账期</label>
+          <select><option>2026-06</option><option>2026-05</option><option>2026-04</option></select>
+          <button class="btn">⬆ 导入数据</button>
+          <button class="btn">▶ 执行校验</button>
+          <div class="spacer"></div>
+          <span class="tag amber">待审核 · 17 问题</span>
+          <button class="btn btn-primary btn-sm">提交审批</button>
+        </div>
+        <div class="grid g-4" style="margin-bottom:16px">
+          <div class="card kpi"><div class="num">5</div><div class="lab">交付 Sheet</div></div>
+          <div class="card kpi"><div class="num">18</div><div class="lab">校验问题总数</div></div>
+          <div class="card kpi"><div class="num" style="color:var(--c-warning)">17</div><div class="lab">待处理</div></div>
+          <div class="card kpi"><div class="num" style="color:var(--c-success)">1</div><div class="lab">已确认</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">问题清单
+            <div><select style="width:120px"><option>全部状态</option><option>待处理</option><option>已确认</option><option>已驳回</option></select></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td>确收交接</td><td>199</td><td>ID</td><td class="diff">duplicate</td><td>#371028</td><td><span class="tag amber">pending</span></td>
+                  <td><button class="btn btn-sm">▸ 明细</button> <button class="btn btn-sm btn-primary btn-sm">校准</button></td></tr>
+                <tr><td colspan="7" style="padding:0;border-bottom:none">
+                  <div class="detail-panel">
+                    <b>ID #371028 共出现 2 处</b> · <span class="diff">⚠ 同一 ID 的 合同编号 / 客户名称 / 交接日期 / 标题 不一致，疑似真异常</span>
+                    <table style="margin-top:8px">
+                      <thead><tr><th>行</th><th>合同编号</th><th>客户名称</th><th>交接日期</th><th>标题</th></tr></thead>
+                      <tbody>
+                        <tr><td>199 (本条)</td><td class="diff">XSZS2606030376</td><td class="diff">广发控股(香港)</td><td class="diff">20260616</td><td class="diff">【部署】Android加固-私有化 V7.0</td></tr>
+                        <tr><td>489</td><td class="diff">XSZS2606090411</td><td class="diff">山东陆华数字科技</td><td class="diff">20260629</td><td class="diff">【部署】Android加固-公有云增强版</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </td></tr>
+                <tr><td>确收交接</td><td>511</td><td>ID</td><td class="diff">null</td><td>—</td><td><span class="tag amber">pending</span></td>
+                  <td><button class="btn btn-sm btn-primary btn-sm">校准</button></td></tr>
+                <tr><td>验收交接</td><td>516</td><td>ID</td><td class="diff">duplicate</td><td>#302350</td><td><span class="tag amber">pending</span></td>
+                  <td><button class="btn btn-sm">▸ 明细</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <!-- ===== REVENUE / 确收汇总 ===== -->
+      <section class="page" data-page="revenue">
+        <div class="page-head"><h1>确收汇总</h1><p>按月汇总确认收入，支持合同 / 客户 / 产线维度下钻</p></div>
+        <div class="toolbar">
+          <label class="note">账期</label>
+          <select><option>2026-06</option><option>2026-05</option></select>
+          <label class="note">维度</label>
+          <select><option>按合同</option><option>按客户</option><option>按产线</option></select>
+          <input placeholder="🔍 搜索合同号 / 客户" style="width:220px">
+          <div class="spacer"></div>
+          <button class="btn">⬇ 导出 Excel</button>
+        </div>
+        <div class="grid g-4" style="margin-bottom:16px">
+          <div class="card kpi"><div class="num">¥4,862<span style="font-size:15px">万</span></div><div class="lab">本月确认收入</div><div class="delta down">▼ 6.4%</div></div>
+          <div class="card kpi"><div class="num">523</div><div class="lab">确收项数</div><div class="delta up">▲ 18</div></div>
+          <div class="card kpi"><div class="num">186</div><div class="lab">涉及客户</div></div>
+          <div class="card kpi"><div class="num">¥9.3<span style="font-size:15px">万</span></div><div class="lab">单项均值</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">确收明细 <span class="note">共 523 项，第 1/11 页</span></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>合同编号</th><th>客户名称</th><th>产线</th><th>标题</th><th>交接日期</th><th>确认收入(万)</th><th>状态</th></tr></thead>
+              <tbody>
+                <tr><td>XSZS2606030376</td><td>广发控股(香港)有限公司</td><td>加固</td><td>【部署】Android 加固-私有化</td><td>2026-06-16</td><td>42.0</td><td><span class="tag green">已确认</span></td></tr>
+                <tr><td>XSZS2606090411</td><td>山东陆华数字科技有限公司</td><td>加固</td><td>【部署】Android 加固-公有云</td><td>2026-06-29</td><td>6.8</td><td><span class="tag green">已确认</span></td></tr>
+                <tr><td>XSZS2606110419</td><td>河南伊克莱贝森医疗器械</td><td>加固</td><td>【部署】公有云增强版</td><td>2026-06-29</td><td>3.2</td><td><span class="tag amber">待复核</span></td></tr>
+                <tr><td>XSZS2606150428</td><td>武汉微派网络科技有限公司</td><td>加固</td><td>扩展授权</td><td>2026-07-02</td><td>15.6</td><td><span class="tag gray">跨期</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== REVENUE-COMPARE / 对比分析 ===== -->
+      <section class="page" data-page="revenue-compare">
+        <div class="page-head"><h1>对比分析</h1><p>多账期 / 多口径确认收入对比，定位差异来源</p></div>
+        <div class="toolbar">
+          <label class="note">对比账期</label>
+          <select><option>2026-06</option></select><span class="note">vs</span>
+          <select><option>2026-05</option></select>
+          <label class="note">口径</label>
+          <select><option>合同口径</option><option>交付口径</option></select>
+          <div class="spacer"></div>
+          <button class="btn btn-primary btn-sm">生成对比</button>
+        </div>
+        <div class="grid g-3" style="margin-bottom:16px">
+          <div class="card kpi"><div class="num">¥4,862<span style="font-size:15px">万</span></div><div class="lab">本期 (06)</div></div>
+          <div class="card kpi"><div class="num">¥5,194<span style="font-size:15px">万</span></div><div class="lab">上期 (05)</div></div>
+          <div class="card kpi"><div class="num down">-332<span style="font-size:15px">万</span></div><div class="lab">差异 (-6.4%)</div></div>
+        </div>
+        <div class="grid g-2">
+          <div class="card">
+            <div class="card-title">两期收入对比（万元）</div>
+            <div class="bars">
+              <div class="bar" style="height:80%;background:linear-gradient(180deg,#8BC4F0,#3FA1DA)"><span>5194</span><small>05月</small></div>
+              <div class="bar" style="height:74%"><span>4862</span><small>06月</small></div>
+            </div>
+            <div class="legend"><span><i style="background:#3FA1DA"></i>上期</span><span><i style="background:#2D74BB"></i>本期</span></div>
+          </div>
+          <div class="card">
+            <div class="card-title">差异构成 Top 客户</div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>客户</th><th>差异(万)</th><th>主因</th></tr></thead>
+              <tbody>
+                <tr><td>长城汽车</td><td class="down">-128</td><td>大额维保 05 一次性确认</td></tr>
+                <tr><td>广发控股</td><td class="up">+42</td><td>私有化部署新增</td></tr>
+                <tr><td>大商所飞泰</td><td class="down">-56</td><td>合规服务分期收尾</td></tr>
+                <tr><td>其他</td><td class="down">-190</td><td>—</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+      </section>
+      <!-- ===== MASTER / 图例基础数据 ===== -->
+      <section class="page" data-page="master">
+        <div class="page-head"><h1>图例基础数据</h1><p>枚举映射、表头图例与参考值维护，作为校验规则的允许集合</p></div>
+        <div class="toolbar">
+          <select><option>枚举映射 (legend_config)</option><option>表头行 (__header__)</option><option>参考值</option></select>
+          <input placeholder="🔍 搜索 code / 名称" style="width:220px">
+          <div class="spacer"></div>
+          <button class="btn btn-primary btn-sm">+ 新增条目</button>
+        </div>
+        <div class="card">
+          <div class="card-title">枚举映射 · 异常项目.状态</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>code</th><th>标准值</th><th>别名 / 原始写法</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead>
+              <tbody>
+                <tr><td>status_normal</td><td>正常</td><td>正常 / Normal / 在跟</td><td><span class="tag green">启用</span></td><td>2026-06-01</td><td><button class="btn btn-sm">编辑</button></td></tr>
+                <tr><td>status_risk</td><td>风险</td><td>风险 / 异常 / 停滞</td><td><span class="tag green">启用</span></td><td>2026-06-01</td><td><button class="btn btn-sm">编辑</button></td></tr>
+                <tr><td>status_closed</td><td>已关闭</td><td>关闭 / Closed / 终止</td><td><span class="tag gray">停用</span></td><td>2026-05-12</td><td><button class="btn btn-sm">编辑</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="note" style="margin-top:12px">⚠ 新增枚举列前需先用真实数据做命中率分析（建议 ≥99%），并同步更新设计文档后启用。</p>
+        </div>
+      </section>
+
+      <!-- ===== DASHBOARD / 交付统计看板 ===== -->
+      <section class="page" data-page="dashboard">
+        <div class="page-head"><h1>交付统计看板</h1><p>交付效率、周期与产线表现的多维统计</p></div>
+        <div class="toolbar">
+          <label class="note">时间范围</label>
+          <select><option>近 6 个月</option><option>近 12 个月</option><option>本季度</option></select>
+          <label class="note">产线</label>
+          <select><option>全部产线</option><option>加固</option><option>测评</option><option>合规</option></select>
+          <div class="spacer"></div>
+          <button class="btn">⟳ 刷新</button>
+        </div>
+        <div class="grid g-4" style="margin-bottom:16px">
+          <div class="card kpi"><div class="num">23.6<span style="font-size:14px">天</span></div><div class="lab">平均交付周期</div><div class="delta up">▼ 2.1 天 提效</div></div>
+          <div class="card kpi"><div class="num">94.2%</div><div class="lab">按期交付率</div><div class="delta up">▲ 1.4pt</div></div>
+          <div class="card kpi"><div class="num">87.5%</div><div class="lab">一次验收通过率</div><div class="delta down">▼ 0.8pt</div></div>
+          <div class="card kpi"><div class="num">3.4<span style="font-size:14px">次</span></div><div class="lab">单项平均往返</div></div>
+        </div>
+        <div class="grid g-2">
+          <div class="card">
+            <div class="card-title">各产线月度交付量</div>
+            <div class="bars">
+              <div class="bar" style="height:60%"><span>186</span><small>加固</small></div>
+              <div class="bar" style="height:80%"><span>248</span><small>测评</small></div>
+              <div class="bar" style="height:45%"><span>139</span><small>合规</small></div>
+              <div class="bar" style="height:30%"><span>92</span><small>SDK</small></div>
+              <div class="bar" style="height:52%"><span>161</span><small>服务</small></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">交付周期分布</div>
+            <div class="table-wrap"><table>
+              <thead><tr><th>周期区间</th><th>项目数</th><th>占比</th></tr></thead>
+              <tbody>
+                <tr><td>≤ 7 天</td><td>142</td><td>27%</td></tr>
+                <tr><td>8–15 天</td><td>208</td><td>40%</td></tr>
+                <tr><td>16–30 天</td><td>118</td><td>23%</td></tr>
+                <tr><td>&gt; 30 天</td><td>55</td><td>10%</td></tr>
+              </tbody>
+            </table></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SETTINGS / 系统设定 ===== -->
+      <section class="page" data-page="settings">
+        <div class="page-head"><h1>系统设定</h1><p>数据源、阈值、集成与系统参数配置</p></div>
+        <div class="grid g-2">
+          <div class="card">
+            <div class="card-title">校验阈值</div>
+            <div class="toolbar" style="margin-bottom:10px"><label style="width:150px">行数偏差告警阈值</label><input value="20%" style="width:90px"></div>
+            <div class="toolbar" style="margin-bottom:10px"><label style="width:150px">枚举命中率门槛</label><input value="99%" style="width:90px"></div>
+            <div class="toolbar" style="margin-bottom:0"><label style="width:150px">长任务超时(秒)</label><input value="300" style="width:90px"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">系统集成</div>
+            <div class="toolbar" style="margin-bottom:10px"><span style="width:150px">ONES 对接</span><span class="tag green">已连接</span></div>
+            <div class="toolbar" style="margin-bottom:10px"><span style="width:150px">企业微信文档</span><span class="tag green">已连接</span></div>
+            <div class="toolbar" style="margin-bottom:0"><span style="width:150px">数据备份</span><span class="tag blue">每日 02:00</span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-title">存储与版本</div>
+          <p class="note">数据库：<code>data/bdms.db</code> · 服务端口：<code>127.0.0.1:8000</code> · 系统版本：<b>BDMS v2.1</b></p>
+          <div style="margin-top:14px"><button class="btn btn-primary btn-sm">保存设置</button> <button class="btn btn-sm">恢复默认</button></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="proto-flag">🎨 Bangcle BDMS UI 原型 v1 · 静态示意</div>
+<script>
+const NAV=[
+ {group:"交付月度管理",items:[{id:"report",label:"交付月报",icon:"📋"}]},
+ {group:"确认收入管理",items:[{id:"revenue",label:"确收汇总",icon:"💰"},{id:"revenue-compare",label:"对比分析",icon:"🔍"}]},
+ {group:"基础数据",items:[{id:"master",label:"图例基础数据",icon:"📖"}]},
+ {group:"统计看板",items:[{id:"dashboard",label:"交付统计看板",icon:"📊"}]},
+ {group:"系统",items:[{id:"settings",label:"系统设定",icon:"⚙️"}]},
+];
+const TITLES={home:"首页概览",report:"交付月报",revenue:"确收汇总","revenue-compare":"对比分析",
+ master:"图例基础数据",dashboard:"交付统计看板",settings:"系统设定"};
+const nav=document.getElementById("nav");
+let h=`<div class="nav-group"><div class="nav-item" data-go="home"><span class="ic">🏠</span>首页概览</div></div>`;
+NAV.forEach(g=>{h+=`<div class="nav-group"><h4>${g.group}</h4>`;
+ g.items.forEach(i=>{h+=`<div class="nav-item" data-go="${i.id}"><span class="ic">${i.icon}</span>${i.label}</div>`});
+ h+="</div>";});
+nav.innerHTML=h;
+function go(id){
+  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.dataset.page===id));
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.go===id));
+  document.getElementById("crumb").textContent=TITLES[id]||id;
+}
+nav.addEventListener("click",e=>{const it=e.target.closest(".nav-item");if(it)go(it.dataset.go);});
+go("home");
+</script>
+</body>
+</html>
