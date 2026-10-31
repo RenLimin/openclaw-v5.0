@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-10-31 20:06 UTC+08:00
+最后生成：2026-10-31 21:19 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -111,6 +111,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 别名 | source | path |
 |---|---|---|
 | `gatewayauthtoken` | `__OPENCLAW_REDACTED__` | `__OPENCLAW_REDACTED__` |
+| `llamacpp` | `__OPENCLAW_REDACTED__` | `__OPENCLAW_REDACTED__` |
 | `memorysearchkey` | `__OPENCLAW_REDACTED__` | `__OPENCLAW_REDACTED__` |
 
 ### 凭据文件
@@ -125,6 +126,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | `~/.openclaw/secrets/iam.email_username` | `600` | 21 B |
 | `~/.openclaw/secrets/iam.password` | `600` | 8 B |
 | `~/.openclaw/secrets/iam.username` | `600` | 9 B |
+| `~/.openclaw/secrets/llama.cpp.apiKey` | `600` | 49 B |
 | `~/.openclaw/secrets/memory.search.remote.apiKey` | `600` | 9 B |
 | `~/.openclaw/secrets/oa.basic` | `600` | 19 B |
 | `~/.openclaw/secrets/ones.basic` | `600` | 31 B |
@@ -135,9 +137,9 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
-| quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
-| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 7200s | `isolated` | wecom/1313 |
+| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
+| quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
 | daily-inspection-detail | ✅ | cron `0 9 * * *` | `isolated` | wecom/1313 |
@@ -256,8 +258,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `b3f4912` |
-| Commit 数 | 541 |
+| HEAD | `ae7b89a` |
+| Commit 数 | 542 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
