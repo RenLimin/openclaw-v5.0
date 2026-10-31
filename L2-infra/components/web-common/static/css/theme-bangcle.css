@@ -1,0 +1,59 @@
+/* ============================================================
+   theme-bangcle.css — Bangcle（梆梆）品牌主题 · opt-in
+   ============================================================
+   组件：web-common (L2) · 版本：v1.0
+   来源：L4 bangcle-ppt/theme/design_constants.py 的 VI 规范 C-01~C-07
+   策略：可选主题，绝不污染全局默认
+   - 不在 :root 上覆盖，仅在 [data-theme="bangcle"] 下生效
+   - 现有应用外观零影响；需要品牌化时在 <html> 或容器加 data-theme="bangcle"
+   - 同时覆盖 v1 (--c-*) 与字体 token，v2 语义别名经桥接自动跟随
+   加载：须在 base.css / tokens.css 之后引入
+   ============================================================ */
+
+[data-theme="bangcle"] {
+    /* ---- 品牌色（VI C-01 ~ C-07） ---- */
+    --bangcle-primary:   #2D74BB;  /* C-01 梆梆蓝   */
+    --bangcle-light:     #3FA1DA;  /* C-02 浅蓝     */
+    --bangcle-cyan:      #27AABF;  /* C-03 青色     */
+    --bangcle-teal:      #33ADA0;  /* C-04 青绿     */
+    --bangcle-gold:      #EFBA20;  /* C-05 金色     */
+    --bangcle-navy:      #00122B;  /* C-06 深藏青   */
+    --bangcle-dark-gray: #595757;  /* C-07 深灰     */
+    --bangcle-very-light-blue: #BEE3FA;
+
+    /* ---- 映射到 v1 颜色 token（组件实际消费这些） ---- */
+    --c-primary:    var(--bangcle-primary);
+    --c-primary-l:  var(--bangcle-light);
+    --c-primary-d:  #1F5C97;                 /* 梆梆蓝按压深色 */
+    --c-bg:         #f4f6fb;
+    --c-card:       #ffffff;
+    --c-border:     #e5e9f2;
+    --c-border-2:   #cbd5e1;
+    --c-text:       #1f2733;
+    --c-text-2:     var(--bangcle-dark-gray);
+    --c-muted:      #6b7686;
+    --c-muted-2:    #9aa6b6;
+    --c-success:    var(--bangcle-teal);
+    --c-success-l:  #7fd0c6;
+    --c-danger:     #dc2626;
+    --c-danger-l:   #f87171;
+    --c-warning:    #c7920a;
+    --c-warning-l:  var(--bangcle-gold);
+
+    /* ---- 品牌字体：思源黑体（VI 指定） ---- */
+    --ff-sans: "Source Han Sans CN", "Source Han Sans SC", "Noto Sans CJK SC",
+               "Source Han Sans", -apple-system, BlinkMacSystemFont,
+               "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-body:    var(--ff-sans);
+    --font-display: var(--ff-sans);
+}
+
+/* 深色品牌侧栏：任何使用 .sidebar / 品牌深色表面的应用可直接套用 */
+[data-theme="bangcle"] .sidebar,
+.bangcle-surface-dark {
+    background: var(--bangcle-navy);
+    color: #c4ccdb;
+}
+
+/* 品牌强调（金色），用于关键数字/点缀 */
+.bangcle-accent { color: var(--bangcle-gold); }

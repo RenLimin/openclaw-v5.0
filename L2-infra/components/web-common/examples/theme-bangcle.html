@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="bangcle">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bangcle 品牌主题 · web-common</title>
+<!-- 标准样式表 -->
+<link rel="stylesheet" href="../static/css/base.css">
+<link rel="stylesheet" href="../static/css/tokens.css">
+<link rel="stylesheet" href="../static/css/layout.css">
+<link rel="stylesheet" href="../static/css/components.css">
+<!-- Bangcle 品牌主题：在其后加载，仅本页生效（html 上 data-theme="bangcle"） -->
+<link rel="stylesheet" href="../static/css/theme-bangcle.css">
+<style>
+  body{padding:28px;background:var(--c-bg)}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-family:var(--font-display);font-size:24px;margin-bottom:4px}
+  .sub{color:var(--c-muted);margin-bottom:22px;font-size:14px}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .box{background:var(--c-card);border:1px solid var(--c-border);border-radius:var(--r-md);
+    padding:16px;box-shadow:var(--sh-md)}
+  .box .n{font-size:24px;font-weight:700}
+  .box .l{color:var(--c-muted);font-size:13px;margin-top:2px}
+  .swatches{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 20px}
+  .sw{width:120px;border-radius:10px;overflow:hidden;border:1px solid var(--c-border);background:#fff}
+  .sw i{display:block;height:56px}
+  .sw b{display:block;padding:7px 10px;font-size:12px;font-weight:600}
+  .sw small{display:block;padding:0 10px 8px;color:var(--c-muted);font-size:11px}
+  code{background:#eef2f8;padding:2px 6px;border-radius:5px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Bangcle 品牌主题</h1>
+  <p class="sub">opt-in 主题 · 在 <code>&lt;html data-theme="bangcle"&gt;</code> 上启用，不影响其他应用默认外观</p>
+
+  <div class="swatches">
+    <div class="sw"><i style="background:#2D74BB"></i><b>梆梆蓝</b><small>#2D74BB · C-01</small></div>
+    <div class="sw"><i style="background:#3FA1DA"></i><b>浅蓝</b><small>#3FA1DA · C-02</small></div>
+    <div class="sw"><i style="background:#27AABF"></i><b>青色</b><small>#27AABF · C-03</small></div>
+    <div class="sw"><i style="background:#33ADA0"></i><b>青绿</b><small>#33ADA0 · C-04</small></div>
+    <div class="sw"><i style="background:#EFBA20"></i><b>金色</b><small>#EFBA20 · C-05</small></div>
+    <div class="sw"><i style="background:#00122B"></i><b>深藏青</b><small>#00122B · C-06</small></div>
+  </div>
+
+  <div class="grid">
+    <div class="box"><div class="n" style="color:var(--c-primary)">¥4,862万</div><div class="l">本月确认收入</div></div>
+    <div class="box"><div class="n">523</div><div class="l">确收交接项</div></div>
+    <div class="box"><div class="n" style="color:var(--c-warning)">17</div><div class="l">待处理问题</div></div>
+    <div class="box"><div class="n" style="color:var(--c-success)">94.2%</div><div class="l">按期交付率</div></div>
+  </div>
+
+  <div class="box">
+    <p style="margin-bottom:10px"><button class="btn btn-primary">主要按钮</button>
+       <button class="btn">次要按钮</button>
+       <span class="tag" style="background:var(--c-primary);color:#fff">品牌标签</span></p>
+    <p class="sub" style="margin:0">字体：<code>Source Han Sans（思源黑体）</code>，中英数统一。</p>
+  </div>
+</div>
+</body>
+</html>
