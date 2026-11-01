@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const latest = months[0].month;
       subEl.textContent = `交付与确收关键指标一览（当前账期 ${latest.slice(0, 4)}年${latest.slice(4)}月）`;
     }
-    el.innerHTML = `服务状态：<strong style="color:var(--c-success,#10b981);">${d.status}</strong>
+    el.innerHTML = `服务状态：<strong style="color:var(--c-success,#10b981);">${d.status === 'ok' ? '正常' : d.status}</strong>
       &nbsp;·&nbsp; 已生成月份：${months.length ? months.map(m => m.month).join(', ') : '无'}`;
   } catch (e) { el.textContent = `检查失败: ${e}`; }
 });

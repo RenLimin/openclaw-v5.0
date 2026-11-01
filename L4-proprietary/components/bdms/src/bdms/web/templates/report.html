@@ -235,8 +235,8 @@
 
         <!-- Sheet 明细 -->
         <div id="sheet-detail-card" style="display:none;">
-          {% call card(title="Sheet 明细") %}
-          <div id="sheet-detail" class="text-muted">生成月报后显示 15 个 Sheet 的明细行数</div>
+          {% call card(title="工作表明细") %}
+          <div id="sheet-detail" class="text-muted">生成月报后显示 15 个工作表的明细行数</div>
           {% endcall %}
         </div>
 
@@ -250,7 +250,7 @@
         ]) %}
         <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
           <div style="display:flex;align-items:center;gap:0.5rem;">
-            <label class="field-label" style="display:inline;margin:0;">Sheet：</label>
+            <label class="field-label" style="display:inline;margin:0;">工作表：</label>
             <select id="view-sheet" class="input w-180" onchange="updateSheetPendingBadge()">
               <option value="签约">签约</option>
               <option value="POC&提前实施">POC&提前实施</option>
@@ -283,7 +283,7 @@
 
         {% call card() %}
         <div id="data-table-container">
-          <p class="text-muted" class="text-center" style="padding:1rem;">选择月份和 Sheet 查看数据</p>
+          <p class="text-muted" class="text-center" style="padding:1rem;">选择月份和工作表查看数据</p>
         </div>
         {% endcall %}
       </div><!-- /Tab 2 -->
@@ -366,7 +366,7 @@
         <input id="cal-month" class="input" readonly style="background:var(--c-surface);">
       </div>
       <div>
-        <label class="field-label">Sheet</label>
+        <label class="field-label">工作表</label>
         <input id="cal-sheet" class="input" readonly style="background:var(--c-surface);">
       </div>
     </div>
@@ -786,7 +786,7 @@ async function doGenerate(month, mode = 'auto') {
   }
 
   if (!month || !/^\d{6}$/.test(month)) {
-    st.textContent = '⚠️ 请输入有效的月份（YYYYMM格式）';
+    st.textContent = '⚠️ 请输入有效的月份（6 位数字，如 202606）';
     return;
   }
 
@@ -1420,7 +1420,7 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
       `共 ${d.total} 个问题（待处理 ${d.pending} / 已确认 ${d.confirmed} / 已驳回 ${d.rejected}）`;
 
     let html = `<div class="table-wrapper"><table class="table"><thead><tr>
-      <th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th><th>操作</th></tr></thead><tbody>`;
+      <th>工作表</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th><th>操作</th></tr></thead><tbody>`;
 
     _issueCache = d.issues;  // 全局缓存：onclick 只传下标，不内联 JSON
 
@@ -1930,7 +1930,7 @@ async function openCalibrationLedger() {
       container.innerHTML = '<p class="text-muted" class="text-center" style="padding:1rem;">暂无校准记录</p>';
       return;
     }
-    const cols = ['月份','Sheet','行号','列名','原始值','校准值','操作人','校准时间','校准原因','状态','操作'];
+    const cols = ['月份','工作表','行号','列名','原始值','校准值','操作人','校准时间','校准原因','状态','操作'];
     let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
     cols.forEach(c => html += `<th>${c}</th>`);
     html += '</tr></thead><tbody>';

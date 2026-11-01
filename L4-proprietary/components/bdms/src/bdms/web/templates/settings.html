@@ -38,7 +38,7 @@ async function loadSettings() {
 
 function render() {
   let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
-          '<th>Key</th><th>值</th><th>操作</th></tr></thead><tbody>';
+          '<th>配置项</th><th>值</th><th>操作</th></tr></thead><tbody>';
   const keys = Object.keys(settings).sort();
   if (!keys.length) h += '<tr><td colspan="3" class="text-muted">无设置项</td></tr>';
   for (const k of keys) {
