@@ -2,12 +2,12 @@
 {% from "layout.html" import page_header with context %}
 {% from "components.html" import card, chart_container with context %}
 
-{% set page_title = '确认收入汇总 — BDMS' %}
+{% set page_title = '确收汇总 — BDMS' %}
 
 {% block content %}
 {{ page_header(
-    title='确认收入汇总',
-    subtitle='递延 / 新签 月度确收（对齐手工报表列序）'
+    title='确收汇总',
+    subtitle='按月汇总确认收入，支持合同 / 客户 / 产线维度下钻'
 ) }}
 
 {% call card(title="查询") %}
