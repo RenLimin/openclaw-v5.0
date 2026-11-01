@@ -63,3 +63,11 @@ analysis_output/
 # SQLite WAL/SHM 运行时文件
 *.db-shm
 *.db-wal
+
+# 组件运行时数据（不入库）
+L4-proprietary/components/cissp-trainer/data/
+L4-proprietary/components/fin-l4/src/fin_l4_pf01/data/
+L4-proprietary/components/product-kb/data/
+
+# 生成日志
+*.log

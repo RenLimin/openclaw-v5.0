@@ -1,0 +1,24 @@
+{
+  "integrations": {
+    "iam": {
+      "email": {
+        "imap": {
+          "host": "hwhzimap.qiye.163.com",
+          "port": 993,
+          "sender": "imb@bangcle.com",
+          "subject_keyword": "登录验证码",
+          "code_length": 6,
+          "poll_timeout": 90
+        },
+        "credentials": {
+          "username_file": "~/.openclaw/secrets/iam.email_username",
+          "password_file": "~/.openclaw/secrets/iam.email_password"
+        }
+      }
+    },
+    "wecom": {
+      "doc_url": "https://doc.weixin.qq.com/sheet/e3_AVoApQaAAFECNkQz1YVFmQNStclkD?scode=AD8AYAehAA80o5luDIAVoApQaAAFE",
+      "browser_cdp_port": 9222
+    }
+  }
+}
