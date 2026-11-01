@@ -59,3 +59,7 @@ L4-proprietary/components/*/output/*
 
 # 临时资产区（INFRA-CLN-001 §7.4.5 统一约定）
 analysis_output/
+
+# SQLite WAL/SHM 运行时文件
+*.db-shm
+*.db-wal
