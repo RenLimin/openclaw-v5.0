@@ -36,6 +36,8 @@
     <link rel="stylesheet" href="/static/web-common/css/layout.css?v=w1.3">
     <link rel="stylesheet" href="/static/web-common/css/components.css?v=w1.2">
     <link rel="stylesheet" href="/static/web-common/css/forms.css?v=w1.2">
+    <link rel="stylesheet" href="/static/web-common/vendor/flatpickr/flatpickr.min.css?v=4.6.13">
+    <link rel="stylesheet" href="/static/web-common/css/datepicker.css?v=w1.3">
     {# head 区域预留，内容在 main 中通过 caller() 渲染 #}
     {% block extra_head %}{{ extra_head|safe }}{% endblock %}
 </head>
@@ -133,6 +135,8 @@
     <script src="/static/web-common/js/forms.js?v=w2.1"></script>
     <script src="/static/web-common/js/pagination.js?v=w2.1"></script>
     <script src="/static/web-common/js/table.js?v=w2.1"></script>
+    <script src="/static/web-common/vendor/flatpickr/flatpickr.min.js?v=4.6.13"></script>
+    <script src="/static/web-common/js/datepicker.js?v=w1.3"></script>
     {% if show_mobile_menu %}
     <script>
     // 移动端菜单（增强版：外部点击/Esc 关闭 + aria-expanded 状态）

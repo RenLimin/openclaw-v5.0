@@ -262,7 +262,25 @@
                 </select>
             {% elif field.type == "date" %}
                 <input type="date" id="{{ field.id }}" name="{{ field.name or field.id }}"
-                       {% if field.default %}value="{{ field.default }}"{% endif %}>
+                       {% if field.default %}value="{{ field.default }}"{% endif %}
+                       {% if field.range_group %}data-range="{{ field.range_from if field.range_from else 'from' if field.id.endswith('From') or field.id.endswith('from') or field.id.endswith('_start') else 'to' if field.id.endswith('To') or field.id.endswith('to') or field.id.endswith('_end') else 'from' }}" data-range-group="{{ field.range_group }}"{% endif %}
+                       {% if field.shortcuts %}data-shortcuts="true"{% endif %}
+                       {% if field.date_format %}data-date-format="{{ field.date_format }}"{% endif %}
+                       {% if field.min_date %}data-min-date="{{ field.min_date }}"{% endif %}
+                       {% if field.max_date %}data-max-date="{{ field.max_date }}"{% endif %}>
+            {% elif field.type == "date-range" %}
+                <input type="date" id="{{ field.id }}" name="{{ field.name or field.id }}"
+                       data-range="from" data-range-group="{{ field.range_group or field.id }}"
+                       {% if field.default_from %}value="{{ field.default_from }}"{% endif %}
+                       {% if field.shortcuts %}data-shortcuts="true"{% endif %}
+                       {% if field.min_date %}data-min-date="{{ field.min_date }}"{% endif %}
+                       {% if field.max_date %}data-max-date="{{ field.max_date }}"{% endif %}
+                       placeholder="开始日期" style="margin-bottom: 4px;">
+                <input type="date" id="{{ field.id }}_to" name="{{ field.name or field.id }}_to"
+                       data-range="to" data-range-group="{{ field.range_group or field.id }}"
+                       {% if field.default_to %}value="{{ field.default_to }}"{% endif %}
+                       {% if field.shortcuts %}data-shortcuts="true"{% endif %}
+                       placeholder="结束日期">
             {% elif field.type == "number" %}
                 <input type="number" id="{{ field.id }}" name="{{ field.name or field.id }}"
                        placeholder="{{ field.placeholder or '' }}"

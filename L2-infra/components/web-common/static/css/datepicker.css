@@ -1,0 +1,490 @@
+/* ============================================================
+   datepicker.css — flatpickr 自定义主题（匹配 web-common 设计语言）
+   覆盖默认 flatpickr 样式，统一设计语言 + 暗色模式支持
+   ============================================================ */
+
+/* --- ⚡ 全局兜底：彻底隐藏原生日历/月份指示器 ---
+   问题根源：原生 date/month input 右侧有 calendar picker indicator，
+   当输入框 padding 较小时，指示器会溢出框外。
+   flatpickr 接管后不需要原生指示器，直接隐藏。
+   用 html body 前缀 + !important 确保最高优先级。 */
+html body input[type="date"],
+html body input[type="month"],
+html body input[type="datetime-local"],
+html body input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+html body input[type="date"]::-webkit-calendar-picker-indicator,
+html body input[type="month"]::-webkit-calendar-picker-indicator,
+html body input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+html body input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* --- 基础容器 --- */
+.flatpickr-calendar {
+  font-family: var(--ff-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, #e5e7eb);
+  border-radius: var(--r-md, 8px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 0;
+  width: 296px;
+}
+
+/* 动画 */
+.flatpickr-calendar.animate.open {
+  animation: fpFadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fpFadeInDown {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* --- 月份切换头部 --- */
+.flatpickr-months {
+  background: var(--c-surface, #fff);
+  border-bottom: 1px solid var(--c-border, #e5e7eb);
+  padding: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-radius: var(--r-md, 8px) var(--r-md, 8px) 0 0;
+}
+
+.flatpickr-month {
+  height: 40px;
+  line-height: 40px;
+  color: var(--c-text, #111827);
+  flex: 1;
+}
+
+.flatpickr-current-month {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  height: 40px;
+  line-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  position: relative;
+}
+
+.flatpickr-current-month input.cur-year {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text, #111827);
+  padding: 0;
+  height: 24px;
+  line-height: 24px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.flatpickr-current-month input.cur-year:hover {
+  background: var(--c-surface-2, #f3f4f6);
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+  background: var(--c-surface-2, #f3f4f6);
+}
+
+/* 左右箭头 —— 用两级选择器匹配 flatpickr 默认优先级(0,2,0)，
+   确保 top/height/padding 全部覆盖，箭头不会溢出日历 */
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text-secondary, #6b7280);
+  fill: var(--c-text-secondary, #6b7280);
+  transition: all 0.15s ease;
+  overflow: hidden;
+  position: absolute;
+}
+
+.flatpickr-months .flatpickr-prev-month {
+  left: 8px;
+}
+
+.flatpickr-months .flatpickr-next-month {
+  right: 8px;
+}
+
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover {
+  background: var(--c-surface-2, #f3f4f6);
+  color: var(--c-primary, #3b82f6);
+  fill: var(--c-primary, #3b82f6);
+}
+
+.flatpickr-months .flatpickr-prev-month svg,
+.flatpickr-months .flatpickr-next-month svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+/* --- 星期标题 --- */
+.flatpickr-weekdays {
+  height: 36px;
+  background: var(--c-surface, #fff);
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.flatpickr-weekdaycontainer {
+  display: flex;
+  width: 100%;
+  padding: 0 8px;
+}
+
+.flatpickr-weekday {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text-muted, #9ca3af);
+  line-height: 36px;
+  height: 36px;
+  text-align: center;
+  flex: 1;
+}
+
+/* --- 日期网格 --- */
+.flatpickr-days {
+  padding: 0 8px 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dayContainer {
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  gap: 2px 0;
+  padding: 0;
+}
+
+.flatpickr-day {
+  height: 34px;
+  line-height: 32px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--c-text, #111827);
+  border-radius: 6px;
+  max-width: calc(100% / 7);
+  margin: 0;
+  border: 1px solid transparent;
+  transition: all 0.1s ease;
+  flex-basis: calc(100% / 7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  padding: 0;
+}
+
+.flatpickr-day:hover {
+  background: var(--c-surface-2, #f3f4f6);
+  border-color: transparent;
+  color: var(--c-text, #111827);
+}
+
+/* 今天 */
+.flatpickr-day.today {
+  border: 1px solid var(--c-primary, #3b82f6);
+  color: var(--c-primary, #3b82f6);
+  font-weight: 600;
+  position: relative;
+}
+.flatpickr-day.today:hover {
+  background: var(--c-primary-light, #dbeafe);
+  color: var(--c-primary, #3b82f6);
+}
+
+/* 选中日期 */
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: var(--c-primary, #3b82f6);
+  color: #fff;
+  border-color: var(--c-primary, #3b82f6);
+  font-weight: 600;
+}
+
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+  background: var(--c-primary, #3b82f6);
+  opacity: 0.9;
+  color: #fff;
+}
+
+/* 范围中间日期 */
+.flatpickr-day.inRange {
+  background: var(--c-primary-light, #dbeafe);
+  color: var(--c-primary-dark, #1d4ed8);
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
+.flatpickr-day.inRange:hover {
+  background: var(--c-primary-light, #dbeafe);
+}
+
+.flatpickr-day.startRange.inRange {
+  border-radius: 6px 0 0 6px;
+}
+
+.flatpickr-day.endRange.inRange {
+  border-radius: 0 6px 6px 0;
+}
+
+.flatpickr-day.startRange.endRange {
+  border-radius: 6px;
+}
+
+/* 其他月份日期 */
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+  color: var(--c-text-muted, #9ca3af);
+  opacity: 0.5;
+}
+
+/* 禁用日期 */
+.flatpickr-day.disabled,
+.flatpickr-day.disabled:hover {
+  color: var(--c-text-muted, #9ca3af);
+  opacity: 0.4;
+  background: none;
+  cursor: not-allowed;
+}
+
+/* --- 快捷选项区域 --- */
+.dp-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--c-border, #e5e7eb);
+}
+
+.dp-shortcuts button {
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--c-border, #d1d5db);
+  border-radius: 4px;
+  background: var(--c-surface, #fff);
+  color: var(--c-text-secondary, #6b7280);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dp-shortcuts button:hover {
+  background: var(--c-surface-2, #f3f4f6);
+  color: var(--c-primary, #3b82f6);
+  border-color: var(--c-primary, #3b82f6);
+}
+
+/* --- 时间选择器（如有需要）--- */
+.flatpickr-time {
+  border-top: 1px solid var(--c-border, #e5e7eb);
+  height: 36px;
+  line-height: 36px;
+}
+
+.flatpickr-time input {
+  color: var(--c-text, #111827);
+  font-size: 13px;
+}
+
+.flatpickr-time .flatpickr-am-pm {
+  font-size: 12px;
+}
+
+/* --- 暗色模式 --- */
+.dark .flatpickr-calendar,
+[data-theme="dark"] .flatpickr-calendar {
+  background: var(--c-surface, #1f2937);
+  border-color: var(--c-border, #374151);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.dark .flatpickr-months,
+[data-theme="dark"] .flatpickr-months {
+  background: var(--c-surface, #1f2937);
+  border-bottom-color: var(--c-border, #374151);
+}
+
+.dark .flatpickr-month,
+[data-theme="dark"] .flatpickr-month,
+.dark .flatpickr-current-month,
+[data-theme="dark"] .flatpickr-current-month,
+.dark .flatpickr-current-month input.cur-year,
+[data-theme="dark"] .flatpickr-current-month input.cur-year {
+  color: var(--c-text, #f9fafb);
+}
+
+.dark .flatpickr-weekdays,
+[data-theme="dark"] .flatpickr-weekdays {
+  background: var(--c-surface, #1f2937);
+}
+
+.dark .flatpickr-weekday,
+[data-theme="dark"] .flatpickr-weekday {
+  color: var(--c-text-muted, #6b7280);
+}
+
+.dark .flatpickr-day,
+[data-theme="dark"] .flatpickr-day {
+  color: var(--c-text, #f9fafb);
+}
+
+.dark .flatpickr-day:hover,
+[data-theme="dark"] .flatpickr-day:hover {
+  background: var(--c-surface-2, #374151);
+}
+
+.dark .flatpickr-day.today,
+[data-theme="dark"] .flatpickr-day.today {
+  border-color: var(--c-primary, #3b82f6);
+  color: var(--c-primary, #60a5fa);
+}
+
+.dark .flatpickr-day.today:hover,
+[data-theme="dark"] .flatpickr-day.today:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.dark .flatpickr-day.selected,
+.dark .flatpickr-day.startRange,
+.dark .flatpickr-day.endRange,
+[data-theme="dark"] .flatpickr-day.selected,
+[data-theme="dark"] .flatpickr-day.startRange,
+[data-theme="dark"] .flatpickr-day.endRange {
+  background: var(--c-primary, #3b82f6);
+  color: #fff;
+  border-color: var(--c-primary, #3b82f6);
+}
+
+.dark .flatpickr-day.inRange,
+[data-theme="dark"] .flatpickr-day.inRange {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--c-primary, #60a5fa);
+}
+
+.dark .flatpickr-months .flatpickr-prev-month,
+.dark .flatpickr-months .flatpickr-next-month,
+[data-theme="dark"] .flatpickr-months .flatpickr-prev-month,
+[data-theme="dark"] .flatpickr-months .flatpickr-next-month {
+  color: var(--c-text-secondary, #9ca3af);
+  fill: var(--c-text-secondary, #9ca3af);
+}
+
+.dark .flatpickr-months .flatpickr-prev-month:hover,
+.dark .flatpickr-months .flatpickr-next-month:hover,
+[data-theme="dark"] .flatpickr-months .flatpickr-prev-month:hover,
+[data-theme="dark"] .flatpickr-months .flatpickr-next-month:hover {
+  background: var(--c-surface-2, #374151);
+  color: var(--c-primary, #60a5fa);
+  fill: var(--c-primary, #60a5fa);
+}
+
+.dark .dp-shortcuts,
+[data-theme="dark"] .dp-shortcuts {
+  border-bottom-color: var(--c-border, #374151);
+}
+
+.dark .dp-shortcuts button,
+[data-theme="dark"] .dp-shortcuts button {
+  background: var(--c-surface, #1f2937);
+  border-color: var(--c-border, #4b5563);
+  color: var(--c-text-secondary, #9ca3af);
+}
+
+.dark .dp-shortcuts button:hover,
+[data-theme="dark"] .dp-shortcuts button:hover {
+  background: var(--c-surface-2, #374151);
+  color: var(--c-primary, #60a5fa);
+  border-color: var(--c-primary, #3b82f6);
+}
+
+.dark .flatpickr-time,
+[data-theme="dark"] .flatpickr-time {
+  border-top-color: var(--c-border, #374151);
+}
+
+.dark .flatpickr-time input,
+[data-theme="dark"] .flatpickr-time input {
+  color: var(--c-text, #f9fafb);
+}
+
+/* --- 全局：所有日期/月份输入框的基础优化（不依赖 form-group）--- */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"] {
+  cursor: pointer;
+}
+
+/* --- 有 flatpickr 的页面：隐藏输入框内的自定义日历图标 --- */
+body input[type="date"],
+body input[type="datetime-local"],
+body input[type="month"],
+body input[type="time"] {
+  background-image: none !important;
+  /* 恢复正常 padding，因为不需要给图标留位置 */
+  padding-right: var(--s-3) !important;
+}
+
+/* flatpickr 激活后彻底隐藏原生 calendar indicator */
+body input[type="date"]::-webkit-calendar-picker-indicator,
+body input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+body input[type="month"]::-webkit-calendar-picker-indicator,
+body input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+/* --- form-group 内的保持一致 --- */
+body .form-group input[type="date"],
+body .form-group input[type="datetime-local"],
+body .form-group input[type="month"],
+body .form-group input[type="time"] {
+  background-image: none !important;
+  padding-right: var(--s-3) !important;
+  cursor: pointer;
+}
