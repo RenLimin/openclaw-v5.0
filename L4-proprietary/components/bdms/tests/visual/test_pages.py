@@ -45,6 +45,8 @@ class TestBDMSReport(VisualTestBase):
     url = "http://127.0.0.1:8000/report"
     viewport = (1440, 900)
     wait_for_selector = "body"
+    # ctxbar 状态条含动态值（导入日期/待处理计数），屏蔽后仍保留布局占位
+    mask_selectors = [".ctxbar .seg .tag"]
 
     def test_page(self, page):
         self.assert_visual_match(page, "report")
