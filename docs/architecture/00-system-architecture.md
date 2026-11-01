@@ -829,7 +829,7 @@ L4 专有业务
 | SCA-001 (合同审批框架) | SCA-L4 (销售合同审批) | 通用框架: 分级审批流程 + 风险扫描 + 合同生成; 实例: 对应销售合同审批规则 | ADR-018 (框架) | `L3-business/skills/contract-approval/` (框架) | ✅ 已上线 |
 | FIN-L3 (家庭理财框架) | FIN-L4 (Rex 家庭理财) | 通用框架: 账户/贷款/保险/投资/利率/建议; 实例: Rex 家庭理财系统 (CLI + Web UI + 测试数据) | ADR-026 (框架) / ADR-027 (实例) | `docs/architecture/components/personal-finance/` (框架) | ✅ 已上线 |
 
-> **BDMS 详情**: 24 个 Python 文件，3157 行代码。5 个采集器 + 4 个业务引擎 + 2 个报告生成器 + 审批流程 + 调度监控。数据库 514+531 行。
+> **BDMS 详情**: 109 个 Python 文件，30079 行代码。9 个业务模块（delivery_report/revenue/dashboard/master_data/contract_management/profit_management/project_management/integration/settings）+ Web 层（FastAPI + Jinja + 9 模板）+ 审批流程 + 调度监控。2026-11 按定稿原型完成前端重建（P1–P4）。
 
 > **与 L2 协同**: BDMS(L4) 调用持久化适配(L2, SQLite) + Office 文档生成(L2, openpyxl) + 知识库工具链(L2)。
 
@@ -1390,8 +1390,9 @@ L4 专有业务
 | 2026-09-02 | 2.10 | 新增 L4 销售合同审批模块(SCA-001,ADR-018): 分级审批流程(按金额4级) + 风险扫描(基于民法典13项) + 合同生成(docx) + 审计追踪。Skill 形式交付,可独立使用。端到端验证通过。 |
 | 2026-09-02 | 2.11 | 新增 L2 OCR 文档数字化组件(OCR-001,ADR-023): 扫描件/图片→高精度文本。RapidOCR主引擎+Paddle可选+600DPI+8版本预处理+版面分析+合同场景40+规则纠错。与Office文档生成(ADR-016)形成一读一写对偶。10页扫描件合同实测通过。 |
 | 2026-09-03 | **3.0** | **L3 家庭及个人理财通用框架(FIN)启动: 6 个 FIN 组件设计齐备(ADR-026 accepted), DESIGN.md v1.0, 架构 v3.0 同步** |
+| 2026-11-01 | **5.5** | **BDMS 按定稿原型前端重建完成（P1–P4）**: ①P1 base 布局品牌化（方形B标/深蓝侧栏/236↔68 折叠/数字右对齐/焦点环）；②P2 月报 4 子页签工作流重构（ctxbar+步骤条+导入/校准/问题清单/审批+审批时间线）；③P3 全页面标题副标题对齐；④P4 审批时间线字段回填 + 首页动态账期 + 启动迁移（`web/main.py` lifespan 修迁移不执行根因）；⑤遗留项清零（英文文案中文化+logo 去白描边）；⑥回归套件固化（32 项 UI 回归 + 9 页视觉 golden，41 项全绿）；⑦历史备份归档至 `archive/`；⑧架构文档/资产清单同步对齐。** |
 | 2026-10-04 | **4.8** | **全量资产文档补齐 + 架构文档与实际对齐 + 系统升级 2026.9.8**: ① L3 7 组件 PRD+OUTLINE+VERIF+OPS (28份); ② L2 19 组件 VERIFICATION+OPERATIONS (38份); ③ L4 补入 revenue-recognition; ④ 架构文档 §7.6 全部标记 ✅; ⑤ OpenClaw 版本 2026.7.2→2026.9.8; ⑥ USER.md/MEMORY.md 瘦身。 |
-| 2026-09-01 | **2.9** | **L4 交付中心运营引擎(BDMS v1.0)完整发布**: 24 个 Python 文件,3157 行代码。M1 数据采集(5个采集器) + M2 业务引擎(4个) + M3 报告生成(2个) + M4 审批流程 + M5 调度监控。端到端验证通过。** |
+| 2026-09-01 | **2.9** | **L4 交付中心运营引擎(BDMS v1.0)完整发布**: 24 个 Python 文件,3157 行代码。M1 数据采集(5个采集器) + M2 业务引擎(4个) + M3 报告生成(2个) + M4 审批流程 + M5 调度监控。端到端验证通过。**（注：2026-11 重建后实测 109 文件/30079 行，见 v5.5） |
 | 2026-09-12 | **4.4** | **L2 logs 组件补录**: 补录 `L2-infra/components/logs/` 到 L2 组件表（骨架阶段，有 README + DESIGN.md 但未在文档声明）。 |
 | 2026-09-11 | **4.3** | **L2 路径补全 + fin-l4 纳入**: ① L2 组件表 19 处路径加 `L2-infra/` 前缀（消除旧格式 `components/xxx/`）；② L4 新增 fin-l4 组件（家庭理财实例引擎，ADR-027）；③ L4 新增 fin-l4 技能（FIN-L4 6 大模块）；④ session-orchestrator 标记为 ❌ 已废弃（已并入 session-isolation 子模块）。 |
 | 2026-09-11 | **4.2** | **路径精确化 + 技能体系文档化**: ① L3 组件表 9 处路径加 `L3-business/components/` 前缀；② L4 组件表 3 处路径加 `L4-proprietary/components/` 前缀 + bangcle-ppt-template→bangcle-ppt 修正；③ L2-infra/skills 机制说明（dag-orchestrator/role-library/ocr-digitalization 三个技能）；④ L4 ones-browser-export 技能纳入；⑤ mcp-server 标记为 📋 预留；⑥ session-lifecycle/error-handling DESIGN.md 引用修正（功能已集成至其他组件）。 |

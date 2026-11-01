@@ -170,6 +170,8 @@ PYTHONPATH=src python3 -m bdms.cli.main web --port 8801
 - 备份链：`data/bdms.db.bak-*`（月度修复前快照）
 - 恢复：`cp data/bdms.db.bak-month-fix data/bdms.db`（先停 Web）
 - revenue 侧备份：`revenue.db.bak-20260916-*`
+- 历史快照已统一归档至 `archive/`（含 `backup_20261016_113741_pre_restart.db` 等，见 `archive/README.md`）
+- 重建前前端快照：`backups/pre-rebuild-20261101/`（git 跟踪，可回滚）
 
 ### 3.5 测试环境隔离
 

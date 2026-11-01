@@ -25,3 +25,5 @@ raw_data_*/
 
 # 数据备份（大体积，不入库）
 backup_*/
+archive/*
+!archive/README.md
