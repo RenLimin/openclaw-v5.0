@@ -25,7 +25,7 @@
     </div>
     <div class="form-group" style="flex:2;min-width:250px">
         <label>搜索知识点</label>
-        <input type="text" id="kpSearch" placeholder="输入知识点名称查询依赖关系..." onkeydown="if(event.key==='Enter')searchKp()">
+        <input type="search" id="kpSearch" placeholder="输入知识点名称查询依赖关系..." onkeydown="if(event.key==='Enter')searchKp()">
     </div>
     <div class="form-group" style="display:flex;align-items:flex-end">
         {{ button('🔍 查询', variant='primary', onclick='searchKp()') }}
