@@ -26,87 +26,175 @@
     margin-right:4px; vertical-align:middle;
     background:rgba(220,53,69,0.18); box-shadow: inset 0 0 0 2px var(--c-danger);
   }
+
+  /* ===== P2 重建：ctxbar + steps + timeline + tag ===== */
+  .ctxbar {
+    position: sticky; top: 0; z-index: 20;
+    background: #fff; border: 1px solid var(--c-border);
+    border-radius: var(--r-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 10px 16px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .ctxbar .seg { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+  .ctxbar .seg b { font-size: 13.5px; }
+  .ctxbar-divider { color: #d4dbe6; font-weight: 300; }
+  .ctxbar .spacer { flex: 1; }
+
+  /* tag 小标签 */
+  .tag {
+    display: inline-block; padding: 2px 9px; border-radius: 20px;
+    font-size: 11.5px; font-weight: 500;
+  }
+  .tag.blue { background: #e7f1fa; color: #2D74BB; }
+  .tag.green { background: #e7f6ee; color: #15803d; }
+  .tag.amber { background: #fdf2e0; color: #b45309; }
+  .tag.red { background: #fdeaea; color: #b91c1c; }
+  .tag.gray { background: #eef1f6; color: #5b6678; }
+
+  /* 阶段步骤条 */
+  .steps {
+    display: flex; align-items: center; margin-bottom: 18px;
+    flex-wrap: wrap; gap: 6px 0;
+  }
+  .step {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--c-muted, #6b7586); font-size: 13px; cursor: default;
+  }
+  .step .dot {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #e7ecf3; color: var(--c-muted, #6b7586);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12.5px; font-weight: 700; flex: none;
+  }
+  .step.done .dot { background: var(--c-success); color: #fff; }
+  .step.active .dot {
+    background: var(--c-primary); color: #fff;
+    box-shadow: 0 0 0 4px rgba(45, 116, 187, 0.15);
+  }
+  .step.active { color: var(--c-text); font-weight: 600; }
+  .step-line { width: 48px; height: 2px; background: #e1e7f0; margin: 0 12px; border-radius: 2px; }
+  .step-line.done { background: var(--c-success); }
+
+  /* 审批时间线 */
+  .timeline { position: relative; margin-left: 8px; padding-left: 22px; }
+  .timeline::before {
+    content: ""; position: absolute; left: 6px; top: 4px; bottom: 4px;
+    width: 2px; background: #e6ecf4;
+  }
+  .tl-item { position: relative; padding: 0 0 18px; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -22px; top: 3px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: #fff; border: 3px solid var(--c-primary);
+  }
+  .tl-item.ok::before { border-color: var(--c-success); }
+  .tl-item.gray::before { border-color: #c2cbda; }
+  .tl-item .t { font-size: 13px; font-weight: 600; }
+  .tl-item .m { font-size: 12.5px; color: var(--c-muted, #6b7586); margin-top: 2px; }
+
+  @media (max-width: 1100px) {
+    .step-line { width: 24px; }
+  }
 </style>
 {{ page_header(
     title='交付月报',
-    subtitle='生成 / 审核 / 导出 / 浏览月度交付报表（15 Sheet）',
-    actions=[
-        {"label": "导出 Excel", "variant": "success", "onclick": "doExport()"}
-    ]
+    subtitle='月度交付数据导入、校验与人工审核 · 按阶段推进'
 ) }}
 
 <div class="report-page">
 
-  <!-- 数据范围卡（对标 dashboard 同款筛选） -->
-  {% call card(title="数据范围") %}
-  <div class="form-row">
-    <div>
-      <label class="field-label">选择月份：</label>
-      <select id="month-select" class="input" style="min-width:180px;">
-        <option value="">加载中...</option>
-      </select>
-    </div>
-    <div style="border-left:1px solid var(--c-border);height:36px;margin:0 0.5rem;"></div>
-    <div>
-      <label class="field-label">新建月份：</label>
-      <input type="month" id="new-month-input" class="input" class="w-140"
-             onkeydown="if(event.key==='Enter')confirmNewMonth()">
-    </div>
-    <div>
-      <label class="field-label">模式：</label>
-      <select id="new-month-mode" class="input" style="width:160px;">
-        <option value="auto">自动（有数据则读取）</option>
-        <option value="regenerate">强制重新生成</option>
-      </select>
-    </div>
-    <div style="display:flex;align-items:center;gap:0.3rem;">
-      <input type="checkbox" id="refetch-sources" checked>
-      <label for="refetch-sources" style="font-size:0.85rem;color:var(--c-text-secondary);cursor:pointer;">重新拉取源数据</label>
-    </div>
-    <button class="btn btn-primary" onclick="confirmNewMonth()">+ 生成月报</button>
-    <button class="btn" onclick="doCompare()" style="margin-left:0.5rem;" id="btn-compare" disabled>📊 对比手工报表</button>
-    <span id="load-status" class="text-muted fs-xs"></span>
+  <!-- 常驻上下文：切子页签不丢账期/状态 -->
+  <div class="ctxbar" id="ctxbar">
+    <div class="seg">账期 <b id="ctx-month">--</b></div>
+    <span class="ctxbar-divider">|</span>
+    <div class="seg">数据状态 <span class="tag gray" id="ctx-data-status">未生成</span></div>
+    <div class="seg">校验 <span class="tag gray" id="ctx-review-status">无数据</span></div>
+    <div class="spacer"></div>
+    <button class="btn btn-sm" id="btn-export-main" data-role="btn-export" onclick="doExport()" disabled>⬇ 导出月报表格</button>
+    <button class="btn btn-primary btn-sm" id="btn-approve" data-role="btn-approve" onclick="doApprove()" disabled>提交审批</button>
+    <button class="btn btn-sm btn-danger" id="btn-reject" data-role="btn-reject" onclick="doReject()" disabled style="display:none;">驳回</button>
   </div>
-  {% endcall %}
 
-  <!-- 核心指标（对标 dashboard 同款统计卡） -->
-  {% call card(title="审核概览") %}
-  <div id="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
-    <div id="stat-errors" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
-      <div class="kpi-icon">❌</div>
-      <div class="kpi-label">错误</div>
-      <div class="stat-value danger">0</div>
-    </div>
-    <div id="stat-warnings" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
-      <div class="kpi-icon">⚠️</div>
-      <div class="kpi-label">警告</div>
-      <div class="stat-value warning">0</div>
-    </div>
-    <div id="stat-pending" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
-      <div class="kpi-icon">⏳</div>
-      <div class="kpi-label">待处理</div>
-      <div class="stat-value primary">0</div>
-    </div>
+  <!-- 阶段步骤条 -->
+  <div class="steps" id="report-steps">
+    <div class="step" data-step="1"><span class="dot">1</span>数据导入</div>
+    <div class="step-line"></div>
+    <div class="step" data-step="2"><span class="dot">2</span>数据校验</div>
+    <div class="step-line"></div>
+    <div class="step" data-step="3"><span class="dot">3</span>问题审核</div>
+    <div class="step-line"></div>
+    <div class="step" data-step="4"><span class="dot">4</span>提交审批</div>
   </div>
-  {% endcall %}
 
-  <!-- Tab 导航 -->
-  <div class="tabs" data-tabs id="report-tabs" data-default-tab="generate" data-tabs-key="report-active-tab">
+  <!-- 子页签：4 阶段工作流 -->
+  <div class="tabs" data-tabs id="report-tabs" data-default-tab="import" data-tabs-key="report-active-tab">
     <div class="tabs-nav" role="tablist">
-      <button type="button" class="tabs-tab" role="tab" data-tab="generate" aria-selected="false" tabindex="-1">报告生成</button>
-      <button type="button" class="tabs-tab" role="tab" data-tab="browse" aria-selected="false" tabindex="-1">数据浏览</button>
+      <button type="button" class="tabs-tab" role="tab" data-tab="import" aria-selected="false" tabindex="-1">⬆ 数据导入</button>
+      <button type="button" class="tabs-tab" role="tab" data-tab="calibrate" aria-selected="false" tabindex="-1">🔍 数据校准</button>
       <button type="button" class="tabs-tab" role="tab" data-tab="issues" aria-selected="false" tabindex="-1">问题清单</button>
+      <button type="button" class="tabs-tab" role="tab" data-tab="approval" aria-selected="false" tabindex="-1">审批历史</button>
     </div>
     <div class="tabs-panels">
 
-      <!-- Tab 1: 报告生成 -->
-      <div class="tabs-panel" role="tabpanel" data-panel="generate" hidden>
+      <!-- Tab 1: 数据导入（原 generate 平移 + 顶部数据范围卡 + 审核概览） -->
+      <div class="tabs-panel" role="tabpanel" data-panel="import" hidden>
+
+        <!-- 数据范围卡（对标 dashboard 同款筛选） -->
+        {% call card(title="数据范围") %}
+        <div class="form-row">
+          <div>
+            <label class="field-label">选择月份：</label>
+            <select id="month-select" class="input" style="min-width:180px;">
+              <option value="">加载中...</option>
+            </select>
+          </div>
+          <div style="border-left:1px solid var(--c-border);height:36px;margin:0 0.5rem;"></div>
+          <div>
+            <label class="field-label">新建月份：</label>
+            <input type="month" id="new-month-input" class="input" class="w-140"
+                   onkeydown="if(event.key==='Enter')confirmNewMonth()">
+          </div>
+          <div>
+            <label class="field-label">模式：</label>
+            <select id="new-month-mode" class="input" style="width:160px;">
+              <option value="auto">自动（有数据则读取）</option>
+              <option value="regenerate">强制重新生成</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.3rem;">
+            <input type="checkbox" id="refetch-sources" checked>
+            <label for="refetch-sources" style="font-size:0.85rem;color:var(--c-text-secondary);cursor:pointer;">重新拉取源数据</label>
+          </div>
+          <button class="btn btn-primary" onclick="confirmNewMonth()">+ 生成月报</button>
+          <button class="btn" onclick="doCompare()" style="margin-left:0.5rem;" id="btn-compare" data-role="btn-compare" disabled>📊 对比手工报表</button>
+          <span id="load-status" class="text-muted fs-xs"></span>
+        </div>
+        {% endcall %}
+
+        <!-- 审核概览 KPI -->
+        {% call card(title="审核概览") %}
+        <div id="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+          <div id="stat-errors" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
+            <div class="kpi-icon">❌</div>
+            <div class="kpi-label">错误</div>
+            <div class="stat-value danger">0</div>
+          </div>
+          <div id="stat-warnings" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
+            <div class="kpi-icon">⚠️</div>
+            <div class="kpi-label">警告</div>
+            <div class="stat-value warning">0</div>
+          </div>
+          <div id="stat-pending" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
+            <div class="kpi-icon">⏳</div>
+            <div class="kpi-label">待处理</div>
+            <div class="stat-value primary">0</div>
+          </div>
+        </div>
+        {% endcall %}
 
         <!-- 生成状态卡 -->
-        {% call card(title="生成状态", actions=[
-            {"label": "审批通过", "variant": "primary", "onclick": "doApprove()"},
-            {"label": "驳回", "variant": "danger", "onclick": "doReject()"}
-        ]) %}
+        {% call card(title="生成状态") %}
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
           <span class="status-dot not_started" id="status-dot" style="width:10px;height:10px;border-radius:50%;display:inline-block;background:var(--c-text-muted);"></span>
           <span id="status-text" style="font-weight:600;">选择月份开始生成</span>
@@ -120,9 +208,8 @@
 
         <!-- 操作按钮 -->
         <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-          <button class="btn" id="btn-revalidate" onclick="doRevalidate()" disabled>↻ 重新校验</button>
-          <button class="btn" id="btn-regenerate" onclick="doRegenerate()" disabled>↻ 重新生成</button>
-          <button class="btn btn-success" id="btn-export-main" onclick="doExport()" disabled>📤 导出 Excel</button>
+          <button class="btn" id="btn-revalidate" data-role="btn-revalidate" onclick="doRevalidate()" disabled>↻ 重新校验</button>
+          <button class="btn" id="btn-regenerate" data-role="btn-regenerate" onclick="doRegenerate()" disabled>↻ 重新生成</button>
         </div>
 
         <!-- 驳回原因输入 -->
@@ -159,9 +246,9 @@
 
       </div><!-- /Tab 1 -->
 
-      <!-- Tab 2: 数据浏览 -->
-      <div class="tabs-panel" role="tabpanel" data-panel="browse" hidden>
-        {% call card(title="数据浏览", actions=[
+      <!-- Tab 2: 数据校准（原 browse 平移 + 台账入口） -->
+      <div class="tabs-panel" role="tabpanel" data-panel="calibrate" hidden>
+        {% call card(title="数据校准", actions=[
             {"label": "📋 校准台账", "onclick": "openCalibrationLedger()"},
             {"label": "导出当前", "onclick": "exportCurrent()"}
         ]) %}
@@ -236,6 +323,33 @@
         <div id="issues-pagination" class="mt-4"></div>
         {% endcall %}
       </div><!-- /Tab 3 -->
+
+      <!-- Tab 4: 审批历史 -->
+      <div class="tabs-panel" role="tabpanel" data-panel="approval" hidden>
+        <div class="approval-layout" style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <!-- 左侧：审批操作 -->
+          {% call card(title="审批操作") %}
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            <p class="text-muted" style="margin:0;font-size:0.875rem;">对当前账期的月报进行审批通过或驳回。驳回需填写原因。</p>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+              <button class="btn btn-primary" id="btn-approve-panel" data-role="btn-approve" onclick="doApprove()" disabled>✅ 审批通过</button>
+              <button class="btn btn-danger" id="btn-reject-panel" data-role="btn-reject" onclick="doReject()" disabled>❌ 驳回</button>
+            </div>
+            <div id="reason-input-container" style="display:none;margin-top:0.5rem;">
+              <label class="field-label">驳回原因</label>
+              <textarea id="review-reason" class="input" placeholder="请填写驳回原因" rows="3" style="width:100%;margin-top:0.25rem;"></textarea>
+            </div>
+          </div>
+          {% endcall %}
+
+          <!-- 右侧：审批时间线 -->
+          {% call card(title="审批记录") %}
+          <div id="approval-timeline" class="timeline">
+            <p class="text-muted" style="font-size:0.875rem;">选择月份后加载审批记录</p>
+          </div>
+          {% endcall %}
+        </div>
+      </div><!-- /Tab 4 -->
 
     </div><!-- /tabs-panels -->
   </div><!-- /tabs -->
@@ -375,15 +489,16 @@ document.addEventListener('DOMContentLoaded', () => {
   tabsEl.addEventListener('tabs:change', (e) => {
     const name = e.detail && e.detail.tab;
     if (!currentMonth) return;
-    if (name === 'browse') loadTable();
+    if (name === 'calibrate') loadTable();
     else if (name === 'issues') loadReviewIssues();
+    else if (name === 'approval') loadApprovalTimeline();
   });
 });
 
 // 初始化 Tab 从 hash
 function initTabFromHash() {
   const hash = window.location.hash.replace('#', '');
-  if (['generate', 'browse', 'issues'].includes(hash)) {
+  if (['import', 'calibrate', 'issues', 'approval'].includes(hash)) {
     setTimeout(() => switchTab(hash), 50);
   }
 }
@@ -494,10 +609,17 @@ function selectMonth(month) {
 
   // 如果在浏览或问题 Tab，自动加载数据
   const activeTab = getActiveTab();
-  if (activeTab === 'browse') {
+  if (activeTab === 'calibrate') {
     loadTable();
   } else if (activeTab === 'issues') {
     loadReviewIssues();
+  } else if (activeTab === 'approval') {
+    loadApprovalTimeline();
+  }
+
+  // ctxbar + steps 同步
+  if (currentMonth) {
+    loadReviewStatus(currentMonth).then(() => {});
   }
 }
 
@@ -800,20 +922,21 @@ async function loadReviewStatus(month) {
       document.getElementById('generated-at').textContent = '';
     }
 
-    // 更新按钮状态（全部加存在性检查，避免 DOM 不存在时报错中断）
-    const btnApprove = document.getElementById('btn-approve');
-    const btnReject = document.getElementById('btn-reject');
-    const btnRevalidate = document.getElementById('btn-revalidate');
-    const btnExport = document.getElementById('btn-export-main');
-    const btnRegenerate = document.getElementById('btn-regenerate');
-    const btnCompare = document.getElementById('btn-compare');
+    // 更新按钮状态（多实例：ctxbar + approval panel + import panel 均统一管控）
+    function _setDisabled(selector, disabled) {
+      document.querySelectorAll(selector).forEach(el => { el.disabled = disabled; });
+    }
+    const approvable = ['validating', 'reviewing'].includes(status);
+    const notStartedOrGen = ['not_started', 'generating'].includes(status);
+    _setDisabled('[data-role="btn-approve"]', !approvable);
+    _setDisabled('[data-role="btn-reject"]', !approvable);
+    _setDisabled('[data-role="btn-revalidate"]', notStartedOrGen);
+    _setDisabled('[data-role="btn-export"]', status !== 'approved');
+    _setDisabled('[data-role="btn-regenerate"]', notStartedOrGen);
+    _setDisabled('[data-role="btn-compare"]', notStartedOrGen);
 
-    if (btnApprove) btnApprove.disabled = !(['validating', 'reviewing'].includes(status));
-    if (btnReject) btnReject.disabled = !(['validating', 'reviewing'].includes(status));
-    if (btnRevalidate) btnRevalidate.disabled = ['not_started', 'generating'].includes(status);
-    if (btnExport) btnExport.disabled = status !== 'approved';
-    if (btnRegenerate) btnRegenerate.disabled = ['not_started', 'generating'].includes(status);
-    if (btnCompare) btnCompare.disabled = ['not_started', 'generating'].includes(status);
+    // ctxbar + steps 同步
+    if (typeof updateCtxbarAndSteps === 'function') updateCtxbarAndSteps(d);
 
     // 加载问题到问题 Tab
     if (status === 'validating' || status === 'reviewing') {
@@ -854,6 +977,169 @@ function statusLabel(s) {
     case 'rejected': return '已驳回';
     default: return s;
   }
+}
+
+// ========== ctxbar + steps 状态更新 ==========
+function _fmtDate(t) {
+  if (!t) return '';
+  const date = (typeof t === 'number') ? new Date(t * 1000) : new Date(t);
+  if (isNaN(date.getTime())) return String(t);
+  return date.toLocaleString('zh-CN');
+}
+
+function _statusTagClass(status) {
+  switch (status) {
+    case 'approved': return 'tag green';
+    case 'validating':
+    case 'reviewing': return 'tag amber';
+    case 'rejected': return 'tag red';
+    case 'generating': return 'tag blue';
+    default: return 'tag gray';
+  }
+}
+
+function _stepForStatus(status) {
+  // 返回当前 active step index（1-based）
+  switch (status) {
+    case 'not_started': return 1;
+    case 'generating': return 1;
+    case 'validating': return 2;
+    case 'reviewing': return 3;
+    case 'approved':
+    case 'rejected': return 4;
+    default: return 1;
+  }
+}
+
+function updateCtxbarAndSteps(statusObj) {
+  const status = statusObj.status || 'not_started';
+
+  // ctxbar: 账期
+  const ctxMonth = document.getElementById('ctx-month');
+  if (ctxMonth && currentMonth)
+    ctxMonth.textContent = `${currentMonth.slice(0,4)}-${currentMonth.slice(4)}`;
+
+  // ctxbar: 数据状态
+  const dataTag = document.getElementById('ctx-data-status');
+  if (dataTag) {
+    const gen = statusObj.generated_at;
+    let text, cls;
+    if (gen) {
+      text = `已导入 ${_fmtDate(gen).split(' ')[0]}`;
+      cls = 'tag green';
+    } else if (status === 'generating') {
+      text = '生成中...';
+      cls = 'tag blue';
+    } else {
+      text = '未生成';
+      cls = 'tag gray';
+    }
+    dataTag.className = cls;
+    dataTag.textContent = text;
+  }
+
+  // ctxbar: 校验状态
+  const revTag = document.getElementById('ctx-review-status');
+  if (revTag) {
+    let text, cls;
+    if (status === 'not_started') { text = '无数据'; cls = 'tag gray'; }
+    else if (status === 'approved') { text = '已通过'; cls = 'tag green'; }
+    else if (status === 'rejected') { text = '已驳回'; cls = 'tag red'; }
+    else if ((statusObj.pending_fixes || 0) > 0) {
+      text = `${statusObj.pending_fixes} 待处理`;
+      cls = 'tag amber';
+    } else {
+      text = statusLabel(status);
+      cls = _statusTagClass(status);
+    }
+    revTag.className = cls;
+    revTag.textContent = text;
+  }
+
+  // ctxbar + approval panel 审批按钮同步（与 loadReviewStatus 同一套禁用逻辑）
+  const apprDisabled = !(['validating', 'reviewing'].includes(status));
+  document.querySelectorAll('[data-role="btn-approve"]').forEach(b => b.disabled = apprDisabled);
+  document.querySelectorAll('[data-role="btn-reject"]').forEach(b => {
+    b.disabled = apprDisabled;
+    // 仅 ctxbar 的驳回按钮在无审批权时隐藏，避免空占位
+    if (b.id === 'btn-reject') b.style.display = apprDisabled ? 'none' : '';
+  });
+
+  // steps 状态
+  const stepsEl = document.getElementById('report-steps');
+  if (stepsEl) {
+    const activeStep = _stepForStatus(status);
+    const steps = stepsEl.querySelectorAll('.step');
+    const lines = stepsEl.querySelectorAll('.step-line');
+    steps.forEach((s, i) => {
+      const idx = i + 1;
+      s.classList.remove('done', 'active');
+      const dot = s.querySelector('.dot');
+      if (dot && i < activeStep - 1) dot.textContent = '✓';
+      else if (dot) dot.textContent = String(idx);
+      if (idx < activeStep) s.classList.add('done');
+      else if (idx === activeStep) s.classList.add('active');
+    });
+    lines.forEach((l, i) => {
+      l.classList.toggle('done', i < activeStep - 1);
+    });
+  }
+}
+
+// ========== 审批历史时间线 ==========
+function loadApprovalTimeline() {
+  if (!currentMonth) return;
+  const container = document.getElementById('approval-timeline');
+  if (!container) return;
+  // 直接复用 loadReviewStatus 拉到的结果（从最新一次 fetch 拿）
+  fetch(`/api/report/review-status/${currentMonth}`)
+    .then(r => r.json())
+    .then(d => {
+      const items = [];
+      if (d.approved_at) {
+        items.push({
+          ok: true,
+          title: '✅ 审批通过',
+          meta: `${d.reviewer || '审核人'} · ${_fmtDate(d.approved_at)}`
+        });
+      }
+      if (d.rejected_at || d.status === 'rejected') {
+        items.push({
+          ok: false,
+          title: '❌ 审批驳回' + (d.reject_reason ? `：${d.reject_reason}` : ''),
+          meta: `${d.reviewer || '审核人'} · ${_fmtDate(d.rejected_at || d.updated_at)}`
+        });
+      }
+      if (d.validated_at) {
+        items.push({
+          ok: true,
+          title: '完成数据校验' + (d.total_errors || d.total_warnings ? ` · ${d.total_errors || 0} 错误 / ${d.total_warnings || 0} 警告` : ''),
+          meta: `系统自动 · ${_fmtDate(d.validated_at)}`
+        });
+      }
+      if (d.generated_at) {
+        items.push({
+          ok: true,
+          title: '导入月报数据',
+          meta: `系统自动 · ${_fmtDate(d.generated_at)}`
+        });
+      }
+      if (items.length === 0) {
+        container.innerHTML = '<p class="text-muted" style="font-size:0.875rem;">暂无审批记录</p>';
+        return;
+      }
+      // 时间倒序
+      items.sort((a, b) => 0); // 已按时间逆序排列
+      let html = '';
+      items.forEach((it, idx) => {
+        const cls = it.ok ? 'tl-item ok' : (idx === 0 ? 'tl-item' : 'tl-item gray');
+        html += `<div class="${cls}"><div class="t">${it.title}</div><div class="m">${it.meta}</div></div>`;
+      });
+      container.innerHTML = html;
+    })
+    .catch(e => {
+      container.innerHTML = `<p class="error-tip">⚠️ 加载失败: ${e.message}</p>`;
+    });
 }
 
 async function doApprove() {
@@ -1597,7 +1883,7 @@ async function saveCalibration() {
     if (typeof loadReviewStatus === 'function') loadReviewStatus(c.month);
     if (typeof loadTable === 'function' && document.getElementById('view-sheet')) {
       const activeTab = getActiveTab ? getActiveTab() : '';
-      if (activeTab === 'browse') loadTable();
+      if (activeTab === 'calibrate') loadTable();
     }
     if (typeof loadCalibrationOverview === 'function') loadCalibrationOverview(c.month);
   } catch (e) {
