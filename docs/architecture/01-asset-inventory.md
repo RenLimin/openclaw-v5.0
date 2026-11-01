@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-01 11:44 UTC+08:00
+最后生成：2026-11-01 12:08 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -137,8 +137,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
-| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
+| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
@@ -258,8 +258,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `1c7c994` |
-| Commit 数 | 545 |
+| HEAD | `a3ab4c5` |
+| Commit 数 | 546 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -267,5 +267,23 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 ## L3 / L4 资产
 
-_(未启动 — 详见 [架构文档 §6 演进路线](./00-system-architecture.md#6-演进路线))_
+### L4 专有业务组件
+
+| 名称 | 描述 | 路径 | 状态 |
+|---|---|---|---|
+| `bdms` | BDMS 交付管理系统：交付月报（导入/校验/问题审核/审批工作流）、确认收入、对比分析、基础数据、统计看板、系统设定。FastAPI + SQLite + Jinja，复用 web-common | `L4-proprietary/components/bdms` | 活跃；v2.1 全量交付，2026-11 按定稿原型重建前端（后端 API 零改动） |
+| `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `L4-proprietary/skills/bangcle-ppt` | 已交付 |
+
+#### BDMS 内部结构
+
+| 部分 | 内容 |
+|---|---|
+| Web 层 | `src/bdms/web/`：`main.py`（入口/侧栏配置）·`api.py`·`api_v2.py`（REST，后端 API 已覆盖全部工作流）·`templates/`（index/report/revenue/revenue_compare/master_data/dashboard/settings/base 等）·`static/`（css/js/img） |
+| 业务模块 | `src/bdms/modules/`：`delivery_report`（交付月报）·`revenue`（确收）·`dashboard`（看板）·`master_data`（基础数据）·`contract_management`·`profit_management`·`project_management`·`integration`·`settings` |
+| 基础设施 | `src/bdms/core/`·`cli/`·`security.py`（访问控制） |
+| 原型 | `prototype/bdms-ui-prototype.html`（UI/视觉定稿基准，真实页面对照重建） |
+| 设计文档 | `PRD/设计大纲/8 份详细设计/实施计划/操作手册/验证` v2.1；重建方案 `DESIGN-OUTLINE-BDMS-REBUILD-v1.0.md` |
+| 回滚 | `backups/pre-rebuild-20261101/`（重建前完整前端快照）；`data/backups/`（DB 周期备份） |
+
+> 演进路线见 [架构文档 §6 演进路线](./00-system-architecture.md#6-演进路线)。
 
