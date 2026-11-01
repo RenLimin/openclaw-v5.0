@@ -71,3 +71,7 @@ L4-proprietary/components/product-kb/data/
 
 # 生成日志
 *.log
+
+# 视觉回归测试运行时产物（每次跑测试重新生成，不入库）
+**/tests/visual/diff/*_diff.png
+**/tests/visual/golden/*.actual.png
