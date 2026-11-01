@@ -47,9 +47,9 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="BDMS — 交付管理系统",
+    title="交付管理系统",
     version="1.0.0",
-    description="BDMS 交付管理系统：交付月报 / 确认收入 / 基础数据 / 统计看板 / 系统设定",
+    description="交付管理系统：交付月报 / 确认收入 / 基础数据 / 统计看板 / 系统设定",
     lifespan=lifespan,
 )
 
@@ -68,7 +68,7 @@ templates = Jinja2Templates(directory=template_dirs[0])
 templates.env.loader = FileSystemLoader(template_dirs)
 
 templates.env.globals.update({
-    "brand_name": "BDMS",
+    "brand_name": "交付管理系统",
     "brand_desc": "交付管理系统",
     "brand_icon": "📦",
     "storage_key": "bdms-theme",

@@ -2,7 +2,7 @@
 {% from "layout.html" import page_header with context %}
 {% from "components.html" import card with context %}
 
-{% set page_title = '基础数据 — BDMS' %}
+{% set page_title = '基础数据' %}
 
 {% block content %}
 {{ page_header(
@@ -31,6 +31,14 @@
 
 {% block extra_scripts %}
 <script>
+// 类型码 → 中文标签（后端 data_type 为英文机器码，展示层映射）
+const TYPE_LABELS = {
+  'legend_config': '图例配置',
+  'legend': '图例',
+  'enum': '枚举映射',
+  'reference': '参考值',
+};
+
 async function loadTypes() {
   const sel = document.getElementById('md-type');
   try {
@@ -43,8 +51,9 @@ async function loadTypes() {
     }
     const types = d.types || [];
     const optLabel = (t) => {
-      if (typeof t === 'string') return t;
-      return (t && (t.label || t.data_type)) || String(t);
+      if (typeof t === 'string') return TYPE_LABELS[t] || t;
+      const dt = (t && t.data_type) || String(t);
+      return (t && t.label && t.label !== dt) ? t.label : (TYPE_LABELS[dt] || dt);
     };
     const optVal = (t) => {
       if (typeof t === 'string') return t;
@@ -69,7 +78,8 @@ async function loadList() {
     const d = await r.json();
     if (!r.ok) { st.textContent = `⚠️ ${d.error}`; return; }
     const items = d.items || [];
-    st.textContent = `${type}：${items.length} 条`;
+    const typeLabel = TYPE_LABELS[type] || type;
+    st.textContent = `${typeLabel}：${items.length} 条`;
     if (!items.length) {
       document.getElementById('md-list').innerHTML = '<p class="text-muted">暂无数据</p>';
       return;
@@ -85,9 +95,14 @@ async function loadList() {
       if (v == null) return '-';
       if (typeof v === 'object') {
         try {
-          const entries = Object.entries(v);
+          // 结构化展示：过滤空值键，最多展示前 5 项，悬浮显示完整内容
+          const entries = Object.entries(v).filter(([, val]) => String(val ?? '').trim() !== '');
           if (!entries.length) return '-';
-          return entries.map(([k, val]) => `${k}: ${val}`).join('；');
+          const shown = entries.slice(0, 5).map(([k, val]) => `${k}: ${val}`).join('；');
+          const rest = entries.length - 5;
+          const full = entries.map(([k, val]) => `${k}: ${val}`).join('；');
+          const text = rest > 0 ? `${shown}；…共 ${entries.length} 项` : shown;
+          return `<span title="${full}">${text}</span>`;
         } catch (e) { return String(v); }
       }
       if (typeof v === 'boolean') return v ? '✓' : '✗';
@@ -96,7 +111,11 @@ async function loadList() {
     let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
             cols.map(c => `<th>${COL_LABELS[c] || c}</th>`).join('') + '</tr></thead><tbody>';
     for (const it of items.slice(0, 500)) {
-      h += '<tr>' + cols.map(c => `<td>${fmtCell(it[c])}</td>`).join('') + '</tr>';
+      h += '<tr>' + cols.map(c => {
+        const v = it[c];
+        if (c === 'data_type') return `<td>${TYPE_LABELS[v] || v}</td>`;
+        return `<td>${fmtCell(v)}</td>`;
+      }).join('') + '</tr>';
     }
     h += '</tbody></table></div>';
     if (items.length > 500) h += `<p class="text-muted">仅显示前 500 条（共 ${items.length}）</p>`;
