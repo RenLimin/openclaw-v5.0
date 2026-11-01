@@ -1,0 +1,1676 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, badge, progress_bar, stat_card, dashboard_grid, pagination, filter_bar, modal, toast_container, modal_toast_js, tabs, confirm_modal, info_grid with context %}
+
+{% set page_title = '交付月报' %}
+{% set active_page = 'report' %}
+
+{% block content %}
+<style>
+  /* 待审核单元格高亮（数据浏览） */
+  td.cell-issue { position: relative; }
+  td.cell-issue-pending {
+    background: rgba(220, 53, 69, 0.12) !important;
+    box-shadow: inset 0 0 0 2px var(--c-danger);
+    font-weight: 600;
+  }
+  td.cell-issue-pending:hover { background: rgba(220, 53, 69, 0.22) !important; }
+  td.cell-issue .cell-issue-badge {
+    display: inline-block; margin-left: 4px; font-size: 0.7rem;
+    line-height: 1; vertical-align: middle;
+  }
+  .cell-issue-legend { display:flex; gap:1rem; align-items:center; flex-wrap:wrap;
+    font-size:0.8rem; color:var(--c-text-secondary); margin:0.25rem 0 0.5rem; }
+  .cell-issue-legend .swatch {
+    display:inline-block; width:12px; height:12px; border-radius:2px;
+    margin-right:4px; vertical-align:middle;
+    background:rgba(220,53,69,0.18); box-shadow: inset 0 0 0 2px var(--c-danger);
+  }
+</style>
+{{ page_header(
+    title='交付月报',
+    subtitle='生成 / 审核 / 导出 / 浏览月度交付报表（15 Sheet）',
+    actions=[
+        {"label": "导出 Excel", "variant": "success", "onclick": "doExport()"}
+    ]
+) }}
+
+<div class="report-page">
+
+  <!-- 数据范围卡（对标 dashboard 同款筛选） -->
+  {% call card(title="数据范围") %}
+  <div class="form-row">
+    <div>
+      <label class="field-label">选择月份：</label>
+      <select id="month-select" class="input" style="min-width:180px;">
+        <option value="">加载中...</option>
+      </select>
+    </div>
+    <div style="border-left:1px solid var(--c-border);height:36px;margin:0 0.5rem;"></div>
+    <div>
+      <label class="field-label">新建月份：</label>
+      <input type="month" id="new-month-input" class="input" class="w-140"
+             onkeydown="if(event.key==='Enter')confirmNewMonth()">
+    </div>
+    <div>
+      <label class="field-label">模式：</label>
+      <select id="new-month-mode" class="input" style="width:160px;">
+        <option value="auto">自动（有数据则读取）</option>
+        <option value="regenerate">强制重新生成</option>
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:0.3rem;">
+      <input type="checkbox" id="refetch-sources" checked>
+      <label for="refetch-sources" style="font-size:0.85rem;color:var(--c-text-secondary);cursor:pointer;">重新拉取源数据</label>
+    </div>
+    <button class="btn btn-primary" onclick="confirmNewMonth()">+ 生成月报</button>
+    <button class="btn" onclick="doCompare()" style="margin-left:0.5rem;" id="btn-compare" disabled>📊 对比手工报表</button>
+    <span id="load-status" class="text-muted fs-xs"></span>
+  </div>
+  {% endcall %}
+
+  <!-- 核心指标（对标 dashboard 同款统计卡） -->
+  {% call card(title="审核概览") %}
+  <div id="kpi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;">
+    <div id="stat-errors" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
+      <div class="kpi-icon">❌</div>
+      <div class="kpi-label">错误</div>
+      <div class="stat-value danger">0</div>
+    </div>
+    <div id="stat-warnings" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">警告</div>
+      <div class="stat-value warning">0</div>
+    </div>
+    <div id="stat-pending" class="kpi-card" onclick="switchToTab('issues')" class="cursor-pointer">
+      <div class="kpi-icon">⏳</div>
+      <div class="kpi-label">待处理</div>
+      <div class="stat-value primary">0</div>
+    </div>
+  </div>
+  {% endcall %}
+
+  <!-- Tab 导航 -->
+  <div class="tabs" data-tabs id="report-tabs" data-default-tab="generate" data-tabs-key="report-active-tab">
+    <div class="tabs-nav" role="tablist">
+      <button type="button" class="tabs-tab" role="tab" data-tab="generate" aria-selected="false" tabindex="-1">报告生成</button>
+      <button type="button" class="tabs-tab" role="tab" data-tab="browse" aria-selected="false" tabindex="-1">数据浏览</button>
+      <button type="button" class="tabs-tab" role="tab" data-tab="issues" aria-selected="false" tabindex="-1">问题清单</button>
+    </div>
+    <div class="tabs-panels">
+
+      <!-- Tab 1: 报告生成 -->
+      <div class="tabs-panel" role="tabpanel" data-panel="generate" hidden>
+
+        <!-- 生成状态卡 -->
+        {% call card(title="生成状态", actions=[
+            {"label": "审批通过", "variant": "primary", "onclick": "doApprove()"},
+            {"label": "驳回", "variant": "danger", "onclick": "doReject()"}
+        ]) %}
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <span class="status-dot not_started" id="status-dot" style="width:10px;height:10px;border-radius:50%;display:inline-block;background:var(--c-text-muted);"></span>
+          <span id="status-text" style="font-weight:600;">选择月份开始生成</span>
+          <span class="text-muted" id="generated-at" style="margin-left:auto;font-size:0.8rem;"></span>
+        </div>
+
+        <!-- 进度条 -->
+        <div id="progress-container" style="display:none;margin-bottom:1rem;">
+          {{ progress_bar(0, variant="primary", label="生成进度") }}
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn" id="btn-revalidate" onclick="doRevalidate()" disabled>↻ 重新校验</button>
+          <button class="btn" id="btn-regenerate" onclick="doRegenerate()" disabled>↻ 重新生成</button>
+          <button class="btn btn-success" id="btn-export-main" onclick="doExport()" disabled>📤 导出 Excel</button>
+        </div>
+
+        <!-- 驳回原因输入 -->
+        <div id="reason-input-container" style="margin-top:1rem;display:none;">
+          <textarea id="review-reason" class="input" placeholder="请填写驳回原因" rows="3" style="width:100%;"></textarea>
+        </div>
+
+        <!-- 手工报表对比结果 -->
+        <div id="compare-result-card" style="margin-top:1rem;display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+            <strong style="font-size:0.9rem;">📊 与手工报表对比</strong>
+            <span id="compare-summary" class="text-muted" style="font-size:0.8rem;"></span>
+          </div>
+          <!-- 对比进度条 -->
+          <div id="compare-progress-container" style="display:none;margin-bottom:0.75rem;">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.25rem;">
+              <span id="compare-progress-text" style="color:var(--c-text-secondary);">准备中...</span>
+              <span id="compare-progress-pct" style="color:var(--c-primary);font-weight:500;">0%</span>
+            </div>
+            <div style="height:6px;background:var(--c-bg-muted);border-radius:var(--r-pill);overflow:hidden;">
+              <div id="compare-progress-bar" style="height:100%;width:0%;background:var(--c-primary);border-radius:var(--r-pill);transition:width 0.3s ease;"></div>
+            </div>
+          </div>
+          <div id="compare-result" style="font-size:0.85rem;max-height:300px;overflow-y:auto;"></div>
+        </div>
+        {% endcall %}
+
+        <!-- Sheet 明细 -->
+        <div id="sheet-detail-card" style="display:none;">
+          {% call card(title="Sheet 明细") %}
+          <div id="sheet-detail" class="text-muted">生成月报后显示 15 个 Sheet 的明细行数</div>
+          {% endcall %}
+        </div>
+
+      </div><!-- /Tab 1 -->
+
+      <!-- Tab 2: 数据浏览 -->
+      <div class="tabs-panel" role="tabpanel" data-panel="browse" hidden>
+        {% call card(title="数据浏览", actions=[
+            {"label": "📋 校准台账", "onclick": "openCalibrationLedger()"},
+            {"label": "导出当前", "onclick": "exportCurrent()"}
+        ]) %}
+        <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <label class="field-label" style="display:inline;margin:0;">Sheet：</label>
+            <select id="view-sheet" class="input w-180" onchange="updateSheetPendingBadge()">
+              <option value="签约">签约</option>
+              <option value="POC&提前实施">POC&提前实施</option>
+              <option value="异常项目">异常项目</option>
+              <option value="确收交接">确收交接</option>
+              <option value="验收交接">验收交接</option>
+            </select>
+            <span id="sheet-pending-badge" style="display:none;font-size:0.75rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:999px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;white-space:nowrap;"></span>
+          </div>
+          <div style="flex:1;min-width:200px;display:flex;align-items:center;gap:0.5rem;">
+            <label class="field-label" style="display:inline;margin:0;white-space:nowrap;">搜索：</label>
+            <input id="view-search" type="search" class="input" placeholder="搜索关键字（全字段模糊匹配）" style="flex:1;" onkeydown="if(event.key==='Enter')loadTable()">
+          </div>
+          <button class="btn btn-primary" onclick="loadTable()">查询</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+          <p style="margin:0;font-size:0.875rem;">当前月份: <strong id="browse-month-label">--</strong></p>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <label style="font-size:0.8rem;color:#555;white-space:nowrap;">每页
+              <select id="view-page-size" class="input input-sm" style="width:auto;display:inline-block;" onchange="onPageSizeChange()">
+                <option value="20">20</option>
+                <option value="50" selected>50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+              </select> 条</label>
+            <div id="pagination" style="display:flex;justify-content:flex-end;min-height:0;"></div>
+          </div>
+        </div>
+        {% endcall %}
+
+        {% call card() %}
+        <div id="data-table-container">
+          <p class="text-muted" class="text-center" style="padding:1rem;">选择月份和 Sheet 查看数据</p>
+        </div>
+        {% endcall %}
+      </div><!-- /Tab 2 -->
+
+      <!-- Tab 3: 问题清单 -->
+      <div class="tabs-panel" role="tabpanel" data-panel="issues" hidden>
+        {% call card() %}
+        <div class="form-row">
+          <div>
+            <label class="field-label">状态：</label>
+            <select id="filter-status" class="input" class="w-140">
+              <option value="">全部</option>
+              <option value="PENDING">待处理</option>
+              <option value="CONFIRMED">已确认</option>
+              <option value="REJECTED">已驳回</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">严重度：</label>
+            <select id="filter-severity" class="input" class="w-140">
+              <option value="">全部</option>
+              <option value="ERROR">错误</option>
+              <option value="WARNING">警告</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="loadReviewIssues()">筛选</button>
+        </div>
+        {% endcall %}
+
+        {% call card(title="审核问题") %}
+        <div id="review-issues-stats" style="margin-bottom:1rem;" class="text-muted">请先选择月份查看问题</div>
+        <div id="review-issues-list" class="text-muted">暂无审核问题</div>
+        <div id="issues-pagination" class="mt-4"></div>
+        {% endcall %}
+      </div><!-- /Tab 3 -->
+
+    </div><!-- /tabs-panels -->
+  </div><!-- /tabs -->
+</div><!-- /report-page -->
+
+<!-- 空状态: 无任何月份 -->
+<div id="empty-state-no-months" style="display:none;text-align:center;padding:3rem 1rem;">
+  <div style="font-size:3rem;margin-bottom:1rem;">📊</div>
+  <h3 style="margin:0 0 0.5rem;">还没有生成交付月报</h3>
+  <p class="text-muted">在上方输入月份，一键生成月度交付报表</p>
+</div>
+
+{% call modal(id="calibration-modal", title="人工校准") %}
+  <div style="display:grid;gap:0.75rem;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div>
+        <label class="field-label">月份</label>
+        <input id="cal-month" class="input" readonly style="background:var(--c-surface);">
+      </div>
+      <div>
+        <label class="field-label">Sheet</label>
+        <input id="cal-sheet" class="input" readonly style="background:var(--c-surface);">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;">
+      <div>
+        <label class="field-label">行号</label>
+        <input id="cal-row" class="input" readonly style="background:var(--c-surface);">
+      </div>
+      <div>
+        <label class="field-label">列名</label>
+        <input id="cal-col" class="input" readonly style="background:var(--c-surface);">
+      </div>
+    </div>
+    <div>
+      <label class="field-label">原始值（只读）</label>
+      <input id="cal-original" class="input" readonly style="background:var(--c-surface);">
+    </div>
+    <div>
+      <label class="field-label">校准值 <span style="color:var(--c-danger);">*</span></label>
+      <input id="cal-value" class="input" placeholder="修正后的值">
+      <p id="cal-hint" class="text-muted" style="font-size:0.8rem;margin-top:0.25rem;"></p>
+    </div>
+    <div>
+      <label class="field-label">校准原因 <span style="color:var(--c-danger);">*</span></label>
+      <select id="cal-reason-preset" class="input" style="margin-bottom:0.4rem;">
+        <option value="">常用原因...</option>
+        <option>源表数据有误</option>
+        <option>日期格式错误</option>
+        <option>人工补充缺失值</option>
+        <option>金额计算修正</option>
+      </select>
+      <input id="cal-reason" class="input" placeholder="填写具体原因（必填）">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:0.5rem;padding-top:0.5rem;">
+      <button class="btn" onclick="closeModal('calibration-modal')">取消</button>
+      <button class="btn btn-primary" onclick="saveCalibration()">保存校准</button>
+    </div>
+  </div>
+{% endcall %}
+
+<!-- 校准台账对话框 -->
+{% call modal(id="ledger-modal", title="📋 校准台账", size="xl") %}
+<div style="font-size:0.875rem;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;flex-wrap:wrap;gap:0.5rem;">
+    <span id="ledger-stats" class="text-muted" style="font-size:0.8125rem;">加载中...</span>
+    <button class="btn btn-sm btn-success" onclick="exportLedger()">📤 导出台账 Excel</button>
+  </div>
+  <div id="ledger-table-container" style="max-height:420px;overflow-y:auto;">
+    <p class="text-muted" class="text-center" style="padding:1rem;">加载中...</p>
+  </div>
+</div>
+{% endcall %}
+
+{{ confirm_modal() }}
+{{ toast_container() }}
+{{ modal_toast_js() }}
+
+<script>
+function showNewMonthModal() {
+  var input = document.getElementById('new-month-input');
+  if (input) { input.focus(); input.select(); }
+}
+
+// 切换到指定 Tab（KPI 卡点击跳转用）
+function switchToTab(tabName) {
+  const tab = document.querySelector(`.tabs-tab[data-tab="${tabName}"]`);
+  if (tab) tab.click();
+}
+
+function confirmNewMonth() {
+  var input = document.getElementById('new-month-input');
+  var modeSel = document.getElementById('new-month-mode');
+  var raw = input.value.trim();
+  // type=month 返回 YYYY-MM，转成后端要的 YYYYMM
+  var m = raw.replace('-', '');
+  if (!m || !/^\d{6}$/.test(m)) {
+    Toast.error('请选择月份');
+    input.focus();
+    return;
+  }
+  var mode = modeSel ? modeSel.value : 'auto';
+  var monthSel = document.getElementById('month-select');
+  var exists = monthSel ? monthSel.querySelector(`option[value="${m}"]`) : null;
+  if (exists && mode !== 'regenerate') {
+    // 月份已存在：明确提示用户，而不是静默切换
+    Toast.info(`✅ ${m.slice(0,4)}年${m.slice(4)}月 已生成，已切换查看`);
+    selectMonth(m);
+    // 滚动到状态区，让用户看到结果
+    const statusCard = document.getElementById('status-card');
+    if (statusCard) statusCard.scrollIntoView({behavior: 'smooth', block: 'start'});
+    return;
+  }
+  doGenerate(m, mode);
+}
+</script>
+
+{% endblock %}
+
+{% block extra_scripts %}
+
+<script>
+let currentMonth = null;
+let currentPage = 1;
+let totalPages = 1;
+
+// ========== Tab 切换（点击真实 tab，由 tabs.js 统一激活） ==========
+function switchTab(tabName) {
+  const tab = document.querySelector(`#report-tabs .tabs-tab[data-tab="${tabName}"]`);
+  if (tab) tab.click();  // tabs.js 激活并发 tabs:change
+}
+
+// 切换到某 Tab 后按需加载该 Tab 数据（监听标准 tabs:change 事件）
+document.addEventListener('DOMContentLoaded', () => {
+  const tabsEl = document.getElementById('report-tabs');
+  if (!tabsEl) return;
+  tabsEl.addEventListener('tabs:change', (e) => {
+    const name = e.detail && e.detail.tab;
+    if (!currentMonth) return;
+    if (name === 'browse') loadTable();
+    else if (name === 'issues') loadReviewIssues();
+  });
+});
+
+// 初始化 Tab 从 hash
+function initTabFromHash() {
+  const hash = window.location.hash.replace('#', '');
+  if (['generate', 'browse', 'issues'].includes(hash)) {
+    setTimeout(() => switchTab(hash), 50);
+  }
+}
+
+// 获取当前激活 Tab
+function getActiveTab() {
+  const active = document.querySelector('.tabs-tab[aria-selected="true"]');
+  if (active) return active.dataset.tab;
+  return 'generate';
+}
+
+// ========== 月份列表（顶部下拉） ==========
+async function loadMonths() {
+  const r = await fetch('/api/report/months');
+  const d = await r.json();
+  const raw = d.months || [];
+  const months = raw.map(m => {
+    const mm = (typeof m === 'string') ? m : (m.month || '');
+    return { month: mm, row_counts: m.row_counts, generated_at: m.generated_at, status: m.status || 'approved' };
+  }).filter(m => m.month && /^\d{6}$/.test(m.month));
+
+  // 填充顶部月份下拉框
+  const sel = document.getElementById('month-select');
+  if (sel) {
+    if (months.length === 0) {
+      sel.innerHTML = '<option value="">暂无已生成月份</option>';
+    } else {
+      sel.innerHTML = '<option value="">-- 选择月份 --</option>' + months.map(m => {
+        const label = `${m.month.slice(0,4)}年${m.month.slice(4)}月`;
+        return `<option value="${m.month}">${label}</option>`;
+      }).join('');
+      // 绑定 change 事件
+      if (!sel._bound) {
+        sel.addEventListener('change', function() { selectMonth(this.value); });
+        sel._bound = true;
+      }
+    }
+  }
+
+  // 选中第一个月份（如果没有选中）
+  if (!currentMonth && months.length > 0) {
+    selectMonth(months[0].month);
+  } else if (currentMonth && sel) {
+    sel.value = currentMonth;
+  }
+
+  if (currentMonth) {
+    loadReviewStatus(currentMonth);
+  }
+}
+
+var _sheetList = [];
+async function loadSheets(month) {
+  const sel = document.getElementById('view-sheet');
+  if (!sel) return;
+  try {
+    const r = await fetch(`/api/report/sheets/${month}`);
+    if (!r.ok) throw new Error('加载 Sheet 列表失败');
+    const d = await r.json();
+    _sheetList = d.sheets;
+    const cur = sel.value;
+    sel.innerHTML = d.sheets.map(sh => {
+      const pend = sh.pending ? `  ⚠待审核 ${sh.pending}` : '';
+      return `<option value="${sh.name}">${sh.name}（${sh.rows} 行）${pend}</option>`;
+    }).join('');
+    // 保持当前选中（若还存在）
+    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+    updateSheetPendingBadge();
+  } catch (e) {
+    // 接口失败时保留原硬编码选项（不阻塞浏览）
+    console.warn('loadSheets:', e.message);
+  }
+}
+
+function updateSheetPendingBadge() {
+  const badge = document.getElementById('sheet-pending-badge');
+  if (!badge) return;
+  const sel = document.getElementById('view-sheet');
+  const sh = _sheetList.find(s => s.name === sel.value);
+  if (sh && sh.pending > 0) {
+    badge.textContent = `⚠ ${sh.pending} 个待审核`;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function selectMonth(month) {
+  if (!month) { currentMonth = null; return; }
+  currentMonth = month;
+  _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 切月失效问题缓存
+
+  // 更新顶部下拉选中
+  const sel = document.getElementById('month-select');
+  if (sel && sel.value !== month) sel.value = month;
+
+  // 更新浏览区月份标签
+  const browseLabel = document.getElementById('browse-month-label');
+  if (browseLabel && month) {
+    browseLabel.textContent = `${month.slice(0,4)}年${month.slice(4)}月`;
+  }
+
+  // 加载审核状态
+  loadReviewStatus(month);
+
+  // 动态 Sheet 下拉（数据浏览；硬编码 5 项改为接口驱动）
+  loadSheets(month);
+
+  // 如果在浏览或问题 Tab，自动加载数据
+  const activeTab = getActiveTab();
+  if (activeTab === 'browse') {
+    loadTable();
+  } else if (activeTab === 'issues') {
+    loadReviewIssues();
+  }
+}
+
+
+
+// ========== 生成流程 ==========
+let generatePollTimer = null;
+let currentJobId = null;
+
+function stopGeneratePolling() {
+  if (generatePollTimer) {
+    clearInterval(generatePollTimer);
+    generatePollTimer = null;
+  }
+  currentJobId = null;
+}
+
+// 生成步骤名称映射
+const stepNames = {
+  0: '准备生成...',
+  10: '下载原始数据...',
+  30: '解析原始数据...',
+  50: '构建交付月报...',
+  70: '统计计算...',
+  80: '存储数据...',
+  90: '校验数据...',
+  100: '完成'
+};
+
+function getStepName(progress) {
+  // 找第一个比当前progress大的key，返回前一个
+  const steps = Object.keys(stepNames).map(Number).sort((a,b) => a - b);
+  for (let s of steps) {
+    if (progress <= s) {
+      return stepNames[s];
+    }
+  }
+  return stepNames[100];
+}
+
+async function pollGenerateProgress() {
+  if (!currentJobId) return;
+  try {
+    const r = await fetch(`/api/report/generate-progress/${currentJobId}`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const progressBar = document.querySelector('.progress-fill');
+    const st = document.getElementById('status-text');
+    const progressLabel = document.querySelector('.progress-label');
+    const progressContainer = document.getElementById('progress-container');
+    const statusCard = document.getElementById('status-card');
+    const btnRevalidate = document.getElementById('btn-revalidate');
+    const btnRegenerate = document.getElementById('btn-regenerate');
+    const btnExport = document.getElementById('btn-export-main');
+    const btnCompare = document.getElementById('btn-compare');
+
+    const progress = d.progress || 0;
+    const stepName = getStepName(progress);
+    const statusText = `${stepName} (${progress}%)`;
+
+    if (progressBar) progressBar.style.width = progress + '%';
+    if (progressLabel) progressLabel.textContent = statusText;
+    if (st && d.status === 'running') st.textContent = statusText;
+
+    // 完成或失败后停止轮询并处理
+    if (d.status === 'done') {
+      stopGeneratePolling();
+      handleGenerateSuccess(d);
+    } else if (d.status === 'failed') {
+      stopGeneratePolling();
+      handleGenerateFailed(d.message || '生成失败');
+    }
+  } catch (e) {
+    // 静默忽略轮询错误
+  }
+}
+
+// 生成后刷新审核状态（带兜底重试）
+// 正常时序下一次到位；极端情况下后端状态尚未 commit（not_started），
+// 自动延迟重试，避免界面永久停在未生成态。
+async function refreshReviewStatusAfterGenerate(month, attempt = 0) {
+  await loadReviewStatus(month);
+  const txt = document.getElementById('status-text')?.textContent || '';
+  if (txt === statusLabel('not_started') && attempt < 5) {
+    await new Promise(r => setTimeout(r, 600));
+    return refreshReviewStatusAfterGenerate(month, attempt + 1);
+  }
+}
+
+// 生成成功处理
+async function handleGenerateSuccess(d) {
+  const st = document.getElementById('status-text');
+  const progressContainer = document.getElementById('progress-container');
+  const statusCard = document.getElementById('status-card');
+  const btnRevalidate = document.getElementById('btn-revalidate');
+  const btnRegenerate = document.getElementById('btn-regenerate');
+  const btnExport = document.getElementById('btn-export-main');
+  const btnCompare = document.getElementById('btn-compare');
+
+  if (st) st.textContent = '✅ 生成完成';
+  const progressBar = document.querySelector('.progress-fill');
+  if (progressBar) progressBar.style.width = '100%';
+  const progressLabelDone = document.querySelector('.progress-label');
+  if (progressLabelDone) progressLabelDone.textContent = '完成 (100%)';
+
+  // 延迟半秒后隐藏进度条，让用户看到 100%
+  setTimeout(() => {
+    if (progressContainer) progressContainer.style.display = 'none';
+  }, 500);
+
+  // 恢复按钮状态
+  if (btnRevalidate) btnRevalidate.disabled = false;
+  if (btnRegenerate) btnRegenerate.disabled = false;
+  if (btnExport) btnExport.disabled = false;
+  if (btnCompare) btnCompare.disabled = false;
+
+  // 重新加载月份列表（await：确保 regenerate 后最新 row_counts 就绪）
+  await loadMonths();
+  // 加载审核状态 + Sheet 明细；状态查询带兜底重试，防止极端时序下读到 not_started
+  if (currentMonth) {
+    await refreshReviewStatusAfterGenerate(currentMonth);
+    loadSheetDetail(currentMonth);
+  }
+  // 滚动到状态卡片
+  if (statusCard) statusCard.scrollIntoView({behavior: 'smooth'});
+  // toast 通知
+  Toast.success('生成完成');
+}
+
+// 生成失败处理
+function handleGenerateFailed(errorMsg) {
+  const st = document.getElementById('status-text');
+  const progressContainer = document.getElementById('progress-container');
+  const btnRevalidate = document.getElementById('btn-revalidate');
+  const btnRegenerate = document.getElementById('btn-regenerate');
+  const btnExport = document.getElementById('btn-export-main');
+  const btnCompare = document.getElementById('btn-compare');
+
+  if (st) st.textContent = `❌ 生成失败: ${errorMsg}`;
+  if (progressContainer) progressContainer.style.display = 'none';
+
+  // 恢复按钮状态
+  if (btnRevalidate) btnRevalidate.disabled = false;
+  if (btnRegenerate) btnRegenerate.disabled = false;
+  if (btnExport) btnExport.disabled = false;
+  if (btnCompare) btnCompare.disabled = false;
+
+  Toast.error(`生成失败: ${errorMsg}`);
+}
+
+async function doGenerate(month, mode = 'auto') {
+  if (!month) { Toast.error('请输入月份'); return; }
+
+  const st = document.getElementById('status-text');
+  const progressContainer = document.getElementById('progress-container');
+  const progressBar = document.querySelector('.progress-fill');
+  const statusCard = document.getElementById('status-card');
+  const btnRevalidate = document.getElementById('btn-revalidate');
+  const btnRegenerate = document.getElementById('btn-regenerate');
+  const btnExport = document.getElementById('btn-export-main');
+  const btnCompare = document.getElementById('btn-compare');
+  const refetchCheckbox = document.getElementById('refetch-sources');
+  const refetch_sources = refetchCheckbox ? refetchCheckbox.checked : true;
+
+  if (!st) {
+    Toast.error('页面元素加载异常，请刷新后重试');
+    return;
+  }
+
+  if (!month || !/^\d{6}$/.test(month)) {
+    st.textContent = '⚠️ 请输入有效的月份（YYYYMM格式）';
+    return;
+  }
+
+  // 更新当前选中
+  selectMonth(month);
+
+  // 禁用操作按钮，防止重复提交
+  if (btnRevalidate) btnRevalidate.disabled = true;
+  if (btnRegenerate) btnRegenerate.disabled = true;
+  if (btnExport) btnExport.disabled = true;
+
+  // 显示状态卡片
+  if (statusCard) statusCard.style.display = 'block';
+  st.textContent = `准备生成（${mode}）...`;
+  if (progressContainer) progressContainer.style.display = 'block';
+  if (progressBar) progressBar.style.width = '0%';
+
+  // 启动进度轮询（每秒更新一次）
+  stopGeneratePolling();
+  generatePollTimer = setInterval(() => pollGenerateProgress(), 1000);
+
+  try {
+    const r = await fetch('/api/report/generate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({month, mode, refetch_sources})
+    });
+    const d = await r.json();
+
+    if (!r.ok || !d.job_id) {
+      st.textContent = `⚠️ ${d.detail || d.error || '生成失败'}`;
+      if (progressContainer) progressContainer.style.display = 'none';
+      stopGeneratePolling();
+      // 恢复按钮状态
+      if (btnRevalidate) btnRevalidate.disabled = false;
+      if (btnRegenerate) btnRegenerate.disabled = false;
+      if (btnExport) btnExport.disabled = false;
+      if (btnCompare) btnCompare.disabled = false;
+      Toast.error(d.detail || d.error || '生成失败');
+      return;
+    }
+
+    // 真异步：立即返回 job_id，后续进度和完成/失败由轮询处理
+    currentJobId = d.job_id;
+    st.textContent = `🚀 任务已提交，正在生成（${mode}）...`;
+
+  } catch (e) {
+    stopGeneratePolling();
+    console.error('doGenerate error:', e);
+    st.textContent = `失败: ${e.message || e}`;
+    if (progressContainer) progressContainer.style.display = 'none';
+    // 恢复按钮状态
+    if (btnRevalidate) btnRevalidate.disabled = false;
+    if (btnRegenerate) btnRegenerate.disabled = false;
+    if (btnExport) btnExport.disabled = false;
+    if (btnCompare) btnCompare.disabled = false;
+    Toast.error(`生成失败: ${e.message || e}`);
+  }
+}
+
+function doRegenerate() {
+  if (!currentMonth) {
+    Toast.warning('请先选择月份');
+    return;
+  }
+  showConfirm('确认重新生成', `重新生成 ${currentMonth} 月报将覆盖现有数据，确定继续吗？`, function() {
+    doGenerate(currentMonth, 'regenerate');
+  });
+}
+
+function doExport() {
+  const month = currentMonth || '';
+  if (!month) return;
+  window.location.href = `/api/report/export/${month}`;
+}
+
+// ========== 状态和审核 ==========
+async function loadReviewStatus(month) {
+  if (!month) return;
+
+  const statusCard = document.getElementById('status-card');
+  if (statusCard) statusCard.style.display = 'block';
+
+  // 默认隐藏 Sheet 明细，有数据再显示
+  const sheetDetailEl = document.getElementById('sheet-detail');
+  const sheetCard = sheetDetailEl ? sheetDetailEl.closest('.card') : null;
+
+  try {
+    const r = await fetch(`/api/report/review-status/${month}`);
+    const d = await r.json();
+
+    // 更新状态
+    const status = d.status || 'not_started';
+    document.getElementById('status-text').textContent = statusLabel(status);
+    const statusDot = document.getElementById('status-dot');
+    statusDot.className = `status-dot ${status}`;
+
+    // 已有数据则显示 Sheet 明细区
+    if (status !== 'not_started') {
+      if (sheetCard) sheetCard.style.display = 'block';
+      // 如果明细还是占位文字，从 months list 补充行数
+      if (document.getElementById('sheet-detail').textContent.indexOf('生成后') >= 0) {
+        loadSheetDetail(month);
+      }
+    } else {
+      if (sheetCard) sheetCard.style.display = 'none';
+    }
+
+    // 更新统计（KPI 卡中的数值）
+    const errorsEl = document.querySelector('#stat-errors .stat-value');
+    const warningsEl = document.querySelector('#stat-warnings .stat-value');
+    const pendingEl = document.querySelector('#stat-pending .stat-value');
+    if (errorsEl) errorsEl.textContent = d.total_errors != null ? d.total_errors : 0;
+    if (warningsEl) warningsEl.textContent = d.total_warnings != null ? d.total_warnings : 0;
+    if (pendingEl) pendingEl.textContent = d.pending_fixes != null ? d.pending_fixes : 0;
+
+    // 显示生成时间
+    if (d.generated_at) {
+      const t = d.generated_at;
+      // 兼容：时间戳（数字）或 ISO/datetime 字符串
+      const date = (typeof t === 'number') ? new Date(t * 1000) : new Date(t);
+      if (!isNaN(date.getTime())) {
+        document.getElementById('generated-at').textContent =
+          `生成于 ${date.toLocaleString('zh-CN')}`;
+      } else {
+        document.getElementById('generated-at').textContent = `生成于 ${t}`;
+      }
+    } else {
+      document.getElementById('generated-at').textContent = '';
+    }
+
+    // 更新按钮状态（全部加存在性检查，避免 DOM 不存在时报错中断）
+    const btnApprove = document.getElementById('btn-approve');
+    const btnReject = document.getElementById('btn-reject');
+    const btnRevalidate = document.getElementById('btn-revalidate');
+    const btnExport = document.getElementById('btn-export-main');
+    const btnRegenerate = document.getElementById('btn-regenerate');
+    const btnCompare = document.getElementById('btn-compare');
+
+    if (btnApprove) btnApprove.disabled = !(['validating', 'reviewing'].includes(status));
+    if (btnReject) btnReject.disabled = !(['validating', 'reviewing'].includes(status));
+    if (btnRevalidate) btnRevalidate.disabled = ['not_started', 'generating'].includes(status);
+    if (btnExport) btnExport.disabled = status !== 'approved';
+    if (btnRegenerate) btnRegenerate.disabled = ['not_started', 'generating'].includes(status);
+    if (btnCompare) btnCompare.disabled = ['not_started', 'generating'].includes(status);
+
+    // 加载问题到问题 Tab
+    if (status === 'validating' || status === 'reviewing') {
+      loadReviewIssues();
+    } else if (status === 'approved') {
+      document.getElementById('review-issues-list').innerHTML =
+        '<p class="success-tip">✅ 审核通过，无待处理问题</p>';
+    }
+  } catch (e) {
+    console.warn('Failed to load review status:', e);
+  }
+}
+
+// 加载某个月的 Sheet 明细行数
+async function loadSheetDetail(month) {
+  try {
+    const r = await fetch(`/api/report/months`);
+    const d = await r.json();
+    const target = (d.months || []).find(m => (m.month || m) === month || (typeof m === 'string' && m === month));
+    if (!target || !target.row_counts) return;
+    const counts = typeof target.row_counts === 'string' ? JSON.parse(target.row_counts) : target.row_counts;
+    let h = '<div class="detail-grid">';
+    for (const [k, v] of Object.entries(counts)) h += `<div>${k}: <strong>${v}</strong> 行</div>`;
+    h += '</div>';
+    document.getElementById('sheet-detail').innerHTML = h;
+  } catch (e) {
+    // 静默忽略
+  }
+}
+
+function statusLabel(s) {
+  switch (s) {
+    case 'not_started': return '未生成';
+    case 'generating': return '生成中';
+    case 'validating': return '待审核';
+    case 'reviewing': return '审核中';
+    case 'approved': return '已通过';
+    case 'rejected': return '已驳回';
+    default: return s;
+  }
+}
+
+async function doApprove() {
+  const month = currentMonth;
+  if (!month) return;
+  showConfirm('确认审批通过', `确认通过 ${month} 的交付月报审核？`, function() {
+    _doApprove(month);
+  });
+  return;
+}
+
+let _approving = false;
+async function _doApprove(month) {
+  if (_approving) return;
+  _approving = true;
+  try {
+    const r = await fetch(`/api/report/review-approve/${month}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({reviewer: '人工审核'}),
+    });
+    const d = await r.json();
+    if (!r.ok) { Toast.error(`审批失败: ${d.detail || d.error}`); return; }
+    Toast.success('✅ 审核通过，已允许导出');
+    loadReviewStatus(month);
+  } catch (e) { Toast.error(`失败: ${e}`); }
+  finally { _approving = false; }
+}
+
+async function doReject() {
+  const month = currentMonth;
+  if (!month) return;
+  const container = document.getElementById('reason-input-container');
+  const reasonInput = document.getElementById('review-reason');
+  
+  // 第一次点击：展开输入框让用户填原因
+  if (!reasonInput.value.trim()) {
+    container.style.display = 'block';
+    container.scrollIntoView({behavior: 'smooth'});
+    reasonInput.focus();
+    Toast.warning('请输入驳回原因');
+    return;
+  }
+  
+  const reason = reasonInput.value.trim();
+  showConfirm('确认驳回', `确认驳回 ${month} 的交付月报？\n原因：${reason}`, function() {
+    _doReject(month, reason, container, reasonInput);
+  });
+}
+
+let _rejecting = false;
+async function _doReject(month, reason, container, reasonInput) {
+  if (_rejecting) return;
+  _rejecting = true;
+  try {
+    const r = await fetch(`/api/report/review-reject/${month}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({reason: reason, reviewer: '人工审核'}),
+    });
+    const d = await r.json();
+    if (!r.ok) { Toast.error(`驳回失败: ${d.detail || d.error}`); return; }
+    Toast.success('已驳回，等待修正');
+    loadReviewStatus(month);
+    reasonInput.value = '';
+    container.style.display = 'none';
+  } catch (e) { Toast.error(`失败: ${e}`); }
+  finally { _rejecting = false; }
+}
+
+let _revalidating = false;
+async function doRevalidate() {
+  const month = currentMonth;
+  if (!month) return;
+  if (_revalidating) return;
+  _revalidating = true;
+  try {
+    const r = await fetch(`/api/report/revalidate/${month}`, {method: 'POST'});
+    const d = await r.json();
+    if (!r.ok) { Toast.error(`重新校验失败: ${d.detail || d.error}`); return; }
+    Toast.success('✅ 重新校验完成');
+    loadReviewStatus(month);
+    loadReviewIssues();
+  } catch (e) { Toast.error(`失败: ${e}`); }
+  finally { _revalidating = false; }
+}
+
+// ========== 数据浏览 ==========
+async function loadTable() {
+  const month = currentMonth || (currentMonth || '');
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  if (!month) {
+    document.getElementById('data-table-container').innerHTML =
+      '<p class="text-muted" class="text-center">请先选择月份</p>';
+    return;
+  }
+
+  const container = document.getElementById('data-table-container');
+  container.innerHTML = '<p class="text-muted" class="text-center">加载中...</p>';
+
+  currentPage = 1;
+  await fetchPage(month, sheet, currentPage);
+}
+
+function getSearchKeyword() {
+  return document.getElementById('view-search')?.value?.trim() || '';
+}
+
+function getPageSize() {
+  return parseInt(document.getElementById('view-page-size')?.value || '50', 10);
+}
+
+function onPageSizeChange() {
+  currentPage = 1;
+  const month = currentMonth;
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  if (month) fetchPage(month, sheet, 1);
+}
+
+async function fetchPage(month, sheet, page) {
+  const container = document.getElementById('data-table-container');
+  const search = getSearchKeyword();
+  const pagContainer = document.getElementById('pagination');
+  try {
+    const params = new URLSearchParams({ page, page_size: getPageSize() });
+    if (search) params.set('search', search);
+    // 并行拉数据 + 当月问题清单（量小，一次拉全月，翻页/切 sheet 复用缓存）
+    const issuesP = _loadBrowseIssues(month);
+    const r = await fetch(`/api/report/data/${month}/${encodeURIComponent(sheet)}?${params.toString()}`);
+    if (!r.ok) {
+      const err = await r.json();
+      container.innerHTML = `<p class="error-tip">⚠️ ${err.detail || '加载失败'}</p>`;
+      pagContainer.innerHTML = '';
+      return;
+    }
+    const [d, issueMap] = await Promise.all([r.json(), issuesP]);
+    currentPage = d.page;
+    totalPages = d.total_pages;
+
+    if (!d.rows || d.rows.length === 0) {
+      container.innerHTML = `<p class="text-muted" class="text-center" style="padding:1rem;">无数据${search ? `（搜索: "${search}"）` : ''}</p>`;
+      pagContainer.innerHTML = '';
+      return;
+    }
+
+    const cols = d.columns;
+    const dataCols = cols.filter(c => c !== 'row_index');
+    _browseCols = dataCols;
+    _browseRows = d.rows;  // 全局缓存：onclick 只传数组下标，不内联 JSON
+    _browseCellIssues = {};  // "全局行号\x00列" → issue（点击高亮格直接带 issue_id）
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    let html = `<p style="margin-bottom:0.5rem;">共 <strong>${d.total}</strong> 行${search ? `（搜索: "${search}"）` : ''}，第 ${d.page}/${d.total_pages} 页</p>`;
+    html += `<div class="cell-issue-legend"><span><span class="swatch"></span>待审核单元格（点击查看原因并校准；本页 <span id="browse-issue-page-count">0</span> 处）</span></div>`;
+    html += '<div class="table-wrapper"><table class="table"><thead><tr>';
+    dataCols.forEach(c => html += `<th>${c}</th>`);
+    html += '<th style="width:70px;">校准</th>';
+    html += '</tr></thead><tbody>';
+    let pageIssueCount = 0;
+    d.rows.forEach((row, ri) => {
+      html += '<tr>';
+      dataCols.forEach((c, ci) => {
+        const v = row[c];
+        const raw = String(v ?? '');
+        const cell = raw.substring(0,50) + (raw.length > 50 ? '...' : '');
+        const mapKey = `${row.row_index}\u0000${c}`;
+        const issue = issueMap.get(mapKey);
+        let cls = 'cursor-pointer';
+        let badge = '';
+        let tip = esc(raw);
+        if (issue) {
+          pageIssueCount++;
+          _browseCellIssues[mapKey] = issue;
+          cls += ' cell-issue cell-issue-pending';
+          badge = '<span class="cell-issue-badge" title="待审核">⚠️</span>';
+          tip = `⚠️ 待审核：${esc(issue.message || issue.rule_code)}&#10;原值：${esc(raw) || '（空）'}`;
+        }
+        // 单元格可点：发起该单元格校准（只传行/列下标）
+        html += `<td class="${cls}" title="${tip}" onclick="openCalibrationAtBrowse(${ri}, ${ci})" onmouseover="this.style.background='var(--c-surface)'" onmouseout="this.style.background=''">${cell}${badge}</td>`;
+      });
+      // 校准操作列：发起该行第一列校准（点击单元格可改其他列）
+      html += `<td><button class="btn btn-sm" onclick="openCalibrationAtBrowse(${ri}, 0)">校准</button></td>`;
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    const _pc = document.getElementById('browse-issue-page-count');
+    if (_pc) _pc.textContent = pageIssueCount;
+
+    // 分页（传入 onClick 回调，修复下一页无反应）
+    renderPagination(pagContainer, month, sheet, totalPages, currentPage,
+      (p) => fetchPage(month, sheet, p));
+  } catch (e) {
+    container.innerHTML = `<p class="error-tip">⚠️ ${e.message}</p>`;
+  }
+}
+
+// 导出当前筛选结果
+function exportCurrent() {
+  const month = currentMonth || (currentMonth || '');
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  const search = getSearchKeyword();
+  if (!month) return;
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  const qs = params.toString();
+  window.location.href = `/api/report/export-sheet/${month}/${encodeURIComponent(sheet)}${qs ? '?' + qs : ''}`;
+}
+
+// 搜索防抖 + 浏览区事件监听
+let searchTimer = null;
+document.addEventListener('DOMContentLoaded', () => {
+  // 简化浏览器标题为「交付月报」
+  document.title = '交付月报';
+
+  const searchInput = document.getElementById('view-search');
+  if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        clearTimeout(searchTimer);
+        currentPage = 1;
+        loadTable();
+      }
+    });
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentPage = 1;
+        loadTable();
+      }, 400);
+    });
+  }
+
+
+  // 浏览区 Sheet 切换自动加载
+  const viewSheetSel = document.getElementById('view-sheet');
+  if (viewSheetSel) {
+    viewSheetSel.addEventListener('change', function() {
+      currentPage = 1;
+      loadTable();
+    });
+  }
+
+  // 初始化
+  initTabFromHash();
+  loadMonths();
+});
+
+// ========== 问题清单 ==========
+async function loadReviewIssues(page = 1, pageSize = 50) {
+  if (!currentMonth) {
+    document.getElementById('review-issues-list').innerHTML =
+      '<p class="text-muted" class="text-center" style="padding:1rem;">请先在左侧选择月份</p>';
+    return;
+  }
+
+  const container = document.getElementById('review-issues-list');
+  const statsContainer = document.getElementById('review-issues-stats');
+  container.innerHTML = '<p class="text-muted" class="text-center">加载中...</p>';
+
+  const statusFilter = document.getElementById('filter-status').value;
+  const severityFilter = document.getElementById('filter-severity').value;
+
+  try {
+    let url = `/api/report/review-issues/${currentMonth}?page=${page}&page_size=${pageSize}`;
+    if (statusFilter) url += `&status=${statusFilter}`;
+    if (severityFilter) url += `&severity=${severityFilter}`;
+    const r = await fetch(url);
+    const d = await r.json();
+
+    if (!d.issues || d.issues.length === 0) {
+      container.innerHTML = '<p class="success-tip">✅ 无匹配问题</p>';
+      statsContainer.textContent =
+        `共 ${d.total || 0} 个问题`;
+      document.getElementById('issues-pagination').innerHTML = '';
+      return;
+    }
+
+    statsContainer.textContent =
+      `共 ${d.total} 个问题（待处理 ${d.pending} / 已确认 ${d.confirmed} / 已驳回 ${d.rejected}）`;
+
+    let html = `<div class="table-wrapper"><table class="table"><thead><tr>
+      <th>Sheet</th><th>行</th><th>列</th><th>问题</th><th>原值</th><th>状态</th><th>操作</th></tr></thead><tbody>`;
+
+    _issueCache = d.issues;  // 全局缓存：onclick 只传下标，不内联 JSON
+
+    d.issues.forEach((issue, ii) => {
+      const severityColor = issue.severity === 'ERROR' ? 'var(--c-danger)' : 'var(--c-warning)';
+      const isPending = issue.status === 'pending';
+      const hasDetail = issue.detail && issue.detail.rows && issue.detail.rows.length;
+      const detailToggle = hasDetail
+        ? `<button class="btn btn-sm" id="detail-toggle-${issue.id}" onclick="toggleIssueDetail(${ii})" style="margin-right:0.25rem;padding:0 0.4rem;" title="查看重复明细">▸ 明细</button>`
+        : '';
+      const calBtn = issue.column_name
+        ? `<button class="btn btn-sm btn-primary" onclick="openCalibrationAtIssue(${ii})" style="margin-right:0.25rem;">校准</button>`
+        : '';
+      const actionBtns = isPending
+        ? detailToggle + calBtn
+          + `<button class="btn btn-sm btn-success" onclick="resolveIssue(${issue.id}, 'confirm')" style="margin-right:0.25rem;">确认</button>`
+          + `<button class="btn btn-sm" onclick="resolveIssue(${issue.id}, 'reject')" style="border-color:var(--c-danger);color:var(--c-danger);">驳回</button>`
+        : (detailToggle || `<span class="text-muted" style="font-size:0.85rem;">${issue.status === 'confirmed' ? '✅ 已确认' : '🗑 已驳回'}</span>`);
+      html += `<tr>
+        <td>${issue.sheet}</td>
+        <td>${issue.row_index}</td>
+        <td>${issue.column_name || '-'}</td>
+        <td style="color:${severityColor};font-weight:500;">${issue.message}</td>
+        <td>${issue.original_value || '-'}</td>
+        <td>${issue.status}</td>
+        <td>${actionBtns}</td>
+      </tr>`;
+      if (hasDetail) {
+        html += `<tr id="detail-row-${issue.id}" style="display:none;"><td colspan="7" style="padding:0;">${renderIssueDetail(issue)}</td></tr>`;
+      }
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    // 分页
+    const pagContainer = document.getElementById('issues-pagination');
+    if (d.total_pages > 1) {
+      renderPagination(pagContainer, null, null, d.total_pages, page, (p) => loadReviewIssues(p, pageSize));
+    } else {
+      pagContainer.innerHTML = '';
+    }
+  } catch (e) {
+    container.innerHTML = `<p class="error-tip">⚠️ 加载失败: ${e.message}</p>`;
+  }
+}
+
+// ========== ID 重复明细展开 ==========
+function toggleIssueDetail(ii) {
+  const issue = _issueCache[ii];
+  const row = document.getElementById('detail-row-' + issue.id);
+  const btn = document.getElementById('detail-toggle-' + issue.id);
+  if (!row) return;
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : '';
+  if (btn) btn.textContent = open ? '▸ 明细' : '▾ 收起';
+}
+
+function renderIssueDetail(issue) {
+  const dt = issue.detail;
+  const cols = dt.columns || [];
+  // 结论提示：diff_cols 非空 = 同 ID 挂不同合同/日期，需人工核对；空 = 字段一致的合法重复
+  let verdict;
+  if (dt.diff_cols && dt.diff_cols.length) {
+    verdict = `<span style="color:var(--c-danger);font-weight:600;">⚠ 同一 ID 的 ${dt.diff_cols.join('、')} 不一致，疑似真异常，请核对是否为不同工作项被误赋同一 ID</span>`;
+  } else {
+    verdict = `<span style="color:var(--c-success,green);font-weight:600;">✓ 各行关键字段一致，仅为同一工作项多行，可确认通过</span>`;
+  }
+  let head = '<th style="text-align:left;">行</th>' + cols.map(c => {
+    const mark = dt.diff_cols && dt.diff_cols.includes(c);
+    return `<th style="text-align:left;${mark ? 'color:var(--c-danger);' : ''}">${c}${mark ? ' ⚠' : ''}</th>`;
+  }).join('');
+  let body = dt.rows.map(r => {
+    const tds = cols.map(c => {
+      const mark = dt.diff_cols && dt.diff_cols.includes(c);
+      return `<td style="${mark ? 'color:var(--c-danger);font-weight:600;' : ''}">${r[c] === '' || r[c] == null ? '<span class=\'text-muted\'>—</span>' : r[c]}</td>`;
+    }).join('');
+    return `<tr${r.current ? ' style="background:rgba(255,193,7,0.08);"' : ''}><td>${r.row_index}${r.current ? ' <span class="text-muted">(本条)</span>' : ''}</td>${tds}</tr>`;
+  }).join('');
+  return `<div style="padding:0.75rem 1rem;background:var(--c-bg-subtle,#fafafa);border-top:1px solid var(--c-border,#eee);">
+    <div style="margin-bottom:0.5rem;font-size:0.85rem;">
+      ID <strong>${dt.id}</strong> 共出现 <strong>${dt.occurrences}</strong> 处 · ${verdict}
+    </div>
+    <div class="table-wrapper"><table class="table" style="margin:0;font-size:0.82rem;"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+  </div>`;
+}
+
+// ========== 通用分页渲染 ==========
+function renderPagination(container, month, sheet, totalPages, current, onClick) {
+  if (totalPages <= 1) {
+    container.innerHTML = '';
+    return;
+  }
+  let html = '<div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">';
+  html += `<button type="button" class="btn btn-sm" data-page="${current - 1}" ${current <= 1 ? 'disabled' : ''}>上一页</button>`;
+  html += `<span class="text-muted">第 ${current} / ${totalPages} 页</span>`;
+  html += `<button type="button" class="btn btn-sm" data-page="${current + 1}" ${current >= totalPages ? 'disabled' : ''}>下一页</button>`;
+  html += '</div>';
+  container.innerHTML = html;
+
+  // 用事件委托绑定，避免 inline onclick 作用域问题
+  container.querySelectorAll('button[data-page]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (this.disabled) return;
+      const next = parseInt(this.getAttribute('data-page'), 10);
+      if (next >= 1 && next <= totalPages && typeof onClick === 'function') {
+        onClick(next);
+      }
+    });
+  });
+}
+
+// ========== 手工报表对比 ==========
+let comparePollTimer = null;
+let currentCompareJobId = null;
+
+function stopComparePolling() {
+  if (comparePollTimer) {
+    clearInterval(comparePollTimer);
+    comparePollTimer = null;
+  }
+}
+
+async function doCompare() {
+  if (!currentMonth) { Toast.error('请先选择月份'); return; }
+  const btn = document.getElementById('btn-compare');
+  const card = document.getElementById('compare-result-card');
+  const resultEl = document.getElementById('compare-result');
+  const summaryEl = document.getElementById('compare-summary');
+  const progressContainer = document.getElementById('compare-progress-container');
+  const progressBar = document.getElementById('compare-progress-bar');
+  const progressText = document.getElementById('compare-progress-text');
+
+  if (btn) btn.disabled = true;
+  if (card) card.style.display = 'block';
+  if (resultEl) resultEl.innerHTML = '';
+  if (summaryEl) summaryEl.textContent = '';
+
+  // 显示进度条
+  if (progressContainer) progressContainer.style.display = 'block';
+  if (progressBar) { progressBar.style.width = '0%'; }
+  const progressPct = document.getElementById('compare-progress-pct');
+  if (progressPct) progressPct.textContent = '0%';
+  if (progressText) progressText.textContent = '准备中...';
+
+  stopComparePolling();
+
+  try {
+    const r = await fetch(`/api/report/compare/${currentMonth}`);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || d.error || '对比失败');
+
+    if (d.error) {
+      if (progressContainer) progressContainer.style.display = 'none';
+      if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-warning);padding:0.5rem;">⚠️ ${d.error}</div>`;
+      return;
+    }
+
+    // 如果有 job_id，启动轮询等待完成
+    if (d.job_id) {
+      currentCompareJobId = d.job_id;
+      await pollCompareProgress(d.job_id);
+      return;
+    }
+
+    // 无 job_id（同步完成）直接渲染
+    renderCompareResult(d);
+  } catch (e) {
+    stopComparePolling();
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-danger);padding:0.5rem;">❌ 对比失败: ${e.message}</div>`;
+    Toast.error(`对比失败: ${e.message}`);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function pollCompareProgress(jobId) {
+  const progressContainer = document.getElementById('compare-progress-container');
+  const progressBar = document.getElementById('compare-progress-bar');
+  const progressText = document.getElementById('compare-progress-text');
+  const resultEl = document.getElementById('compare-result');
+  const btn = document.getElementById('btn-compare');
+
+  comparePollTimer = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/report/generate-progress/${jobId}`);
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || '查询进度失败');
+
+      // 更新进度条
+      const pct = d.progress || 0;
+      if (progressBar) { progressBar.style.width = pct + '%'; }
+      const pctEl = document.getElementById('compare-progress-pct');
+      if (pctEl) pctEl.textContent = pct + '%';
+      if (progressText) progressText.textContent = d.message || '';
+
+      if (d.status === 'done') {
+        stopComparePolling();
+        if (progressContainer) progressContainer.style.display = 'none';
+        // 拉取最终结果
+        const finalR = await fetch(`/api/report/compare/${currentMonth}`);
+        const finalD = await finalR.json();
+        if (finalR.ok && !finalD.error) {
+          renderCompareResult(finalD);
+        } else {
+          if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-danger);padding:0.5rem;">❌ 对比失败</div>`;
+        }
+        if (btn) btn.disabled = false;
+      } else if (d.status === 'failed') {
+        stopComparePolling();
+        if (progressContainer) progressContainer.style.display = 'none';
+        if (resultEl) resultEl.innerHTML = `<div style="color:var(--c-danger);padding:0.5rem;">❌ 对比失败: ${d.message || ''}</div>`;
+        Toast.error(`对比失败: ${d.message || '未知错误'}`);
+        if (btn) btn.disabled = false;
+      }
+    } catch (e) {
+      console.error('poll compare progress error:', e);
+    }
+  }, 1000);
+}
+
+function renderCompareResult(d) {
+  const resultEl = document.getElementById('compare-result');
+  const summaryEl = document.getElementById('compare-summary');
+
+  // 汇总
+  const totalDiffs = d.total_diff_cells || 0;
+  const matchText = d.all_match ? '✅ 完全一致' : `❌ ${totalDiffs} 处差异`;
+  if (summaryEl) summaryEl.innerHTML = matchText;
+
+  // 各 Sheet 详情
+  let html = '<div style="display:grid;gap:0.5rem;">';
+  for (const [sheet, info] of Object.entries(d.sheets || {})) {
+    let cls = info.status === 'match' ? 'var(--c-success-soft)' : 'var(--c-danger-soft)';
+    let color = info.status === 'match' ? 'var(--c-success)' : 'var(--c-danger)';
+    let icon = info.status === 'match' ? '✅' : '❌';
+    html += `<div style="padding:0.5rem 0.75rem;background:${cls};border-radius:var(--r-sm);">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong>${icon} ${sheet}</strong>
+          <span style="color:${color};font-size:0.8rem;">${info.diff_count != null ? info.diff_count + ' 处差异' : info.reason || ''}</span>
+        </div>`;
+    if (info.diffs && info.diffs.length > 0) {
+      html += '<details style="margin-top:0.3rem;"><summary style="cursor:pointer;font-size:0.8rem;color:var(--c-text-secondary);">查看详情</summary>';
+      html += '<table class="table" style="margin-top:0.3rem;font-size:0.8rem;"><thead><tr><th>行</th><th>列</th><th>我方</th><th>手工</th></tr></thead><tbody>';
+      for (const diff of info.diffs) {
+        html += `<tr><td>${diff.row}</td><td>${diff.col}</td>
+            <td style="color:var(--c-primary);font-family:monospace;">${diff.mine === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.mine}</td>
+            <td style="color:var(--c-warning);font-family:monospace;">${diff.manual === '' ? '<em style="color:var(--c-text-muted);">空</em>' : diff.manual}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      if (info.has_more) {
+        html += '<p style="font-size:0.75rem;color:var(--c-text-muted);margin-top:0.25rem;">仅显示前 200 条差异</p>';
+      }
+      html += '</details>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+
+  if (resultEl) resultEl.innerHTML = html;
+  Toast.success(d.all_match ? '✅ 与手工报表完全一致' : `⚠️ 发现 ${totalDiffs} 处差异`);
+}
+
+// ========== issue 状态流转（确认/驳回） ==========
+async function resolveIssue(issueId, action) {
+  if (!currentMonth) return;
+  const actionLabel = action === 'confirm' ? '确认' : '驳回';
+  const hint = action === 'confirm' ? '确认后不再计入待处理。' : '驳回后视为误报，不再计入待处理。';
+  showConfirm(`处理问题 #${issueId}`, `确定${actionLabel}该问题？${hint}`, async function() {
+    try {
+      const r = await fetch(`/api/report/review-issues/${currentMonth}/${issueId}/resolve`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: action, operator: '人工处理'})
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || '处理失败');
+      Toast.success(`✅ ${actionLabel}成功${d.changed === false ? '（已处理过）' : ''}`);
+      _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
+      if (typeof loadSheets === 'function') loadSheets(currentMonth);  // 刷新sheet待审核徽标
+      // 刷新问题列表 + 顶部 KPI（loadReviewStatus 会重算 total_errors/pending_fixes）
+      loadReviewIssues();
+      loadReviewStatus(currentMonth);
+    } catch (e) {
+      Toast.error(`❌ ${actionLabel}失败: ${e.message}`);
+    }
+  });
+}
+
+// ========== 人工校准（v1.0）==========
+let _calContext = null;  // {month, sheet, row_index, column_name, original_value}
+let _issueCache = [];    // 问题清单缓存（onclick 按下标取，不内联 JSON）
+let _browseRows = [];    // 数据浏览行缓存
+let _browseCols = [];    // 数据浏览列缓存
+let _browseCellIssues = {};  // "全局行号\u0000列" → issue（本页）
+let _browseIssueCacheMonth = null;  // 问题缓存所属月
+let _browseIssueCachePromise = null;  // 同月复用同一次拉取
+
+// 拉当月全部问题 → 返回 Map("全局行号\u0000列" → issue)，只收当前 sheet
+async function _loadBrowseIssues(month) {
+  const sheet = document.getElementById('view-sheet').value || '签约';
+  if (_browseIssueCacheMonth !== month || !_browseIssueCachePromise) {
+    _browseIssueCacheMonth = month;
+    _browseIssueCachePromise = fetch(`/api/report/review-issues/${month}?status_filter=pending`)
+      .then(r => r.json())
+      .catch(() => ({ issues: [] }));
+  }
+  const d = await _browseIssueCachePromise;
+  const m = new Map();
+  (d.issues || []).forEach(it => {
+    if (it.sheet === sheet)
+      m.set(`${it.row_index}\u0000${it.column_name}`, it);
+  });
+  return m;
+}
+
+function _calInputType(col) {
+  // 与后端口径一致：日期/时间列 → date；金额/数量/天数/人数/成本 → number
+  if (/日期|时间/.test(col)) return 'date';
+  if (/金额|数量|天数|人数|成本/.test(col)) return 'number';
+  return 'text';
+}
+
+function openCalibrationAtIssue(ii) {
+  const issue = _issueCache[ii];
+  if (!issue) return;
+  openCalibrationForIssue(issue);
+}
+
+function openCalibrationAtBrowse(ri, ci) {
+  const row = _browseRows[ri];
+  const col = _browseCols[ci];
+  if (!row || !col) return;
+  const hit = _browseCellIssues[`${row.row_index}\u0000${col}`];
+  openCalibrationForCell(row, col, hit || null);
+}
+
+function openCalibrationForIssue(issue) {
+  if (!currentMonth) return;
+  _calContext = {
+    month: currentMonth,
+    sheet: issue.sheet,
+    row_index: issue.row_index,
+    column_name: issue.column_name,
+    original_value: issue.original_value,
+    issue_id: issue.id,
+  };
+  _populateCalModal();
+}
+
+function openCalibrationForCell(row, col, issue) {
+  if (!currentMonth) return;
+  const month = currentMonth;
+  const sheet = document.getElementById('view-sheet').value;
+  _calContext = {
+    month: month,
+    sheet: sheet,
+    row_index: row.row_index,
+    column_name: col,
+    original_value: issue ? (issue.original_value || null)
+                          : (row[col] === '' ? null : row[col]),
+    issue_id: issue ? issue.id : null,
+  };
+  _populateCalModal();
+}
+
+let _calPopulateSeq = 0;  // 异步 populate 竞态保护
+
+async function _populateCalModal() {
+  const c = _calContext;
+  const seq = ++_calPopulateSeq;
+  document.getElementById('cal-month').value = c.month;
+  document.getElementById('cal-sheet').value = c.sheet;
+  document.getElementById('cal-row').value = c.row_index;
+  document.getElementById('cal-col').value = c.column_name;
+  document.getElementById('cal-original').value = c.original_value == null ? '' : c.original_value;
+  document.getElementById('cal-reason').value = '';
+  document.getElementById('cal-reason-preset').value = '';
+
+  // 枚举列 → <select>（选项来自 enum-options 端点）；否则 → 按类型 <input>
+  const holder = document.getElementById('cal-value');
+  const parent = holder.parentNode;
+  let options = [];
+  try {
+    const r = await fetch(`/api/report/enum-options/${c.month}/${encodeURIComponent(c.sheet)}/${encodeURIComponent(c.column_name)}`);
+    if (r.ok) options = (await r.json()).options || [];
+  } catch (e) { options = []; }
+  if (seq !== _calPopulateSeq) return;  // 已被更新请求覆盖
+
+  if (options.length) {
+    const sel = document.createElement('select');
+    sel.id = 'cal-value';
+    sel.className = 'input';
+    sel.innerHTML = '<option value="">-- 请选择 --</option>'
+      + options.map(o => `<option value="${o}">${o}</option>`).join('');
+    parent.replaceChild(sel, holder);
+    document.getElementById('cal-hint').textContent =
+      `枚举列：可选 ${options.length} 个合法值`;
+  } else {
+    const inp = document.createElement('input');
+    inp.id = 'cal-value';
+    inp.className = 'input';
+    inp.placeholder = '修正后的值';
+    inp.type = _calInputType(c.column_name);
+    parent.replaceChild(inp, holder);
+    document.getElementById('cal-hint').textContent =
+      inp.type === 'date' ? '日期格式：YYYY-MM-DD' :
+      inp.type === 'number' ? '数值格式：纯数字（可含小数）' : '';
+  }
+
+  openModal('calibration-modal');
+  setTimeout(() => {
+    const el = document.getElementById('cal-value');
+    if (el) el.focus();
+  }, 50);
+}
+
+// 常用原因联动
+document.addEventListener('DOMContentLoaded', () => {
+  const preset = document.getElementById('cal-reason-preset');
+  if (preset) {
+    preset.addEventListener('change', function() {
+      if (this.value) document.getElementById('cal-reason').value = this.value;
+    });
+  }
+});
+
+async function saveCalibration() {
+  const c = _calContext;
+  if (!c) return;
+  const corrected_value = document.getElementById('cal-value').value.trim();
+  const reason = document.getElementById('cal-reason').value.trim();
+  if (!reason) { Toast.error('请填写校准原因'); return; }
+  try {
+    const r = await fetch(`/api/report/calibrations/${c.month}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        sheet: c.sheet, row_index: c.row_index, column_name: c.column_name,
+        corrected_value: corrected_value, reason: reason,
+        operator: 'gateway-owner', issue_id: c.issue_id
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      const detail = d.detail || d.error || {};
+      const code = typeof detail === 'object' ? detail.code : null;
+      const msg = typeof detail === 'object' ? (detail.message || JSON.stringify(detail)) : (detail || '保存失败');
+      Toast.error(`❌ ${code ? '[' + code + '] ' : ''}${msg}`);
+      return;
+    }
+    Toast.success('✅ 校准已保存，并触发自动重校验');
+    closeModal('calibration-modal');
+    _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
+    if (typeof loadSheets === 'function') loadSheets(c.month);  // 刷新sheet待审核徽标
+    // 刷新相关视图
+    if (typeof loadReviewIssues === 'function') loadReviewIssues();
+    if (typeof loadReviewStatus === 'function') loadReviewStatus(c.month);
+    if (typeof loadTable === 'function' && document.getElementById('view-sheet')) {
+      const activeTab = getActiveTab ? getActiveTab() : '';
+      if (activeTab === 'browse') loadTable();
+    }
+    if (typeof loadCalibrationOverview === 'function') loadCalibrationOverview(c.month);
+  } catch (e) {
+    Toast.error(`❌ 保存失败: ${e.message}`);
+  }
+}
+
+async function revokeCalibration(month, sheet, row_index, column_name) {
+  showConfirm('撤销校准', `确定撤销该单元格（${sheet} 第${row_index}行 ${column_name}）的校准？撤销后恢复原始值。`, async function() {
+    try {
+      const r = await fetch(`/api/report/calibrations/${month}/revoke`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({sheet: sheet, row_index: row_index, column_name: column_name, operator: 'gateway-owner'})
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || d.error || '撤销失败');
+      Toast.success('✅ 校准已撤销，原始值恢复');
+      _browseIssueCacheMonth = null; _browseIssueCachePromise = null;  // 失效问题缓存
+      if (typeof loadSheets === 'function') loadSheets(month);  // 刷新sheet待审核徽标
+      if (typeof loadReviewIssues === 'function') loadReviewIssues();
+      if (typeof loadReviewStatus === 'function') loadReviewStatus(month);
+      if (typeof loadTable === 'function') loadTable();
+    } catch (e) {
+      Toast.error(`❌ 撤销失败: ${e.message}`);
+    }
+  });
+}
+
+// ========== 校准台账 ==========
+async function openCalibrationLedger() {
+  if (!currentMonth) { Toast.error('请先选择月份'); return; }
+  openModal('ledger-modal');
+  const container = document.getElementById('ledger-table-container');
+  const stats = document.getElementById('ledger-stats');
+  container.innerHTML = '<p class="text-muted" class="text-center" style="padding:1rem;">加载中...</p>';
+  try {
+    const r = await fetch(`/api/report/calibration-ledger/${currentMonth}`);
+    if (!r.ok) throw new Error('加载台账失败');
+    const d = await r.json();
+    const rows = d.rows || [];
+    const activeCount = rows.filter(x => x[9] === 'active').length;
+    stats.textContent = `共 ${rows.length} 条校准记录（生效 ${activeCount} / 已撤销 ${rows.length - activeCount}）`;
+    if (!rows.length) {
+      container.innerHTML = '<p class="text-muted" class="text-center" style="padding:1rem;">暂无校准记录</p>';
+      return;
+    }
+    const cols = ['月份','Sheet','行号','列名','原始值','校准值','操作人','校准时间','校准原因','状态','操作'];
+    let html = '<div class="table-wrapper"><table class="table"><thead><tr>';
+    cols.forEach(c => html += `<th>${c}</th>`);
+    html += '</tr></thead><tbody>';
+    rows.forEach(x => {
+      const isActive = x[9] === 'active';
+      html += `<tr>
+        <td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td><td>${x[3]}</td>
+        <td title="${x[4]}">${String(x[4]).substring(0,30)}</td>
+        <td title="${x[5]}" style="font-weight:500;">${String(x[5]).substring(0,30)}</td>
+        <td>${x[6]}</td><td>${x[7]}</td><td title="${x[8]}">${String(x[8]).substring(0,20)}</td>
+        <td>${isActive ? '<span style="color:var(--c-success);">生效</span>' : '<span class="text-muted">已撤销</span>'}</td>
+        <td>${isActive ? `<button class="btn btn-sm" onclick="revokeCalibration('${x[0]}','${x[1]}',${x[2]},'${x[3]}')" style="border-color:var(--c-danger);color:var(--c-danger);">撤销</button>` : ''}</td>
+      </tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<p class="error-tip">⚠️ ${e.message}</p>`;
+  }
+}
+
+function exportLedger() {
+  if (!currentMonth) return;
+  window.location.href = `/api/report/calibration-ledger/${currentMonth}?format=xlsx`;
+}
+
+</script>
+{% endblock %}

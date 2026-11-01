@@ -7,10 +7,11 @@
     'use strict';
 
     var STORAGE_KEY = (window.__WEB_COMMON_STORAGE_KEY__ || 'web-common') + ':sidebar';
-    var DEFAULT_WIDTH = 200;
-    var COLLAPSED_WIDTH = 56;
-    var MIN_WIDTH = 160;
-    var MAX_WIDTH = 360;
+    // 宽度可由宿主页面通过 window 全局覆盖（默认保持 200/56，向后兼容）
+    var DEFAULT_WIDTH = window.__SIDEBAR_DEFAULT_WIDTH__ || 200;
+    var COLLAPSED_WIDTH = window.__SIDEBAR_COLLAPSED_WIDTH__ || 56;
+    var MIN_WIDTH = window.__SIDEBAR_MIN_WIDTH__ || 160;
+    var MAX_WIDTH = window.__SIDEBAR_MAX_WIDTH__ || 360;
 
     var sidebar = document.getElementById('sidebar');
     var toggleBtn = document.getElementById('sidebarToggle');

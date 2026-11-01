@@ -79,13 +79,13 @@ templates.env.globals.update({
         {
             "title": "基础数据",
             "items": [
-                {"id": "master", "label": "图例基础数据", "url": "/master-data", "icon": "📖"},
+                {"id": "master", "label": "基础数据", "url": "/master-data", "icon": "📖"},
             ],
         },
         {
             "title": "统计看板",
             "items": [
-                {"id": "dashboard", "label": "交付统计看板", "url": "/dashboard", "icon": "📊"},
+                {"id": "dashboard", "label": "统计看板", "url": "/dashboard", "icon": "📊"},
             ],
         },
         {

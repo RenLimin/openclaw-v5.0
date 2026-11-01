@@ -220,10 +220,10 @@
 
 /* ===== 折叠态 ===== */
 .sidebar.collapsed {
-    width: 56px !important;
+    width: var(--sidebar-wc, 56px) !important;
 }
 .sidebar.collapsed ~ .main-wrapper {
-    margin-left: 56px !important;
+    margin-left: var(--sidebar-wc, 56px) !important;
 }
 
 /* 折叠态：隐藏所有文字 */
