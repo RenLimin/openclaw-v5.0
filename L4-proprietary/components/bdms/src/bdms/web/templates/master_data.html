@@ -42,7 +42,15 @@ async function loadTypes() {
       return;
     }
     const types = d.types || [];
-    sel.innerHTML = types.length ? types.map(t => `<option value="${t}">${t}</option>`).join('')
+    const optLabel = (t) => {
+      if (typeof t === 'string') return t;
+      return (t && (t.label || t.data_type)) || String(t);
+    };
+    const optVal = (t) => {
+      if (typeof t === 'string') return t;
+      return (t && t.data_type) || String(t);
+    };
+    sel.innerHTML = types.length ? types.map(t => `<option value="${optVal(t)}">${optLabel(t)}</option>`).join('')
                                  : '<option value="">无类型</option>';
     if (types.length) loadList();
   } catch (e) {
@@ -67,10 +75,28 @@ async function loadList() {
       return;
     }
     const cols = Object.keys(items[0]);
+    // 列名中文化映射（后端列名保持英文，展示层转换）
+    const COL_LABELS = {
+      'id': 'ID', 'data_type': '数据类型', 'code': '编码', 'label': '名称',
+      'extra': '扩展信息', 'sort_order': '排序', 'enabled': '启用',
+      'updated_at': '更新时间', 'created_at': '创建时间',
+    };
+    const fmtCell = (v) => {
+      if (v == null) return '-';
+      if (typeof v === 'object') {
+        try {
+          const entries = Object.entries(v);
+          if (!entries.length) return '-';
+          return entries.map(([k, val]) => `${k}: ${val}`).join('；');
+        } catch (e) { return String(v); }
+      }
+      if (typeof v === 'boolean') return v ? '✓' : '✗';
+      return String(v);
+    };
     let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
-            cols.map(c => `<th>${c}</th>`).join('') + '</tr></thead><tbody>';
+            cols.map(c => `<th>${COL_LABELS[c] || c}</th>`).join('') + '</tr></thead><tbody>';
     for (const it of items.slice(0, 500)) {
-      h += '<tr>' + cols.map(c => `<td>${it[c] ?? '-'}</td>`).join('') + '</tr>';
+      h += '<tr>' + cols.map(c => `<td>${fmtCell(it[c])}</td>`).join('') + '</tr>';
     }
     h += '</tbody></table></div>';
     if (items.length > 500) h += `<p class="text-muted">仅显示前 500 条（共 ${items.length}）</p>`;

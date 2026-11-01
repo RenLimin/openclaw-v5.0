@@ -37,14 +37,30 @@ async function loadSettings() {
 }
 
 function render() {
+  // 配置项中文标签映射（后端 API 键名保持英文，前端展示中文化）
+  const LABELS = {
+    'view.default_months_back': '默认显示数据跨度（月）',
+    'view.default_month': '默认选中月份（6位年月，留空=自动取最新）',
+    'view.available_months': '可选月份列表（自动汇总）',
+    'report.auto_overwrite': '生成报表时自动覆盖已有数据',
+    'report.excel_output_dir': 'Excel 输出目录',
+  };
+  const fmtVal = (v) => {
+    if (v == null) return '';
+    if (typeof v === 'object') {
+      try { return JSON.stringify(v); } catch (e) { return String(v); }
+    }
+    return String(v);
+  };
   let h = '<div class="table-wrapper"><table class="table"><thead><tr>' +
           '<th>配置项</th><th>值</th><th>操作</th></tr></thead><tbody>';
   const keys = Object.keys(settings).sort();
   if (!keys.length) h += '<tr><td colspan="3" class="text-muted">无设置项</td></tr>';
   for (const k of keys) {
+    const label = LABELS[k] || k;
     const v = Array.isArray(settings[k]) ? settings[k].join(', ') : settings[k];
-    h += `<tr><td style="font-family:var(--font-mono);font-size:0.85rem;">${k}</td>
-      <td><input class="input" id="set-${k}" value="${String(v ?? '').replace(/"/g,'&quot;')}"
+    h += `<tr><td style="font-size:0.9rem;">${label}</td>
+      <td><input class="input" id="set-${k}" value="${String(fmtVal(v)).replace(/"/g,'&quot;')}"
            style="width:100%;max-width:420px;"></td>
       <td><button class="btn btn-sm btn-primary" onclick="saveSetting('${k}')">保存</button></td></tr>`;
   }
@@ -77,7 +93,7 @@ async function loadMonths() {
     return { month: mm };
   }).filter(m => m.month && /^\d{6}$/.test(m.month));
   document.getElementById('st-months').textContent =
-    months.length ? months.join(', ') : '尚无已生成月份';
+    months.length ? months.map(m => m.month).join(', ') : '尚无已生成月份';
 }
 
 document.addEventListener('DOMContentLoaded', () => { loadSettings(); loadMonths(); });

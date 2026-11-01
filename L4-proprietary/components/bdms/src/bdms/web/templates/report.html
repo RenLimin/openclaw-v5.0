@@ -975,6 +975,23 @@ function statusLabel(s) {
   }
 }
 
+function issueStatusLabel(s) {
+  switch (s) {
+    case 'pending': return '待处理';
+    case 'duplicate': return '重复';
+    case 'confirmed': return '已确认';
+    case 'rejected': return '已驳回';
+    default: return (s == null || s === '') ? '—' : s;
+  }
+}
+
+function issueMessageLabel(m, ruleCode) {
+  // 校验问题描述中文化：rule_code 为英文机器码，展示层统一映射
+  if (ruleCode === 'duplicate' || m === 'duplicate') return '重复';
+  if (ruleCode === 'null' || m == null || m === '' || m === 'null') return '缺失';
+  return m;
+}
+
 // ========== ctxbar + steps 状态更新 ==========
 function _fmtDate(t) {
   if (!t) return '';
@@ -1443,9 +1460,9 @@ async function loadReviewIssues(page = 1, pageSize = 50) {
         <td>${issue.sheet}</td>
         <td>${issue.row_index}</td>
         <td>${issue.column_name || '-'}</td>
-        <td style="color:${severityColor};font-weight:500;">${issue.message}</td>
+        <td style="color:${severityColor};font-weight:500;">${issueMessageLabel(issue.message, issue.rule_code)}</td>
         <td>${issue.original_value || '-'}</td>
-        <td>${issue.status}</td>
+        <td>${issueStatusLabel(issue.status)}</td>
         <td>${actionBtns}</td>
       </tr>`;
       if (hasDetail) {
