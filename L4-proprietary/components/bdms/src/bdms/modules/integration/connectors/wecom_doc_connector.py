@@ -279,7 +279,7 @@ class WecomDocConnector(BaseConnector):
                     if not doc_url:
                         logger.warning("未配置 wecom.doc_url，无法打开文档")
                         return None
-                    page.goto(doc_url, wait_until="domcontentloaded", timeout=30000)
+                    page.goto(doc_url, wait_until="domcontentloaded", timeout=90000)
                     page.wait_for_timeout(3000)
 
                 page.bring_to_front()

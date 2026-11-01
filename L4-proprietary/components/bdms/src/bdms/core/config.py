@@ -60,9 +60,25 @@ def get_config() -> Dict[str, Any]:
 
 
 def get(key: str, default: Any = None) -> Any:
-    """获取单个配置项。"""
+    """获取单个配置项。
+
+    兼容两种 key 形式：
+    1. 扁平 key：`wecom.enable_api`（config.json 中以点号 key 扁平存储）
+    2. 点号路径：`integrations.iam.email`（config.json 嵌套 dict 结构）
+
+    先试扁平 key，再试点号路径逐层解析，二者都找不到时返回 default。
+    """
     cfg = get_config()
-    return cfg.get(key, default)
+    if key in cfg:
+        return cfg[key]
+    # 点号路径逐层解析
+    cur = cfg
+    for part in key.split("."):
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        else:
+            return default
+    return cur
 
 
 def reset_config() -> None:

@@ -168,6 +168,7 @@
           </div>
           <button class="btn btn-primary" onclick="confirmNewMonth()">+ 生成月报</button>
           <button class="btn" onclick="doCompare()" style="margin-left:0.5rem;" id="btn-compare" data-role="btn-compare" disabled>📊 对比手工报表</button>
+          <button class="btn btn-sm" id="btn-export-import" data-role="btn-export" onclick="doExport()" disabled style="margin-left:0.5rem;">⬇ 导出 Excel</button>
           <span id="load-status" class="text-muted fs-xs"></span>
         </div>
         {% endcall %}
@@ -1053,11 +1054,14 @@ function updateCtxbarAndSteps(statusObj) {
 
   // ctxbar + approval panel 审批按钮同步（与 loadReviewStatus 同一套禁用逻辑）
   const apprDisabled = !(['validating', 'reviewing'].includes(status));
-  document.querySelectorAll('[data-role="btn-approve"]').forEach(b => b.disabled = apprDisabled);
+  // ctxbar + approval panel 审批按钮统一：无审批权时隐藏（避免空占位禁用态）
+  document.querySelectorAll('[data-role="btn-approve"]').forEach(b => {
+    b.disabled = apprDisabled;
+    b.style.display = apprDisabled ? 'none' : '';
+  });
   document.querySelectorAll('[data-role="btn-reject"]').forEach(b => {
     b.disabled = apprDisabled;
-    // 仅 ctxbar 的驳回按钮在无审批权时隐藏，避免空占位
-    if (b.id === 'btn-reject') b.style.display = apprDisabled ? 'none' : '';
+    b.style.display = apprDisabled ? 'none' : '';
   });
 
   // steps 状态
