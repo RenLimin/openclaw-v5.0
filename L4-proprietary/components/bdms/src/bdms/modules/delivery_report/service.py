@@ -170,7 +170,9 @@ class DeliveryReportService:
 
             conn.execute(
                 "UPDATE dr_review_status SET status='approved', approved_at=datetime('now','localtime'), "
-                "reviewer=?, updated_at=datetime('now','localtime') WHERE month=?",
+                "reviewed_at=datetime('now','localtime'), reviewer=?, "
+                "rejected_at=NULL, reject_reason=NULL, "
+                "updated_at=datetime('now','localtime') WHERE month=?",
                 (reviewer, month)
             )
             conn.commit()
@@ -179,13 +181,14 @@ class DeliveryReportService:
             conn.close()
 
     def reject_review(self, month: str, reason: str = "", reviewer: str = "") -> dict:
-        """人工驳回：打回 reviewing 状态等待修正。"""
+        """人工驳回：打回 reviewing 状态等待修正，并记录驳回原因与时间。"""
         conn = _db.get_connection(self.db_path)
         try:
             conn.execute(
                 "UPDATE dr_review_status SET status='reviewing', reviewer=?, "
+                "rejected_at=datetime('now','localtime'), reject_reason=?, "
                 "updated_at=datetime('now','localtime') WHERE month=?",
-                (reviewer, month)
+                (reviewer, reason, month)
             )
             conn.commit()
             return {"month": month, "status": "reviewing", "reason": reason}

@@ -37,10 +37,20 @@ _WEB_COMMON_STATIC = (_WEB_COMMON_DIR / "static") if _WEB_COMMON_DIR else None
 
 sys.path.insert(0, str(BASE_DIR.parent))
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """启动时初始化/迁移 schema（幂等：CREATE IF NOT EXISTS + ALTER 补列）。"""
+    from bdms.core import db as _db
+    _db.init_db()
+    yield
+
 app = FastAPI(
     title="BDMS — 交付管理系统",
     version="1.0.0",
     description="BDMS 交付管理系统：交付月报 / 确认收入 / 基础数据 / 统计看板 / 系统设定",
+    lifespan=lifespan,
 )
 
 if STATIC_DIR.exists():

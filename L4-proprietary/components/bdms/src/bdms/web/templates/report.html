@@ -212,11 +212,6 @@
           <button class="btn" id="btn-regenerate" data-role="btn-regenerate" onclick="doRegenerate()" disabled>↻ 重新生成</button>
         </div>
 
-        <!-- 驳回原因输入 -->
-        <div id="reason-input-container" style="margin-top:1rem;display:none;">
-          <textarea id="review-reason" class="input" placeholder="请填写驳回原因" rows="3" style="width:100%;"></textarea>
-        </div>
-
         <!-- 手工报表对比结果 -->
         <div id="compare-result-card" style="margin-top:1rem;display:none;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
@@ -1098,28 +1093,28 @@ function loadApprovalTimeline() {
       const items = [];
       if (d.approved_at) {
         items.push({
-          ok: true,
+          ok: true, ts: d.approved_at,
           title: '✅ 审批通过',
           meta: `${d.reviewer || '审核人'} · ${_fmtDate(d.approved_at)}`
         });
       }
       if (d.rejected_at || d.status === 'rejected') {
         items.push({
-          ok: false,
+          ok: false, ts: d.rejected_at || d.updated_at,
           title: '❌ 审批驳回' + (d.reject_reason ? `：${d.reject_reason}` : ''),
           meta: `${d.reviewer || '审核人'} · ${_fmtDate(d.rejected_at || d.updated_at)}`
         });
       }
       if (d.validated_at) {
         items.push({
-          ok: true,
+          ok: true, ts: d.validated_at,
           title: '完成数据校验' + (d.total_errors || d.total_warnings ? ` · ${d.total_errors || 0} 错误 / ${d.total_warnings || 0} 警告` : ''),
           meta: `系统自动 · ${_fmtDate(d.validated_at)}`
         });
       }
       if (d.generated_at) {
         items.push({
-          ok: true,
+          ok: true, ts: d.generated_at,
           title: '导入月报数据',
           meta: `系统自动 · ${_fmtDate(d.generated_at)}`
         });
@@ -1128,8 +1123,8 @@ function loadApprovalTimeline() {
         container.innerHTML = '<p class="text-muted" style="font-size:0.875rem;">暂无审批记录</p>';
         return;
       }
-      // 时间倒序
-      items.sort((a, b) => 0); // 已按时间逆序排列
+      // 按时间倒序（新的在上）
+      items.sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
       let html = '';
       items.forEach((it, idx) => {
         const cls = it.ok ? 'tl-item ok' : (idx === 0 ? 'tl-item' : 'tl-item gray');

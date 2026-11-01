@@ -222,6 +222,8 @@ def _migrate_columns(conn: sqlite3.Connection) -> None:
         ("ct_timesheets", "updated_at", "TEXT"),
         ("pf_timesheet", "approval_comment", "TEXT"),
         ("pf_timesheet", "created_by", "TEXT"),
+        ("dr_review_status", "rejected_at", "TEXT"),
+        ("dr_review_status", "reject_reason", "TEXT"),
     ]
     for table, column, coldef in migrations:
         try:

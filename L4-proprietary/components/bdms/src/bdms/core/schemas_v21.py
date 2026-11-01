@@ -832,6 +832,8 @@ CREATE TABLE IF NOT EXISTS dr_review_status (
     validated_at TEXT,
     reviewed_at TEXT,
     approved_at TEXT,
+    rejected_at TEXT,
+    reject_reason TEXT,
     exported_at TEXT,
     reviewer TEXT,
     total_errors INTEGER DEFAULT 0,
