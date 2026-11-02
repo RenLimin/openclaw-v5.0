@@ -2,11 +2,11 @@
 {% from "layout.html" import page_header with context %}
 {% from "components.html" import card with context %}
 
-{% set page_title = '交付管理基础数据' %}
+{% set page_title = '交付基础数据' %}
 
 {% block content %}
 {{ page_header(
-    title='交付管理基础数据',
+    title='交付基础数据',
     subtitle='枚举映射、表头图例与参考值维护，作为校验规则的允许集合'
 ) }}
 
@@ -32,13 +32,13 @@
 {% block extra_scripts %}
 <script>
 // 类型码 → 中文标签（后端 data_type 为英文机器码，展示层映射）
-// 与 engine.py DATA_TYPES 同步（权威源：202606 交付月报 48 列图例）
+// 与 engine.py DATA_TYPES 同步（权威源：202606 交付月报 21 列图例）
 const TYPE_LABELS = {
   // 1 项目经理信息
   'project_manager': '项目经理',
   // 2 交付考核信息（20 行规则矩阵）
   'assessment_rule': '考核项',
-  // 3 履约义务状态
+  // 3 状态字典
   'obligation_status': '状态',
   'item_stat_status': '履约项统计状态',
   'project_stat_status': '项目统计状态',
@@ -46,11 +46,22 @@ const TYPE_LABELS = {
   'fin_accept_status': '财报-验收状态',
   // 4 营销团队信息
   'sales_team': '责任销售所属团队',
-  // 5 财务交接差异
+  // 5 交接差异原因
   'delivery_cross_month_reason': '确收交接跨月原因',
   'delivery_fail_reason': '确收交接不合格原因',
   'accept_fail_reason': '验收交接不合格原因',
 };
+
+// 数据类型分类（按图例 sheet 列簇归组，组名沿用 engine.py 分组注释）
+const TYPE_GROUPS = [
+  {label: '项目经理信息', types: ['project_manager']},
+  {label: '交付考核信息', types: ['assessment_rule']},
+  {label: '状态字典', types: ['obligation_status', 'item_stat_status',
+      'project_stat_status', 'fin_delivery_status', 'fin_accept_status']},
+  {label: '营销团队信息', types: ['sales_team']},
+  {label: '交接差异原因', types: ['delivery_cross_month_reason',
+      'delivery_fail_reason', 'accept_fail_reason']},
+];
 
 async function loadTypes() {
   const sel = document.getElementById('md-type');
@@ -72,8 +83,17 @@ async function loadTypes() {
       if (typeof t === 'string') return t;
       return (t && t.data_type) || String(t);
     };
-    sel.innerHTML = types.length ? types.map(t => `<option value="${optVal(t)}">${optLabel(t)}</option>`).join('')
-                                 : '<option value="">无类型</option>';
+    // 仅渲染库中实际存在的类型，并按 TYPE_GROUPS 分组（optgroup）
+    const present = new Set(types.map(optVal));
+    if (types.length) {
+      sel.innerHTML = TYPE_GROUPS.map(g => {
+        const opts = g.types.filter(v => present.has(v))
+          .map(v => `<option value="${v}">${TYPE_LABELS[v] || v}</option>`).join('');
+        return opts ? `<optgroup label="${g.label}">${opts}</optgroup>` : '';
+      }).join('');
+    } else {
+      sel.innerHTML = '<option value="">无类型</option>';
+    }
     // 默认选中项目经理（业务常用，避免字母序首项）
     if (types.length) {
       const def = 'project_manager';

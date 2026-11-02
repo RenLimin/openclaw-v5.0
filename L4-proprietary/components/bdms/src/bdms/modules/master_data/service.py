@@ -1,4 +1,4 @@
-"""【模块3】交付管理基础数据 —— 服务层（编排 + 写操作）。
+"""【模块3】交付基础数据 —— 服务层（编排 + 写操作）。
 
 对外契约（见 docs/MODULE-CONTRACT.md §2）：
     list_xxx / get_xxx / create_xxx / update_xxx / delete_xxx

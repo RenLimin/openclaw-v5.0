@@ -1,4 +1,4 @@
-"""模块3 交付管理基础数据 —— 测试。
+"""模块3 交付基础数据 —— 测试。
 
 用法：
     cd L4-proprietary/components/bdms && export PYTHONPATH=src && python3 -m pytest tests/test_master_data.py -v

@@ -4,7 +4,7 @@
 五大模块：
   1. 交付月度管理（月报生成/导出）
   2. 确认收入管理（导入/计算/汇总/对比）
-  3. 交付管理基础数据（图例等）
+  3. 交付基础数据（图例等）
   4. 交付统计看板（图表 + 下钻）
   5. 交付管理系统设定
 """
@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="交付管理系统",
     version="1.0.0",
-    description="交付管理系统：交付月报 / 确认收入 / 基础数据 / 统计看板 / 系统设定",
+    description="交付管理系统：交付月报 / 确认收入 / 交付基础数据 / 统计看板 / 系统设定",
     lifespan=lifespan,
 )
 
@@ -93,9 +93,9 @@ templates.env.globals.update({
             ],
         },
         {
-            "title": "交付管理",
+            "title": "基础数据管理",
             "items": [
-                {"id": "master", "label": "交付管理基础数据", "url": "/master-data", "icon": "📖"},
+                {"id": "master", "label": "交付基础数据", "url": "/master-data", "icon": "📖"},
             ],
         },
         {
