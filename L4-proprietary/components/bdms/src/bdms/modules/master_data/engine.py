@@ -51,7 +51,7 @@ DATA_TYPES: dict[str, str] = {
     # 1. 项目经理信息
     "project_manager": "项目经理",
     # 2. 交付考核信息（20 行规则矩阵）
-    "assessment_rule": "考核规则",
+    "assessment_rule": "考核项",
     # 3. 履约义务状态
     "obligation_status": "状态",
     "item_stat_status": "履约项统计状态",

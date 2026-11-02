@@ -2,11 +2,11 @@
 {% from "layout.html" import page_header with context %}
 {% from "components.html" import card with context %}
 
-{% set page_title = '基础数据' %}
+{% set page_title = '交付管理基础数据' %}
 
 {% block content %}
 {{ page_header(
-    title='基础数据',
+    title='交付管理基础数据',
     subtitle='枚举映射、表头图例与参考值维护，作为校验规则的允许集合'
 ) }}
 
@@ -37,7 +37,7 @@ const TYPE_LABELS = {
   // 1 项目经理信息
   'project_manager': '项目经理',
   // 2 交付考核信息（20 行规则矩阵）
-  'assessment_rule': '考核规则',
+  'assessment_rule': '考核项',
   // 3 履约义务状态
   'obligation_status': '状态',
   'item_stat_status': '履约项统计状态',
