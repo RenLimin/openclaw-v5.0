@@ -61,20 +61,15 @@ def cs(seeded):
 
 
 def _seed_legend(db_path, col_values):
-    """向 md_reference 写 legend_config（枚举允许集合）。"""
-    import json
+    """向 md_reference 写 obligation_status（枚举允许集合）。"""
     conn = _db.get_connection(db_path)
     try:
-        conn.execute("DELETE FROM md_reference WHERE data_type='legend_config'")
-        conn.execute(
-            "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
-            "VALUES ('legend_config', '__header__', '表头行', ?, 0, 0)",
-            (json.dumps({"状态": "状态"}, ensure_ascii=False),))
+        conn.execute("DELETE FROM md_reference WHERE data_type='obligation_status'")
         for i, v in enumerate(col_values, 1):
             conn.execute(
                 "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
-                "VALUES ('legend_config', ?, ?, ?, ?, 1)",
-                (v, v, json.dumps({"状态": v}, ensure_ascii=False), i))
+                "VALUES ('obligation_status', ?, ?, NULL, ?, 1)",
+                (v, v, i))
         conn.commit()
     finally:
         conn.close()

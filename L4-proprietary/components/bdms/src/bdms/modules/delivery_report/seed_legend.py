@@ -1,17 +1,18 @@
 # 🔒 NO_TOKEN — 纯代码，零 AI 依赖
-"""图例基础数据结构化落盘：权威 16 列源「图例」sheet → md_reference。
+"""图例基础数据结构化落盘：202606 交付月报「图例」sheet（48 列）→ md_reference。
 
-源文件（权威，16 列）：
-  data/source_snapshots/202606/
-    2026年计划确收&实际确收对比表202601-06-0724 - 差异分析.xlsx
+权威源（48 列交付月报）：
+  /Users/bangcle/Bangcle Workspace/01. Management/2026/2026团队报告/
+  202606/2026交付月报-20260630.xlsx
 
-按 5 大类拆为 9 个 data_type（去重列表）：
-  1 项目经理信息      project_manager（extra: dept/note）
-  2 确收差异分析      deviation_status / deviation_reason（extra: note）
-  3 验收差异分析      delay_accept_reason / delay_accept_action
-  4 预算执行进度      abnormal_type / abnormal_category
-  5 团队/产线         team / product
-  另：dept 从项目经理的部门列去重提取。
+按 5 大类拆为 11 个 data_type（除考核矩阵外均去重枚举）：
+  1 项目经理信息    project_manager（extra: dept/center/note）
+  2 交付考核信息    assessment_rule（20 行规则矩阵，positional）
+  3 履约义务状态    obligation_status（extra: category）/ item_stat_status /
+                    project_stat_status / fin_delivery_status / fin_accept_status
+  4 营销团队信息    sales_team（extra: stat）
+  5 财务交接差异    delivery_cross_month_reason / delivery_fail_reason /
+                    accept_fail_reason
 
 用法: python3 -m bdms.modules.delivery_report.seed_legend [源文件.xlsx]
 幂等：重复执行覆盖更新（先清空受管类型再写入）。
@@ -29,19 +30,29 @@ from bdms.modules.master_data.engine import (
     MasterDataEngine,
 )
 
-# 权威 16 列源（202606 快照）
+# 权威 48 列交付月报（202606）
 DEFAULT_SOURCE = Path(
-    "/Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms/"
-    "data/source_snapshots/202606/"
-    "2026年计划确收&实际确收对比表202601-06-0724 - 差异分析.xlsx"
+    "/Users/bangcle/Bangcle Workspace/01. Management/2026/"
+    "2026团队报告/202606/2026交付月报-20260630.xlsx"
 )
 
 # 受管类型（= LEGEND_BLOCKS 全部 data_type）
 MANAGED_TYPES = [b["data_type"] for b in LEGEND_BLOCKS]
-# 历史遗留类型（仅清理 16 列侧的废弃 type）。
-# 注意：不清理 legend_config —— 它是 48 列月报管线（validator 枚举 /
-# calibration / exporter 往返）的内部数据，与本基础数据共存。
-LEGACY_TYPES = ["legend"]
+# 历史/上一轮遗留类型，落盘时一并清理：
+#   16 列轮：legend, deviation_status, deviation_reason, delay_accept_*,
+#            abnormal_*, team, product, dept
+#   48 列首轮（独立枚举拆法）：assessment_item, deviation_category,
+#            cross_month, gt15_days, weight_factor, assessment_note,
+#            obligation_status_category, sales_team_stat
+LEGACY_TYPES = [
+    "legend",
+    "deviation_status", "deviation_reason",
+    "delay_accept_reason", "delay_accept_action",
+    "abnormal_type", "abnormal_category", "team", "product", "dept",
+    "assessment_item", "deviation_category", "cross_month", "gt15_days",
+    "weight_factor", "assessment_note", "obligation_status_category",
+    "sales_team_stat",
+]
 
 
 def seed_legend(source_path: Path = None, db_path: Path = None) -> dict:

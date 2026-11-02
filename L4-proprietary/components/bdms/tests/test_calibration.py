@@ -56,19 +56,15 @@ def svc(seeded):
 
 
 def _seed_legend(db_path, col_values):
-    """向 md_reference 写 legend_config（枚举允许集合），模拟 seed_legend。"""
+    """向 md_reference 写 obligation_status（枚举允许集合），模拟 seed_legend。"""
     conn = _db.get_connection(db_path)
     try:
-        conn.execute("DELETE FROM md_reference WHERE data_type='legend_config'")
-        conn.execute(
-            "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
-            "VALUES ('legend_config', '__header__', '表头行', ?, 0, 0)",
-            (json.dumps({"状态": "状态"}, ensure_ascii=False),))
+        conn.execute("DELETE FROM md_reference WHERE data_type='obligation_status'")
         for i, v in enumerate(col_values, 1):
             conn.execute(
                 "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
-                "VALUES ('legend_config', ?, ?, ?, ?, 1)",
-                (v, v, json.dumps({"状态": v}, ensure_ascii=False), i))
+                "VALUES ('obligation_status', ?, ?, NULL, ?, 1)",
+                (v, v, i))
         conn.commit()
     finally:
         conn.close()
@@ -234,7 +230,8 @@ def test_enum_legacy_dead_config_removed():
     """废弃配置：签约.履约状态 列不存在，映射表不应再包含。"""
     from bdms.modules.delivery_report.validator import ENUM_COLS
     assert "签约" not in ENUM_COLS or "履约状态" not in ENUM_COLS.get("签约", {})
-    assert ENUM_COLS.get("异常项目", {}).get("状态") == "状态"
+    # 异常项目.状态 枚举源 = obligation_status（结构化类型）
+    assert ENUM_COLS.get("异常项目", {}).get("状态") == "obligation_status"
 
 
 def test_enum_non_mapped_column_still_text(enum_seeded):

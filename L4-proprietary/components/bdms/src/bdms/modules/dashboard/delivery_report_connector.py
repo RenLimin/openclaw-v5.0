@@ -1231,54 +1231,73 @@ class DeliveryReportConnector:
     # ============================================================
 
     def get_legend_config(self) -> pd.DataFrame:
-        """读 md_reference legend_config → 图例 DataFrame。"""
+        """从 18 个结构化 data_type 逆向装配 48 列「图例」DataFrame。
+
+        单一事实源 = md_reference 中的结构化类型；本方法把它们重新拼成与
+        202606 交付月报完全一致的图例布局：
+          - 项目经理块（项目经理/部门/中心/备注，34 行，逐行对齐）
+          - 其余各列为独立枚举列表，从 R2 起顶部对齐，超出长度留空
+          - 组间空列 / 日期列保持空表头、空数据
+        """
+        from bdms.modules.master_data.engine import (
+            LEGEND_BLOCKS,
+            LEGEND_48_HEADERS,
+        )
+
         conn = _db.get_connection(self.db_path)
         try:
-            header_row = conn.execute(
-                "SELECT extra FROM md_reference "
-                "WHERE data_type = 'legend_config' AND code = '__header__'"
-            ).fetchone()
-
-            if header_row:
-                columns = list(json.loads(header_row['extra']).values())
-            else:
-                sample = conn.execute(
-                    "SELECT extra FROM md_reference "
-                    "WHERE data_type = 'legend_config' AND enabled = 1 LIMIT 1"
-                ).fetchone()
-                if not sample or not sample['extra']:
-                    return pd.DataFrame()
-                columns = list(json.loads(sample['extra']).keys())
-
+            # 一次取全部受管条目（按类型 + sort_order）
+            type_codes = [b["data_type"] for b in LEGEND_BLOCKS]
+            placeholders = ",".join("?" for _ in type_codes)
             rows = conn.execute(
-                "SELECT code, label, extra FROM md_reference "
-                "WHERE data_type = 'legend_config' AND enabled = 1 "
-                "ORDER BY sort_order, code"
+                f"SELECT data_type, code, label, extra, sort_order "
+                f"FROM md_reference WHERE data_type IN ({placeholders}) "
+                f"AND enabled = 1 ORDER BY data_type, sort_order, id",
+                type_codes,
             ).fetchall()
-
-            data = []
-            for r in rows:
-                extra = json.loads(r['extra']) if r['extra'] else {}
-                row_data = {col: extra.get(col, '') for col in columns}
-                data.append(row_data)
-
-            df = pd.DataFrame(data, columns=columns)
-
-            # 对齐人工基准：占位列名 col_* 在表头为空单元格，数据为空
-            # 备注_1 还原为重复列名 备注（人工图例 c4/c11 均为 备注）
-            import re as _re
-            new_cols = []
-            for c in df.columns:
-                if _re.fullmatch(r'col_\d+', str(c)):
-                    new_cols.append('')
-                elif str(c) == '备注_1':
-                    new_cols.append('备注')
-                else:
-                    new_cols.append(c)
-            df.columns = new_cols
-            return df
         finally:
             conn.close()
+
+        grouped: dict[str, list[dict]] = {dt: [] for dt in type_codes}
+        for r in rows:
+            extra = json.loads(r["extra"]) if r["extra"] else {}
+            grouped[r["data_type"]].append(
+                {"label": r["label"], "extra": extra})
+
+        # 行数 = 最长块（项目经理 34 行）；空则返回空表
+        n_rows = max((len(v) for v in grouped.values()), default=0)
+        if n_rows == 0:
+            return pd.DataFrame()
+
+        # 48 列表头（与交付月报 R1 逐字一致；空串=空列）
+        headers = list(LEGEND_48_HEADERS)
+        n_cols = len(headers)
+        grid = [[""] * n_cols for _ in range(n_rows)]
+
+        # 按块配置逆向装配：label 落 label_col-1；extra 字段按 grid_extra/
+        # grid_map 落指定 0-based 列（positional 块不走 label，只用 grid_map）
+        for blk in LEGEND_BLOCKS:
+            dt = blk["data_type"]
+            items = grouped.get(dt, [])
+            if not items:
+                continue
+            grid_extra = blk.get("grid_extra") or {}
+            grid_map = blk.get("grid_map") or {}
+            if blk.get("kind") != "positional":
+                col0 = blk["label_col"] - 1
+                if 0 <= col0 < n_cols:
+                    for i, it in enumerate(items):
+                        grid[i][col0] = it["label"]
+            for i, it in enumerate(items):
+                ex = it.get("extra") or {}
+                for k, f in grid_extra.items():
+                    if 0 <= k < n_cols:
+                        grid[i][k] = ex.get(f, "")
+                for k, f in grid_map.items():
+                    if 0 <= k < n_cols:
+                        grid[i][k] = ex.get(f, "")
+
+        return pd.DataFrame(grid, columns=headers)
 
     # ============================================================
     # 内部工具

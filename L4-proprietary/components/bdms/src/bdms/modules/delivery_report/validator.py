@@ -60,13 +60,12 @@ _DATE_TIME_RE = re.compile(r"^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}[ T]\d{1,2}:\d{2}(:\d
 _DATE_FLOAT8_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})(\.0+)?$")
 _NUMERIC_RE = re.compile(r"^-?\d+(\.\d+)?$")
 
-# 枚举约束（黄金基准 Sheet-15 图例；业务列 → legend 列名）
-# v1.0.1 订正：废弃不存在的「签约.履约状态」；仅启用真实数据验证过的映射
-# （202606 真实 17177 行 100% 命中，见 DESIGN-DETAIL-MANUAL-CALIBRATION §2.3.1）。
+# 枚举约束：业务列 → 结构化 data_type（单一事实源）。
+# 「异常项目.状态」的允许集合 = 履约义务状态(obligation_status) 的 8 个状态。
 # 新增枚举列必须先用真实数据做命中率分析（建议 ≥99%）并更新设计文档后启用。
 ENUM_COLS: Dict[str, Dict[str, str]] = {
     "异常项目": {
-        "状态": "状态",
+        "状态": "obligation_status",
     },
 }
 
@@ -74,31 +73,27 @@ ENUM_COLS: Dict[str, Dict[str, str]] = {
 
 
 def get_enum_options(db_path, sheet: str, column: str) -> List[str]:
-    """从 md_reference legend_config 读取枚举允许集合（保序去重）。
+    """从 md_reference 结构化 data_type 读取枚举允许集合（保序去重）。
 
     仅对 ENUM_COLS 映射列生效；非映射列返回空（空集=不做枚举阻断，
     与校准保存前置的降级口径一致）。模块级函数供 validator 与
     CalibrationService 共用同一枚举源。
     """
-    legend_col = ENUM_COLS.get(sheet, {}).get(column)
-    if not legend_col:
+    data_type = ENUM_COLS.get(sheet, {}).get(column)
+    if not data_type:
         return []
     conn = _db.get_connection(db_path)
     try:
         rows = conn.execute(
-            "SELECT extra FROM md_reference "
-            "WHERE data_type='legend_config' AND enabled=1 "
-            "ORDER BY sort_order").fetchall()
+            "SELECT label FROM md_reference "
+            "WHERE data_type = ? AND enabled = 1 "
+            "ORDER BY sort_order, id", (data_type,)).fetchall()
     finally:
         conn.close()
     options: List[str] = []
     seen = set()
     for r in rows:
-        try:
-            extra = json.loads(r["extra"])
-        except (ValueError, TypeError):
-            continue
-        v = extra.get(legend_col, "")
+        v = r["label"] if isinstance(r, dict) else r[0]
         if isinstance(v, str) and v.strip() and v.strip() not in seen:
             seen.add(v.strip())
             options.append(v.strip())

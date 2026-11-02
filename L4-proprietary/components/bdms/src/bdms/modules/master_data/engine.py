@@ -4,29 +4,30 @@
   1. 管理 md_reference 表（图例/参考字典）的读取与结构校验
   2. 从真实手工报表「图例」sheet 解析图例数据（纯解析，不落库）
 
-设计要点（基于 202606 源文件实测结构）：
-  源文件：2026年计划确收&实际确收对比表202601-06-0724 - 差异分析.xlsx
+设计要点（基于 202606 交付月报实测结构）：
+  源文件：2026交付月报-20260630.xlsx（48 列交付月报，权威图例源）
   「图例」sheet 实际结构：
-    - 名义 506 行 × 16 列，但**有效数据只有第 1-35 行**（36 行及以后全空，Excel 残留空行）
-    - 第 1 行是各图例块的标题行
-    - 16 列被「组间空列」切成 8 个块：
+    - 名义 506 行 × 48 列，但**有效数据只有第 1-35 行**（36 行及以后全空，
+      Excel 残留空行），第 1 行是各图例块的标题行
+    - 48 列被「组间空列」切成 5 大类 11 个数据块：
 
-        块 | 列区间 | 标题             | 说明列
-        ---+--------+------------------+------------------------
-         1 | 1-3    | 项目经理/部门/备注 | 无（3 列联合定义）
-         2 | 5      | 偏差-状态/趋势    | 无
-         3 | 6-7    | 偏差-原因类别     | 第 7 列 = 类别说明
-         4 | 9      | 滞后验收原因      | 无
-         5 | 10     | 滞后验收处置措施  | 无
-         6 | 12     | 预算执行进度      | 无
-         7 | 13     | 预算执行进度类别  | 无
-         8 | 15-16  | 团队/产线         | 无
+        类 | 块                       | 列(1-based) | 数据行数
+        ---+--------------------------+------------+--------
+         1 | 项目经理/部门/中心/备注    | 1-4        | 34（逐行）
+         2 | 考核规则矩阵（20 行组合）  | 6-11       | 20（positional）
+         3 | 状态/状态类别             | 13-14      | 8（状态带类别）
+         3 | 履约项统计状态            | 21         | 9
+         3 | 项目统计状态              | 22         | 5
+         3 | 财报-交付/确收状态        | 23         | 4
+         3 | 财报-验收状态             | 24         | 3
+         4 | 责任销售所属团队/统计     | 27-28      | 18（团队带统计）
+         5 | 确收交接跨月/不合格/验收   | 30-32      | 各 3
 
-  重要：不使用 header_mapper.detect_header_row 直接取表头行 —— 实测该 sheet
-  第 1 行的非空单元格数为 12（< HEADER_MIN_CELLS=10 的阈值虽然勉强达标，
-  但表头行右侧全为空、且真数据仅 35 行），且 merged_cells 为空、存在 4 个
-  无标题分隔列。因此本模块**显式按列区间解析**，再用 HeaderMapper 做
-  标题名校验（标题缺失时告警而非静默跳过）。
+  重要：不使用 header_mapper.detect_header_row 直接取表头行 —— 本 sheet
+  表头行右侧全为空、真数据仅 35 行，因此**显式按列区间解析**，再用
+  HeaderMapper 做标题名校验（标题缺失时告警而非静默跳过）。
+  考核规则块（kind=positional）逐行保留（不去重），考核项为合并单元格
+  向下填充；其余块去重为枚举。
 """
 
 import re
@@ -41,17 +42,28 @@ from bdms.core.header_mapper import HeaderMapper, normalize_header
 
 # ─── 支持的数据类型 ───
 
+# ─── 数据类型：权威源 = 202606 交付月报「图例」sheet（48 列）───
+# 共 11 个 data_type，全部是「从 R2 起顶部对齐」的逐行块：
+#   - 简单枚举：每行一个 label
+#   - 带子字段：label + extra（如状态带类别、销售带统计组）
+#   - 考核规则矩阵：20 行规则组合（kind=positional，不去重）
 DATA_TYPES: dict[str, str] = {
+    # 1. 项目经理信息
     "project_manager": "项目经理",
-    "deviation_status": "偏差-状态/趋势",
-    "deviation_reason": "偏差-原因类别",
-    "delay_accept_reason": "滞后验收原因",
-    "delay_accept_action": "滞后验收处置措施",
-    "abnormal_type": "预算执行进度",
-    "abnormal_category": "预算执行进度类别",
-    "team": "项目管理团队",
-    "product": "所属产线",
-    "dept": "部门",
+    # 2. 交付考核信息（20 行规则矩阵）
+    "assessment_rule": "考核规则",
+    # 3. 履约义务状态
+    "obligation_status": "状态",
+    "item_stat_status": "履约项统计状态",
+    "project_stat_status": "项目统计状态",
+    "fin_delivery_status": "财报-交付/确收状态",
+    "fin_accept_status": "财报-验收状态",
+    # 4. 营销团队信息
+    "sales_team": "责任销售所属团队",
+    # 5. 财务交接差异
+    "delivery_cross_month_reason": "确收交接跨月原因",
+    "delivery_fail_reason": "确收交接不合格原因",
+    "accept_fail_reason": "验收交接不合格原因",
 }
 
 DEFAULT_DATA_TYPE = "project_manager"
@@ -61,35 +73,68 @@ DEFAULT_SORT_STEP = 10
 # ─── 图例块定义：源 sheet 列区间 → (data_type, 是否有说明列) ───
 # col 为 1-based 列号，与 HeaderMapper 一致
 
-# 列号均为 1-based，与 HeaderMapper 一致；映射对象为权威 16 列源
-# （...202601-06-0724 - 差异分析.xlsx「图例」sheet）。
+# 映射对象：权威源 = 202606 交付月报「图例」sheet（48 列）。
+# col 为 1-based 列号，与 HeaderMapper 一致。
 #
 #   1-based 列 → 表头（R1）
-#     1 项目经理 / 2 部门 / 3 备注
-#     5 偏差-状态/趋势
-#     6 偏差-原因类别 / 7 偏差-原因类别说明
-#     9 滞后验收原因 / 10 滞后验收处置措施
-#     12 预算执行进度 / 13 预算执行进度类别
-#     15 团队(项目管理团队) / 16 产线(所属产线)
-#   列 4/8/11/14（1-based）为组间空列。
+#     1 项目经理 / 2 部门 / 3 中心 / 4 备注
+#     6 考核项 / 7 偏差类别 / 8 是否跨月 / 9 偏差是否大于15个自然日
+#     10 加权系数 / 11 备注
+#     13 状态 / 14 状态类别
+#     21 履约项统计状态 / 22 项目统计状态
+#     23 财报-交付/确收状态 / 24 财报-验收状态
+#     27 责任销售所属团队 / 28 销售团队-统计
+#     30 确收交接跨月原因 / 31 确收交接不合格原因 / 32 验收交接不合格原因
+#   列 5/12/25/29/33+ 为组间空列；组3的 15-20、25 列为日期/工作安排，图例无枚举值。
 LEGEND_BLOCKS: list[dict] = [
+    # 1. 项目经理信息（34 行，逐行带 dept/center/note）
     {"data_type": "project_manager", "title_col": 1, "label_col": 1,
-     "extra_cols": {2: "dept", 3: "note"}, "strip": False},
-    {"data_type": "deviation_status", "title_col": 5, "label_col": 5},
-    {"data_type": "deviation_reason", "title_col": 6, "label_col": 6,
-     "extra_cols": {7: "note"}},
-    {"data_type": "delay_accept_reason", "title_col": 9, "label_col": 9},
-    {"data_type": "delay_accept_action", "title_col": 10, "label_col": 10},
-    {"data_type": "abnormal_type", "title_col": 12, "label_col": 12},
-    {"data_type": "abnormal_category", "title_col": 13, "label_col": 13},
-    {"data_type": "team", "title_col": 15, "label_col": 15,
-     "skip_labels": ["*"], "skip_note": "源表末尾为汇总行（* = 全部）"},
-    {"data_type": "product", "title_col": 16, "label_col": 16,
-     "skip_labels": ["*"], "skip_note": "源表末尾为汇总行（* = 全部）"},
-    # 部门：从第 2 列（项目经理的部门归属）去重提取权威部门清单，
-    # 供报表按部门下钻使用。
-    {"data_type": "dept", "title_col": 2, "label_col": 2, "dedup_from": True},
+     "extra_cols": {2: "dept", 3: "center", 4: "note"}, "strip": False,
+     # 逆向装配：extra 字段 → 0-based 列（1 项目经理/2 部门/3 中心/4 备注）
+     "grid_extra": {1: "dept", 2: "center", 3: "note"}},
+    # 2. 交付考核信息：20 行规则矩阵（R2-R21；考核项为合并单元格）。
+    #    kind=positional → 每行一条规则、不去重；label 由考核项+偏差类别
+    #    组合，extra 存跨月/>15/系数/备注。
+    {"data_type": "assessment_rule", "kind": "positional",
+     "title_col": 6, "label_col": 6,
+     "label_extra_col": 7,
+     "extra_cols": {8: "cross_month", 9: "gt15_days", 10: "weight_factor",
+                    11: "note"},
+     # 逆向装配：extra 字段 → 0-based 列（item 仅在合并锚点输出）
+     "grid_map": {5: "item", 6: "category", 7: "cross_month",
+                  8: "gt15_days", 9: "weight_factor", 10: "note"}},
+    # 3. 履约义务状态
+    {"data_type": "obligation_status", "title_col": 13, "label_col": 13,
+     "extra_cols": {14: "category"},
+     "grid_extra": {13: "category"}},
+    {"data_type": "item_stat_status", "title_col": 21, "label_col": 21},
+    {"data_type": "project_stat_status", "title_col": 22, "label_col": 22},
+    {"data_type": "fin_delivery_status", "title_col": 23, "label_col": 23},
+    {"data_type": "fin_accept_status", "title_col": 24, "label_col": 24},
+    # 4. 营销团队信息（18 团队，逐行带统计组）
+    {"data_type": "sales_team", "title_col": 27, "label_col": 27,
+     "extra_cols": {28: "stat"},
+     "grid_extra": {27: "stat"}},
+    # 5. 财务交接差异
+    {"data_type": "delivery_cross_month_reason", "title_col": 30, "label_col": 30},
+    {"data_type": "delivery_fail_reason", "title_col": 31, "label_col": 31},
+    {"data_type": "accept_fail_reason", "title_col": 32, "label_col": 32},
 ]
+
+# 48 列交付月报「图例」sheet 的完整 R1 表头（0-based 位置；空串=空列）。
+# 供 get_legend_config() 逆向装配时锁定列位置。
+LEGEND_48_HEADERS: tuple[str, ...] = (
+    "项目经理", "部门", "中心", "备注", "",
+    "考核项", "偏差类别", "是否跨月", "偏差是否大于15自然日", "加权系数", "备注", "",
+    "状态", "状态类别",
+    "预算-预估交付完成日期", "预估交付完成日期", "预算-预估验收日期", "预估验收日期",
+    "预估结项日期", "项目状态",
+    "履约项统计状态", "项目统计状态", "财报-交付/确收状态", "财报-验收状态",
+    "项目经理工作安排及饱和度", "",
+    "责任销售所属团队", "销售团队-统计", "",
+    "确收交接跨月原因", "确收交接不合格原因", "验收交接不合格原因",
+    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+)
 
 # 该 sheet 的真实数据截止行（实测 35 行有效；用非空扫描兜底，不硬编码）
 LEGEND_SHEET_NAME = "图例"
@@ -277,6 +322,12 @@ class MasterDataEngine:
         blocks: dict[str, list[dict]] = {}
         for blk in LEGEND_BLOCKS:
             dt = blk["data_type"]
+
+            if blk.get("kind") == "positional":
+                blocks[dt] = self._parse_positional_block(
+                    blk, data_rows, warnings)
+                continue
+
             title_col = blk["title_col"]
             label_col = blk["label_col"]
 
@@ -341,3 +392,61 @@ class MasterDataEngine:
             "unmatched_headers": sorted(mapper.unmatched),
             "warnings": warnings,
         }
+
+    def _parse_positional_block(
+        self, blk: dict, data_rows: list, warnings: list[str]
+    ) -> list[dict]:
+        """解析「逐行规则矩阵」块（如交付考核 20 行规则）。
+
+        与普通枚举块的区别：
+          - 不去重：每行是一条规则组合（label 列可为合并单元格，向下填充）
+          - label = 主键列（label_col）+ 副标签列（label_extra_col）
+          - 其余列进 extra；空 label 行（纯空）跳过
+        """
+        dt = blk["data_type"]
+        label_col = blk["label_col"]
+        label_extra_col = blk.get("label_extra_col")
+
+        def cell(r, col1: int):
+            idx = col1 - 1
+            return _clean(r[idx]) if 0 <= idx < len(r) else None
+
+        items: list[dict] = []
+        anchor = ""          # 合并单元格向下填充值
+        order = 1
+        for r in data_rows:
+            primary = cell(r, label_col)
+            if primary:
+                anchor = primary
+            secondary = cell(r, label_extra_col) if label_extra_col else None
+            # 规则行判定：有副标签列时，每行必须带副标签（避免合并错向下
+            # 填充到块外产生幽灵行）；无副标签列时，要求本行主键存在。
+            row_has = secondary if label_extra_col else primary
+            if not row_has:
+                continue
+            label = f"{anchor}-{secondary}" if (anchor and secondary) else (anchor or secondary)
+
+            extra: dict[str, str] = {}
+            # 合并单元格语义：item 只在锚点行（本行主键非空）写入，
+            # 保证逆向装配时与原文件合并单元格行为逐字节一致。
+            if primary:
+                extra["item"] = anchor
+            if secondary:
+                extra["category"] = secondary
+            for col, attr in (blk.get("extra_cols") or {}).items():
+                v = cell(r, col)
+                if v:
+                    extra[attr] = v
+            extra["_source_row"] = order
+
+            items.append({
+                "code": f"r{order:02d}",
+                "label": label,
+                "extra": extra or None,
+                "sort_order": order * DEFAULT_SORT_STEP,
+            })
+            order += 1
+
+        if not items:
+            warnings.append(f"{dt}: 未解析到任何规则行（列{label_col} 为空？）")
+        return items

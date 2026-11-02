@@ -195,14 +195,24 @@ class TestLegendSeed:
 
         conn = _db.get_connection(tmp)
         n = conn.execute(
-            "SELECT COUNT(*) FROM md_reference WHERE data_type='legend_config' AND enabled=1"
+            "SELECT COUNT(*) FROM md_reference "
+            "WHERE data_type IN "
+            "('project_manager','assessment_rule','obligation_status',"
+            " 'item_stat_status','project_stat_status','fin_delivery_status',"
+            " 'fin_accept_status','sales_team','delivery_cross_month_reason',"
+            " 'delivery_fail_reason','accept_fail_reason') AND enabled=1"
         ).fetchone()[0]
         assert n == r1["seeded"]  # 数据行 = seeded 数
-        # 表头行（enabled=0, code='__header__'）单独存
-        header_count = conn.execute(
-            "SELECT COUNT(*) FROM md_reference WHERE data_type='legend_config' AND code='__header__'"
+        # 各类型都落库
+        type_n = conn.execute(
+            "SELECT COUNT(DISTINCT data_type) FROM md_reference "
+            "WHERE data_type IN "
+            "('project_manager','assessment_rule','obligation_status',"
+            " 'item_stat_status','project_stat_status','fin_delivery_status',"
+            " 'fin_accept_status','sales_team','delivery_cross_month_reason',"
+            " 'delivery_fail_reason','accept_fail_reason')"
         ).fetchone()[0]
-        assert header_count == 1
+        assert type_n == 11
         conn.close()
 
 
@@ -223,9 +233,14 @@ class TestExportStructure:
 
         import openpyxl
         wb = openpyxl.load_workbook(path, read_only=True)
-        assert len(wb.sheetnames) == 15
+        # 15 个业务 sheet + 校准台账 = 16；图例必须存在且结构完整
+        assert len(wb.sheetnames) == 16
         assert wb.sheetnames[0] == "签约"
-        assert wb.sheetnames[-1] == "图例"
+        assert "图例" in wb.sheetnames
+        # 图例 sheet 有数据（逆向装配自结构化类型）
+        ws = wb["图例"]
+        assert ws.max_row >= 35
+        assert ws.max_column == 48
         wb.close()
 
 # ─── 6. 月份格式统一（YYYYMM 规范化）───

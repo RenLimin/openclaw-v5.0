@@ -31,20 +31,15 @@ _STATUS_8 = ["义务已拆分", "交付邮件交接中", "交付邮件已归档"
 
 
 def _seed_legend(dbp):
-    """向临时库 md_reference 写 legend_config（状态 8 值）。"""
-    import json
+    """向临时库 md_reference 写 obligation_status（状态 8 值）。"""
     conn = _db.get_connection(dbp)
     try:
-        conn.execute("DELETE FROM md_reference WHERE data_type='legend_config'")
-        conn.execute(
-            "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
-            "VALUES ('legend_config', '__header__', '表头行', ?, 0, 0)",
-            (json.dumps({"状态": "状态"}, ensure_ascii=False),))
+        conn.execute("DELETE FROM md_reference WHERE data_type='obligation_status'")
         for i, v in enumerate(_STATUS_8, 1):
             conn.execute(
                 "INSERT INTO md_reference (data_type, code, label, extra, sort_order, enabled) "
-                "VALUES ('legend_config', ?, ?, ?, ?, 1)",
-                (v, v, json.dumps({"状态": v}, ensure_ascii=False), i))
+                "VALUES ('obligation_status', ?, ?, NULL, ?, 1)",
+                (v, v, i))
         conn.commit()
     finally:
         conn.close()

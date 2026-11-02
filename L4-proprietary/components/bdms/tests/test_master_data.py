@@ -18,7 +18,7 @@ from bdms.modules.master_data.engine import make_code                  # noqa: E
 
 REAL_SOURCE = Path(
     "/Users/bangcle/Bangcle Workspace/01. Management/2026/2026团队报告/202606/"
-    "2026年计划确收&实际确收对比表202601-06-0724 - 差异分析.xlsx"
+    "2026交付月报-20260630.xlsx"
 )
 
 
@@ -53,34 +53,41 @@ def test_parse_real_legend_excel(svc):
     assert parsed["max_row"] == 506        # 名义 506 行，尾部为空残留
 
     blocks = parsed["blocks"]
-    # 8 个图例块
-    assert set(blocks) >= {
-        "project_manager", "legend", "deviation_reason",
-        "delay_accept_reason", "delay_accept_action",
-        "abnormal_type", "abnormal_category", "team", "product",
+    # 11 个图例块（48 列交付月报）
+    assert set(blocks) == {
+        "project_manager", "assessment_rule",
+        "obligation_status", "item_stat_status", "project_stat_status",
+        "fin_delivery_status", "fin_accept_status",
+        "sales_team",
+        "delivery_cross_month_reason", "delivery_fail_reason",
+        "accept_fail_reason",
     }
-    assert len(blocks["legend"]) == 7            # 偏差-状态/趋势
-    assert len(blocks["deviation_reason"]) == 11  # 偏差-原因类别
-    assert len(blocks["abnormal_type"]) == 7      # 预算执行进度（7 个互异值）
-    # 预算执行进度类别：源数据 7 行但只有 4 个互异值（"异常中" 重复 3 次），
-    # 去重后为 4 —— 这是源数据事实，不是解析缺陷
-    assert len(blocks["abnormal_category"]) == 4
-    assert any("重复 label" in w for w in parsed["warnings"])
-    # 产线：源 10 行含末尾汇总行 '*'（= 全部），应跳过 → 9 条
-    assert len(blocks["product"]) == 9            # 产线
-    assert all(i["label"] != "*" for i in blocks["product"])
-    assert any("汇总行" in w for w in parsed["warnings"])
     assert len(blocks["project_manager"]) == 34   # 项目经理
-    assert len(blocks["team"]) == 4              # 团队（同样跳过 '*' 汇总行）
-    assert len(blocks["dept"]) == 5               # 部门（从第 2 列去重提取）
-    assert "北区客户服务部" in [i["label"] for i in blocks["dept"]]
-    # extra
+    assert len(blocks["assessment_rule"]) == 20   # 考核规则矩阵（不去重）
+    assert len(blocks["obligation_status"]) == 8  # 状态
+    assert len(blocks["item_stat_status"]) == 9   # 履约项统计状态
+    assert len(blocks["project_stat_status"]) == 5
+    assert len(blocks["fin_delivery_status"]) == 4
+    assert len(blocks["fin_accept_status"]) == 3
+    assert len(blocks["sales_team"]) == 18        # 责任销售所属团队
+    assert len(blocks["delivery_cross_month_reason"]) == 3
+    assert len(blocks["delivery_fail_reason"]) == 3
+    assert len(blocks["accept_fail_reason"]) == 3
+
+    # extra：项目经理带 dept/center/note
     cn = [i for i in blocks["project_manager"] if i["label"] == "崔延章"][0]
     assert cn["extra"]["dept"] == "北区客户服务部"
-    assert cn["extra"]["status"] == "已离职"
-    # 原因类别说明（第 7 列）挂到 extra.note
-    note_items = [i for i in blocks["deviation_reason"] if i["extra"].get("note")]
-    assert len(note_items) == 3
+    assert cn["extra"]["center"] == "交付中心"
+    assert cn["extra"]["note"] == "已离职"
+    # 状态带类别；销售带统计组
+    assert blocks["obligation_status"][0]["extra"]["category"] == "未实施"
+    assert blocks["sales_team"][0]["extra"]["stat"]
+    # 考核规则行：第一行 = 交付计划准确率-提前
+    assert blocks["assessment_rule"][0]["label"] == "交付计划准确率-提前"
+    assert blocks["assessment_rule"][0]["extra"]["weight_factor"] == "1"
+    # 合并单元格：item 只在锚点行（第 1、12 行）
+    assert blocks["assessment_rule"][0]["extra"]["item"] == "交付计划准确率"
+    assert "item" not in blocks["assessment_rule"][1]["extra"]
 
 
 def test_parse_missing_file_raises(svc):
@@ -151,13 +158,18 @@ def test_import_legend_from_excel(svc):
     r = svc.import_legend_from_excel(REAL_SOURCE, month="202606")
     assert r["ok"]
     assert r["total"] == sum(r["imported"].values())
-    assert r["imported"]["legend"] == 7
     assert r["imported"]["project_manager"] == 34
-    assert r["imported"]["product"] == 9       # 跳过末尾 '*' 汇总行
-    assert r["imported"]["team"] == 4
-    assert r["imported"]["abnormal_category"] == 4
-    assert r["imported"]["dept"] == 5
-    assert r["total"] == 91          # 真实互异条目数（去重 + 跳过汇总行后）
+    assert r["imported"]["assessment_rule"] == 20
+    assert r["imported"]["obligation_status"] == 8
+    assert r["imported"]["item_stat_status"] == 9
+    assert r["imported"]["project_stat_status"] == 5
+    assert r["imported"]["fin_delivery_status"] == 4
+    assert r["imported"]["fin_accept_status"] == 3
+    assert r["imported"]["sales_team"] == 18
+    assert r["imported"]["delivery_cross_month_reason"] == 3
+    assert r["imported"]["delivery_fail_reason"] == 3
+    assert r["imported"]["accept_fail_reason"] == 3
+    assert r["total"] == 110          # 11 类型真实条目数
 
     # 幂等：重复导入 total 不变
     r2 = svc.import_legend_from_excel(REAL_SOURCE, month="202606")
@@ -165,24 +177,23 @@ def test_import_legend_from_excel(svc):
     assert svc.engine.count() == r["total"]
 
     # 数据可查
-    labels = svc.get_labels("legend")
-    assert "正常确收" in labels
-    assert "提前确收" in labels
+    labels = svc.get_labels("obligation_status")
+    assert "实施进行中" in labels
+    assert "验收文件已归档" in labels
 
     # 类型统计
     types = {t["data_type"]: t for t in svc.list_types()}
-    assert types["legend"]["total"] == 7
-    assert types["product"]["total"] == 9   # 跳过末尾 '*' 汇总行
-    assert types["team"]["total"] == 4      # 同样跳过汇总行
-    assert types["dept"]["total"] == 5
-    assert len(types) == 10
+    assert types["obligation_status"]["total"] == 8
+    assert types["project_manager"]["total"] == 34
+    assert len(types) == 11
 
 
 @pytest.mark.skipif(not REAL_SOURCE.exists(), reason="真实验收源文件不存在")
 def test_import_selected_types(svc):
-    r = svc.import_legend_from_excel(REAL_SOURCE, month="202606", data_types=["legend"])
-    assert set(r["imported"]) == {"legend"}
-    assert svc.engine.count() == 7
+    r = svc.import_legend_from_excel(
+        REAL_SOURCE, month="202606", data_types=["obligation_status"])
+    assert set(r["imported"]) == {"obligation_status"}
+    assert svc.engine.count() == 8
 
 
 def test_import_without_path_and_month(tmp_path):

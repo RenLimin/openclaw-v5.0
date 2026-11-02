@@ -32,18 +32,24 @@
 {% block extra_scripts %}
 <script>
 // 类型码 → 中文标签（后端 data_type 为英文机器码，展示层映射）
-// 与 engine.py DATA_TYPES 同步
+// 与 engine.py DATA_TYPES 同步（权威源：202606 交付月报 48 列图例）
 const TYPE_LABELS = {
+  // 1 项目经理信息
   'project_manager': '项目经理',
-  'deviation_status': '偏差-状态/趋势',
-  'deviation_reason': '偏差-原因类别',
-  'delay_accept_reason': '滞后验收原因',
-  'delay_accept_action': '滞后验收处置措施',
-  'abnormal_type': '预算执行进度',
-  'abnormal_category': '预算执行进度类别',
-  'team': '项目管理团队',
-  'product': '所属产线',
-  'dept': '部门',
+  // 2 交付考核信息（20 行规则矩阵）
+  'assessment_rule': '考核规则',
+  // 3 履约义务状态
+  'obligation_status': '状态',
+  'item_stat_status': '履约项统计状态',
+  'project_stat_status': '项目统计状态',
+  'fin_delivery_status': '财报-交付/确收状态',
+  'fin_accept_status': '财报-验收状态',
+  // 4 营销团队信息
+  'sales_team': '责任销售所属团队',
+  // 5 财务交接差异
+  'delivery_cross_month_reason': '确收交接跨月原因',
+  'delivery_fail_reason': '确收交接不合格原因',
+  'accept_fail_reason': '验收交接不合格原因',
 };
 
 async function loadTypes() {
