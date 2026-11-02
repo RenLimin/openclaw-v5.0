@@ -43,14 +43,14 @@ from bdms.core.header_mapper import HeaderMapper, normalize_header
 
 DATA_TYPES: dict[str, str] = {
     "project_manager": "项目经理",
-    "deviation_status": "偏差状态/趋势",
-    "deviation_reason": "偏差原因类别",
+    "deviation_status": "偏差-状态/趋势",
+    "deviation_reason": "偏差-原因类别",
     "delay_accept_reason": "滞后验收原因",
     "delay_accept_action": "滞后验收处置措施",
-    "abnormal_type": "异常类型（预算执行进度）",
-    "abnormal_category": "异常类别（预算执行进度类别）",
-    "team": "团队/产线",
-    "product": "产品线",
+    "abnormal_type": "预算执行进度",
+    "abnormal_category": "预算执行进度类别",
+    "team": "项目管理团队",
+    "product": "所属产线",
     "dept": "部门",
 }
 
@@ -61,10 +61,21 @@ DEFAULT_SORT_STEP = 10
 # ─── 图例块定义：源 sheet 列区间 → (data_type, 是否有说明列) ───
 # col 为 1-based 列号，与 HeaderMapper 一致
 
+# 列号均为 1-based，与 HeaderMapper 一致；映射对象为权威 16 列源
+# （...202601-06-0724 - 差异分析.xlsx「图例」sheet）。
+#
+#   1-based 列 → 表头（R1）
+#     1 项目经理 / 2 部门 / 3 备注
+#     5 偏差-状态/趋势
+#     6 偏差-原因类别 / 7 偏差-原因类别说明
+#     9 滞后验收原因 / 10 滞后验收处置措施
+#     12 预算执行进度 / 13 预算执行进度类别
+#     15 团队(项目管理团队) / 16 产线(所属产线)
+#   列 4/8/11/14（1-based）为组间空列。
 LEGEND_BLOCKS: list[dict] = [
     {"data_type": "project_manager", "title_col": 1, "label_col": 1,
-     "extra_cols": {2: "dept", 3: "status"}, "strip": False},
-    {"data_type": "legend", "title_col": 5, "label_col": 5},
+     "extra_cols": {2: "dept", 3: "note"}, "strip": False},
+    {"data_type": "deviation_status", "title_col": 5, "label_col": 5},
     {"data_type": "deviation_reason", "title_col": 6, "label_col": 6,
      "extra_cols": {7: "note"}},
     {"data_type": "delay_accept_reason", "title_col": 9, "label_col": 9},
@@ -75,10 +86,8 @@ LEGEND_BLOCKS: list[dict] = [
      "skip_labels": ["*"], "skip_note": "源表末尾为汇总行（* = 全部）"},
     {"data_type": "product", "title_col": 16, "label_col": 16,
      "skip_labels": ["*"], "skip_note": "源表末尾为汇总行（* = 全部）"},
-    # 部门：源 sheet 无独立「部门」图例块，但第 2 列（项目经理的部门归属）
-    # 提供了权威部门清单。用 dedup_from 从该列**去重提取**，让 dept 类型
-    # 真正可用（报表按部门下钻时需要）。第 3 列备注中的「项目管理部」等
-    # 组织标签一并纳入。
+    # 部门：从第 2 列（项目经理的部门归属）去重提取权威部门清单，
+    # 供报表按部门下钻使用。
     {"data_type": "dept", "title_col": 2, "label_col": 2, "dedup_from": True},
 ]
 

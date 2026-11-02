@@ -32,16 +32,17 @@
 {% block extra_scripts %}
 <script>
 // 类型码 → 中文标签（后端 data_type 为英文机器码，展示层映射）
+// 与 engine.py DATA_TYPES 同步
 const TYPE_LABELS = {
   'project_manager': '项目经理',
-  'deviation_status': '偏差状态/趋势',
-  'deviation_reason': '偏差原因类别',
+  'deviation_status': '偏差-状态/趋势',
+  'deviation_reason': '偏差-原因类别',
   'delay_accept_reason': '滞后验收原因',
   'delay_accept_action': '滞后验收处置措施',
-  'abnormal_type': '异常类型（预算执行进度）',
-  'abnormal_category': '异常类别（预算执行进度类别）',
-  'team': '团队/产线',
-  'product': '产品线',
+  'abnormal_type': '预算执行进度',
+  'abnormal_category': '预算执行进度类别',
+  'team': '项目管理团队',
+  'product': '所属产线',
   'dept': '部门',
 };
 
@@ -97,31 +98,18 @@ async function loadList() {
       'extra': '扩展信息', 'sort_order': '排序', 'enabled': '启用',
       'updated_at': '更新时间', 'created_at': '创建时间',
     };
-    const COL_NAMES = {
-      0: '项目经理', 1: '部门', 2: '中心', 3: '备注',
-      5: '考核项', 6: '偏差类别', 7: '是否跨月', 8: '偏差是否大于15自然日', 9: '加权系数', 10: '备注_1',
-      11: '状态_实施进度', 12: '状态_状态', 13: '状态_状态类别', 14: '状态_预算进度',
-      15: '验收_滞后原因', 16: '验收_处置措施', 17: '验收_备注1', 18: '验收_备注2',
-      19: '项目_状态', 20: '项目_履约状态', 21: '项目_项目统计状态',
-      22: '项目_财报交付状态', 23: '项目_财报验收状态', 24: '项目_工作安排', 25: '项目_销售团队',
-      26: '项目_确认状态原因', 27: '项目_确认不合格原因', 28: '项目_验收不合格原因',
-      29: '预算_预算状态', 30: '预算_预算类别',
-    };
     const fmtCell = (v) => {
-      if (v == null) return '-';
+      if (v == null || v === '') return '-';
       if (typeof v === 'object') {
         try {
-          const entries = Object.entries(v).filter(([, val]) => String(val ?? '').trim() !== '');
+          const entries = Object.entries(v)
+            .filter(([k, val]) => String(val ?? '').trim() !== '' && !k.startsWith('_'));
           if (!entries.length) return '-';
-          // 按字段名分组：先展示关键字段，再展示剩余
-          const KEY_FIELDS = ['项目经理', '部门', '中心', '备注', '考核项', '偏差类别', '是否跨月', '状态_状态'];
-          const keyEntries = entries.filter(([k]) => KEY_FIELDS.includes(k));
-          const restEntries = entries.filter(([k]) => !KEY_FIELDS.includes(k));
-          const shown = keyEntries.slice(0, 5).map(([k, val]) => `${k}: ${val}`).join('；');
-          const restCount = entries.length - keyEntries.slice(0, 5).length;
+          const shown = entries.slice(0, 5).map(([k, val]) => `${k}: ${val}`).join('；');
+          const rest = entries.length - 5;
           const full = entries.map(([k, val]) => `${k}: ${val}`).join('；');
-          const summary = restCount > 0 ? `${shown}；…共 ${entries.length} 项` : shown;
-          return `<span title="${full}">${summary}</span>`;
+          const text = rest > 0 ? `${shown}；…共 ${entries.length} 项` : shown;
+          return `<span title="${full}">${text}</span>`;
         } catch (e) { return String(v); }
       }
       if (typeof v === 'boolean') return v ? '✓' : '✗';
