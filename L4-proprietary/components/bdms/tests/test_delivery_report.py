@@ -237,10 +237,10 @@ class TestExportStructure:
         assert len(wb.sheetnames) == 16
         assert wb.sheetnames[0] == "签约"
         assert "图例" in wb.sheetnames
-        # 图例 sheet 有数据（逆向装配自结构化类型）
+        # 图例 sheet 有数据（逆向装配自结构化类型，21 列紧凑布局）
         ws = wb["图例"]
-        assert ws.max_row >= 35
-        assert ws.max_column == 48
+        assert ws.max_row >= 33
+        assert ws.max_column == 21
         wb.close()
 
 # ─── 6. 月份格式统一（YYYYMM 规范化）───

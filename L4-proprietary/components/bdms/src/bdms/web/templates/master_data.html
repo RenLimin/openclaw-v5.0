@@ -74,7 +74,12 @@ async function loadTypes() {
     };
     sel.innerHTML = types.length ? types.map(t => `<option value="${optVal(t)}">${optLabel(t)}</option>`).join('')
                                  : '<option value="">无类型</option>';
-    if (types.length) loadList();
+    // 默认选中项目经理（业务常用，避免字母序首项）
+    if (types.length) {
+      const def = 'project_manager';
+      if (types.some(t => optVal(t) === def)) sel.value = def;
+      loadList();
+    }
   } catch (e) {
     document.getElementById('md-status').textContent = `加载类型失败: ${e}`;
   }
@@ -104,20 +109,26 @@ async function loadList() {
       'extra': '扩展信息', 'sort_order': '排序', 'enabled': '启用',
       'updated_at': '更新时间', 'created_at': '创建时间',
     };
+    // extra 字段中文名（展示层映射，数据仍存英文机器码）
+    const EXTRA_LABELS = {
+      'dept': '部门', 'center': '中心', 'person_status': '人员状态',
+      'category': '状态类别', 'stat': '统计归并',
+      'item': '考核项', 'cross_month': '是否跨月', 'gt15_days': '>15自然日',
+      'weight_factor': '加权系数', 'note': '备注',
+    };
+    const fmtExtra = (v) => {
+      if (v == null || typeof v !== 'object') return fmtCell(v);
+      const entries = Object.entries(v)
+        .filter(([k, val]) => String(val ?? '').trim() !== '' && !k.startsWith('_'));
+      if (!entries.length) return '-';
+      const shown = entries.slice(0, 5).map(([k, val]) => `${EXTRA_LABELS[k] || k}: ${val}`).join('；');
+      const rest = entries.length - 5;
+      const full = entries.map(([k, val]) => `${EXTRA_LABELS[k] || k}: ${val}`).join('；');
+      const text = rest > 0 ? `${shown}；…共 ${entries.length} 项` : shown;
+      return `<span title="${full}">${text}</span>`;
+    };
     const fmtCell = (v) => {
       if (v == null || v === '') return '-';
-      if (typeof v === 'object') {
-        try {
-          const entries = Object.entries(v)
-            .filter(([k, val]) => String(val ?? '').trim() !== '' && !k.startsWith('_'));
-          if (!entries.length) return '-';
-          const shown = entries.slice(0, 5).map(([k, val]) => `${k}: ${val}`).join('；');
-          const rest = entries.length - 5;
-          const full = entries.map(([k, val]) => `${k}: ${val}`).join('；');
-          const text = rest > 0 ? `${shown}；…共 ${entries.length} 项` : shown;
-          return `<span title="${full}">${text}</span>`;
-        } catch (e) { return String(v); }
-      }
       if (typeof v === 'boolean') return v ? '✓' : '✗';
       return String(v);
     };
@@ -127,6 +138,7 @@ async function loadList() {
       h += '<tr>' + cols.map(c => {
         const v = it[c];
         if (c === 'data_type') return `<td>${TYPE_LABELS[v] || v}</td>`;
+        if (c === 'extra') return `<td>${fmtExtra(v)}</td>`;
         return `<td>${fmtCell(v)}</td>`;
       }).join('') + '</tr>';
     }

@@ -89,9 +89,12 @@ DEFAULT_SORT_STEP = 10
 LEGEND_BLOCKS: list[dict] = [
     # 1. 项目经理信息（34 行，逐行带 dept/center/note）
     {"data_type": "project_manager", "title_col": 1, "label_col": 1,
-     "extra_cols": {2: "dept", 3: "center", 4: "note"}, "strip": False,
-     # 逆向装配：extra 字段 → 0-based 列（1 项目经理/2 部门/3 中心/4 备注）
-     "grid_extra": {1: "dept", 2: "center", 3: "note"}},
+     "extra_cols": {2: "dept", 3: "center", 4: "person_status"},
+     "skip_labels": ["*"], "skip_note": "透视表「全部」汇总行，不入基础数据",
+     "strip": False,
+     # 逆向装配：extra 字段 → 0-based 列（0 项目经理/1 部门/2 中心/3 人员状态）
+     "grid_label_col": 0,
+     "grid_extra": {1: "dept", 2: "center", 3: "person_status"}},
     # 2. 交付考核信息：20 行规则矩阵（R2-R21；考核项为合并单元格）。
     #    kind=positional → 每行一条规则、不去重；label 由考核项+偏差类别
     #    组合，extra 存跨月/>15/系数/备注。
@@ -101,39 +104,45 @@ LEGEND_BLOCKS: list[dict] = [
      "extra_cols": {8: "cross_month", 9: "gt15_days", 10: "weight_factor",
                     11: "note"},
      # 逆向装配：extra 字段 → 0-based 列（item 仅在合并锚点输出）
-     "grid_map": {5: "item", 6: "category", 7: "cross_month",
-                  8: "gt15_days", 9: "weight_factor", 10: "note"}},
+     "grid_map": {4: "item", 5: "category", 6: "cross_month",
+                  7: "gt15_days", 8: "weight_factor", 9: "note"}},
     # 3. 履约义务状态
     {"data_type": "obligation_status", "title_col": 13, "label_col": 13,
      "extra_cols": {14: "category"},
-     "grid_extra": {13: "category"}},
-    {"data_type": "item_stat_status", "title_col": 21, "label_col": 21},
-    {"data_type": "project_stat_status", "title_col": 22, "label_col": 22},
-    {"data_type": "fin_delivery_status", "title_col": 23, "label_col": 23},
-    {"data_type": "fin_accept_status", "title_col": 24, "label_col": 24},
+     "grid_label_col": 10,
+     "grid_extra": {11: "category"}},
+    {"data_type": "item_stat_status", "title_col": 21, "label_col": 21,
+     "grid_label_col": 12},
+    {"data_type": "project_stat_status", "title_col": 22, "label_col": 22,
+     "grid_label_col": 13},
+    {"data_type": "fin_delivery_status", "title_col": 23, "label_col": 23,
+     "grid_label_col": 14},
+    {"data_type": "fin_accept_status", "title_col": 24, "label_col": 24,
+     "grid_label_col": 15},
     # 4. 营销团队信息（18 团队，逐行带统计组）
     {"data_type": "sales_team", "title_col": 27, "label_col": 27,
      "extra_cols": {28: "stat"},
-     "grid_extra": {27: "stat"}},
+     "grid_label_col": 16,
+     "grid_extra": {17: "stat"}},
     # 5. 财务交接差异
-    {"data_type": "delivery_cross_month_reason", "title_col": 30, "label_col": 30},
-    {"data_type": "delivery_fail_reason", "title_col": 31, "label_col": 31},
-    {"data_type": "accept_fail_reason", "title_col": 32, "label_col": 32},
+    {"data_type": "delivery_cross_month_reason", "title_col": 30, "label_col": 30,
+     "grid_label_col": 18},
+    {"data_type": "delivery_fail_reason", "title_col": 31, "label_col": 31,
+     "grid_label_col": 19},
+    {"data_type": "accept_fail_reason", "title_col": 32, "label_col": 32,
+     "grid_label_col": 20},
 ]
 
-# 48 列交付月报「图例」sheet 的完整 R1 表头（0-based 位置；空串=空列）。
+# 清理后导出布局：21 列紧凑图例（2026-11-02 Rex 审核通过）。
+# 删除空表头列（原 5/12/15-20/25/26/29/33-48），只保留 5 组真实数据列；
 # 供 get_legend_config() 逆向装配时锁定列位置。
-LEGEND_48_HEADERS: tuple[str, ...] = (
-    "项目经理", "部门", "中心", "备注", "",
-    "考核项", "偏差类别", "是否跨月", "偏差是否大于15自然日", "加权系数", "备注", "",
+LEGEND_21_HEADERS: tuple[str, ...] = (
+    "项目经理", "部门", "中心", "人员状态",
+    "考核项", "偏差类别", "是否跨月", "偏差是否大于15自然日", "加权系数", "备注",
     "状态", "状态类别",
-    "预算-预估交付完成日期", "预估交付完成日期", "预算-预估验收日期", "预估验收日期",
-    "预估结项日期", "项目状态",
     "履约项统计状态", "项目统计状态", "财报-交付/确收状态", "财报-验收状态",
-    "项目经理工作安排及饱和度", "",
-    "责任销售所属团队", "销售团队-统计", "",
+    "责任销售所属团队", "销售团队-统计",
     "确收交接跨月原因", "确收交接不合格原因", "验收交接不合格原因",
-    "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 )
 
 # 该 sheet 的真实数据截止行（实测 35 行有效；用非空扫描兜底，不硬编码）

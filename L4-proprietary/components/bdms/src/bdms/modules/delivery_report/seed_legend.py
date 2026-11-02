@@ -6,13 +6,18 @@
   202606/2026交付月报-20260630.xlsx
 
 按 5 大类拆为 11 个 data_type（除考核矩阵外均去重枚举）：
-  1 项目经理信息    project_manager（extra: dept/center/note）
+  1 项目经理信息    project_manager（extra: dept/center/person_status，
+                    31 真人 + 未立项/已结项 = 33 条，去掉 * 汇总行）
   2 交付考核信息    assessment_rule（20 行规则矩阵，positional）
   3 履约义务状态    obligation_status（extra: category）/ item_stat_status /
                     project_stat_status / fin_delivery_status / fin_accept_status
   4 营销团队信息    sales_team（extra: stat）
   5 财务交接差异    delivery_cross_month_reason / delivery_fail_reason /
                     accept_fail_reason
+
+2026-11-02 清理决策（Rex 审核 7 点通过）：
+  - 删除空表头列 → 导出 21 列紧凑布局（LEGEND_21_HEADERS）
+  - project_manager 跳过 `*` 透视表汇总行，备注列拆为 person_status 人员状态
 
 用法: python3 -m bdms.modules.delivery_report.seed_legend [源文件.xlsx]
 幂等：重复执行覆盖更新（先清空受管类型再写入）。

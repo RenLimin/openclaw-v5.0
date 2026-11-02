@@ -1231,17 +1231,17 @@ class DeliveryReportConnector:
     # ============================================================
 
     def get_legend_config(self) -> pd.DataFrame:
-        """从 18 个结构化 data_type 逆向装配 48 列「图例」DataFrame。
+        """从 11 个结构化 data_type 逆向装配 21 列紧凑「图例」DataFrame。
 
-        单一事实源 = md_reference 中的结构化类型；本方法把它们重新拼成与
-        202606 交付月报完全一致的图例布局：
-          - 项目经理块（项目经理/部门/中心/备注，34 行，逐行对齐）
+        单一事实源 = md_reference 中的结构化类型；本方法把它们重新拼成
+        清理后的紧凑图例布局（2026-11-02 Rex 审核通过）：
+          - 删除全部空表头列（原 5/12/15-20/25/26/29/33-48）
+          - 项目经理块（项目经理/部门/中心/人员状态，33 行，逐行对齐）
           - 其余各列为独立枚举列表，从 R2 起顶部对齐，超出长度留空
-          - 组间空列 / 日期列保持空表头、空数据
         """
         from bdms.modules.master_data.engine import (
             LEGEND_BLOCKS,
-            LEGEND_48_HEADERS,
+            LEGEND_21_HEADERS,
         )
 
         conn = _db.get_connection(self.db_path)
@@ -1264,17 +1264,18 @@ class DeliveryReportConnector:
             grouped[r["data_type"]].append(
                 {"label": r["label"], "extra": extra})
 
-        # 行数 = 最长块（项目经理 34 行）；空则返回空表
+        # 行数 = 最长块（项目经理 33 行）；空则返回空表
         n_rows = max((len(v) for v in grouped.values()), default=0)
         if n_rows == 0:
             return pd.DataFrame()
 
-        # 48 列表头（与交付月报 R1 逐字一致；空串=空列）
-        headers = list(LEGEND_48_HEADERS)
+        # 21 列表头（清理后紧凑布局）
+        headers = list(LEGEND_21_HEADERS)
         n_cols = len(headers)
         grid = [[""] * n_cols for _ in range(n_rows)]
 
-        # 按块配置逆向装配：label 落 label_col-1；extra 字段按 grid_extra/
+        # 按块配置逆向装配：label 落 grid_label_col（缺省=源 label_col-1
+        # 的旧 48 列位置，新布局全部显式指定）；extra 字段按 grid_extra/
         # grid_map 落指定 0-based 列（positional 块不走 label，只用 grid_map）
         for blk in LEGEND_BLOCKS:
             dt = blk["data_type"]
@@ -1284,7 +1285,7 @@ class DeliveryReportConnector:
             grid_extra = blk.get("grid_extra") or {}
             grid_map = blk.get("grid_map") or {}
             if blk.get("kind") != "positional":
-                col0 = blk["label_col"] - 1
+                col0 = blk.get("grid_label_col", blk["label_col"] - 1)
                 if 0 <= col0 < n_cols:
                     for i, it in enumerate(items):
                         grid[i][col0] = it["label"]

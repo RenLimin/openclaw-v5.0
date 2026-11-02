@@ -93,7 +93,7 @@ templates.env.globals.update({
             ],
         },
         {
-            "title": "基础数据管理",
+            "title": "交付管理",
             "items": [
                 {"id": "master", "label": "交付管理基础数据", "url": "/master-data", "icon": "📖"},
             ],

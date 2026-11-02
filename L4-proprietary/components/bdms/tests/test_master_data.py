@@ -62,7 +62,7 @@ def test_parse_real_legend_excel(svc):
         "delivery_cross_month_reason", "delivery_fail_reason",
         "accept_fail_reason",
     }
-    assert len(blocks["project_manager"]) == 34   # 项目经理
+    assert len(blocks["project_manager"]) == 33   # 31 真人 + 未立项/已结项（去掉 * 汇总行）
     assert len(blocks["assessment_rule"]) == 20   # 考核规则矩阵（不去重）
     assert len(blocks["obligation_status"]) == 8  # 状态
     assert len(blocks["item_stat_status"]) == 9   # 履约项统计状态
@@ -74,11 +74,13 @@ def test_parse_real_legend_excel(svc):
     assert len(blocks["delivery_fail_reason"]) == 3
     assert len(blocks["accept_fail_reason"]) == 3
 
-    # extra：项目经理带 dept/center/note
+    # extra：项目经理带 dept/center/person_status（备注列语义=人员状态）
     cn = [i for i in blocks["project_manager"] if i["label"] == "崔延章"][0]
     assert cn["extra"]["dept"] == "北区客户服务部"
     assert cn["extra"]["center"] == "交付中心"
-    assert cn["extra"]["note"] == "已离职"
+    assert cn["extra"]["person_status"] == "已离职"
+    # * 汇总行已被剔除
+    assert all(i["label"] != "*" for i in blocks["project_manager"])
     # 状态带类别；销售带统计组
     assert blocks["obligation_status"][0]["extra"]["category"] == "未实施"
     assert blocks["sales_team"][0]["extra"]["stat"]
@@ -158,7 +160,7 @@ def test_import_legend_from_excel(svc):
     r = svc.import_legend_from_excel(REAL_SOURCE, month="202606")
     assert r["ok"]
     assert r["total"] == sum(r["imported"].values())
-    assert r["imported"]["project_manager"] == 34
+    assert r["imported"]["project_manager"] == 33
     assert r["imported"]["assessment_rule"] == 20
     assert r["imported"]["obligation_status"] == 8
     assert r["imported"]["item_stat_status"] == 9
@@ -169,7 +171,7 @@ def test_import_legend_from_excel(svc):
     assert r["imported"]["delivery_cross_month_reason"] == 3
     assert r["imported"]["delivery_fail_reason"] == 3
     assert r["imported"]["accept_fail_reason"] == 3
-    assert r["total"] == 110          # 11 类型真实条目数
+    assert r["total"] == 109          # 11 类型真实条目数（33+20+8+9+5+4+3+18+3+3+3）
 
     # 幂等：重复导入 total 不变
     r2 = svc.import_legend_from_excel(REAL_SOURCE, month="202606")
@@ -184,7 +186,7 @@ def test_import_legend_from_excel(svc):
     # 类型统计
     types = {t["data_type"]: t for t in svc.list_types()}
     assert types["obligation_status"]["total"] == 8
-    assert types["project_manager"]["total"] == 34
+    assert types["project_manager"]["total"] == 33
     assert len(types) == 11
 
 
