@@ -42,21 +42,19 @@ from bdms.core.header_mapper import HeaderMapper, normalize_header
 # ─── 支持的数据类型 ───
 
 DATA_TYPES: dict[str, str] = {
-    "legend": "图例（偏差状态/趋势）",
-    "dept": "部门",
-    "product": "产品线",
-    "team": "团队",
-    "abnormal_type": "异常类型（预算执行进度）",
-    "abnormal_category": "异常类别（预算执行进度类别）",
+    "project_manager": "项目经理",
+    "deviation_status": "偏差状态/趋势",
     "deviation_reason": "偏差原因类别",
-    "deviation_reason_note": "偏差原因类别说明",
     "delay_accept_reason": "滞后验收原因",
     "delay_accept_action": "滞后验收处置措施",
-    "project_manager": "项目经理",
-    "project_status": "项目经理状态（离职/转岗等）",
+    "abnormal_type": "异常类型（预算执行进度）",
+    "abnormal_category": "异常类别（预算执行进度类别）",
+    "team": "团队/产线",
+    "product": "产品线",
+    "dept": "部门",
 }
 
-DEFAULT_DATA_TYPE = "legend"
+DEFAULT_DATA_TYPE = "project_manager"
 DEFAULT_SORT_STEP = 10
 
 
