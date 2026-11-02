@@ -74,6 +74,12 @@ templates.env.globals.update({
     "storage_key": "bdms-theme",
     "sidebar_items": [
         {
+            "title": "概览",
+            "items": [
+                {"id": "home", "label": "首页概览", "url": "/", "icon": "🏠"},
+            ],
+        },
+        {
             "title": "交付月度管理",
             "items": [
                 {"id": "report", "label": "交付月报", "url": "/report", "icon": "📋"},
@@ -118,7 +124,7 @@ def _render(request: Request, name: str, ctx: dict | None = None) -> HTMLRespons
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
-    return _render(request, "index.html", {"active_page": "dashboard"})
+    return _render(request, "index.html", {"active_page": "home"})
 
 
 @app.get("/report", response_class=HTMLResponse)
