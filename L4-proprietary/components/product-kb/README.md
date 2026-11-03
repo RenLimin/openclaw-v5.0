@@ -15,11 +15,14 @@ L4 专有业务模块，提供 Bangcle 产品知识库，支持合同标的比�
 │   ├── search.py       # 混合检索
 │   ├── contract.py     # 合同比对
 │   └── cli.py          # CLI 入口
-├── scripts/            # 便捷脚本
-│   ├── init_db.sh      # 初始化数据库
-│   ├── import_price.sh # 导入价格表
-│   ├── scan_docs.sh    # 扫描文档目录
-│   └── build_index.sh  # 构建全文和向量索引
+├── scripts/                  # 便捷脚本
+│   ├── init_db.sh            # 初始化数据库
+│   ├── import_price.sh       # 导入价格表
+│   ├── scan_docs.sh          # 扫描文档目录
+│   ├── build_index.sh        # 构建全文和向量索引
+│   ├── fetch_oa_kb.py        # OA 产品中心全量抓取（含已知双点后缀 bug，见 OPERATIONS §2.4）
+│   ├── oa_incremental_sync.py# OA 增量同步核心（doclastmoddate 水位过滤）
+│   └── oa_sync_pipeline.sh   # OA 一键编排：增量抓取 + scan + build-index
 ├── data/               # 数据库存储（gitignore）
 ├── tests/              # 测试
 └── README.md
@@ -53,7 +56,21 @@ L4 专有业务模块，提供 Bangcle 产品知识库，支持合同标的比�
 
 `--full` 用于全量重建，默认增量构建。
 
-### 5. 数据质量检查
+### 5. OA 产品中心文档增量同步
+
+从 OA（泛微）知识类文档-产品中心增量拉取 2026-09-20 基线之后更新的文档（114 个叶子目录）：
+
+```bash
+./scripts/oa_sync_pipeline.sh             # 增量抓取 + scan 入库 + build-index
+./scripts/oa_sync_pipeline.sh --dry-run   # 只统计不落盘
+./scripts/oa_sync_pipeline.sh --since 2026-10-01  # 临时指定水位
+```
+
+- 水位/历史/清单：`~/.openclaw/data/product-kb-oa-sync/state.json` 与 `manifests/`
+- 旧版备份：`~/.openclaw/data/product-kb-oa-sync/trash/<run-ts>/`
+- 详见 `docs/OPERATIONS-v1.0.md` §2.4
+
+### 6. 数据质量检查
 
 ```bash
 python -m product_kb.cli check

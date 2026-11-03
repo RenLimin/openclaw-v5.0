@@ -1,6 +1,6 @@
 ---
 name: product-kb
-description: "Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索"
+description: "Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索；OA 产品中心文档自动增量同步（水位过滤/一键编排）"
 homepage:
 metadata:
   openclaw:
@@ -59,6 +59,30 @@ cd /Users/bangcle/.openclaw/workspace/L4-proprietary/components/product-kb
 ./scripts/scan_docs.sh "/Users/bangcle/Bangcle Workspace/07. Bangcle Prod/"
 ./scripts/build_index.sh
 ```
+
+### 5. OA 产品中心文档增量同步（自动）
+
+> 链路：OA（泛微）→ 流程 → 知识 → 知识类文档 → 产品中心（114 个叶子目录）。
+> 基线 2026-09-20，之后每次只拉取 `doclastmoddate > 水位` 的更新；每轮自动标记截止日期。
+
+```bash
+cd /Users/bangcle/.openclaw/workspace/L4-proprietary/components/product-kb
+./scripts/oa_sync_pipeline.sh             # 增量抓取 + scan 入库 + build-index（推荐一键）
+./scripts/oa_sync_pipeline.sh --dry-run   # 只统计不落盘
+./scripts/oa_sync_pipeline.sh --since 2026-10-01   # 临时指定水位
+python3 scripts/oa_incremental_sync.py    # 只跑抓取（不入库）
+```
+
+落盘与基线同构 `07. Bangcle Prod/<产品线>/<目录>/<文件名>`；覆盖更新的旧版备份到 `~/.openclaw/data/product-kb-oa-sync/trash/`，不直接删。
+
+| 状态/审计位置 | 内容 |
+|---|---|
+| `~/.openclaw/data/product-kb-oa-sync/state.json` | 基线/水位/最近同步日期/历史 run |
+| `~/.openclaw/data/product-kb-oa-sync/manifests/run-<ts>.json` | 每轮 added/updated/unchanged/无附件/错误清单 |
+| `~/.openclaw/data/product-kb-oa-sync/trash/<run-ts>/` | 覆盖更新的旧版备份（scan root 之外，不误入库） |
+
+依赖 `~/.openclaw/data/clm-oa-recon/state.json` 的 OA 登录态；失效（API 返回「登录信息超时」）时先重建会话：
+`cd L4-proprietary/components/bangcle-contract && python3 -c "from services.oa.browser_fallback import refresh_oa_session; print(refresh_oa_session())"`
 
 ## 依赖
 

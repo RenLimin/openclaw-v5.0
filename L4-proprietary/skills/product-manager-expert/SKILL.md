@@ -1,6 +1,6 @@
 ---
 name: product-manager-expert
-description: "Bangcle 产品管理专家 — L4 层 Bangcle 产品相关的统一入口。产品咨询解答、跨产品组合方案、产品知识库检准与维护、产品/SKU/价格/合同标的匹配查询路由（product-kb）。当用户提出 Bangcle 产品、功能、方案、价格、标的匹配相关需求，或要求检准产品知识库时使用。合同审批、PPT、项目交付管理不属于本入口。"
+description: "Bangcle 产品管理专家 — L4 层 Bangcle 产品相关的统一入口。产品咨询解答、跨产品组合方案、产品知识库检准与维护、OA 产品中心文档增量同步、产品/SKU/价格/合同标的匹配查询路由（product-kb）。当用户提出 Bangcle 产品、功能、方案、价格、标的匹配相关需求，或要求检准产品知识库时使用。合同审批、PPT、项目交付管理不属于本入口。"
 homepage:
 metadata:
   openclaw:
@@ -28,6 +28,7 @@ metadata:
 | 产品咨询解答 / 功能描述查询 | **本技能** + `product-kb` | 本技能做专家判断，product-kb 做数据检索 |
 | 跨产品组合方案 / 售前产品方案 | **本技能** | 核心职责 |
 | 产品知识库检准 / 数据修复 | **本技能**（scripts/audit_kb.py） | 核心职责 |
+| OA 产品中心文档增量同步 | `product-kb`（scripts/oa_sync_pipeline.sh） | 自动增量抓取+入库+索引；维护入口本技能协调 |
 | 产品/型号/SKU 查询 | `product-kb`（PKB-001） | 数据操作 |
 | 价格查询 / 销售状态（正常/受控/报备） | `product-kb` | 数据操作 |
 | 合同标的匹配（合同条款→产品匹配） | `product-kb`（contract 模块） | 仅"标的匹配"环节；合同审批流程见 §边界外 |
@@ -87,6 +88,21 @@ python3 /Users/bangcle/.openclaw/workspace/L4-proprietary/skills/product-manager
 | 🔴 error | 必须修：源文件缺失→核实路径/补录；孤儿引用→清理或重建 |
 | 🟡 warn | 按业务判断：doc_type 归类→按文件名强规则重分类；无文档产品→服务类维保/定制/第三方占位桶无独立文档属正常（第三方桶自动剔除），在报告标注；embedding 为空→建议重建索引 |
 | 🔵 info | 记录说明：kb_relation 空、version 缺失等 |
+
+### 2.5 OA 产品中心文档增量同步（自动更新知识库源文件）
+
+本地知识库源文件与 OA（泛微）产品中心保持同步：基线 2026-09-20，之后每轮只拉取 `doclastmoddate > 水位` 的更新文档（114 个叶子目录），自动落盘 + scan 入库 + 重建索引，并标记截止日期。
+
+```bash
+cd /Users/bangcle/.openclaw/workspace/L4-proprietary/components/product-kb
+./scripts/oa_sync_pipeline.sh             # 一键：抓取 + 入库 + build-index
+./scripts/oa_sync_pipeline.sh --dry-run   # 预览候选不落盘
+```
+
+- 状态/审计：`~/.openclaw/data/product-kb-oa-sync/state.json`（水位/历史）+ `manifests/run-<ts>.json`（每轮清单）
+- 旧版被覆盖时备份到 `~/.openclaw/data/product-kb-oa-sync/trash/<run-ts>/`（不直接删，可回滚）
+- OA 登录态失效时先重建会话（见 product-kb SKILL §5）
+- 检准发现"源文件落后于 OA"时，先跑本同步再做检准结论
 
 ### 3. embedding 重建（语义检索恢复）
 
