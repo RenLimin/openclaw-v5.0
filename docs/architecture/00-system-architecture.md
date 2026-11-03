@@ -721,6 +721,9 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 文档数字化(OCR) | `L2-infra/components/ocr-digitalization/` | ✅ | 多后端引擎 + 预处理管线 + 质量评分 + 后处理纠错 | ✅ 已上线 |
 | Office 文档生成 | `L2-infra/components/office-generation/` | ✅ | Word/Excel/PPT 统一 SDK + 6 库工具链 | ✅ 已上线 |
 | 日志管理 | `L2-infra/components/logs/` | ✅ | 骨架阶段（目录结构预留，observability 子目录） | 📐 骨架阶段 |
+| 会话边界护栏 | `L2-infra/components/session-boundary-guard/` | 📋 待建 | `before_tool_call` 插件：拦截 agent 向 pinned/live 会话注入消息/任务（FB-20261103-03） | 📋 设计态（ADR-202611-036） |
+
+> **会话边界护栏**（2026-11-03，ADR-202611-036）：机制性兜底，与 session-isolation（上下文不可见）正交 —— 将隔离从"不可见"升级到"不可注入"。判据为 sessionKey 前缀（`dashboard:` = pinned 会话 → 拦截；`subagent:`/`cron:`/`wecom:` → 放行），不依赖运行时实时状态查询。
 
 > **命名对齐**（2026-09-11）：config-management→config, sandbox-isolation→sandbox，统一为简短命名。
 
@@ -930,6 +933,32 @@ L4 专有业务
 **铁律**：agent/脚本发起的重启一律走 `safe_restart.sh`，禁止裸调 `openclaw gateway restart`（会绕过 guard）。错误扫描器检测到压缩失败时**绝不自动重启**。
 
 **架构边界**：config-patch 触发的进程内自动重启**无外部否决点**，in-process hook 只能观察、无法 cancel。缓解仅能靠"改配置前手动跑 guard + 优先热加载"。硬缺口需上游暴露 pre-restart veto 扩展点或改核心。
+
+### 5.7 会话边界护栏（2026-11-03）
+
+> 详见 [ADR-202611-036](../knowledge-base/by-category/project-experience/adr/ADR-202611-036-session-boundary-guard.md) 与组件 DESIGN-DETAIL（`L2-infra/components/session-boundary-guard/`）
+
+**问题**：会话隔离只约束上下文可见性，不约束 agent 主动的跨会话写入。FB-20261103-03 串台事故中，agent 将消息注入 pinned/live 会话做旁路排查，其回执携带无关任务上下文混入用户回复。行为规则依赖模型自觉，明知规范仍可能违反。
+
+**机制**（与 §5.6 同构：判据 + 拦截 + 入口 + 配置）：
+
+| 层 | 资产 | 职责 |
+|---|---|---|
+| 判据 | `session-boundary-guard` 插件（`before_tool_call`） | 匹配 `sessions_send`/`sessions_spawn(visible)`，目标 sessionKey 前缀 `agent:main:dashboard:` → 拦截（requireApproval 或 block，fail-closed 15s） |
+| 拦截 | 插件返回值 `block`/`requireApproval` | 调用不生效，或需 Rex 显式批准 |
+| 审计 | 插件写 state 日志（`~/.openclaw/state/session-boundary-guard.jsonl`） | 每次拦截记录来源/目标/工具/决策，反哺 delivery-quality |
+| 配置 | `plugins.entries.session-boundary-guard.config` | 拦截模式（approve/block）、allow 前缀白名单 |
+
+**放行路径**（不受影响）：
+- `sessions_spawn` 普通 subagent（`agent:main:subagent:*`）—— 旁路排查唯一合法路径
+- `sessions_send` resume 自己 paused 的 child（`agent:main:subagent:*`）
+- `sessions_send` 指向 cron / wecom 会话（`agent:main:cron:*`、`agent:main:wecom:*`）
+- `conversations_send` / `conversations_turn`（外部渠道投递，不属会话注入）
+
+**架构边界**：
+- 判据基于 OpenClaw 稳定契约（sessionKey 前缀格式），**不查询实时会话状态**（`api.runtime.gateway.request` 拒绝 external plugin，ADR-202611-036 §3 选项 C 否决）
+- 护栏失效方向安全：插件加载失败 → 调用被 block（fail-closed），不会放行
+- 合法通知若需发给 dashboard 会话 → 走 allow 白名单（默认最小集，Rex 拍板）
 
 ---
 

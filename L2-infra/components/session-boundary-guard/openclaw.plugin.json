@@ -1,0 +1,32 @@
+{
+  "id": "session-boundary-guard",
+  "name": "Session Boundary Guard",
+  "description": "会话边界护栏：机制性拦截 agent 向 pinned/live 会话注入消息/任务（FB-20261103-03）",
+  "description_zh": "基于 before_tool_call 的跨会话注入拦截：sessions_send / sessions_spawn(visible=true) 指向 dashboard:* 会话时弹批准或直接拒绝（fail-closed），杜绝串台。",
+  "version": "1.0.0",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": ["approve", "block"],
+        "description": "拦截模式：approve=软闸门（requireApproval 弹批准），block=硬闸门（直接拒绝）",
+        "default": "approve"
+      },
+      "allowTargets": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "精确 sessionKey 白名单（合法通知目标），命中直接放行",
+        "default": []
+      },
+      "debug": {
+        "type": "boolean",
+        "description": "调试模式：审计记录全部决策（含放行）",
+        "default": false
+      }
+    }
+  }
+}

@@ -201,6 +201,7 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py start \
 - ✅ 旁路排查一律 `sessions_spawn(mode="run", context="isolated")` 一次性子会话，用完即弃
 - ✅ inter-session 回执只提取结论，**禁止引用对方任务的上下文/术语**写进给用户的回复
 - ✅ 压缩恢复后先核对当前会话任务身份（任务卡/首条用户消息），再继续输出
+- ⚠️ 技术护栏已上线：`session-boundary-guard` 插件（ADR-202611-036）拦截 `sessions_send`/`sessions_spawn(visible)` 指向 `dashboard:*` 的调用（approve 弹批准 / block 硬拒绝），审计在 `~/.openclaw/state/session-boundary-guard.jsonl`；即使越过行为规则也调不通
 - 违反 = 串台事故，必须按 delivery-quality 记账
 
 ## 交付验收方法（7 步法）★强制

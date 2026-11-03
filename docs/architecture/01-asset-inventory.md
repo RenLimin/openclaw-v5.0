@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-03 12:00 UTC+08:00
+最后生成：2026-11-03 12:34 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,7 +23,7 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 71 个（启用 7） · bundled 64 · global 7
+**总计** 72 个（启用 8） · bundled 64 · config 1 · global 7
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
@@ -34,6 +34,7 @@
 | `longcat` | global | — | model-provider: longcat |
 | `memory-core` | bundled | `intent`, `memory_get`, `memory_search` | — |
 | `openclaw-weixin` | global | — | channel: openclaw-weixin |
+| `session-boundary-guard` | config | — | — |
 | `tavily` | global | `tavily_search`, `tavily_extract` | web-search: tavily |
 | `wecom-openclaw-plugin` | global | `wecom-cli`, `wecom_mcp` | channel: wecom |
 
@@ -154,6 +155,16 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 > config-patch 触发的进程内自动重启无外部否决点，仅能事前 guard + 优先热加载。
 
+## L2 — 会话边界护栏（ADR-202611-036）
+
+| 资产 | 路径 | 职责 |
+|---|---|---|
+| ADR-202611-036 决策 | `docs/knowledge-base/by-category/project-experience/adr/ADR-202611-036-session-boundary-guard.md` | 机制性拦截 agent 向 pinned/live 会话注入消息/任务（FB-20261103-03）；sessionKey 前缀判据，不依赖实时状态查询 |
+| 护栏插件 | `L2-infra/components/session-boundary-guard/` | before_tool_call 插件：匹配 sessions_send/sessions_spawn(visible)，目标 agent:main:dashboard:* → requireApproval/block（fail-closed 15s）；纯逻辑 core.js 零依赖可单测 |
+| 审计日志 | `~/.openclaw/state/session-boundary-guard.jsonl` | 每次拦截记录来源/目标/工具/决策（ts/sourceSessionKey/toolName/targetSessionKey/decision/mode），反哺 delivery-quality |
+
+> 放行路径：sessions_spawn 普通 subagent（旁路排查唯一合法路径）、resume 自己 child、cron/wecom 会话投递、conversations_send 外部渠道。状态：✅ 已上线（2026-11-03）。
+
 ## L2 — Prompt 治理（ADR-035 纵切层）
 
 | 资产 | 路径 | 职责 |
@@ -176,7 +187,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 
 | 类别 | 数量 |
 |---|---|
-| ADR（架构决策记录） | 31 |
+| ADR（架构决策记录） | 32 |
 | EXP（经验卡片） | 32 |
 | 模板 | 4 |
 
@@ -215,6 +226,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | [`ADR-202609-028-l0-installation-layer`](../knowledge-base/by-category/project-experience/adr/ADR-202609-028-l0-installation-layer.md) | proposed |
 | [`ADR-202609-029-l3-office-business-dimension`](../knowledge-base/by-category/project-experience/adr/ADR-202609-029-l3-office-business-dimension.md) | proposed |
 | [`ADR-202610-035-prompt-rule-system`](../knowledge-base/by-category/project-experience/adr/ADR-202610-035-prompt-rule-system.md) | accepted |
+| [`ADR-202611-036-session-boundary-guard`](../knowledge-base/by-category/project-experience/adr/ADR-202611-036-session-boundary-guard.md) | proposed |
 
 ### 经验卡片清单
 
@@ -258,8 +270,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `bb48c35` |
-| Commit 数 | 573 |
+| HEAD | `699b87b` |
+| Commit 数 | 574 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

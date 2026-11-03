@@ -419,6 +419,40 @@ def render_safety() -> list[str]:
     return lines
 
 
+def render_session_boundary_guard() -> list[str]:
+    """会话边界护栏资产（ADR-202611-036，2026-11-03 新增）。"""
+    root = Path(__file__).resolve().parents[3]
+    rows = [
+        (
+            "ADR-202611-036 决策",
+            "docs/knowledge-base/by-category/project-experience/adr/ADR-202611-036-session-boundary-guard.md",
+            "机制性拦截 agent 向 pinned/live 会话注入消息/任务（FB-20261103-03）；sessionKey 前缀判据，不依赖实时状态查询",
+        ),
+        (
+            "护栏插件",
+            "L2-infra/components/session-boundary-guard/",
+            "before_tool_call 插件：匹配 sessions_send/sessions_spawn(visible)，目标 agent:main:dashboard:* → requireApproval/block（fail-closed 15s）；纯逻辑 core.js 零依赖可单测",
+        ),
+        (
+            "审计日志",
+            "~/.openclaw/state/session-boundary-guard.jsonl",
+            "每次拦截记录来源/目标/工具/决策（ts/sourceSessionKey/toolName/targetSessionKey/decision/mode），反哺 delivery-quality",
+        ),
+    ]
+    lines = ["## L2 — 会话边界护栏（ADR-202611-036）", ""]
+    lines.append("| 资产 | 路径 | 职责 |")
+    lines.append("|---|---|---|")
+    for name, rel, desc in rows:
+        mark = "" if (root / rel.lstrip("~/")).exists() or rel.startswith("~") else " ⚠️缺失"
+        lines.append(f"| {name}{mark} | `{rel}` | {desc} |")
+    lines += [
+        "",
+        "> 放行路径：sessions_spawn 普通 subagent（旁路排查唯一合法路径）、resume 自己 child、cron/wecom 会话投递、conversations_send 外部渠道。状态：✅ 已上线（2026-11-03）。",
+        "",
+    ]
+    return lines
+
+
 def render_prompt_governance() -> list[str]:
     """ADR-035 Prompt 规则体系（P0-P3 纵切层）与应答契约治理资产（2026-10-30）。"""
     root = Path(__file__).resolve().parents[3]
@@ -561,6 +595,7 @@ def build_document(data: dict) -> str:
         render_credentials(data),
         render_cron(data),
         render_safety(),
+        render_session_boundary_guard(),
         render_prompt_governance(),
         render_docs(),
         render_repo(data),

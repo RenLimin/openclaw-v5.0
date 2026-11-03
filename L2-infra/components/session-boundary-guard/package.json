@@ -1,0 +1,17 @@
+{
+  "name": "openclaw-session-boundary-guard",
+  "version": "1.0.0",
+  "description": "会话边界护栏：机制性拦截 agent 向 pinned/live 会话（dashboard:*）注入消息/任务（FB-20261103-03）",
+  "keywords": ["openclaw", "plugin", "session", "isolation", "guard", "tool-policy"],
+  "type": "module",
+  "main": "./index.js",
+  "openclaw": {
+    "extensions": ["./index.js"],
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2",
+      "minGatewayVersion": "2026.3.24-beta.2"
+    }
+  },
+  "files": ["index.js", "README.md", "openclaw.plugin.json", "package.json", "tests/"],
+  "license": "MIT"
+}
