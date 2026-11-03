@@ -293,12 +293,21 @@ class DocScanner:
         return best_id if best_score > 0 else None
 
     def scan_directory(self) -> Dict[str, Any]:
-        """Scan all documents in root directory"""
+        """Scan all documents in root directory.
+
+        Path-first upsert（支持增量覆盖更新）：
+          1. 同路径 + 同 md5         -> unchanged，跳过
+          2. 同路径 + md5 变了        -> replaced：更新行 + 删旧 chunks（触发重建索引）
+          3. 新路径，md5 已在别处存在  -> duplicate（同内容副本），跳过，不产生重复行
+          4. 新路径 + 新 md5          -> added
+        """
         stats = {
             "total": 0,
             "skipped": 0,
             "added": 0,
-            "updated": 0,
+            "updated": 0,      # unchanged（保留旧键名，兼容旧输出）
+            "replaced": 0,
+            "duplicate": 0,
             "unmatched": 0,
             "unmatched_files": []
         }
@@ -317,11 +326,26 @@ class DocScanner:
                 rel_path = os.path.relpath(full_path, self.root_path)
                 md5 = self.get_file_md5(full_path)
 
-                # Check if already exists and unchanged
-                existing = self.db.get_doc_by_md5(md5)
-                if existing:
-                    stats["updated"] += 1
-                    continue  # No change, skip
+                # 1/2. 先按落盘路径查（增量覆盖的核心：同路径才算同一文档）
+                same_path = self.db.get_doc_by_path(full_path)
+                if same_path:
+                    if same_path["md5"] == md5:
+                        stats["updated"] += 1
+                        continue  # 内容未变
+                    # 2. 同路径内容已变：更新行元数据 + 删旧 chunks，等 build-index 重建
+                    dtype = self.guess_doc_type(file)
+                    version = self.extract_version(full_path)
+                    self.db.update_doc_asset(
+                        same_path["id"], md5=md5, doc_type=dtype,
+                        version=version, file_name=file, relative_path=rel_path)
+                    self.db.delete_doc_chunks(same_path["id"])
+                    stats["replaced"] += 1
+                    continue
+
+                # 3. 新路径，但相同内容已在别的路径入库（同内容副本）-> 不重复入库
+                if self.db.get_doc_by_md5(md5):
+                    stats["duplicate"] += 1
+                    continue
 
                 # Try match product (use filename + parent dir name)
                 product_id = self.fuzzy_match_product(file, os.path.basename(root))

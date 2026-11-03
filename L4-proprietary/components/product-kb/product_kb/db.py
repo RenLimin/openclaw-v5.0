@@ -313,6 +313,23 @@ class ProductKBDB:
         cursor = self.execute("SELECT * FROM doc_asset WHERE md5 = ?", (md5,))
         return cursor.fetchone()
 
+    def get_doc_by_path(self, original_path: str) -> Optional[sqlite3.Row]:
+        """按落盘绝对路径查文档行（增量覆盖更新用）。"""
+        cursor = self.execute(
+            "SELECT * FROM doc_asset WHERE original_path = ?", (original_path,))
+        return cursor.fetchone()
+
+    def update_doc_asset(self, doc_id: int, **kwargs):
+        """更新 doc_asset 字段（如 md5 / file_name / doc_type / version）。"""
+        if not kwargs:
+            return
+        set_clause = ", ".join(f"{k} = ?" for k in kwargs)
+        kwargs["updated_at"] = self.get_now()
+        values = list(kwargs.values()) + [doc_id]
+        self.execute(
+            f"UPDATE doc_asset SET {set_clause} WHERE id = ?", values)
+        self.commit()
+
     # --- Doc chunk operations ---
     def create_doc_chunk(self, doc_id: int, chunk_index: int, title: Optional[str],
                          text: str, embedding: Optional[bytes]) -> int:

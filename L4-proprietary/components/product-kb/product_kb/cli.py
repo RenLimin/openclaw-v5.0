@@ -94,7 +94,9 @@ def cmd_scan(args):
     print(f"  Total files: {stats['total']}")
     print(f"  Skipped: {stats['skipped']}")
     print(f"  Added: {stats['added']}")
-    print(f"  Updated: {stats['updated']}")
+    print(f"  Unchanged: {stats['updated']}")
+    print(f"  Replaced: {stats.get('replaced', 0)}")
+    print(f"  Duplicate copies: {stats.get('duplicate', 0)}")
     print(f"  Unmatched: {stats['unmatched']}")
     if stats['unmatched'] > 0:
         print("  Unmatched files:")

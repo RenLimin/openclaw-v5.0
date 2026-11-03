@@ -72,6 +72,40 @@ python -m product_kb.cli build-index \
 
 - `--full`：全量重建，否则增量构建（仅处理新抽取文档）
 
+### 2.4 OA 产品中心文档增量同步（自动）
+
+> 链路：OA（泛微）→ 流程 → 知识 → 知识类文档 → 产品中心（114 个叶子目录）。
+> 基线 2026-09-20（本地知识库文档截止日），之后每次只增量拉取 `doclastmoddate > 水位` 的更新。
+
+#### 一键同步（推荐）
+
+```bash
+./scripts/oa_sync_pipeline.sh            # 增量抓取 + 入库 + 重建索引
+./scripts/oa_sync_pipeline.sh --dry-run  # 只统计不落盘（验证用）
+./scripts/oa_sync_pipeline.sh --since 2026-10-01  # 临时指定水位
+./scripts/oa_sync_pipeline.sh --no-advance         # 跑但不推进水位
+```
+
+三步内部逻辑：
+1. **增量抓取** `oa_incremental_sync.py`：遍历 114 叶子 → 分页取文档列表 → 过滤 `doclastmoddate > 水位` → 下载附件 → 落盘 `07. Bangcle Prod/<产品线>/<产品目录>/<文件名>`（与基线同构）。覆盖更新时旧版备份到 `~/.openclaw/data/product-kb-oa-sync/trash/<run-ts>/`，不直接删。
+2. **扫描入库** `scan`：path-first upsert——同路径内容变了 → replaced（更新行 + 删旧 chunks）；新路径 → added；同内容副本 → duplicate 跳过。
+3. **重建索引** `build-index`：只处理无 chunk 的文档（增量）。
+
+#### 状态与审计
+
+| 位置 | 内容 |
+|---|---|
+| `~/.openclaw/data/product-kb-oa-sync/state.json` | 基线/水位/最近同步日期/历史 run |
+| `~/.openclaw/data/product-kb-oa-sync/manifests/run-<ts>.json` | 每轮清单：added/updated/unchanged/无附件/错误 |
+| `~/.openclaw/data/product-kb-oa-sync/trash/<run-ts>/` | 覆盖更新的旧版备份（scan root 之外，不误入库） |
+| `~/.openclaw/data/product-kb-oa-sync/legacy/` | 2026-11-02 全量抓取副本（双点命名 bug，已归档不合并） |
+
+#### 会话
+
+- 依赖 `~/.openclaw/data/clm-oa-recon/state.json`（OA 登录态）。失效时 API 返回 `登录信息超时`，需先重建：
+  `cd L4-proprietary/components/bangcle-contract && python3 -c "from services.oa.browser_fallback import refresh_oa_session; print(refresh_oa_session())"`
+- 全量重抓用 `scripts/fetch_oa_kb.py`（注意其文件名 `f"{base}.{ext}"` 会把 ext 重复加点，产生 `..docx` 双点后缀；增量脚本已修正为 OA 原始名单点）。
+
 ### 2.4 数据质量检查
 
 ```bash

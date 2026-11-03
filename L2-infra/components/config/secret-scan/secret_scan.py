@@ -75,6 +75,11 @@ _TEST_MARK = (b"test", b"wrong", b"dummy", b"fake", b"sample", b"example", b"log
 
 _ALLOW_MARKER = b"secret-scan: allow-test-vectors"
 
+# fetch()/XMLHttpRequest 的 credentials 枚举值（DOM API 选项，非凭据）：
+# credentials:'include'|'omit'|'same-origin'，值固定且不含敏感信息。
+FETCH_CREDENTIALS_ENUM = (b"include", b"omit", b"same-origin")
+
+
 
 def _file_has_allow_marker(path: str) -> bool:
     """检测源文件头部的显式豁免标记（仅限扫描器自身的检测向量集）。"""
@@ -127,6 +132,8 @@ def scan_bytes(data: bytes, allow_patterns, source: str = "<data>"):
     for m in ASSIGN.finditer(data):
         value = m.group(2)
         if value in ALLOW_LITERAL:
+            continue
+        if value in FETCH_CREDENTIALS_ENUM:
             continue
         low = value.lower()
         if any(marker in low for marker in PLACEHOLDER_MARKERS):
