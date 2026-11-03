@@ -196,6 +196,13 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py start \
 
 **多会话并行建设：** 必须先读 `docs/conventions/multi-session-build.md`，按 `L2-infra/components/session-isolation/scripts/cli.py` 创建任务卡。
 
+**会话隔离铁律 ★★★（2026-11-03，FB-20261103-03）：**
+- ❌ 禁止用 `sessions_send` 把用户消息/旁路排查请求转发给 pinned、dashboard 或任何正在执行任务的 live 会话
+- ✅ 旁路排查一律 `sessions_spawn(mode="run", context="isolated")` 一次性子会话，用完即弃
+- ✅ inter-session 回执只提取结论，**禁止引用对方任务的上下文/术语**写进给用户的回复
+- ✅ 压缩恢复后先核对当前会话任务身份（任务卡/首条用户消息），再继续输出
+- 违反 = 串台事故，必须按 delivery-quality 记账
+
 ## 交付验收方法（7 步法）★强制
 
 任何宣称"完成"的长任务，交付前必须跑完整 7 步验收。完整规范：`docs/conventions/delivery-acceptance.md`
@@ -211,6 +218,20 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py start \
 | 7 | 回归测试锁定 | 新增测试数 ≥ 修复 bug 数 |
 
 **四条铁律：** 参数被解析 ≠ 参数生效；收参数必须用参数；修 bug 要 grep 全调用点；验证覆盖率比验证结论更值得怀疑。
+
+### 既有组件增量扩展的完成检查 ★（2026-11-03，FB-20261103-04）
+
+在**已交付组件上加新能力**时，"代码跑通+OPERATIONS更新"**不算完成**，还必须逐项落实：
+
+| # | 检查项 | 动作 |
+|---|---|---|
+| 1 | 技能固化 | 对应专家/组件的分层 SKILL（`L2/L3/L4` 分层目录）加能力描述与路由 |
+| 2 | 资产清单 | frontmatter 改后由 pre-commit 自动重生成 `01-asset-inventory.md`，确认新能力进清单 |
+| 3 | 文档版本对齐 | PRD/设计/计划/验收随能力**升版**（增量文档如 `*-<topic>-vX.Y.md`），旧版加变更指针、不回改正文 |
+| 4 | README/scripts | 组件 README 的脚本清单与用法同步 |
+
+**红线：** 禁止把建设后的能力回改进历史版本正文冒充当初设计；用新版本/变更指针并存，保审计链。
+
 
 ## 交付质量反馈闭环 ★★★（2026-10-30，ADR-035 §4）
 

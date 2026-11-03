@@ -11,6 +11,14 @@
 
 ---
 
+> **📌 v1.1 变更（2026-11-03，已交付）**：新增「OA 产品中心文档自动增量同步」能力——
+> 基于 `doclastmoddate` 水位，增量拉取 OA 产品中心 114 个叶子目录更新并自动入库/重建索引。
+> 契约见 [`DESIGN-DETAIL-oa-sync-v1.1.md`](DESIGN-DETAIL-oa-sync-v1.1.md)，
+> 验收见 [`VERIFICATION-oa-sync-v1.1.md`](VERIFICATION-oa-sync-v1.1.md)。
+> 以下正文为 v1.0 原始需求，保持历史不改。
+
+
+
 ## 1. 背景与目标
 
 ### 1.1 业务背景

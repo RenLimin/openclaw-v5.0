@@ -9,6 +9,13 @@
 
 ---
 
+> **📌 v1.1 变更（2026-11-03，已交付）**：OA 增量同步能力在 v1.0 计划之外按增量需求建设。
+> 实际落地范围与步骤见 [`DESIGN-DETAIL-oa-sync-v1.1.md`](DESIGN-DETAIL-oa-sync-v1.1.md)，
+> 验收记录见 [`VERIFICATION-oa-sync-v1.1.md`](VERIFICATION-oa-sync-v1.1.md)。
+> 以下正文为 v1.0 原始计划，保持历史不改。
+
+
+
 ## 1. 开发目标
 
 按设计文档交付可运行的 Bangcle 产品知识库，满足合同标的比对和产品知识问答核心需求。
