@@ -75,18 +75,16 @@ class TestCheckSessionFailed:
             assert error is None
 
     def test_session_list_with_failed_status(self):
-        """sessions --json shows status=failed → is_failed=True."""
+        """sessions --json status=failed → is_failed=True（当前唯一数据源）。"""
         data = {
             "sessions": [
                 {"key": "agent:main:main", "status": "failed", "updatedAt": 1700000000000}
             ]
         }
-        with patch.object(check_and_retry, "_run", side_effect=[
-            ("", 1),  # sessions history fails
-            (json.dumps(data), 0),  # sessions list succeeds
-        ]):
+        with patch.object(check_and_retry, "_run", return_value=(json.dumps(data), 0)):
             is_failed, error, ts = check_and_retry.check_session_failed("agent:main:main")
             assert is_failed is True
+            assert "status=failed" in error
 
     def test_session_list_with_ok_status(self):
         """sessions --json shows status=ok → not failed."""
@@ -102,38 +100,29 @@ class TestCheckSessionFailed:
             is_failed, error, ts = check_and_retry.check_session_failed("agent:main:main")
             assert is_failed is False
 
-    def test_session_history_with_error_message(self):
-        """History contains 'The agent run failed' → is_failed=True."""
-        recent_ts = int(time.time() * 1000)  # current time in ms
+    def test_session_list_with_error_status(self):
+        """sessions --json status=error → is_failed=True（替代已移除的 history 数据源）。"""
         data = {
-            "messages": [
-                {
-                    "role": "assistant",
-                    "content": [{"type": "text", "text": "The agent run failed with error"}],
-                    "timestamp": recent_ts,
-                }
+            "sessions": [
+                {"key": "agent:main:main", "status": "error", "updatedAt": 1700000000000}
             ]
         }
         with patch.object(check_and_retry, "_run", return_value=(json.dumps(data), 0)):
             is_failed, error, ts = check_and_retry.check_session_failed("agent:main:main")
             assert is_failed is True
-            assert "agent run failed" in error
+            assert "status=error" in error
 
-    def test_session_history_stop_reason_error(self):
-        """History has stopReason=error → is_failed=True."""
-        recent_ts = int(time.time() * 1000)
+    def test_session_running_not_failed(self):
+        """status=running 不视为失败（可能长任务执行中，与 P1-b 卡住识别互补）。"""
         data = {
-            "messages": [
-                {
-                    "role": "assistant",
-                    "stopReason": "error",
-                    "timestamp": recent_ts,
-                }
+            "sessions": [
+                {"key": "agent:main:main", "status": "running", "updatedAt": 1700000000000}
             ]
         }
         with patch.object(check_and_retry, "_run", return_value=(json.dumps(data), 0)):
             is_failed, error, ts = check_and_retry.check_session_failed("agent:main:main")
-            assert is_failed is True
+            assert is_failed is False
+            assert error == "session running"
 
     def test_session_not_found(self):
         """Session key not in list → not failed."""
@@ -197,6 +186,13 @@ class TestFindFailedSessions:
 # ──────────────────────────────────────────────
 
 class TestCheckAndRetry:
+    @pytest.fixture(autouse=True)
+    def _no_real_side_effects(self):
+        """根治污染：达上限分支会写真实 state/日志，全部屏蔽。"""
+        with patch.object(check_and_retry, "_log"), \
+             patch.object(check_and_retry, "_mark_blocked_notified", return_value=False):
+            yield
+
     def test_no_task_returns_true(self):
         """No current task → returns True (nothing to do)."""
         with patch.object(check_and_retry, "get_current_task", return_value=None):
@@ -204,18 +200,20 @@ class TestCheckAndRetry:
             assert result is True
 
     def test_failure_count_at_max_stops(self):
-        """failure_count >= MAX_RETRIES → returns False, no retry."""
+        """达上限是正常终态（等人工介入），返回 True 防止被计为 cron 连续失败。"""
         task = {"active": True, "task_id": "t1", "failure_count": 2, "name": "Test"}
-        with patch.object(check_and_retry, "get_current_task", return_value=task):
+        with patch.object(check_and_retry, "get_current_task", return_value=task), \
+             patch.object(check_and_retry, "_mark_blocked_notified", return_value=False):
             result = check_and_retry.check_and_retry(apply=True)
-            assert result is False
+            assert result is True
 
     def test_failure_count_exceeds_max(self):
-        """failure_count > MAX_RETRIES → returns False."""
+        """failure_count > MAX_RETRIES 同样正常终态，返回 True。"""
         task = {"active": True, "task_id": "t1", "failure_count": 5, "name": "Test"}
-        with patch.object(check_and_retry, "get_current_task", return_value=task):
+        with patch.object(check_and_retry, "get_current_task", return_value=task), \
+             patch.object(check_and_retry, "_mark_blocked_notified", return_value=False):
             result = check_and_retry.check_and_retry(apply=True)
-            assert result is False
+            assert result is True
 
     def test_session_ok_returns_true(self):
         """Session not failed → returns True."""
@@ -272,11 +270,12 @@ class TestCheckAndRetry:
             assert result is True
 
     def test_retry_count_boundary_2(self):
-        """failure_count=2 (== MAX_RETRIES) → should NOT retry."""
+        """failure_count=2 (== MAX_RETRIES) → 不再重试，但返回 True（正常终态）。"""
         task = {"active": True, "task_id": "t1", "failure_count": 2, "name": "Test"}
-        with patch.object(check_and_retry, "get_current_task", return_value=task):
+        with patch.object(check_and_retry, "get_current_task", return_value=task), \
+             patch.object(check_and_retry, "_mark_blocked_notified", return_value=False):
             result = check_and_retry.check_and_retry(apply=True)
-            assert result is False
+            assert result is True
 
     def test_min_retry_interval_not_elapsed(self):
         """Failure too recent → skip retry."""
@@ -313,7 +312,14 @@ class TestCheckAndRetry:
 # ──────────────────────────────────────────────
 
 class TestWakeSession:
+    @pytest.fixture(autouse=True)
+    def _no_real_log(self):
+        """wake_session 内部 _log 写真实日志，屏蔽。"""
+        with patch.object(check_and_retry, "_log"):
+            yield
+
     def test_wake_success(self):
+        """openclaw agent --json 成功返回 {"ok": true} 信封（docs/cli/agent.md 契约）。"""
         task_info = {
             "name": "Test Task",
             "task_id": "t1",
@@ -322,7 +328,7 @@ class TestWakeSession:
             "total_steps": 3,
             "progress_entries_recent": [{"text": "step0 done"}],
         }
-        with patch.object(check_and_retry, "_run", return_value=("", 0)) as mock_run:
+        with patch.object(check_and_retry, "_run", return_value=(json.dumps({"ok": True}), 0)) as mock_run:
             result = check_and_retry.wake_session("agent:main:main", task_info, 1, "timeout")
             assert result is True
             mock_run.assert_called_once()

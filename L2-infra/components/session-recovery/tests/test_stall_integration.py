@@ -38,6 +38,7 @@ class StallIntegrationTest(unittest.TestCase):
             patch.object(car, "STALL_LOG", str(self.log)),
             patch.object(car, "STALL_CURSOR_FILE", self.cursor),
             patch.object(car, "STALL_STATE_FILE", self.state),
+            patch.object(car, "_log"),  # 根治：detect_stalled_sessions 内部 _log 写真实日志
         ]
         for p in self._patches:
             p.start()
