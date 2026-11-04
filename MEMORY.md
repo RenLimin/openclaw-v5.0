@@ -43,7 +43,7 @@
 - **泛微 OA（oa.bangcle.com，e-cology 9）：当前仅具备普通账号登录权限，无开放平台应用凭证、无 WorkflowService/管理权限。** <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 - 含义：合同桥只能走「登录会话 cookie + 浏览器/SPA 内部接口」路线（cube.py 已是此模式，非 app token）；无法走 REST apply token / WebService。
 - ~~已证鸿沟~~ **2026-11-04 已解**：销售合同卡片主字段 `合同审批流程→` 即审批 **requestid**（billid 15134 → 882663），另有 `流程编号`/`概算申请流程`/`存档流程`。普通账号带会话即可读完整审批链。
-- 只读端点（playwright 带 cookie 抓 SPA XHR）：`/api/workflow/reqform/getRequestLogList?requestid=`（节点/处理人/动作/意见/接收人）+ `getRequestLogBaseInfo`（txStatus）。**无需开放平台凭证**；写回（同意/驳回）仍须人决策。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+- 只读端点（**纯 HTTP 重放已验证**，2026-11-04）：POST `/api/workflow/reqform/getRequestLogList` 带 cookie+SPA 头+构造 body（requestid/workflowid/nodeid/signatureAttributesStr）→ 完整 loglist（节点/处理人/动作/意见/接收人）；`getRequestLogBaseInfo` 返回 txStatus/creatorNodeId。**无需开放平台凭证、无需 playwright**；写回（同意/驳回）仍须人决策。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 - 现存 ecology 会话 2026-11-04 已超时；重建需消耗一次真实 IMAP 验证码（oa-login）。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 
 ## 变更历史
