@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from datetime import datetime
@@ -98,7 +99,8 @@ def init_db(db_path: Optional[str] = None) -> str:
     conn = _connect(path)
     try:
         with conn:
-            for stmt in _SCHEMA_STATEMENTS:
+            # P2：SCHEMA_V2 含既有三表 + contracts/approval_instances/索引
+            for stmt in SCHEMA_V2:
                 conn.execute(stmt)
     finally:
         conn.close()
@@ -225,3 +227,195 @@ class Repository:
         ).fetchall()
         record["audit_logs"] = [dict(r) for r in audit_rows]
         return record
+
+
+    # ========================================================
+    # P2 — contracts / approval_instances（DETAIL §2.4，纯增量）
+    # ========================================================
+
+    def add_contract(
+        self,
+        contract_no: str = "",
+        title: str = "",
+        contract_type: str = "tech_service",
+        party_a: str = "",
+        party_b: str = "",
+        amount: float = 0.0,
+        status: str = "draft",
+        current_approver: Optional[str] = None,
+        effective_date: Optional[str] = None,
+        expiry_date: Optional[str] = None,
+        oa_billid: Optional[str] = None,
+        extra: Optional[str] = None,
+        created_by: str = "",
+        created_at: Optional[str] = None,
+        updated_at: Optional[str] = None,
+    ) -> int:
+        """插入一条合同，返回其 id。status 恒由调用方控制（create 传 draft）。"""
+        now = datetime.now().isoformat()
+        created_at = created_at or now
+        updated_at = updated_at or now
+        cur = self._conn.execute(
+            """
+            INSERT INTO contracts
+                (contract_no, title, contract_type, party_a, party_b, amount,
+                 status, current_approver, effective_date, expiry_date,
+                 oa_billid, extra, created_at, created_by, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (contract_no, title, contract_type, party_a, party_b, amount,
+             status, current_approver, effective_date, expiry_date,
+             oa_billid, extra, created_at, created_by, updated_at),
+        )
+        self._conn.commit()
+        return int(cur.lastrowid)
+
+    def update_contract_status(
+        self,
+        contract_id: int,
+        status: str,
+        current_approver: Optional[str] = None,
+        updated_at: Optional[str] = None,
+    ) -> None:
+        """更新合同状态/当前审批角色。"""
+        updated_at = updated_at or datetime.now().isoformat()
+        self._conn.execute(
+            """
+            UPDATE contracts
+               SET status = ?, current_approver = ?, updated_at = ?
+             WHERE id = ?
+            """,
+            (status, current_approver, updated_at, contract_id),
+        )
+        self._conn.commit()
+
+    def add_approval_instance(
+        self,
+        contract_id: int,
+        action: str,
+        level: Optional[int] = None,
+        status: Optional[str] = None,
+        approver_role: str = "",
+        approver_name: str = "",
+        comment: str = "",
+        created_at: Optional[str] = None,
+    ) -> int:
+        """插入一条审批实例（approve/reject 时落行），返回其 id。"""
+        created_at = created_at or datetime.now().isoformat()
+        cur = self._conn.execute(
+            """
+            INSERT INTO approval_instances
+                (contract_id, level, status, action,
+                 approver_role, approver_name, comment, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (contract_id, level, status, action,
+             approver_role, approver_name, comment, created_at),
+        )
+        self._conn.commit()
+        return int(cur.lastrowid)
+
+    def list_contracts(self, status: Optional[str] = None) -> list:
+        """列出合同（可按状态过滤），按 id 升序。"""
+        if status is None:
+            rows = self._conn.execute(
+                "SELECT * FROM contracts ORDER BY id"
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT * FROM contracts WHERE status = ? ORDER BY id",
+                (status,),
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_contract_row(self, contract_id: int) -> Optional[Dict[str, Any]]:
+        """按 id 取合同原始行，无则 None。"""
+        row = self._conn.execute(
+            "SELECT * FROM contracts WHERE id = ?", (contract_id,)
+        ).fetchone()
+        return dict(row) if row is not None else None
+
+    def get_contract_with_history(self, contract_id: int) -> Optional[Dict[str, Any]]:
+        """取合同 + 审批实例 + 审计日志（JOIN 两表 + 审计表），无则 None。"""
+        record = self.get_contract_row(contract_id)
+        if record is None:
+            return None
+
+        instances = self._conn.execute(
+            "SELECT * FROM approval_instances WHERE contract_id = ? ORDER BY id",
+            (contract_id,),
+        ).fetchall()
+        record["approval_instances"] = [dict(r) for r in instances]
+
+        # P2 合同审计：既有 audit_logs.review_id 外键指向 reviews(id)，
+        # 结构不可改，故合同审计 review_id 置 NULL，在 detail JSON 内带
+        # contract_id（见 services/contract_service.py），读取时按其过滤。
+        audits = self._conn.execute(
+            "SELECT * FROM audit_logs WHERE review_id IS NULL ORDER BY id"
+        ).fetchall()
+        contract_audits = []
+        for r in audits:
+            row_dict = dict(r)
+            detail = row_dict.get("detail")
+            if not detail:
+                continue
+            try:
+                parsed = json.loads(detail)
+            except (ValueError, TypeError):
+                continue
+            if isinstance(parsed, dict) and parsed.get("contract_id") == contract_id:
+                contract_audits.append(row_dict)
+        record["audit_logs"] = contract_audits
+        return record
+
+
+
+# ============================================================
+# P2 V2 Schema（DESIGN-DETAIL-contract-ontology-bridge-v1.0 §2.4）
+# 增量追加：contracts / approval_instances + 部分唯一索引。
+# 既有 reviews / kb_matches / audit_logs 三表结构不变。
+# ============================================================
+
+SCHEMA_V2 = _SCHEMA_STATEMENTS + (
+    """
+    CREATE TABLE IF NOT EXISTS contracts (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        contract_no       TEXT,
+        title             TEXT,
+        contract_type     TEXT,
+        party_a           TEXT,
+        party_b           TEXT,
+        amount            REAL,
+        status            TEXT NOT NULL DEFAULT 'draft',
+        current_approver  TEXT,
+        effective_date    TEXT,
+        expiry_date       TEXT,
+        oa_billid         TEXT,
+        extra             TEXT,
+        created_at        TEXT NOT NULL,
+        created_by        TEXT,
+        updated_at        TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS approval_instances (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        contract_id    INTEGER NOT NULL REFERENCES contracts (id),
+        level          INTEGER,
+        status         TEXT,
+        action         TEXT,
+        approver_role  TEXT,
+        approver_name  TEXT,
+        comment        TEXT,
+        created_at     TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_contracts_oa_billid
+        ON contracts (oa_billid) WHERE oa_billid IS NOT NULL
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS ix_approval_instances_contract_id
+        ON approval_instances (contract_id)
+    """,
+)
