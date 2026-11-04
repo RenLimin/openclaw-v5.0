@@ -36,6 +36,14 @@ BLOCK_NOTIFY_FILE = STATE_DIR / "session-retry-blocked-notified.json"
 MAX_RETRIES = 2
 MIN_RETRY_INTERVAL_MIN = 5  # 两次重试最小间隔
 
+# ── P1-b：会话卡住识别（running 但 turn 超时）──────────────
+# 独立游标，避免与 error-scan(15min) 抢行消费新增日志。
+STALL_SILENT_MIN = 10          # 超时后静默多久判卡住
+STALL_STATE_FILE = STATE_DIR / "session-stall-state.json"
+STALL_CURSOR_FILE = STATE_DIR / "session-stall-cursor.json"
+STALL_LOG = os.path.expanduser("~/Library/Logs/openclaw/gateway.log")
+ERROR_HANDLER_DIR = WORKSPACE / "L2-infra/scripts/error_handler"
+
 # 仅收集需要推送给 Rex 的精简事件；正常巡检保持静默。
 NOTIFICATIONS = []
 
@@ -280,14 +288,79 @@ def check_and_retry(apply=False):
     return True
 
 
+def detect_stalled_sessions(auto_wake=False):
+    """检测"running 但 turn 超时卡住"的会话（P1-b）。
+
+    独立游标 + 跨轮状态机（stall_detect.py）——不消费 error-scan 的增量行，
+    避免两个巡检器抢行。默认只通知不自动代跑；--auto-wake 才唤醒会话。
+    无任务绑定的卡住仅记录日志，不通知（避免噪音）。
+    """
+    try:
+        import stall_detect  # 同目录
+        if str(ERROR_HANDLER_DIR) not in sys.path:
+            sys.path.insert(0, str(ERROR_HANDLER_DIR))
+        from log_cursor import LogCursorStore
+    except Exception as e:
+        _log(f"stall detect init failed: {e}")
+        return
+
+    # 增量读取 gateway 日志（独立游标）
+    try:
+        cursor = LogCursorStore(str(STALL_CURSOR_FILE))
+        lines = cursor.read_new_lines(STALL_LOG)
+        cursor.save()
+    except Exception as e:
+        _log(f"stall detect cursor failed: {e}")
+        return
+
+    # 更新跨轮状态机
+    state = {}
+    try:
+        if STALL_STATE_FILE.exists():
+            state = json.loads(STALL_STATE_FILE.read_text())
+    except Exception:
+        state = {}
+    new_state = stall_detect.update_stall_state(state, lines)
+    try:
+        STALL_STATE_FILE.write_text(json.dumps(new_state, ensure_ascii=False))
+    except Exception:
+        pass
+
+    stalled = stall_detect.stalled_sessions(
+        new_state, datetime.now(), silent_min=STALL_SILENT_MIN)
+    if not stalled:
+        return
+
+    # 按任务归属决定通知 vs 仅记录
+    task = get_current_task()
+    task_sessions = set()
+    if task and task.get("session_key"):
+        task_sessions.add(task["session_key"])
+    for key, evidence in stalled:
+        if key in task_sessions and task:
+            notify(f"⚠️ 会话 {key} 疑似卡住（LLM 超时后静默 ≥ {STALL_SILENT_MIN}min），"
+                   f"任务可能中断：{evidence[:120]}")
+            if auto_wake:
+                _log(f"  → auto-wake {key}")
+                wake_session(key, task, int(task.get("failure_count", 0)) + 1,
+                             "stall detected (LLM timeout)")
+        else:
+            _log(f"会话 {key} 疑似卡住（无任务绑定或非当前任务，仅记录）: {evidence[:120]}")
+
+
 def main():
+
     parser = argparse.ArgumentParser(description="会话失败自动重试检测器（正常巡检静默）")
     parser.add_argument("--apply", action="store_true", help="实际执行重试（默认 dry-run）")
     parser.add_argument("--session", default="agent:main:main", help="要检测的会话 key")
+    parser.add_argument("--auto-wake", action="store_true",
+                        help="卡住会话自动唤醒（默认只通知，防重复副作用）")
     args = parser.parse_args()
 
     try:
         ok = check_and_retry(apply=args.apply)
+        # P1-b：卡住识别默认只通知；--auto-wake 才唤醒（默认保守，防重复副作用）
+        detect_stalled_sessions(auto_wake=args.auto_wake)
         # 仅输出关键通知；无事件则零输出（不推送）
         if NOTIFICATIONS:
             print("\n".join(NOTIFICATIONS))

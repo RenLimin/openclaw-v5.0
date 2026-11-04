@@ -96,8 +96,8 @@ def _read_current():
 
 def _format_frontmatter(data):
     """生成 frontmatter 字符串"""
-    keys_order = ["task_id", "name", "phase", "step_index", "total_steps",
-                  "failure_count", "started_at", "last_updated",
+    keys_order = ["task_id", "name", "session_key", "phase", "step_index",
+                  "total_steps", "failure_count", "started_at", "last_updated",
                   "archived_at", "archive_reason", "result"]
     lines = ["---"]
     for key in keys_order:
@@ -158,6 +158,7 @@ def cmd_start(args):
     data = {
         "task_id": args.task_id,
         "name": args.name,
+        "session_key": getattr(args, "session_key", "") or "",
         "description": args.description or "",
         "phase": args.phase or "启动",
         "step_index": 0,
@@ -261,6 +262,8 @@ def main():
     p.add_argument("--task-id", required=True)
     p.add_argument("--name", required=True)
     p.add_argument("--description", default="")
+    p.add_argument("--session-key", default="",
+                   help="绑定该任务的会话 key（如 agent:main:dashboard:xxx）；用于卡住恢复")
     p.add_argument("--phase", default="启动")
     p.add_argument("--steps", default="[]", help="JSON 数组")
 
