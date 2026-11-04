@@ -843,6 +843,66 @@ def scan_provider_health():
     return errors
 
 
+# ── P1-c：FailoverError 对症处置辅助 ───────────────────────
+ENDPOINT_PROBE_DIR = f"{WORKSPACE}/L2-infra/components/model-scheduling/scripts"
+ENDPOINT_FAIL_STATE = f"{WORKSPACE}/memory/endpoint-fail-state.json"
+
+
+def gateway_process_healthy():
+    """判定 gateway 进程是否健康（rc==0）。FailoverError 多为上游端点问题，
+    进程往往是健康的——此时重启 gateway 不对症。"""
+    out, rc = run_cmd("openclaw status 2>&1", timeout=15)
+    if rc != 0:
+        return False
+    low = out.lower()
+    return not any(bad in low for bad in ("unhealthy", "not running", "stopped", "is down"))
+
+
+def probe_model_endpoints(timeout=8):
+    """聚合探测已配置模型端点，返回 (probe_dict, all_unreachable, any_unreachable)。
+
+    探测本身失败（脚本缺失/异常）不得影响主扫描：返回 (None, False, False)，
+    由调用方按"无法判定"保守处理（不据此重启也不据此静默）。
+    """
+    try:
+        if ENDPOINT_PROBE_DIR not in sys.path:
+            sys.path.insert(0, ENDPOINT_PROBE_DIR)
+        import endpoint_probe  # type: ignore
+        probe = endpoint_probe.probe_endpoints(timeout=timeout)
+        all_unreach, any_unreach, total = endpoint_probe.summarize(probe)
+        return probe, (all_unreach if total else False), (any_unreach if total else False)
+    except Exception as e:
+        return {"_error": str(e)[:160]}, False, False
+
+
+def _update_endpoint_fail_streak(all_unreachable):
+    """记录"全部端点不可达"的连续轮次，返回当前连续计数。瞬时单轮 vs 持续故障。"""
+    state = {}
+    try:
+        with open(ENDPOINT_FAIL_STATE) as f:
+            state = json.load(f)
+    except Exception:
+        state = {}
+    streak = int(state.get("all_unreachable_streak", 0))
+    streak = streak + 1 if all_unreachable else 0
+    try:
+        with open(ENDPOINT_FAIL_STATE, "w") as f:
+            json.dump({"all_unreachable_streak": streak,
+                       "updated_at": datetime.now().isoformat()}, f)
+    except Exception:
+        pass
+    return streak
+
+
+def guarded_restart(reason):
+    """走 safe_restart.sh 重启（先过 pre-restart guard）。返回 rc。
+
+    绝不裸调 openclaw gateway restart（2026-10-27 自杀式重启事故护栏）。
+    """
+    safe_restart = f"bash {WORKSPACE}/L2-infra/components/gateway-safety/scripts/safe_restart.sh"
+    return run_cmd(f"{safe_restart} 2>&1", timeout=120)[1]
+
+
 def auto_fix(errors):
     """自动处置检测到的错误"""
     fixes = []
@@ -949,22 +1009,56 @@ def auto_fix(errors):
             fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
     
 
-    # 处置 1: LLM 超时 → 通过 safe_restart.sh 重启（先过 pre-restart guard）
-    # 绝不裸调 `openclaw gateway restart`——那会绕过 guard，可能打断正在进行的
-    # 压缩/关键工作（2026-10-27 21:15 扫描器自身触发的自杀式重启事故）。
+    # 处置 1（P1-c 对症）：LLM FailoverError/timeout —— 不再一律重启 gateway。
+    # FailoverError 多为上游模型端点慢/不可用，而 gateway 进程健康，重启不对症
+    # 且可能打断压缩。决策：
+    #   进程不健康                         → guarded 重启（P1-a pending 补偿在 Phase3）
+    #   进程健康 + 全部端点连续 N 轮不可达 → 仅建议切 fallback（默认不自动切）
+    #   进程健康 + 瞬时/部分               → 只记录，不动作
+    # 绝不裸调 `openclaw gateway restart`（2026-10-27 自杀式重启事故护栏）。
     if timeout_errors:
-        fixes.append({
-            "action": "gateway_restart_guarded",
-            "reason": f"Detected {len(timeout_errors)} distinct LLM timeout minute(s)",
-            "executed": False
-        })
-        safe_restart = (
-            f"bash {WORKSPACE}/L2-infra/components/gateway-safety/scripts/safe_restart.sh"
-        )
-        # 不经 guard 硬阻断（压缩中）则不重启；best-effort，结果如实记录
-        rc = run_cmd(f"{safe_restart} 2>&1", timeout=120)[1]
-        fixes[-1]["executed"] = True
-        fixes[-1]["result"] = "success" if rc == 0 else f"not restarted (rc={rc}; guard may have blocked, or restart failed)"
+        n = len(timeout_errors)
+        healthy = gateway_process_healthy()
+        if not healthy:
+            fixes.append({
+                "action": "gateway_restart_guarded",
+                "reason": f"LLM timeout x{n} AND gateway process unhealthy; restart is appropriate",
+                "executed": False,
+            })
+            rc = guarded_restart(f"LLM timeout x{n} + unhealthy process")
+            fixes[-1]["executed"] = True
+            fixes[-1]["result"] = "success" if rc == 0 else f"not restarted (rc={rc}; guard blocked or failed)"
+            fixes[-1]["gateway_healthy"] = False
+        else:
+            probe, all_unreach, any_unreach = probe_model_endpoints(timeout=8)
+            streak = _update_endpoint_fail_streak(all_unreach)
+            ENDPOINT_ALL_DOWN_STREAK = 2  # 连续 2 轮全不可达才判持续故障
+            if all_unreach and streak >= ENDPOINT_ALL_DOWN_STREAK:
+                fixes.append({
+                    "action": "model_fallback_suggested",
+                    "reason": (f"LLM timeout x{n}; gateway healthy but ALL model endpoints "
+                               f"unreachable for {streak} consecutive scans"),
+                    "executed": False,
+                    "gateway_healthy": True,
+                    "endpoints_all_unreachable": True,
+                    "streak": streak,
+                    "detail": ("上游模型端点全部不可达，gateway 进程健康——不要重启。"
+                               "建议：1) 用 /model 切到可用/fallback 模型；2) 检查网络代理"
+                               "(http://127.0.0.1:7897) 与端点状态；3) 持续故障再人工介入。"
+                               "自动切换需显式开关 --enable-auto-fallback（本期默认关闭）。"),
+                })
+            else:
+                fixes.append({
+                    "action": "llm_timeout_observed_no_action",
+                    "reason": (f"LLM timeout x{n}; gateway healthy; "
+                               f"endpoints all_unreachable={all_unreach} streak={streak}"),
+                    "executed": False,
+                    "gateway_healthy": True,
+                    "endpoints_all_unreachable": all_unreach,
+                    "detail": "进程健康、端点未确认持续全挂 → 判瞬时/单点抖动，仅记录不重启。",
+                })
+                if isinstance(probe, dict) and "_error" in probe:
+                    fixes[-1]["probe_error"] = probe["_error"]
 
     # 处置 1b: 压缩超时/失败 → 绝不自动重启，只记录与提示
     # 重启会打断正在进行的压缩（2026-10-27 20:24 事故），且 Gateway 重启后
