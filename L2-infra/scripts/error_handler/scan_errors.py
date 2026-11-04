@@ -10,6 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
+from log_cursor import LogCursorStore  # noqa: E402  同目录增量游标
 
 WORKSPACE = "/Users/bangcle/.openclaw/workspace"
 LOG_FILE = f"{WORKSPACE}/memory/error-scan-latest.json"
@@ -20,8 +21,10 @@ GATEWAY_LOG = os.path.expanduser("~/Library/Logs/openclaw/gateway.log")
 # Must be >= agents.defaults.compaction.timeoutSeconds (300), else the
 # scanner's own compact subprocess gets killed before the engine can finish.
 COMPACT_SUBPROC_TIMEOUT = 320
-# Only report a compaction failure if it occurred within this window.
-COMPACTION_FAIL_WINDOW_SEC = 30 * 60
+# 增量日志游标状态：只消费"自上次扫描以来新增"的 gateway 日志行，
+# 消除旧实现"30min 时间窗口 vs 2h cron"造成的漏报
+# （2026-11-03 LLM timeout 漏处置事故）。事件检测不再依赖时间窗口。
+LOG_CURSOR_FILE = f"{WORKSPACE}/memory/error-scan-cursor.json"
 
 
 def run_cmd(cmd, timeout=15):
@@ -181,47 +184,39 @@ def _count_recent_failures(job_id, limit=5):
     return consecutive, last_error
 
 
-def scan_llm_timeouts():
-    """扫描通用 LLM 请求超时（从真实 gateway 日志检测）。
+def scan_llm_timeouts(new_lines):
+    """从"自上次扫描以来新增"的 gateway 日志行中识别 LLM 请求超时。
 
-    只匹配高置信标记，并按"分钟桶"去重——同一次超时会在日志里产生
+    改为增量游标驱动（见 log_cursor.py），不再依赖 30min 时间窗口，因此
+    cron 间隔再长也不漏事件。仍按"分钟桶"去重——同一次超时会产生
     embedded run end / lane task error / failed before reply 等多行，
     旧实现把这些当成 N 个独立超时，导致计数虚高并触发不必要的自动重启
     （2026-10-27 21:15 自杀式重启事故）。
 
     compaction 超时由 scan_compaction_failures 专门处理，这里排除。
+
+    参数 new_lines: 本次游标读出的新增文本行列表（已不含行尾换行）。
     """
-    if not os.path.exists(GATEWAY_LOG):
-        return []
-
-    tail, _ = run_cmd(f"tail -4000 {GATEWAY_LOG} 2>/dev/null", timeout=15)
-    if not tail:
-        return []
-
     ts_re = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
     # 高置信：明确声明 LLM 请求超时的终态行
     sig_re = re.compile(
         r"Embedded agent failed before reply: LLM request timed out"
         r"|lane task error: .*error=\"LLM request timed out"
     )
-    window_cut = datetime.now(timezone.utc).timestamp() - COMPACTION_FAIL_WINDOW_SEC
     buckets = {}
-    for line in tail.split("\n"):
+    for line in new_lines:
         if "compaction" in line.lower() or "compact" in line.lower():
             continue
         if not sig_re.search(line):
             continue
         m = ts_re.match(line)
         if not m:
-            continue
-        try:
-            t = datetime.fromisoformat(m.group(1)).timestamp()
-        except ValueError:
-            continue
-        if t < window_cut:
+            # 无时间戳也按整行做一次去重键，避免重复计数
+            key = line.strip()[:60]
+            buckets.setdefault(key, line.strip()[:200])
             continue
         # 按分钟桶去重；同一分钟内的多行视为同一事件
-        bucket = int(t // 60)
+        bucket = m.group(1)[:16]  # YYYY-MM-DDTHH:MM
         if bucket not in buckets:
             buckets[bucket] = line.strip()[:200]
 
@@ -231,49 +226,29 @@ def scan_llm_timeouts():
     ]
 
 
-def scan_compaction_failures():
-    """直接从 gateway 日志识别压缩失败事件。
+def scan_compaction_failures(new_lines):
+    """从增量日志行中识别压缩失败事件（增量游标驱动，无时间窗口盲区）。
 
-    解析 `[compaction-diag] end ... outcome=failed reason=...` 行，
-    只报告最近 COMPACTION_FAIL_WINDOW_SEC 内的事件，并区分：
+    解析 `[compaction-diag] end ... outcome=failed reason=...` 行，并区分：
       - reason=timeout  → compaction_timeout
       - 其他（rate_limit / unknown / draining）→ compaction_failed
 
-    之前扫描器只看 sessions list 的 token 阈值，且读的是陈旧日志路径，
-    因此压缩超时完全漏判。
+    同一 diagId 只报一次；最多保留最近 10 条。
     """
     errors = []
-    if not os.path.exists(GATEWAY_LOG):
-        return errors
-
-    tail, _ = run_cmd(f"tail -4000 {GATEWAY_LOG} 2>/dev/null", timeout=15)
-    if not tail:
-        return errors
-
-    cutoff = datetime.now(timezone.utc).timestamp() - COMPACTION_FAIL_WINDOW_SEC
     diag_re = re.compile(r"\[compaction-diag\] end (.*)")
-    ts_re = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[+-]\d{2}:?\d{2}|Z)?)")
+    ts_re = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})")
     seen_diag = set()
-    for line in tail.split("\n"):
+    for line in new_lines:
         m = diag_re.search(line)
         if not m:
-            continue
-        tsm = ts_re.match(line)
-        if not tsm:
-            continue
-        ts = tsm.group(1)
-        try:
-            t = datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
-        except ValueError:
-            continue
-        if t < cutoff:
             continue
         fields = m.group(1)
         if "outcome=failed" not in fields:
             continue
         # 去重：同一 diagId 只报一次
         dm = re.search(r"diagId=(\S+)", fields)
-        diag_id = dm.group(1) if dm else fields[:60]
+        diag_id = dm.group(1) if dm else (ts_re.match(line).group(1) if ts_re.match(line) else fields[:60])
         if diag_id in seen_diag:
             continue
         seen_diag.add(diag_id)
@@ -1047,11 +1022,17 @@ def main():
 
     now = datetime.now().isoformat()
 
+    # 增量读取 gateway 日志（只读一次，两个扫描函数共享新增行）。
+    # 首次部署建立 baseline（不回放历史）；之后每次只消费新行，永不漏事件。
+    cursor = LogCursorStore(LOG_CURSOR_FILE)
+    new_log_lines = cursor.read_new_lines(GATEWAY_LOG)
+    cursor.save()
+
     # 扫描所有错误类型
     all_errors = []
     all_errors.extend(scan_cron_errors())
-    all_errors.extend(scan_llm_timeouts())
-    all_errors.extend(scan_compaction_failures())
+    all_errors.extend(scan_llm_timeouts(new_log_lines))
+    all_errors.extend(scan_compaction_failures(new_log_lines))
     all_errors.extend(scan_provider_health())
     all_errors.extend(scan_plugin_channel_health())
     all_errors.extend(scan_context_overflow())
