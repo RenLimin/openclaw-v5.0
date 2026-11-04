@@ -844,6 +844,7 @@ def scan_provider_health():
 
 
 # ── P1-c：FailoverError 对症处置辅助 ───────────────────────
+GATEWAY_SAFETY_DIR = f"{WORKSPACE}/L2-infra/components/gateway-safety"
 ENDPOINT_PROBE_DIR = f"{WORKSPACE}/L2-infra/components/model-scheduling/scripts"
 ENDPOINT_FAIL_STATE = f"{WORKSPACE}/memory/endpoint-fail-state.json"
 
@@ -903,9 +904,88 @@ def guarded_restart(reason):
     return run_cmd(f"{safe_restart} 2>&1", timeout=120)[1]
 
 
+def guard_rc():
+    """只查询 pre-restart guard 的判决 rc（0 放行 / 1 硬阻断 / 2 不确定），不重启。"""
+    g = f"python3 {GATEWAY_SAFETY_DIR}/scripts/pre_restart_guard.py"
+    return run_cmd(f"{g} 2>&1", timeout=20)[1]
+
+
+def _load_recovery_pending():
+    if GATEWAY_SAFETY_DIR not in sys.path:
+        sys.path.insert(0, GATEWAY_SAFETY_DIR)
+    import recovery_pending  # type: ignore
+    return recovery_pending
+
+
+def resolve_pending_restart(fixes):
+    """处理上一轮因 guard 阻断而挂起的重启（在 auto_fix 开头调用）。
+
+    - guard 放行且故障仍在、未超次数/TTL → 安全补 1 次 guarded 重启并清除；
+    - guard 放行但故障已自愈 → 撤销 pending（不重启）；
+    - guard 仍阻断 → 保留等待；
+    - 超 TTL → 转人工通知并清除。
+    """
+    try:
+        rp = _load_recovery_pending()
+    except Exception:
+        return
+    rec = rp.load()
+    if not rec:
+        return
+    grc = guard_rc()
+    now = None
+
+    if rp.can_compensate(rec, grc):
+        # 补偿前复核故障是否仍在：pending 只挂于"进程不健康"分支，故以
+        # gateway 进程仍不健康作为"故障仍在"的证据。
+        if gateway_process_healthy():
+            rp.clear()
+            fixes.append({
+                "action": "pending_recovery_canceled",
+                "reason": "guard cleared and gateway is healthy again; no compensatory restart needed",
+                "executed": False,
+                "evidence_hash": rec.get("evidence_hash"),
+            })
+            return
+        rc = guarded_restart("pending compensatory restart after guard cleared")
+        if rc == 0:
+            rp.mark_compensated()
+            rp.clear()
+            fixes.append({
+                "action": "pending_recovery_restart",
+                "reason": "guard cleared and fault persisted; executed the deferred guarded restart (x1)",
+                "executed": True, "result": "success",
+                "evidence_hash": rec.get("evidence_hash"),
+            })
+        else:
+            # 理论上 guard 放行后 restart 应成功；失败则保留并由 TTL 兜底
+            fixes.append({
+                "action": "pending_recovery_restart",
+                "reason": f"guard cleared but restart returned rc={rc}",
+                "executed": True, "result": f"failed (rc={rc})",
+                "evidence_hash": rec.get("evidence_hash"),
+            })
+    elif rp.is_expired(rec):
+        rp.clear()
+        fixes.append({
+            "action": "pending_recovery_manual_review",
+            "reason": ("deferred restart exceeded TTL before guard cleared; "
+                       "cleared pending, manual intervention required"),
+            "executed": False,
+            "evidence_hash": rec.get("evidence_hash"),
+            "detail": rec.get("evidence", "")[:200],
+        })
+    else:
+        # guard 仍 rc=1/2：继续等待，不制造噪音 fix
+        pass
+
+
 def auto_fix(errors):
     """自动处置检测到的错误"""
     fixes = []
+
+    # P1-a：先处理上一轮因 guard 阻断而挂起的补偿重启（可能在本轮 guard 放行）
+    resolve_pending_restart(fixes)
 
     timeout_errors = [e for e in errors if e.get("type") == "llm_timeout"]
     context_errors = [e for e in errors if "context_" in e.get("type")]
@@ -1027,8 +1107,19 @@ def auto_fix(errors):
             })
             rc = guarded_restart(f"LLM timeout x{n} + unhealthy process")
             fixes[-1]["executed"] = True
-            fixes[-1]["result"] = "success" if rc == 0 else f"not restarted (rc={rc}; guard blocked or failed)"
             fixes[-1]["gateway_healthy"] = False
+            if rc == 0:
+                fixes[-1]["result"] = "success"
+            elif rc == 1:
+                # guard 硬阻断（compaction in-flight）：挂起，待工作结束后安全补一次
+                rp = _load_recovery_pending()
+                ev = ";".join(e.get("detail", "")[:120] for e in timeout_errors)[:240]
+                rec, created = rp.upsert("llm_timeout_unhealthy", ev)
+                fixes[-1]["result"] = "blocked by guard (rc=1); deferred as pending recovery"
+                fixes[-1]["pending_evidence_hash"] = rec.get("evidence_hash")
+                fixes[-1]["pending_created"] = created
+            else:
+                fixes[-1]["result"] = f"not restarted (rc={rc}; indeterminate or failed; not auto-pending)"
         else:
             probe, all_unreach, any_unreach = probe_model_endpoints(timeout=8)
             streak = _update_endpoint_fail_streak(all_unreach)
