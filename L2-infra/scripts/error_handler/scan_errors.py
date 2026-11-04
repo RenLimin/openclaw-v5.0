@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone
 from log_cursor import LogCursorStore  # noqa: E402  同目录增量游标
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 
 WORKSPACE = "/Users/bangcle/.openclaw/workspace"
 LOG_FILE = f"{WORKSPACE}/memory/error-scan-latest.json"
@@ -26,6 +27,89 @@ COMPACT_SUBPROC_TIMEOUT = 320
 # （2026-11-03 LLM timeout 漏处置事故）。事件检测不再依赖时间窗口。
 LOG_CURSOR_FILE = f"{WORKSPACE}/memory/error-scan-cursor.json"
 
+# ── P1-d：每个扫描项的 wall-clock 硬预算与异常隔离 ─────────────
+SCAN_ITEM_BUDGET_SEC = 45
+SCAN_ITEM_TIMEOUT = "scanner_item_timeout"
+SCAN_ITEM_ERROR = "scanner_item_error"
+
+
+def _item_error(kind, name, detail):
+    return [{"type": kind, "name": name, "detail": detail}]
+
+
+def run_scan_item(name, fn, *, budget=SCAN_ITEM_BUDGET_SEC):
+    """单项有界执行：超时/异常隔离。返回 (errors, item_errors)。
+
+    注意：Python 无法强杀线程，超时后必须 shutdown(wait=False)，否则
+    executor 上下文退出会阻塞等待慢线程，预算形同虚设。残留线程为 daemon，
+    其内部网络/subprocess 调用自带 timeout，会自行收尾、不阻塞进程退出。
+    """
+    box = {}
+
+    def _work():
+        try:
+            box["result"] = fn()
+        except Exception as exc:  # 单项异常不得炸掉整轮
+            box["error"] = exc
+
+    ex = ThreadPoolExecutor(max_workers=1)
+    try:
+        fut = ex.submit(_work)
+        try:
+            fut.result(timeout=budget)
+        except FuturesTimeout:
+            return [], _item_error(
+                SCAN_ITEM_TIMEOUT, name,
+                f"scan item '{name}' exceeded {budget}s budget; skipped this round")
+        except Exception as exc:
+            return [], _item_error(
+                SCAN_ITEM_ERROR, name,
+                f"scan item '{name}' raised {type(exc).__name__}: {str(exc)[:160]}")
+    finally:
+        ex.shutdown(wait=False)  # 不等待可能仍在收尾的慢线程
+
+    if "error" in box:
+        exc = box["error"]
+        return [], _item_error(
+            SCAN_ITEM_ERROR, name,
+            f"scan item '{name}' raised {type(exc).__name__}: {str(exc)[:160]}")
+    return box.get("result", []), []
+
+
+def run_scan_items(items, *, budget=SCAN_ITEM_BUDGET_SEC, max_workers=3):
+    """并发执行多个互相独立的 scan_*，每个有独立 wall-clock 预算。
+
+    items: [(name, fn), ...]；返回 (errors, item_errors)，结果按输入归并。
+    所有项几乎同时开始，故整批 wall-clock ≈ budget（而非 N×budget）；
+    单项 hang 只占一个 worker，其余项照常返回。
+    """
+    ex = ThreadPoolExecutor(max_workers=max_workers)
+    outcomes = {}
+    try:
+        future_name = {ex.submit(fn): name for name, fn in items}
+        for fut in list(future_name.keys()):
+            name = future_name[fut]
+            try:
+                outcomes[name] = ("ok", fut.result(timeout=budget))
+            except FuturesTimeout:
+                outcomes[name] = ("timeout", _item_error(
+                    SCAN_ITEM_TIMEOUT, name,
+                    f"scan item '{name}' exceeded {budget}s budget; skipped this round"))
+            except Exception as exc:
+                outcomes[name] = ("error", _item_error(
+                    SCAN_ITEM_ERROR, name,
+                    f"scan item '{name}' raised {type(exc).__name__}: {str(exc)[:160]}"))
+    finally:
+        ex.shutdown(wait=False)  # 不等待可能仍在收尾的慢线程
+
+    errors, item_errors = [], []
+    for name, _fn in items:
+        kind, payload = outcomes[name]
+        if kind == "ok":
+            errors.extend(payload or [])
+        else:
+            item_errors.extend(payload)
+    return errors, item_errors
 
 def run_cmd(cmd, timeout=15):
     try:
@@ -1030,12 +1114,19 @@ def main():
 
     # 扫描所有错误类型
     all_errors = []
-    all_errors.extend(scan_cron_errors())
+    # 消费日志增量的两个纯函数：零 IO、极快，直接同步调用
     all_errors.extend(scan_llm_timeouts(new_log_lines))
     all_errors.extend(scan_compaction_failures(new_log_lines))
-    all_errors.extend(scan_provider_health())
-    all_errors.extend(scan_plugin_channel_health())
-    all_errors.extend(scan_context_overflow())
+    # 互相独立、且会触发外部命令/网络的项：各自 wall-clock 预算 + 并发 +
+    # 异常隔离（P1-d）。单项 hang/抛错不再拖垮整轮或让结果丢失。
+    indep_errors, item_errors = run_scan_items([
+        ("cron", scan_cron_errors),
+        ("provider_health", scan_provider_health),
+        ("plugin_channel", scan_plugin_channel_health),
+        ("context_overflow", scan_context_overflow),
+    ])
+    all_errors.extend(indep_errors)
+    all_errors.extend(item_errors)
 
     fixes = auto_fix(all_errors) if all_errors else []
 
