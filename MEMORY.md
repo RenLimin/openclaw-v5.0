@@ -38,6 +38,13 @@
 | 建设 | 迭代>平行 · 同一功能单路径 · 参数收了必须用 |
 | 技术选型 | 涉及技术选型的工作必须先产出选型方案文档，确认后再更新至详细设计文档 |
 
+## 环境约束（实测）
+
+- **泛微 OA（oa.bangcle.com，e-cology 9）：当前仅具备普通账号登录权限，无开放平台应用凭证、无 WorkflowService/管理权限。** <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+- 含义：合同桥只能走「登录会话 cookie + 浏览器/SPA 内部接口」路线（cube.py 已是此模式，非 app token）；无法走 REST apply token / WebService。
+- 已证鸿沟：Cube 合同卡片 `formId=-249` 是未绑定流程的建模记录（主键 billid，无 requestid），审批在独立 workflow 引擎；P3 难点是**如何从合同定位到审批 request**，而非单纯读权限。
+- 现存 ecology 会话 2026-11-04 已超时；重建需消耗一次真实 IMAP 验证码（oa-login）。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+
 ## 变更历史
 
 - 2026-10-04：全量资产文档补齐(66份) · AGENTS.md 瘦身 24k→11k · USER.md 瘦身 8k→2.6k · 系统升级 2026.9.1→2026.9.8
