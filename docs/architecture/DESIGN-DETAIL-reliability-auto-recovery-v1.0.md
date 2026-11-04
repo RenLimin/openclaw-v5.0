@@ -1,6 +1,19 @@
 # DESIGN-DETAIL — 故障自动恢复可靠性加固 v1.0
 
 - 状态：**OUTLINE 已由 Rex 通过（2026-11-04）；DETAIL 待评审后按 Phase 编码**
+
+> **实现状态变更（2026-11-04，Rex 授权"同意按建议执行"后直接落地，P1 四项全部交付并推送）：**
+>
+> | 项 | Commit | 交付内容 |
+> |---|---|---|
+> | P1-d 分项超时隔离 | `31b8273` | `run_scan_items` 守护线程+预算45s，cron/provider/plugin/context 四项并发隔离，曾 929s→现 5–6s |
+> | P1-c FailoverError 对症 | `457f379` | 新增 `endpoint_probe.py` 探三端点；进程不健康才重启，全端点连续2轮不可达仅建议切 fallback，瞬时只观察 |
+> | P1-a 挂起补偿重启 | `b3a6f63` | 新增 `recovery_pending.py`（TTL30min/最多补1次/evidence去抖）；guard rc=1 阻断后压缩结束且故障仍在恰好补1次 |
+> | P1-b 会话卡住识别 | `d1afbde` | 新增 `stall_detect.py` 跨轮状态机+独立游标；绑任务卡住→通知，无绑定仅记录，默认不代跑，`--auto-wake` 显式开启 |
+>
+> **测试**：error_handler 35、gateway-safety 7、model-scheduling 7、session-recovery 88 passed（新增均绿）。
+> session-recovery 仅剩 **7 个改造前已存在的既有红账**（基线钉死，非本次引入），建议另行专项收口。
+> P0 见 `b120892`（增量游标 + 15min 周期）。此段为事后状态指针，正文不回改，保审计链。
 - 作者：Jerry 🦞 · 关联：`DESIGN-OUTLINE-reliability-auto-recovery-v1.0.md`、P0 commit `b120892`
 - 范围：L2 跨 error_handler / gateway-safety / session-recovery / model-scheduling
 - 已定策略：**卡住默认只通知不自动代跑**；**切 fallback 仅建议 + 显式开关**；按 **P1-d→c→a→b** 推进
