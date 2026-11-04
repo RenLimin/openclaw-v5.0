@@ -1,0 +1,29 @@
+{
+  "description": "P1 只读桥黄金夹具：冻结的 Cube main_fields 输入与期望 L3 Contract 字段（DETAIL §4）",
+  "frozen_at": "2026-11-04",
+  "main_fields": {
+    "合同编号": "XSZS-2026-0001",
+    "合同名称": "技术服务合同（梆梆安全云平台运维）",
+    "合同类型": "tech_service",
+    "甲方": "北京梆梆安全科技有限公司",
+    "乙方": "北京云动网络科技有限公司",
+    "合同金额": "人民币 12.5 万元",
+    "生效日期": "2026-11-01",
+    "到期日期": "2027-10-31"
+  },
+  "expected_contract": {
+    "id": null,
+    "contract_no": "XSZS-2026-0001",
+    "title": "技术服务合同（梆梆安全云平台运维）",
+    "contract_type": "tech_service",
+    "party_a": "北京梆梆安全科技有限公司",
+    "party_b": "北京云动网络科技有限公司",
+    "amount": 125000.0,
+    "status": "draft",
+    "current_approver": null,
+    "created_by": "",
+    "effective_date": "2026-11-01",
+    "expiry_date": "2027-10-31",
+    "extra": {}
+  }
+}
