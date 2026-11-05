@@ -357,6 +357,46 @@ def scan_compaction_failures(new_lines):
     return errors[:10]
 
 
+def _resolve_file_ref(api_key):
+    """解析 file 型 SecretRef 的实际文件路径（OpenClaw 双层结构）。
+
+    形态（源码 dist/config-cli-input-*.mjs 明确定义）：
+      引用层 models.providers.<p>.apiKey =
+        {"source": "file", "provider": <alias>, "id": <json-pointer|"value">}
+      定义层 secrets.providers.<alias> =
+        {"source": "file", "path": ..., "mode": ...}
+
+    引用层**不要求** path 字段 —— path 在定义层。旧版扫描器把两层当一层、
+    要求引用层自带 path，导致 llama-cpp 等合法 file ref 被误报为
+    api_key_format_error（2026-11-05 复发项，本函数为根治）。
+
+    返回：{"path": ...} 成功；{"error": ...} 结构非法；{} 非 file ref。
+    """
+    if not isinstance(api_key, dict):
+        return {}
+    # 定义层形态（provider 定义直接带 path）
+    if "path" in api_key:
+        return {"path": api_key["path"]}
+    if api_key.get("source") != "file":
+        return {}
+    provider_alias = api_key.get("provider")
+    ref_id = api_key.get("id")
+    if not provider_alias or not ref_id:
+        return {"error": "file ref missing 'provider'/'id' fields"}
+    # 读定义层（只取 path，不读密钥内容）
+    try:
+        with open(os.path.expanduser("~/.openclaw/openclaw.json")) as f:
+            cfg = json.load(f)
+    except Exception as exc:
+        return {"error": f"cannot read openclaw.json: {exc}"}
+    secrets = (cfg.get("secrets") or {}).get("providers") or {}
+    provider_def = secrets.get(provider_alias) or {}
+    path = provider_def.get("path")
+    if not path:
+        return {"error": f"secrets.providers.{provider_alias} missing 'path'"}
+    return {"path": path}
+
+
 def scan_provider_config_full_chain():
     """配置全链路检测：apiKey 格式 + baseUrl 可达性 + 三层一致性 + 端到端验证"""
     errors = []
@@ -393,7 +433,7 @@ def scan_provider_config_full_chain():
         base_url = active.get("baseUrl", "").rstrip("/")
         api_key = active.get("apiKey", "")
         
-        # 检测 1: apiKey 格式检查
+        # 检测 1: apiKey 格式检查（双层结构认知：引用层无 path，定义层才有）
         if isinstance(api_key, dict):
             # 错误旧格式：有 provider + id 但没有 source
             if "provider" in api_key and "id" in api_key and "source" not in api_key:
@@ -401,12 +441,19 @@ def scan_provider_config_full_chain():
                     "type": "api_key_format_error",
                     "detail": f"provider {provider_name}: apiKey is old-format dict (missing 'source'), will cause 401"
                 })
-            # source=file 但 path 不对
-            elif api_key.get("source") == "file" and "path" not in api_key:
-                errors.append({
-                    "type": "api_key_format_error",
-                    "detail": f"provider {provider_name}: apiKey file ref missing 'path' field"
-                })
+            # file ref：引用层/定义层均可，解析定义层 path 并校验文件存在性
+            elif api_key.get("source") == "file":
+                resolution = _resolve_file_ref(api_key)
+                if resolution.get("error"):
+                    errors.append({
+                        "type": "api_key_format_error",
+                        "detail": f"provider {provider_name}: apiKey file ref {resolution['error']}"
+                    })
+                elif not os.path.exists(resolution["path"]):
+                    errors.append({
+                        "type": "api_key_file_not_found",
+                        "detail": f"provider {provider_name}: apiKey file not found at {resolution['path']}"
+                    })
         
         # 检测 2: baseUrl 可达性 + 正确端点验证
         # 注意：当 apiKey 是 SecretRef（source=store）时，脚本拿不到明文 key，
@@ -552,25 +599,32 @@ def scan_provider_api_key_format():
         api_key = provider_config['apiKey']
         # 检查格式：如果是字典，必须是正确的 SecretRef 结构
         if isinstance(api_key, dict):
-            # 正确结构：{source: store, provider: default, id: NAME} 或者 {source: file, ...} 已经在解析时处理
+            # 正确结构：
+            #   引用层 {source: file|store|env, provider: <alias>, id: <id>}（file 的 path 在定义层，不在引用层）
+            #   定义层 secrets.providers.<alias> = {source: file, path: ..., mode: ...}
             # 只检查错误的旧结构
             if 'provider' in api_key and 'id' in api_key and not ('source' in api_key):
                 errors.append({
                     "type": "api_key_format_error",
                     "detail": f"provider {provider_name}: apiKey is old-format dict, should be fixed to correct SecretRef"
                 })
-            elif 'source' in api_key and api_key['source'] == 'file' and 'id' not in api_key and 'path' not in api_key:
+            elif api_key.get('source') == 'file' and 'id' not in api_key and 'path' not in api_key:
                 errors.append({
                     "type": "api_key_format_error",
                     "detail": f"provider {provider_name}: apiKey file ref has incorrect structure"
                 })
-        # 对于文件引用，检查文件是否存在
-        if isinstance(api_key, dict) and api_key.get('source') == 'file' and 'path' in api_key:
-            path = api_key['path']
-            if not os.path.exists(path):
+        # 对于文件引用，检查文件是否存在（双层结构：引用层经定义层解析出 path）
+        if isinstance(api_key, dict) and api_key.get('source') == 'file':
+            resolution = _resolve_file_ref(api_key)
+            if resolution.get("error"):
+                errors.append({
+                    "type": "api_key_format_error",
+                    "detail": f"provider {provider_name}: apiKey file ref {resolution['error']}"
+                })
+            elif not os.path.exists(resolution["path"]):
                 errors.append({
                     "type": "api_key_file_not_found",
-                    "detail": f"provider {provider_name}: apiKey file not found at {path}"
+                    "detail": f"provider {provider_name}: apiKey file not found at {resolution['path']}"
                 })
     
     return errors
