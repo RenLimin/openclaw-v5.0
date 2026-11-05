@@ -25,6 +25,7 @@ metadata:
 | 合同管理需求 | 处理 / 路由去向 | 层 | 说明 |
 |---|---|---|---|
 | 合同智能审查 / 风险扫描 / 审查报告 | **本技能**（`bangcle-contract`，CLM-BANGCLE-001，CLI: `contractctl`） | L4 | 核心职责：ingest→digitize→risk→kb_match→report |
+| 合同运营对象 / Proposal Gate（登记→submit→approve→reject，写回+审计） | **本技能**（`contract_review/ontology_bridge` + `contractctl ontology` 子命令） | L4→L2 | Contract Ontology Bridge：合同先登记为 L2 运营对象，经提案门禁执行生命周期动作，真写回 L4 表 + 全程审计（v1.1 新增） |
 | 合同标的 → 产品知识库参照（满足/部分/不满足 + 红线） | **本技能** 调 `product-kb`（contract 匹配模块） | L4→L4 | bangcle-contract 内部已集成；含近似名 partial、停售 SKU 红线 |
 | 泛微 OA Cube 拉合同（billid 拉取/附件下载/浏览器兜底） | **本技能**（`bangcle-contract/services/oa`） | L4 | API→浏览器自动兜底；`contractctl oa-login` 建会话 |
 | 销售合同审批工作流（OCR 识别/条款拆解/分级审批/Excel·Word 生成） | `contract-approval`（SCA-001） | L3 | 通用审批框架能力 |
@@ -61,6 +62,34 @@ python3 cli/contractctl.py report <review_id>
 ```
 
 审查五步：**ingest（取证）→ digitize（OCR 数字化）→ risk（22 条受控规则）→ kb_match（product-kb 标的参照）→ report（md/xlsx）**。
+
+## 二a. Contract Ontology Bridge（合同运营对象，v1.1）
+
+> 合同作为 L2 运营对象（`object_type=contract`）经 Proposal Gate 执行 submit/approve/reject，
+> 真写回 L4 contract 表 + 全程审计（L2 提案/决策记录双写）。
+
+```bash
+cd /Users/bangcle/.openclaw/workspace/L4-proprietary/components/bangcle-contract
+
+# 装配（幂等：L4 contract 库 + L2 ai_kb 库 + domain/functions/actions）
+python3 scripts/register_contract_ontology.py --db <path> --ai-kb <path> --register "HT-2026-001:100000"
+
+# 登记（必须先登记才能操作，CWA 封闭世界）
+python3 cli/contractctl.py --db <path> ontology register "HT-2026-001:100000"
+
+# 生命周期动作（submit=auto 审；approve/reject=human 审）
+python3 cli/contractctl.py --db <path> ontology submit  1 --operator sales --idempotency-key k1
+python3 cli/contractctl.py --db <path> ontology approve 1 --operator boss --role "销售经理" --comment 同意
+python3 cli/contractctl.py --db <path> ontology reject  1 --operator boss --role "销售经理" --comment 驳回
+
+# 查询（L4 状态 + L2 metadata + 决策链双视角）
+python3 cli/contractctl.py --db <path> ontology status 1
+python3 cli/contractctl.py --db <path> ontology proposals --status committed
+```
+
+关键语义：**validated ≠ committed**（校验只留痕，审批后才写回）；agent 审 human 级动作 → `PermissionError`；非法状态流转留违规痕不写回；同 `idempotency_key` 重复动作幂等；Saga 写回失败逆序补偿 + 决策 `compensated` + 提案 `failed`。
+
+黄金基准：`python3 -m pytest tests/integration/test_ontology_bridge.py -q`（7 组：提交闭环/越权拒绝/非法转移/幂等重放/Saga 补偿/CWA 拒绝/CLI 冒烟）。
 
 ## 三、关键规则与红线（强制）
 

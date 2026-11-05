@@ -335,6 +335,13 @@ class Repository:
         ).fetchone()
         return dict(row) if row is not None else None
 
+    def get_contract_row_by_no(self, contract_no: str) -> Optional[Dict[str, Any]]:
+        """按合同编号取合同原始行，无则 None（登记幂等用）。"""
+        row = self._conn.execute(
+            "SELECT * FROM contracts WHERE contract_no = ?", (contract_no,)
+        ).fetchone()
+        return dict(row) if row is not None else None
+
     def get_contract_with_history(self, contract_id: int) -> Optional[Dict[str, Any]]:
         """取合同 + 审批实例 + 审计日志（JOIN 两表 + 审计表），无则 None。"""
         record = self.get_contract_row(contract_id)

@@ -6,6 +6,7 @@
   report <review_id> [--format md|xlsx]
   init-db
   oa-login
+  ontology register/submit/approve/reject/status/proposals  （Contract Ontology Bridge）
 
 分步进度：>10s 操作打印当前步骤（进度条铁律）。
 """
@@ -168,6 +169,104 @@ def cmd_oa_login(args) -> int:
     return 0 if ok else 1
 
 
+# =============================================================
+# ontology 子命令（Contract Ontology Bridge，P1-P3）
+# =============================================================
+
+def _bridge(args):
+    """构造 ContractOntologyBridge（ai_kb 默认与 contract db 同目录）。"""
+    from contract_review.ontology_bridge import ContractOntologyBridge
+    ai_kb = args.ai_kb or os.path.join(
+        os.path.dirname(args.db), "ai_kb.db",
+    )
+    return ContractOntologyBridge(args.db, ai_kb)
+
+
+def cmd_ont_register(args) -> int:
+    """登记合同为运营对象（幂等）。"""
+    from contract_review.ontology_bridge import ContractRegistry
+    reg = ContractRegistry(args.db, args.ai_kb)
+    for spec in args.specs:
+        no, _, amount = spec.rpartition(":")
+        try:
+            amt = float(amount or 0)
+        except ValueError:
+            print(f"❌ 无效登记规格（期望 NO:AMOUNT）: {spec}")
+            return 1
+        result = reg.register(no, title=args.title or f"合同 {no}", amount=amt,
+                              created_by=args.operator)
+        print("✅ 登记 %s → identity %s (canonical=%s, created=%s, status=%s)" % (
+            result["contract_no"], result["identity_id"],
+            result["canonical_key"], result["created"], result["status"],
+        ))
+    return 0
+
+
+def cmd_ont_submit(args) -> int:
+    bridge = _bridge(args)
+    _progress("submit %s (draft→review1, auto 审)" % args.contract_id)
+    r = bridge.submit(args.contract_id, args.operator,
+                      idempotency_key=args.idempotency_key)
+    return _print_action_result(r)
+
+
+def cmd_ont_approve(args) -> int:
+    bridge = _bridge(args)
+    _progress("approve %s (human 审)" % args.contract_id)
+    r = bridge.approve(args.contract_id, args.operator,
+                       approver_role=args.role, comment=args.comment,
+                       idempotency_key=args.idempotency_key)
+    return _print_action_result(r)
+
+
+def cmd_ont_reject(args) -> int:
+    bridge = _bridge(args)
+    _progress("reject %s (human 审)" % args.contract_id)
+    r = bridge.reject(args.contract_id, args.operator,
+                      approver_role=args.role, comment=args.comment,
+                      idempotency_key=args.idempotency_key)
+    return _print_action_result(r)
+
+
+def cmd_ont_status(args) -> int:
+    bridge = _bridge(args)
+    st = bridge.status(args.contract_id)
+    print(json.dumps(st, ensure_ascii=False, indent=2, default=str))
+    return 0
+
+
+def cmd_ont_proposals(args) -> int:
+    bridge = _bridge(args)
+    items = bridge.proposals(status=args.status, limit=args.limit)
+    if not items:
+        print("(无提案)")
+        return 0
+    for p in items:
+        print("#%s %-10s %-9s caller=%s/%s action=%s idem=%s" % (
+            p["id"], p["status"], p.get("action_type_id") or "",
+            p["caller_id"], p["caller_kind"],
+            p.get("params", {}).get("contract_no", ""),
+            p.get("idempotency_key") or "-",
+        ))
+    return 0
+
+
+def _print_action_result(r: dict) -> int:
+    """统一打印动作结果；失败返回 1（violations 输出）。"""
+    if not r["ok"]:
+        print("❌ 动作未执行")
+        print("  proposal : #%s (%s)" % (r.get("proposal_id"), r.get("proposal_status")))
+        for v in r.get("violations", []):
+            print("  violation: [%s] %s" % (v.get("stage"), v.get("message")))
+        return 1
+    print("✅ 动作已提交")
+    print("  proposal : #%s (%s)" % (r.get("proposal_id"), r.get("proposal_status")))
+    print("  contract : #%s → %s" % (r.get("contract_id"), r.get("contract_status")))
+    if r.get("idempotent_replay"):
+        print("  (幂等重放：同 idempotency_key 既有提案)")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="contractctl", description="Bangcle 合同智能审查")
     parser.add_argument("--db", default=None, help="SQLite 路径（默认组件 data/）")
@@ -190,6 +289,53 @@ def main(argv=None) -> int:
 
     p_login = sub.add_parser("oa-login", help="建立 OA 会话")
     p_login.set_defaults(func=cmd_oa_login)
+
+    # --- ontology 子命令（Contract Ontology Bridge） ---
+    p_ont = sub.add_parser("ontology", help="合同运营对象（Proposal Gate）")
+    ont_sub = p_ont.add_subparsers(dest="ont_cmd", required=True)
+
+    p_oreg = ont_sub.add_parser("register", help="登记合同为运营对象（幂等）")
+    p_oreg.add_argument("specs", nargs="+", help="NO:AMOUNT 列表（逗号分隔可多份）")
+    p_oreg.add_argument("--title", default=None, help="合同标题（默认 合同 NO）")
+    p_oreg.add_argument("--operator", default="contractctl", help="登记人")
+    p_oreg.add_argument("--ai-kb", default=None, help="L2 ai_kb 库路径（默认与 contract db 同目录）")
+    p_oreg.set_defaults(func=cmd_ont_register)
+
+    p_osub = ont_sub.add_parser("submit", help="提交审批（draft→review1，auto 审）")
+    p_osub.add_argument("contract_id", type=int)
+    p_osub.add_argument("--operator", default="contractctl", help="操作人")
+    p_osub.add_argument("--idempotency-key", default=None)
+    p_osub.add_argument("--ai-kb", default=None)
+    p_osub.set_defaults(func=cmd_ont_submit)
+
+    p_oapp = ont_sub.add_parser("approve", help="审批通过（human 审）")
+    p_oapp.add_argument("contract_id", type=int)
+    p_oapp.add_argument("--operator", default="contractctl", help="审批人")
+    p_oapp.add_argument("--role", default="", help="审批角色")
+    p_oapp.add_argument("--comment", default="")
+    p_oapp.add_argument("--idempotency-key", default=None)
+    p_oapp.add_argument("--ai-kb", default=None)
+    p_oapp.set_defaults(func=cmd_ont_approve)
+
+    p_orej = ont_sub.add_parser("reject", help="驳回（human 审）")
+    p_orej.add_argument("contract_id", type=int)
+    p_orej.add_argument("--operator", default="contractctl", help="审批人")
+    p_orej.add_argument("--role", default="", help="审批角色")
+    p_orej.add_argument("--comment", default="")
+    p_orej.add_argument("--idempotency-key", default=None)
+    p_orej.add_argument("--ai-kb", default=None)
+    p_orej.set_defaults(func=cmd_ont_reject)
+
+    p_ost = ont_sub.add_parser("status", help="合同双视角状态")
+    p_ost.add_argument("contract_id", type=int)
+    p_ost.add_argument("--ai-kb", default=None)
+    p_ost.set_defaults(func=cmd_ont_status)
+
+    p_op = ont_sub.add_parser("proposals", help="列出提案（可按五态过滤）")
+    p_op.add_argument("--status", default=None, help="pending/validated/rejected/committed/failed")
+    p_op.add_argument("--limit", type=int, default=100)
+    p_op.add_argument("--ai-kb", default=None)
+    p_op.set_defaults(func=cmd_ont_proposals)
 
     args = parser.parse_args(argv)
     if args.out_dir is None:

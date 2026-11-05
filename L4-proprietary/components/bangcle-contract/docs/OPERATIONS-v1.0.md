@@ -8,6 +8,7 @@
 | 依据 | PRD / DESIGN-DETAIL / VERIFICATION v1.0 |
 
 > 本期范围：MVP 四步分析闭环（获取→数字化→风险→product-kb 满足度→报告），CLI 驱动。
+> v1.1：新增 Contract Ontology Bridge（合同运营对象 + Proposal Gate + 写回/补偿），CLI `ontology` 子命令。
 
 ---
 
@@ -83,6 +84,38 @@ contractctl report <review_id> --format xlsx
 
 ---
 
+## 4a. 合同运营对象（Contract Ontology Bridge，v1.1）
+
+> 合同作为 L2 运营对象（object_type=`contract`）经 Proposal Gate 执行 submit/approve/reject；
+> 写回真实生效（L4 contract 表）并全程审计（L2 提案/决策记录双写）。依赖：L2 ai-knowledge-base + L3 contract-management（同仓库 path 引用）。
+
+```bash
+# 1) 装配（幂等：L4 contract 库 + L2 ai_kb 库 + domain/functions/actions）
+contractctl ontology register-contract-ontology --db <path> --ai-kb <path>   # 或 scripts/register_contract_ontology.py
+
+# 2) 登记合同为运营对象（幂等；必须先登记才能操作，CWA 封闭世界）
+contractctl --db <path> ontology register "HT-2026-001:100000"
+
+# 3) 生命周期动作（submit=auto 审；approve/reject=human 审）
+contractctl --db <path> ontology submit  1 --operator sales --idempotency-key k1
+contractctl --db <path> ontology approve 1 --operator boss --role "销售经理" --comment 同意
+contractctl --db <path> ontology reject  1 --operator boss --role "销售经理" --comment 驳回
+
+# 4) 查询
+contractctl --db <path> ontology status    1     # L4 状态 + L2 metadata + 决策链双视角
+contractctl --db <path> ontology proposals --status committed
+```
+
+**关键语义：**
+- `validated ≠ committed`：校验通过只留痕，审批（review）后才 commit 写回；
+- 越权：agent 审 human 级动作 → `PermissionError`（L2 硬拒绝）；
+- 非法状态流转（如未 submit 直接 approve）→ 提案留违规痕（`illegal_transition`），不写回；
+- 幂等：同 `idempotency_key` 重复动作返回既有提案，无二次副作用；
+- 写回失败（Saga 第二步注入故障）→ 逆序补偿，L4 回滚 + 决策记录 `compensated` + 提案 `failed`；
+- 补偿不可用（无 before 快照）→ 人工对账工单记录，不静默。
+
+---
+
 ## 5. OA / 凭据运行说明
 
 - OA 为 **泛微 e-cology 9 Cube**，主键 `billid`；会话经 IAM SSO 换票（IAM 登录后点「OA协同办公平台」应用卡片换票，直导 OA / 跨 context 注入 cookie 均不建立 ecology 会话）。
@@ -126,3 +159,4 @@ contractctl report <review_id> --format xlsx
 | 2026-10-27 | v1.0 | 初版：MVP 分析闭环运维 + Cube/浏览器兜底排查 |
 | 2026-10-29 | v1.0 | 更正 OA 会话有效期为实测约 2h idle（原误记 12h）；补换票/落盘/验证码/DOM 判定/E2E skip 等运维事实 |
 | 2026-10-29 | v1.0 | OA 审查改用合同附件**原文全文**（原仅审卡片字段摘要）；附件临时目录**即用即焚**（finally rmtree，不留存/不入库）；新增 `contract_review/oa_text.py` + 5 条回归（含临时目录焚毁集成测试），全量 127 passed |
+| 2026-11-05 | v1.1 | 新增 Contract Ontology Bridge 运维：`ontology register/submit/approve/reject/status/proposals` 子命令 + 装配脚本 + 关键语义（CWA 登记前置 / validated≠committed / 越权拒绝 / 幂等 / Saga 补偿） |
