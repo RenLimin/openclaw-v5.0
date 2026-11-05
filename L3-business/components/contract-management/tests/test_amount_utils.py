@@ -28,7 +28,8 @@ def test_single_zero_position():
 
 @pytest.mark.parametrize("amount,expected", [
     (1.1, "壹元壹角"),
-    (0.05, "零元伍分"),
+    # 2026-11-05 合并 sandbox 权威实现：0.05 → "伍分"（旧版"零元伍分"已废弃）
+    (0.05, "伍分"),
     (1.2, "壹元贰角"),
 ])
 def test_decimal_branches(amount, expected):

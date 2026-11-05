@@ -10,6 +10,7 @@ from pptx import Presentation
 from PyPDF2 import PdfReader
 from typing import List, Dict, Optional, Tuple, Any
 from .db import ProductKBDB
+from .identity import ProductIdentityService, canonical_key
 
 # Regex for version extraction
 VERSION_PATTERN = re.compile(r'[Vv](?:ersion)?\s*(\d+(?:\.\d+)+)')
@@ -19,6 +20,9 @@ VERSION_PATTERN2 = re.compile(r'(\d+(?:\.\d+)+)')
 class PriceImporter:
     def __init__(self, db: ProductKBDB):
         self.db = db
+        # 确保身份表就位（幂等）；身份服务用于导入幂等与跨源别名
+        self.db.init_identity_tables()
+        self.identity = ProductIdentityService(db)
         # Map raw line name to normalized code
         self.line_name_map = {
             "内容安全产品线": "content_security",
@@ -131,16 +135,25 @@ class PriceImporter:
                 stats["category_ids"].add(category_id)
                 stats["categories"] = len(stats["category_ids"])
 
-            # Get existing product
-            product = self.db.get_product_by_name(product_name.strip())
+            # 定位既有产品：canonical_key 优先（幂等），名称精确匹配兜底
+            pname = product_name.strip()
             product_id = None
-            if not product:
+            ident = self.identity.get_by_canonical(canonical_key(pname)) \
+                if hasattr(self.identity, "get_by_canonical") else None
+            if ident is not None:
+                product_id = ident["product_id"]
+            else:
+                product = self.db.get_product_by_name(pname)
+                if product:
+                    product_id = product["id"]
+
+            if product_id is None:
                 # Create new product
                 product_id = self.db.create_product(
                     line_id=line_id,
                     category_id=category_id,
                     family=(row[8] or "").strip() or None,
-                    name=product_name.strip(),
+                    name=pname,
                     aliases=None,
                     code=product_code,
                     version_latest=version,
@@ -148,12 +161,22 @@ class PriceImporter:
                     status=("第三方产品/服务" if "非梆梆" in product_name else (sale_status.strip() if sale_status else "正常销售")),
                     summary=service_desc
                 )
+                # 注册权威身份 + price_excel 跨源别名（原始名、编码）
+                iid = self.identity.register(product_id, display_name=pname)
+                self.identity.add_alias(iid, "price_excel", pname, 1.0)
+                if product_code:
+                    self.identity.add_alias(iid, "internal", str(product_code), 1.0)
                 stats["products"] += 1
             else:
-                product_id = product["id"]
                 # Update version if newer
-                if version and (not product["version_latest"] or version > product["version_latest"]):
-                    self.db.update_product(product_id, version_latest=version)
+                if version:
+                    cur = self.db.get_product(product_id)
+                    if not cur["version_latest"] or version > cur["version_latest"]:
+                        self.db.update_product(product_id, version_latest=version)
+                # 补登 price_excel 别名（历史产品首次经导入器时）
+                iid_row = self.identity.get_by_product_id(product_id)
+                if iid_row is not None and self.identity.resolve("price_excel", pname) is None:
+                    self.identity.add_alias(iid_row["id"], "price_excel", pname, 1.0)
 
             # Create/update SKU
             sku_id = self.db.create_or_update_sku(

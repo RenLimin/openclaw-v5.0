@@ -88,13 +88,36 @@ result = handler.call_tool("kb_query", {"question": "..."})
 服务层: api/ (REST) + mcp/ (MCP) + cli/ (CLI) + guardrails/ (风险防护)
 ```
 
+## 运营本体（Operational Ontology）
+
+> Palantir 范式在本组件的落地：Object（读模型）+ **Action（动词）** + 写治理。设计见 `docs/DESIGN-DETAIL-operational-ontology-v1.0.md`。
+
+| 层 | 模块 | 能力 |
+|---|---|---|
+| **P1 身份层** | `ai_kb/ontology/identity.py` | 权威身份注册/别名/解析/归并（CWA 边界） |
+| **P2 动力学层** | `ai_kb/ontology/actions.py` | ActionRegistry：动作/函数/写回步骤注册（装配期 gate 隔离） |
+| **P3 Proposal Gate** | `ai_kb/ontology/proposal.py` · `decision.py` | LLM 只提议 → 符号层校验 → review/commit 才写回；决策即数据 |
+| **P3 输出侧校验** | `ai_kb/guardrails/output_guard.py` | ABAC → JSON Schema → 前置条件 → 状态机 固定链 |
+| **P4 连接器** | `ai_kb/ontology/connectors/` | WritebackConnector 抽象 + Saga 补偿 + 人工对账降级 |
+
+**运行时接线**：REST `/ontology/proposals` 与 MCP `get_ontology_services` 均调用 `kb.init_ontology_tables()`（幂等，v8-v11 全表）。装配期注册 action/function 用 L3 `scripts/register_ontology_functions.py`（gate 开启），运行期 gate 关闭、结构注册一律拒绝。
+
+```bash
+# 装配期（一次性，注册 L3 handler + action types）
+python3 ../contract-management/scripts/register_ontology_functions.py <db_path>
+
+# 运行期（只读发现 + propose）
+# REST: GET /ontology/action-types · POST /ontology/proposals
+```
+
 ## 文档
 
 - `docs/PRD-v1.0.md` — 产品需求
 - `docs/DESIGN-OUTLINE-v1.0.md` — 总体设计
-- `docs/DESIGN-DETAIL-*.md` — 详细设计（数据模型/接入层/检索层/服务层/风险防护/模板化）
+- `docs/DESIGN-DETAIL-*.md` — 详细设计（数据模型/接入层/检索层/服务层/风险防护/模板化/运营本体）
 - `docs/OPERATIONS-v1.0.md` — 运维手册
 - `docs/IMPLEMENTATION-PLAN-v1.0.md` — 实施计划
+- `docs/VERIFICATION-P{1-4}-*.md` — 运营本体 P1-P4 验收
 
 ## 测试
 

@@ -155,6 +155,82 @@ class ProductKBDB:
         self.conn.commit()
         cursor.close()
 
+    def init_identity_tables(self):
+        """P1 权威身份层（migration v12）：product_identity / product_alias.
+
+        增量幂等：CREATE TABLE IF NOT EXISTS，不动既有 product/sku 表与数据。
+        schema 与 L2 ont_identity(v8) 语义对齐：
+        - product_identity: 稳定 canonical_key + 软归并 merged_into；
+        - product_alias: 跨源标识，UNIQUE(source_system, source_key)。
+        """
+        if not self.conn:
+            self.connect()
+        cursor = self.conn.cursor()
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS kb_migration (
+            version INTEGER PRIMARY KEY,
+            name TEXT,
+            applied_at DATETIME NOT NULL
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS product_identity (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id    INTEGER NOT NULL UNIQUE REFERENCES product(id),
+            canonical_key TEXT NOT NULL UNIQUE,
+            display_name  TEXT,
+            status        TEXT DEFAULT 'active',
+            merged_into   INTEGER REFERENCES product_identity(id),
+            metadata      TEXT,
+            created_at    DATETIME NOT NULL,
+            updated_at    DATETIME NOT NULL
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS product_alias (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            identity_id   INTEGER NOT NULL REFERENCES product_identity(id),
+            source_system TEXT NOT NULL,
+            source_key    TEXT NOT NULL,
+            confidence    REAL,
+            created_at    DATETIME NOT NULL,
+            UNIQUE (source_system, source_key)
+        )
+        """)
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_product_alias_identity
+        ON product_alias(identity_id)
+        """)
+
+        # P4 审计（merge/unmerge 全留痕，migration v13）
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS identity_audit (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            identity_id INTEGER NOT NULL,
+            op          TEXT NOT NULL,
+            actor       TEXT,
+            details     TEXT,
+            ts          DATETIME NOT NULL
+        )
+        """)
+
+        self.conn.commit()
+        cursor.close()
+
+        for ver, nm in ((12, "product_identity"), (13, "identity_audit")):
+            row = self.execute(
+                "SELECT version FROM kb_migration WHERE version = ?", (ver,)
+            ).fetchone()
+            if row is None:
+                self.execute(
+                    "INSERT INTO kb_migration (version, name, applied_at) VALUES (?, ?, ?)",
+                    (ver, nm, self.get_now()),
+                )
+                self.commit()
+
     def get_now(self) -> str:
         return datetime.datetime.now().isoformat()
 

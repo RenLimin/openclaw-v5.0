@@ -53,6 +53,32 @@ class BatchStatusRequest(BaseModel):
     status: str
 
 
+class OntologyProposeRequest(BaseModel):
+    instance_code: str
+    action: str
+    object_refs: List[str]
+    params: Dict[str, Any] = {}
+    caller_id: str = "agent"
+    caller_kind: str = "agent"
+    rationale: Optional[str] = None
+    idempotency_key: Optional[str] = None
+
+
+class OntologyReviewRequest(BaseModel):
+    instance_code: str
+    proposal_id: int
+    decision: str  # approve | reject
+    reviewer: str = "human"
+    reviewer_kind: str = "human"
+    auto_commit: bool = True
+
+
+class OntologyQueryRequest(BaseModel):
+    instance_code: str
+    status: Optional[str] = None
+    limit: int = 100
+
+
 class InstanceCreateRequest(BaseModel):
     code: str
     name: str
@@ -79,6 +105,28 @@ def _load_instances(db_path: str):
             _service_registry[domain['code']] = AIKBService(db_path, domain['code'])
         except Exception as e:
             print(f"Warning: failed to load instance {domain['code']}: {e}")
+
+
+_ont_registry: Dict[str, Any] = {}  # instance_code -> ProposalService
+
+
+def _get_ontology_service(instance_code: str):
+    """Return ProposalService for an instance; build lazily (read-only runtime)."""
+    if instance_code not in _service_registry:
+        raise HTTPException(status_code=404, detail=f"Instance {instance_code} not found or not loaded")
+    if instance_code not in _ont_registry:
+        from ai_kb.ontology import ActionRegistry, AssemblyGate, ProposalService
+        from ai_kb.ontology.decision import DecisionService
+
+        kb = _service_registry[instance_code].kb
+        kb.init_ontology_tables()
+        # 运行期 gate 关闭：结构注册一律拒绝
+        registry = ActionRegistry(kb, gate=AssemblyGate(open_by_default=False))
+        decisions = DecisionService(kb)
+        _ont_registry[instance_code] = ProposalService(
+            kb, registry, decisions=decisions
+        )
+    return _ont_registry[instance_code]
 
 
 # === Instance management ===
@@ -259,6 +307,53 @@ def low_score_knowledge(instance_code: str, threshold: int = 1):
     """List low-score knowledge"""
     service = _get_service(instance_code)
     return service.list_low_score_knowledge(threshold)
+
+
+# === Operational Ontology: proposal gate (§4) ===
+
+@app.post("/ontology/proposals")
+def ontology_propose(req: OntologyProposeRequest):
+    """Create a pending proposal (zero business writes)."""
+    proposals = _get_ontology_service(req.instance_code)
+    try:
+        return proposals.propose_action(
+            req.instance_code, req.action, req.object_refs, req.params,
+            caller_id=req.caller_id, caller_kind=req.caller_kind,
+            rationale=req.rationale, idempotency_key=req.idempotency_key,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.get("/ontology/proposals")
+def ontology_list_proposals(instance_code: str, status: Optional[str] = None,
+                            limit: int = 100):
+    """List proposals (status query). Read-only."""
+    proposals = _get_ontology_service(instance_code)
+    try:
+        return {"proposals": proposals.list_proposals(
+            instance_code, status=status, limit=limit
+        )}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.post("/ontology/proposals/review")
+def ontology_review(req: OntologyReviewRequest):
+    """Human review; approve triggers internal commit only.
+
+    No direct execute/write/commit endpoint is exposed.
+    """
+    proposals = _get_ontology_service(req.instance_code)
+    try:
+        return proposals.review(
+            req.proposal_id, req.decision, req.reviewer,
+            reviewer_kind=req.reviewer_kind, auto_commit=req.auto_commit,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # === MCP tools endpoint (JSON-RPC style) ===

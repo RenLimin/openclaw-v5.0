@@ -660,6 +660,226 @@ class AIKB:
         cursor = self.execute("SELECT * FROM domain ORDER BY name")
         return cursor.fetchall()
 
+    # --- Operational ontology: P1 identity layer (migration v8) ---
+    def init_ontology_identity_tables(self):
+        """Create ont_identity / ont_identity_alias tables and register migration v8.
+
+        Incremental only: existing tables and read paths are untouched.
+        Idempotent: safe to call on an already migrated database.
+        """
+        if not self.conn:
+            self.connect()
+
+        cursor = self.conn.cursor()
+
+        # 权威身份（详设 §2.1）
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_identity (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain_id        INTEGER NOT NULL REFERENCES domain(id),
+            object_type      TEXT NOT NULL,
+            canonical_key    TEXT NOT NULL,
+            system_of_record TEXT NOT NULL,
+            display_name     TEXT,
+            status           TEXT DEFAULT 'active',
+            merged_into      INTEGER REFERENCES ont_identity(id),
+            metadata         TEXT,
+            created_at       DATETIME NOT NULL,
+            updated_at       DATETIME NOT NULL,
+            UNIQUE (domain_id, object_type, canonical_key)
+        )
+        """)
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ont_identity_sor
+        ON ont_identity(system_of_record)
+        """)
+
+        # 跨源别名（详设 §2.1）
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_identity_alias (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            identity_id   INTEGER NOT NULL REFERENCES ont_identity(id),
+            source_system TEXT NOT NULL,
+            source_key    TEXT NOT NULL,
+            confidence    REAL,
+            created_at    DATETIME NOT NULL,
+            UNIQUE (source_system, source_key)
+        )
+        """)
+
+        self.conn.commit()
+        cursor.close()
+
+        # 登记 migration v8（幂等：已登记则跳过）
+        if self.get_current_migration_version() < 8:
+            self.apply_migration(8, "operational_ontology_identity")
+
+    # --- Operational ontology: P2 kinetic layer (migration v9) ---
+    def init_ontology_kinetic_tables(self):
+        """Create ont_action_type / ont_function_def tables and register migration v9.
+
+        Incremental only: existing tables and read paths are untouched.
+        Idempotent: safe to call on an already migrated database.
+        DDL per DESIGN-DETAIL-operational-ontology-v1.0 §2.2.
+        """
+        if not self.conn:
+            self.connect()
+
+        cursor = self.conn.cursor()
+
+        # 动作类型（结构通道，装配期注册）
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_action_type (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain_id         INTEGER NOT NULL REFERENCES domain(id),
+            name              TEXT NOT NULL,
+            object_type       TEXT NOT NULL,
+            params_schema     TEXT NOT NULL,
+            precondition      TEXT,
+            required_approval TEXT NOT NULL DEFAULT 'none',
+            writeback_target  TEXT,
+            version           INTEGER DEFAULT 1,
+            status            TEXT DEFAULT 'active',
+            created_at        DATETIME NOT NULL,
+            updated_at        DATETIME NOT NULL,
+            UNIQUE (domain_id, name, version)
+        )
+        """)
+
+        # 函数定义（handler_ref 由 L3/L4 装配期注入，L2 惰性加载）
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_function_def (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain_id     INTEGER NOT NULL REFERENCES domain(id),
+            name          TEXT NOT NULL,
+            kind          TEXT NOT NULL,
+            handler_ref   TEXT NOT NULL,
+            io_schema     TEXT,
+            deterministic INTEGER DEFAULT 1,
+            version       INTEGER DEFAULT 1,
+            status        TEXT DEFAULT 'active',
+            created_at    DATETIME NOT NULL,
+            updated_at    DATETIME NOT NULL,
+            UNIQUE (domain_id, name, version)
+        )
+        """)
+
+        self.conn.commit()
+        cursor.close()
+
+        # 登记 migration v9（幂等：已登记则跳过）
+        if self.get_current_migration_version() < 9:
+            self.apply_migration(9, "operational_ontology_kinetic")
+
+    # --- Operational ontology: P3 proposal gate (migration v10) ---
+    def init_ontology_proposal_tables(self):
+        """Create ont_proposal / ont_decision_record tables, register v10.
+
+        Incremental only: existing tables and read paths are untouched.
+        Idempotent: safe on an already migrated database.
+        DDL strictly per DESIGN-DETAIL-operational-ontology-v1.0 §2.3.
+        """
+        if not self.conn:
+            self.connect()
+
+        cursor = self.conn.cursor()
+
+        # 写治理提案：五态状态机（pending|validated|rejected|committed|failed）
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_proposal (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain_id         INTEGER NOT NULL REFERENCES domain(id),
+            action_type_id    INTEGER NOT NULL REFERENCES ont_action_type(id),
+            caller_id         TEXT NOT NULL,
+            caller_kind       TEXT NOT NULL,
+            params            TEXT NOT NULL,
+            target_snapshot   TEXT NOT NULL,
+            status            TEXT NOT NULL DEFAULT 'pending',
+            validation_result TEXT,
+            review_by         TEXT,
+            review_at         DATETIME,
+            idempotency_key   TEXT UNIQUE,
+            created_at        DATETIME NOT NULL,
+            committed_at      DATETIME
+        )
+        """)
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ont_proposal_status
+        ON ont_proposal(status)
+        """)
+
+        # 决策对象：commit / 人工直录 / 归并均留痕
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_decision_record (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            proposal_id INTEGER REFERENCES ont_proposal(id),
+            domain_id   INTEGER NOT NULL REFERENCES domain(id),
+            action_type TEXT NOT NULL,
+            object_refs TEXT NOT NULL,
+            actor_id    TEXT NOT NULL,
+            actor_kind  TEXT NOT NULL,
+            rationale   TEXT,
+            change_set  TEXT NOT NULL,
+            evidence    TEXT,
+            result      TEXT NOT NULL,
+            ts          DATETIME NOT NULL
+        )
+        """)
+        cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ont_decision_ts
+        ON ont_decision_record(ts)
+        """)
+
+        self.conn.commit()
+        cursor.close()
+
+        # 登记 migration v10（幂等：已登记则跳过）
+        if self.get_current_migration_version() < 10:
+            self.apply_migration(10, "operational_ontology_proposal")
+
+    # --- Operational ontology: P4 saga writeback steps (migration v11) ---
+    def init_ontology_saga_tables(self):
+        """Create ont_writeback_step table, register v11.
+
+        P4: an action may bind MULTIPLE ordered writeback targets.
+        Independent table (does not alter ont_action_type); each row is one
+        ordered step (connector_key resolved from ProposalService.connectors).
+        Single-target actions keep using ont_action_type.writeback_target.
+        """
+        if not self.conn:
+            self.connect()
+        cursor = self.conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_writeback_step (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            action_type_id INTEGER NOT NULL REFERENCES ont_action_type(id),
+            seq            INTEGER NOT NULL,
+            connector_key  TEXT NOT NULL,
+            payload_schema TEXT,
+            created_at     DATETIME NOT NULL,
+            UNIQUE (action_type_id, seq)
+        )
+        """)
+        self.conn.commit()
+        cursor.close()
+        if self.get_current_migration_version() < 11:
+            self.apply_migration(11, "operational_ontology_saga")
+
+    # --- Operational ontology: one-shot bootstrap for runtime entrypoints ---
+    def init_ontology_tables(self):
+        """Create ALL ontology tables (v8-v11) in dependency order.
+
+        Idempotent: each sub-init is CREATE IF NOT EXISTS + guarded migration.
+        Used by runtime entrypoints (REST / MCP) so that proposal/action/identity/
+        saga tables all exist even on a fresh database. Without this, a fresh DB
+        only gets proposal tables and propose_action fails with
+        'no such table: ont_action_type'.
+        """
+        self.init_ontology_identity_tables()
+        self.init_ontology_kinetic_tables()
+        self.init_ontology_proposal_tables()
+        self.init_ontology_saga_tables()
+
     # --- Migration ---
     def get_current_migration_version(self) -> int:
         """Get the highest applied migration version"""

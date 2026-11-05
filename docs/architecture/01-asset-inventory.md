@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-04 16:23 UTC+08:00
+最后生成：2026-11-05 14:51 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -270,10 +270,74 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `4b5fff8` |
-| Commit 数 | 591 |
+| HEAD | `80c7e33` |
+| Commit 数 | 592 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
+
+---
+
+## L2 / L3 / L4 组件资产
+
+### L2 基础设施
+
+| 组件 | Python 模块 | 文档 | 测试 | 路径 |
+|---|---|---|---|---|
+| `.deprecated` | 0 | 0 | 0 | `L2-infra/components/.deprecated` |
+| `ai-knowledge-base` | 86 | 20 | 9 | `L2-infra/components/ai-knowledge-base` |
+| `backup` | 0 | 0 | 0 | `L2-infra/components/backup` |
+| `browser-automation` | 0 | 0 | 0 | `L2-infra/components/browser-automation` |
+| `config` | 6 | 0 | 2 | `L2-infra/components/config` |
+| `context-management` | 5 | 0 | 1 | `L2-infra/components/context-management` |
+| `credentials` | 3 | 0 | 1 | `L2-infra/components/credentials` |
+| `delivery-quality` | 2 | 0 | 0 | `L2-infra/components/delivery-quality` |
+| `gateway-safety` | 4 | 0 | 1 | `L2-infra/components/gateway-safety` |
+| `knowledge-base` | 19 | 0 | 6 | `L2-infra/components/knowledge-base` |
+| `logs` | 3 | 0 | 0 | `L2-infra/components/logs` |
+| `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
+| `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |
+| `model-scheduling` | 16 | 0 | 2 | `L2-infra/components/model-scheduling` |
+| `observability` | 9 | 0 | 1 | `L2-infra/components/observability` |
+| `ocr-digitalization` | 24 | 0 | 7 | `L2-infra/components/ocr-digitalization` |
+| `office-generation` | 16 | 0 | 6 | `L2-infra/components/office-generation` |
+| `persistence` | 8 | 0 | 1 | `L2-infra/components/persistence` |
+| `role-library` | 0 | 0 | 0 | `L2-infra/components/role-library` |
+| `sandbox` | 9 | 0 | 1 | `L2-infra/components/sandbox` |
+| `session-boundary-guard` | 0 | 0 | 0 | `L2-infra/components/session-boundary-guard` |
+| `session-isolation` | 17 | 0 | 6 | `L2-infra/components/session-isolation` |
+| `session-recovery` | 12 | 0 | 5 | `L2-infra/components/session-recovery` |
+| `tool-policy` | 0 | 0 | 0 | `L2-infra/components/tool-policy` |
+| `web-common` | 13 | 4 | 2 | `L2-infra/components/web-common` |
+| `workspace-temp-cleanup` | 2 | 0 | 1 | `L2-infra/components/workspace-temp-cleanup` |
+
+### L3 通用业务
+
+| 组件 | Python 模块 | 文档 | 测试 | 路径 |
+|---|---|---|---|---|
+| `cissp-learning` | 0 | 0 | 0 | `L3-business/components/cissp-learning` |
+| `contract-approval` | 0 | 0 | 0 | `L3-business/components/contract-approval` |
+| `contract-management` | 27 | 6 | 10 | `L3-business/components/contract-management` |
+| `delivery-management-framework` | 40 | 0 | 10 | `L3-business/components/delivery-management-framework` |
+| `dms-framework` | 50 | 0 | 17 | `L3-business/components/dms-framework` |
+| `finance-engine` | 51 | 0 | 12 | `L3-business/components/finance-engine` |
+| `health-engine` | 0 | 0 | 0 | `L3-business/components/health-engine` |
+| `health-management` | 30 | 0 | 7 | `L3-business/components/health-management` |
+| `office-business` | 0 | 0 | 0 | `L3-business/components/office-business` |
+
+### L4 专有业务
+
+| 组件 | Python 模块 | 文档 | 测试 | 路径 |
+|---|---|---|---|---|
+| `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
+| `bangcle-contract` | 62 | 9 | 3 | `L4-proprietary/components/bangcle-contract` |
+| `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
+| `bdms` | 183 | 9 | 19 | `L4-proprietary/components/bdms` |
+| `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
+| `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |
+| `fin-l4` | 58 | 0 | 14 | `L4-proprietary/components/fin-l4` |
+| `office-contract` | 15 | 0 | 3 | `L4-proprietary/components/office-contract` |
+| `product-kb` | 15 | 14 | 3 | `L4-proprietary/components/product-kb` |
+| `revenue-recognition` | 21 | 0 | 0 | `L4-proprietary/components/revenue-recognition` |
 
 ---
 

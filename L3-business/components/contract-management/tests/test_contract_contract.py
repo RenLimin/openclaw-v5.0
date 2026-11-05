@@ -10,8 +10,26 @@ def test_all_exports_present():
 
 
 def test_expected_export_count():
-    # DETAIL §7 冻结的 18 个公共符号
-    assert len(cm.__all__) == 18
+    # 2026-11-05 P2 合并：原 DETAIL §7 冻结的 18 个符号必须全部保留（向后兼容），
+    # P2 新增解析/审核/适配 15 个符号。此处断言原 18 个仍在，不锁死总数。
+    p1_frozen = [
+        "Contract", "ApprovalRecord", "AuditLogEntry", "RiskReport",
+        "RiskFinding", "ApprovalConfig", "CONTRACT_STATUSES", "VALID_TRANSITIONS",
+        "ApprovalStateMachine", "get_approval_config", "can_transition",
+        "next_approval_status", "scan_text", "scan_text_dict", "RiskRule",
+        "CHECK_RULES", "amount_to_chinese", "OaProvider",
+    ]
+    missing = [n for n in p1_frozen if n not in cm.__all__]
+    assert missing == [], f"P1 冻结符号丢失: {missing}"
+    # P2 新增符号
+    p2_new = [
+        "ContractClause", "ParsedContract", "parse_contract", "CLAUSE_CATEGORIES",
+        "AuditCriterion", "AUDIT_CRITERIA", "get_criterion_by_id",
+        "get_criteria_by_category", "get_all_categories", "AuditResult",
+        "AuditReport", "audit_contract", "format_audit_report", "HANDLERS",
+    ]
+    missing_p2 = [n for n in p2_new if n not in cm.__all__]
+    assert missing_p2 == [], f"P2 新增符号丢失: {missing_p2}"
 
 
 def test_state_machine_fn_signature():

@@ -602,8 +602,38 @@ def build_document(data: dict) -> str:
     ):
         lines += section
 
+    lines += render_components()
     lines += render_l3_l4()
     return "\n".join(lines) + "\n"
+
+
+def render_components() -> list:
+    """L2/L3/L4 组件资产扫描（文件系统据实登记）。
+
+    逐组件目录统计：Python 模块数 / 文档数 / 测试数，供资产盘点核对。
+    不解析语义，只记存在与规模；与 L3/L4 手工登记表互补。
+    """
+    layers = [
+        ("L2 基础设施", "L2-infra/components"),
+        ("L3 通用业务", "L3-business/components"),
+        ("L4 专有业务", "L4-proprietary/components"),
+    ]
+    lines = ["---", "", "## L2 / L3 / L4 组件资产", ""]
+    for title, base in layers:
+        base_path = REPO_ROOT / base
+        if not base_path.is_dir():
+            continue
+        lines += [f"### {title}", "",
+                  "| 组件 | Python 模块 | 文档 | 测试 | 路径 |",
+                  "|---|---|---|---|---|"]
+        for comp in sorted(p for p in base_path.iterdir() if p.is_dir()):
+            py = len(list(comp.rglob("*.py")))
+            docs = len(list(comp.glob("docs/*.md"))) if (comp / "docs").is_dir() else 0
+            tests = len(list(comp.glob("tests/test_*.py"))) if (comp / "tests").is_dir() else 0
+            rel = f"{base}/{comp.name}"
+            lines.append(f"| `{comp.name}` | {py} | {docs} | {tests} | `{rel}` |")
+        lines.append("")
+    return lines
 
 
 def render_l3_l4() -> list:
