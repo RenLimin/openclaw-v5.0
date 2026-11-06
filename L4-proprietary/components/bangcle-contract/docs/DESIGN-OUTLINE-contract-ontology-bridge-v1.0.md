@@ -1,7 +1,7 @@
 # DESIGN-OUTLINE — L4 bangcle-contract × 运营本体桥（Contract Ontology Bridge）v1.0
 
 > L4 · bangcle-contract · 依据：RESEARCH-palantir-oncology-v1.1 §5 P0/P1 + DESIGN-DETAIL-operational-ontology-v1.0（已通过）+ DESIGN-DETAIL-contract-management-v1.0 §7（已通过）
-> 版本 v1.0 · 状态：**待 Rex 评审** · 2026-11-03 · Jerry 🦞
+> 版本 v1.0 · 状态：**已验收 P1–P3**（Rex 2026-11-06 授权收口；实现 `a1efeb4`，黄金 7 基准 + L4 194/L3 115 回归绿）· **P4 泛微真写回不在本立项范围**，另立项（见 `docs/research/PROPOSAL-palantir-p4-oa-writeback-v1.0.md`） · 2026-11-03 · Jerry 🦞
 > 关联提交：L2 运营本体 P1–P4（`ae3a1b9`，114 tests 绿）；L3 contract-management P1/P2（42 tests 绿）
 
 ---

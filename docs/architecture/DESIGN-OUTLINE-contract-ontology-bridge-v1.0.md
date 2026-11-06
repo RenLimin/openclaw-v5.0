@@ -1,6 +1,8 @@
 # DESIGN-OUTLINE — Contract Ontology Bridge v1.0（重做版 · 待评审）
 
 > 状态：**待 Rex 评审**。通过后才进 DESIGN-DETAIL。
+>
+> 📌 **关系指针（2026-11-06 追加，不改写历史正文）**：本文档属 **11-04 旧路线——只读/持久化桥**（P1 字段映射只读适配 + P2 本地持久化/状态机接线，代码 `ontology/mapper.py`、`services/oa/cube_provider.py`，实现 `f0a7b57`/`33a562a`）。它与 **11-05 Palantir 范式动词桥**（L4 `contract_review/ontology_bridge/`，合同登记为 L2 运营对象 + Proposal Gate + Saga 真写回，实现 `a1efeb4`，设计见 `L4-proprietary/components/bangcle-contract/docs/DESIGN-OUTLINE-contract-ontology-bridge-v1.0.md`）是**两条并存路线**：旧桥解决“读得准/对得齐”，动词桥解决“可审计地写回”。两者代码均在、用途不同；P1–P3 已由 Rex 2026-11-06 验收。
 > 重做原因：压缩摘要继承的 OUTLINE / 提交 `d6470ec` / 锚点（`ProposalService`、`SagaStep`、`ACTION_TYPES`、`register_action_type` 等）在当前仓库**全部查无实证**（全分支/refs/reflog/文件系统）。本版仅基于**亲眼通读的真实代码**重立。
 > 日期：2026-11-04 · Jerry 🦞
 

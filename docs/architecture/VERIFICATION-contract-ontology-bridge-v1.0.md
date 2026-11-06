@@ -3,6 +3,8 @@
 > 前置：OUTLINE `ac9faff`、DETAIL `f6ff800`、PLAN `d5c99fc` 均获 Rex 评审通过。
 > 实现：P1 `f0a7b57`、P2 `33a5a2a`（均已在远端 `main`）。
 > 验收人：Jerry 🦞（独立验收，不依赖子任务自报）· 2026-11-04 · Python 3.14.7 / pytest 9.0.3
+>
+> 📌 **关系指针（2026-11-06 追加）**：本验收对应 11-04 只读/持久化桥旧路线（P1/P2）。Palantir 动词桥（11-05，L4 ontology_bridge，`a1efeb4`）的验收见 `L4-proprietary/components/bangcle-contract/docs/VERIFICATION-contract-ontology-bridge-v1.0.md`；两路线并存，关系见同目录 OUTLINE 顶部指针。
 
 ## 1. 交付验收 7 步法
 

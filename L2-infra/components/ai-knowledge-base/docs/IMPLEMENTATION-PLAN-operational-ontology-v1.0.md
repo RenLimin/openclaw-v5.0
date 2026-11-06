@@ -1,7 +1,7 @@
 # L2 运营本体（Operational Ontology）实施计划 v1.0
 
 > L2 · ai-knowledge-base · 阶段 4（Gen3）· INFRA-KB-002
-> 版本 v1.0 · 状态：**待 Rex 评审** · 2026-10-31 · Jerry 🦞
+> 版本 v1.0 · 状态：**已验收**（Rex 2026-11-06 授权收口）· 2026-10-31 · Jerry 🦞
 > 依据：DESIGN-DETAIL-operational-ontology-v1.0（已通过）
 > 说明：本计划仅规划 L2 原语建设；L3/L4 落地在 L2 验收后单独立项。
 

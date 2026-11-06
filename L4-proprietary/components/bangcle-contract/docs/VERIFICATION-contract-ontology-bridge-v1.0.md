@@ -1,6 +1,6 @@
 # VERIFICATION — Contract Ontology Bridge（L4 bangcle-contract × L2 运营本体）v1.0
 
-> 日期：2026-11-05 · 对应 DESIGN-OUTLINE-contract-ontology-bridge-v1.0（待 Rex 评审）
+> 日期：2026-11-05（验收状态：**Rex 2026-11-06 正式验收通过**） · 对应 DESIGN-OUTLINE-contract-ontology-bridge-v1.0（已验收 P1–P3）
 > 执行：主会话真实落地，全部命令真实运行。
 > 关联：L2 运营本体 P1–P4（`ae3a1b9`）· L3 contract-management P1/P2（`f654958` 等）
 

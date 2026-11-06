@@ -4,8 +4,8 @@
 > 范围：**P1 只读桥 + P2 持久化/状态机接线**。P3（审批节点映射+push_result）/P4（回调/真写回）**冻结**，待泛微 workflow 数据源确认。
 > 依据：真实代码通读（L3 785 行 / L4 oa 1571 行 / db.py 227 行）+ 既有测试契约（`test_oa_helpers` / `test_state_machine` / `test_oa_base`）+ 黄金夹具 `golden_expected.json`。
 > 日期：2026-11-04 · Jerry 🦞
-
----
+>
+> 📌 **关系指针（2026-11-06 追加）**：本文档属 11-04 只读/持久化桥旧路线；与 11-05 Palantir 动词桥（L4 `contract_review/ontology_bridge/`，`a1efeb4`）并存。旧桥=读得准/对得齐，动词桥=可审计写回。详见同目录 `DESIGN-OUTLINE-contract-ontology-bridge-v1.0.md` 顶部关系指针。
 
 ## 1. 设计目标与边界
 

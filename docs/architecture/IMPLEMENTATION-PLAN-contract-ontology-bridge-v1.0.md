@@ -3,6 +3,8 @@
 > 前置：OUTLINE `ac9faff`、DETAIL `f6ff800` 均获 Rex 评审通过（2026-11-04）。
 > 范围：P1 只读桥 + P2 持久化/状态机接线。P3/P4 冻结。
 > 日期：2026-11-04 · Jerry 🦞
+>
+> 📌 **关系指针（2026-11-06 追加）**：本计划属 11-04 只读/持久化桥旧路线；11-05 Palantir 动词桥（L4 `contract_review/ontology_bridge/`，`a1efeb4`）另立。两路线并存，关系见同目录 OUTLINE 顶部指针。
 
 ## Phase 拆分
 

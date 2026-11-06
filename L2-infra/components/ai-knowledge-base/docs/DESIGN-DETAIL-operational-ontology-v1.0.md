@@ -1,8 +1,8 @@
 # L2 运营本体（Operational Ontology）详细设计 v1.0
 
 > L2 Infrastructure Component · ai-knowledge-base · 阶段 4（Gen3）
-> 组件编码：INFRA-KB-002 · 版本：v1.0 · 状态：**待 Rex 评审**
-> 日期：2026-10-31 · 作者：Jerry 🦞
+> 组件编码：INFRA-KB-002 · 版本：v1.0 · 状态：**已验收**（Rex 2026-11-06 授权收口）
+> 日期：2026-10-31 · 验收：2026-11-06 · 作者：Jerry 🦞
 > 依据：DESIGN-OUTLINE-operational-ontology-v1.0（已通过）+ ADR-007/008/009
 > 本文档定义：接口契约、数据模型 DDL、模块/类设计、安全、测试方案。
 

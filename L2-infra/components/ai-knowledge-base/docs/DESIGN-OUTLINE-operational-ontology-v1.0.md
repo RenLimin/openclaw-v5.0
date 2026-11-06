@@ -2,8 +2,8 @@
 
 > L2 Infrastructure Component · ai-knowledge-base · 阶段 4（Gen3）
 > 组件编码：INFRA-KB-002
-> 版本：v1.0 · 状态：**待 Rex 评审**
-> 日期：2026-10-31 · 作者：Jerry 🦞
+> 版本：v1.0 · 状态：**已验收**（Rex 2026-11-06 授权收口；P1–P4 实现 `ae3a1b9`，114 tests 绿）
+> 日期：2026-10-31 · 验收：2026-11-06 · 作者：Jerry 🦞
 > 依据：ADR-007/008/009（`docs/architecture/00-system-architecture.md`）
 > 方法论：`docs/research/ANALYSIS-ontology-methodology-v1.0.md`；写治理：`docs/research/ANALYSIS-agent-write-governance-v1.0.md`
 > 前置文档：本组件 `DESIGN-OUTLINE-v1.0.md`（Gen1/Gen2，只读知识库）
