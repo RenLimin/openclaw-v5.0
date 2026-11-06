@@ -645,3 +645,68 @@ ai-kb db import-from-sqlite backup.db
 ai-kb db verify
 ```
 
+
+---
+
+## 9. 运营本体（Operational Ontology）运维
+
+> 2026-11-06 补充。运营本体把业务对象（如合同）登记为**运营对象**，
+> 经 Proposal Gate 执行受治理动作（propose→validate→review→commit），
+> 写回真实系统并全程审计。代码位于 `ai_kb/ontology/` + `ai_kb/guardrails/output_guard.py`。
+
+### 9.1 数据表（init_ontology_tables，CREATE IF NOT EXISTS 幂等）
+
+| 表 | 用途 |
+|---|---|
+| `ont_identity` / `ont_identity_alias` / `ont_identity_sor` / `ont_identity_merge` | 运营对象主身份 / 别名 / system-of-record / 合并记录 |
+| `ont_function_def` | deterministic function 定义（前置条件/状态机/参数 schema） |
+| `ont_action_type` | 动作类型（required_approval=auto/human + bindings） |
+| `ont_proposal` | 提案（pending/validated/rejected/committed/failed 五态） |
+| `ont_commit` | 已提交变更集（只追加 metadata.applied_changes） |
+| `ont_decision_record` / `ont_decision_ts` | 决策证据记录 / 时间线 |
+| `ont_writeback_step` | Saga 写回步骤（含补偿状态） |
+| `ont_reconcile` | 人工对账工单（补偿不可用时） |
+
+### 9.2 初始化（幂等链式）
+
+```python
+from ai_kb.db import AIKB
+kb = AIKB("path/to/ai_kb.db")
+kb.init_db()
+kb.init_ontology_tables()   # identity→kinetic→proposal→saga 顺序，已存在跳过
+```
+
+> 结构注册（register function / action）仅**装配期**允许：
+> `AssemblyGate` 运行期默认关闭，关闭时一切结构注册被拒。
+
+### 9.3 接入面
+
+**MCP（6 个 ont_ 工具）**：`ont_query_object` / `ont_compute_risk` /
+`ont_propose_action` / `ont_list_actions` / `ont_get_proposal` / `ont_review_proposal`。
+
+**REST（/ontology/*）**：
+
+| 方法 | 路径 |
+|---|---|
+| POST | `/ontology/proposals`（提案） |
+| GET | `/ontology/proposals`（列表，可按 status 过滤） |
+| POST | `/ontology/proposals/review`（审批） |
+
+### 9.4 生命周期语义（排障要点）
+
+- **validated ≠ committed**：validate 通过只留痕，review 审批后才 commit + 触发写回；
+- **越权**：agent 审 human 级动作 → `PermissionError`（硬拒绝）；
+- **CWA 封闭世界**：对象必须先在 `ont_identity` 登记，否则拒绝；
+- **OutputGuard 顺序**：ABAC → 参数 JSON Schema → 前置条件 → 状态机；
+  handler 只返回校验结果，禁止直接写库；
+- **Saga 写回失败**：逆序补偿，已补偿写回步骤回滚；不可逆且无快照 →
+  落 `ont_reconcile` 人工对账，不静默；
+- **commit 不直接改业务状态**：`ont_commit` 只追加 `metadata.applied_changes`，
+  真实状态由注入的 WritebackConnector 落地。
+
+### 9.5 上层实例
+
+首个真实运营实例：L4 `bangcle-contract` 的 Contract Ontology Bridge
+（`L4-proprietary/components/bangcle-contract/contract_review/ontology_bridge/`），
+含合同登记 / submit / approve / reject 与写回、补偿演示，详见其
+`docs/VERIFICATION-contract-ontology-bridge-v1.0.md`。
