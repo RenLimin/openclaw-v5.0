@@ -87,6 +87,20 @@ def _classify(local_state: str, oa_state: str) -> str:
     return OA_AHEAD if rk > lr else LOCAL_AHEAD
 
 
+def _classify_event(local_state: str, oa_state: str, chain: ApprovalChain) -> str:
+    """在序号比较基础上感知「退回」回退事件。
+
+    审批流不是单调线性的：退回让状态从 review 回到 draft，这是 OA 侧一个
+    真实事件，而非"OA 落后"。OA 是权威副本，当 OA 当前节点动作为退回、
+    而本地未同步到 draft，说明本地未收到退回事件（本地过期）→ oa_ahead；
+    本地也已是 draft → in_sync。其余情形仍走序号比较。
+    """
+    current = chain.current_node()
+    if current is not None and current.action == "退回":
+        return IN_SYNC if str(local_state).strip() == "draft" else OA_AHEAD
+    return _classify(local_state, oa_state)
+
+
 def reconcile(
     requestids: List[str],
     *,
@@ -126,7 +140,7 @@ def reconcile(
             continue
 
         oa_state = derive_oa_state(chain)
-        kind = _classify(local_state, oa_state)
+        kind = _classify_event(local_state, oa_state, chain)
         diffs.append(ReconcileDiff(
             requestid=key, local_state=local_state,
             oa_state=oa_state, kind=kind,
