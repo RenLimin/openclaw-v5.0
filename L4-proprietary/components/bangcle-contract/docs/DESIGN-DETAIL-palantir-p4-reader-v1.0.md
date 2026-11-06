@@ -1,8 +1,9 @@
 # DESIGN-DETAIL — Palantir Oncology P4：泛微 OA 审批链读取器 + 外部写连接器 v1.0
 
 > L4 · bangcle-contract · Contract Ontology Bridge **P4** 详细设计（读路径 + 写连接器契约）
-> 版本 v1.0 · 状态：**已实现，待 Rex 验收** · 2026-11-06 · Jerry 🦞
-> 实现进度：P4.0（会话重建，复用）/ P4.1（审批链读取器）/ P4.3（连接器契约 dry-run）/ P4.4（定时对账只读）已编码；P4.2（真实写端点）冻结，待测试流程单据 + 增量文档 `p4-write-v1.1`
+> 版本 v1.0 · 状态：**已验收（Rex 2026-11-06 按实测结果通过）** · 2026-11-06 · Jerry 🦞
+> 实现进度：P4.0（会话重建，复用）/ P4.1（审批链读取器）/ P4.3（连接器契约 dry-run）/ P4.4（定时对账只读）已编码并验收；P4.2（真实写端点）冻结，作为人工验收测试一环暂缓，待测试流程单据 + 增量文档 `p4-write-v1.1`
+> 验收记录：`docs/VERIFICATION-palantir-p4-reader-v1.0.md`
 > 上游：`docs/research/PROPOSAL-palantir-p4-oa-writeback-v1.0.md`（立项书）
 > 契约基线：`L2-.../ai_kb/ontology/connectors/base.py`、`connectors/saga.py`
 > 既有实现：`contract_review/ontology_bridge/connector.py`（P2 本地表写回）
