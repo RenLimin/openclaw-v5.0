@@ -1,0 +1,134 @@
+{
+ "requestid": "882663",
+ "workflowid": "757",
+ "base_info": {
+  "txStatus": "1",
+  "creatorNodeId": "5503",
+  "userId": 1313,
+  "viewLogIds": "5498,5499,5500,5501,5502,5503,5504,5505,5506",
+  "loadmethod": "split",
+  "orderbytype": "1"
+ },
+ "loglist_raw": [
+  {
+   "logid": "1847685",
+   "log_nodename": "商务",
+   "displayname": "佟鑫",
+   "displayid": "949",
+   "displaydepname": "行政部",
+   "operationname": "抄送",
+   "log_remarkHtml": "",
+   "log_operatedate": "2026-10-27",
+   "log_operatetime": "17:13:40",
+   "receiveUser": "佟鑫,何钰其,马雁冰,阚志刚,赵云,唐洁滢,田晓宁"
+  },
+  {
+   "logid": "1847684",
+   "log_nodename": "商务",
+   "displayname": "佟鑫",
+   "displayid": "949",
+   "displaydepname": "行政部",
+   "operationname": "批准",
+   "log_remarkHtml": "<p>已登记</p>",
+   "log_operatedate": "2026-10-27",
+   "log_operatetime": "17:13:40",
+   "receiveUser": "秦少影"
+  },
+  {
+   "logid": "1847573",
+   "log_nodename": "分管总监",
+   "displayname": "阚志刚",
+   "displayid": "3",
+   "displaydepname": "高管团队",
+   "operationname": "批准",
+   "log_remarkHtml": "同意。<br/><span class='wf-requestlog-item-signsource' style='font-size:11px;color:#666;'>来自iPhone客户端</span>",
+   "log_operatedate": "2026-10-27",
+   "log_operatetime": "15:54:26",
+   "receiveUser": "佟鑫"
+  },
+  {
+   "logid": "1847217",
+   "log_nodename": "部门经理",
+   "displayname": "王仙仙",
+   "displayid": "364",
+   "displaydepname": "上海分公司-金融",
+   "operationname": "批准",
+   "log_remarkHtml": "同意<br/><span class='wf-requestlog-item-signsource' style='font-size:11px;color:#666;'>来自iPhone客户端</span>",
+   "log_operatedate": "2026-10-27",
+   "log_operatetime": "10:24:58",
+   "receiveUser": "阚志刚"
+  },
+  {
+   "logid": "1847205",
+   "log_nodename": "申请人",
+   "displayname": "AI小助手",
+   "displayid": "2038",
+   "displaydepname": "信息管理部",
+   "operationname": "批注",
+   "log_remarkHtml": "<div style=\"font-size:14px;line-height:1.7;color:#111827;white-space:normal;\"><div style=\"font-size:16px;font-weight:700;color:#111827;margin:0 0 8px 0;\">销售合同审核意见</div><div style=\"margin-bottom:4px;\">总体建议：<span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】建议谨慎签署</span></div><div>审核范围：1 份合同</div><div style=\"margin-top:8px;\"><b>核心结论：</b></div><ol style=\"margin:4px 0 8px 22px;padding:0;\"><li>共审核 1 份合同、2 个销售合同分项。</li><li>1. <span style=\"color:#b42318;font-weight:700;background:#fff1f0;padding:1px 4px;border-radius:4px;\">【重点复核】</span>流程签约总额 36000.00；可比价分项 2 项，可比价金额 36000.00，可比标准总价 133000.00，签约比例 27.07%，低于标准价 72.93%。</li><li>2. 请优先关闭低价偏差和毛利风险、验收口径、关键法律条款后再进入签署。</li></ol><div style=\"font-size:15px;font-weight:700;color:#111827;margin:14px 0 6px 0;\">一、价格与合同范围</div><table style=\"border-collapse:collapse;width:100%;margin:8px 0 12px 0;font-size:13px;line-height:1.55;\"><tr><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">合同</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">流程签约金额</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">可比标准总价</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">签约比例/风险</th></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同1：梆梆-安卓加固合同(2).docx</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">36000.00</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">133000.00</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"color:#b42318;font-weight:700;background:#fff1f0;padding:1px 4px;border-radius:4px;\">【重点复核】</span>Android应用加固软件V7.0、Android应用加固软件V7.0：流程签约总额 36000.00，可比价金额 36000.00，可比标准总价 133000.00，签约比例 27.07%，低于标准价 72.93%</td></tr></table><div style=\"font-size:15px;font-weight:700;color:#111827;margin:14px 0 6px 0;\">二、逐合同风险与建议</div><div style=\"border:1px solid #d0d5dd;border-radius:10px;padding:12px 14px;margin:10px 0;background:#ffffff;\"><div style=\"font-size:14px;font-weight:700;margin-bottom:6px;\">合同1：梆梆-安卓加固合同(2).docx</div><table style=\"border-collapse:collapse;width:100%;margin:8px 0 12px 0;font-size:13px;line-height:1.55;\"><tr><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">风险点</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">等级</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">标准要求</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">合同原文或缺失说明</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">处理建议</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">责任角色</th></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">签订价低于标准价 20% 及以上，可能存在毛利不足、成本倒挂或异常折扣。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">价格与分项：流程分项金额、标准价、折扣/毛利或价格依据应闭环</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">价格与分项：合同原文“号开通之日起始计算； 产品开通有效时间为2026年11月1日至2027年10月31日 第二条 付款方式 2.1本合同总价为：4336000元人民币（含税），大写： 肆万叁仟叁万陆仟元人民币，在合同生效后 5日内并收到增值税专用发票后后甲”</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">建议谨慎或暂缓签署，先补充折扣审批、毛利测算、成本覆盖说明和业务负责人确认；签署影响：影响价格审批、毛利测算、收入确认和签署风险判断。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">商务/财务</td></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">流程分项中的产品或服务未在合同正文/附件稳定体现，可能导致履约和收入拆分依据不足。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">流程分项一致性：合同中的产品/服务、数量、服务边界应与流程分项一致，作为履约、验收和收入确认依据</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">流程分项一致性：历史同类审核经验：流程分项一致性；触发信号：流程分项</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">商务补充服务清单或附件，明确每个流程分项在合同中的对应条款；签署影响：影响交付范围、验收和财务收入确认。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">商务/交付/财务</td></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同存在可能偏向单方权利、无限责任或验收裁量过大的表述，需要法务重点复核。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同原文风险片段：存在需复核表述</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同原文风险片段：合同原文“行安装后，经双方协商一致，可以退、换货。如产品存在质量问题，乙方应当自甲方报修之日起立即提供解决方案，并免费换货、退货，甲方有权单方解除协议。 甲方在产品进行安装前提出退货的，征得乙方书面同意后，甲方应当自费并完好无损地退还本合同产品。 …”</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">建议法务逐字复核该条款，限制单方解释权、无限责任和不合理验收裁量，并补充责任上限与异议机制；签署影响：影响责任边界、争议处理、赔偿范围和合同可执行性。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">法务</td></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">回款条件审查</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#067647;background:#ecfdf3;border:1px solid #abefc6;font-weight:700;padding:2px 8px;border-radius:999px;\">【可接受】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">付款/开票/账期：合同应明确付款节点、开票条件、账期、尾款、逾期责任和必要的暂停服务权<br>逾期付款/暂停服务：合同应明确付款节点、开票条件、账期、尾款、逾期责任和必要的暂停服务权</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">付款/开票/账期：合同原文“合同第三条约定的账号开通之日起始计算； 产品开通有效时间为2026年11月1日至2027年10月31日 第二条 付款方式 2.1本合同总价为：4336000元人民币（含税），大写： 肆万叁仟叁万陆仟元人民币，在合同生效后 5日内并收”<br>逾期付款/暂停服务：合同原文“数据并出具书面证明。 第八条 违约责任 8.1 甲方无故未按约定支付款项的，每逾期一日按逾期未支付款项的千分之一支付违约金。违约金最高不超过本合同总金额的百分之五。累计逾期超过三十日的，乙方有权单方中止服务或以书面形式通知甲方终止合同，通…”</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">财务复核付款节点、开票条件、账期、尾款条件、逾期付款责任和必要的暂停服务权。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">财务/商务</td></tr></table></div><div style=\"font-size:15px;font-weight:700;color:#111827;margin:14px 0 6px 0;\">三、共性复核要求</div><ol style=\"margin:4px 0 0 22px;padding:0;\"><li>商务/财务补折扣审批、毛利测算和成本覆盖说明。</li><li>交付补验收口径。</li><li>法务补关键法律条款。</li></ol></div><!--AI_WORKFLOW_OPINION_CALLBACK:ai-opinion:882663:3b78bd0bd5c3885013f6a898623a9747-->",
+   "log_operatedate": "2026-10-27",
+   "log_operatetime": "10:21:40",
+   "receiveUser": "何钰其"
+  },
+  {
+   "logid": "1847206",
+   "log_nodename": "申请人",
+   "displayname": "何钰其",
+   "displayid": "1625",
+   "displaydepname": "上海分公司-金融",
+   "operationname": "提交",
+   "log_remarkHtml": "<p>与客户沟通后产品版本是公有云增强版，流程与合同产品描述一致，由于是老客户所以用以前现有的自动化标准的策略。</p><p>&nbsp;</p><p>望批准，谢谢</p>",
+   "log_operatedate": "2026-10-27",
+   "log_operatetime": "10:21:38",
+   "receiveUser": "王仙仙"
+  },
+  {
+   "logid": "1847039",
+   "log_nodename": "部门经理",
+   "displayname": "王仙仙",
+   "displayid": "364",
+   "displaydepname": "上海分公司-金融",
+   "operationname": "退回",
+   "log_remarkHtml": "请修改产品版本<br/><span class='wf-requestlog-item-signsource' style='font-size:11px;color:#666;'>来自iPhone客户端</span>",
+   "log_operatedate": "2026-10-26",
+   "log_operatetime": "20:08:08",
+   "receiveUser": "何钰其"
+  },
+  {
+   "logid": "1847026",
+   "log_nodename": "合同评审小组",
+   "displayname": "张火平",
+   "displayid": "2032",
+   "displaydepname": "财务部",
+   "operationname": "提交",
+   "log_remarkHtml": "<p>合同中产品描述是公有云标准版，流程分项是公有云增强版，请确认实际提供的版本类型。<span style=\"color: rgb(0, 0, 0); font-family: &quot;Microsoft YaHei&quot;, &quot;\\\\5FAE软雅黑&quot;, &quot;Helvetica Neue&quot;, Helvetica, &quot;PingFang SC&quot;, &quot;Hiragino Sans GB&quot;, Arial, sans-serif; font-size: 12px; font-style: normal; font-variant-ligatures: normal; font-variant-caps: normal; font-weight: 400; letter-spacing: normal; orphans: 2; text-align: start; text-indent: 0px; text-transform: none; widows: 2; word-spacing: 0px; -webkit-text-stroke-width: 0px; white-space: normal; background-color: rgb(255, 255, 255); text-decoration-thickness: initial; text-decoration-style: initial; text-decoration-color: initial; display: inline !important; float: none;\">如是公有云增强版，请在合同中按照我司标准产品描述，如是公有云标准版，请修改合同中的产品型号，及概算和流程分项中的产品型号为公有云标准版。</span></p><p><img src=\"/images/imgLazyDefault_wev9.gif\" style=\"width:18px;height:18px;\"  alt=\"\" original-src=\"/weaver/weaver.file.FileDownload?fileid=a471dd8d54c8a2d9004aa049d5b667b171be0c4d66807255f91b2fb5e0737482da6c907e87ded61396a3743b7f19b12b942f5146a539cc136\" original-style=\"width: 702px; height: 298px;\" /></p><p><img src=\"/images/imgLazyDefault_wev9.gif\" style=\"width:18px;height:18px;\"  alt=\"\" original-src=\"/weaver/weaver.file.FileDownload?fileid=a673cd36d3413115137e29fb08eb4e260936d465c81fc5b731626322783c623868f4d46af8c61a8d9978933dda4a252ad42f5146a539cc136\" original-style=\"width: 727px; height: 134px;\" /></p>",
+   "log_operatedate": "2026-10-26",
+   "log_operatetime": "18:41:17",
+   "receiveUser": "王仙仙"
+  },
+  {
+   "logid": "1846799",
+   "log_nodename": "合同评审小组",
+   "displayname": "任立民",
+   "displayid": "1313",
+   "displaydepname": "交付中心",
+   "operationname": "提交",
+   "log_remarkHtml": "<p>请明确合同标的，公有云标准版？公有云增强版？</p><p>&nbsp;</p><p><img src=\"/images/imgLazyDefault_wev9.gif\" style=\"width:18px;height:18px;\"  alt=\"\" original-src=\"/weaver/weaver.file.FileDownload?fileid=aee5c1d43568bc32c5ff51b0853f5a15a62891b6c487689148763f1bc63eac573814de960c07a646d82d707c01a661f86105333aab5cf92af\" original-style=\"width: 678px; height: 295px;\" /></p>",
+   "log_operatedate": "2026-10-26",
+   "log_operatetime": "16:13:13",
+   "receiveUser": "张火平"
+  },
+  {
+   "logid": "1846732",
+   "log_nodename": "申请人",
+   "displayname": "AI小助手",
+   "displayid": "2038",
+   "displaydepname": "信息管理部",
+   "operationname": "批注",
+   "log_remarkHtml": "<div style=\"font-size:14px;line-height:1.7;color:#111827;white-space:normal;\"><div style=\"font-size:16px;font-weight:700;color:#111827;margin:0 0 8px 0;\">销售合同审核意见</div><div style=\"margin-bottom:4px;\">总体建议：<span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】建议谨慎签署</span></div><div>审核范围：1 份合同</div><div style=\"margin-top:8px;\"><b>核心结论：</b></div><ol style=\"margin:4px 0 8px 22px;padding:0;\"><li>共审核 1 份合同、2 个销售合同分项。</li><li>1. <span style=\"color:#b42318;font-weight:700;background:#fff1f0;padding:1px 4px;border-radius:4px;\">【重点复核】</span>流程签约总额 36000.00；可比价分项 2 项，可比价金额 36000.00，可比标准总价 133000.00，签约比例 27.07%，低于标准价 72.93%。</li><li>2. 请优先关闭低价偏差和毛利风险、验收口径、关键法律条款后再进入签署。</li></ol><div style=\"font-size:15px;font-weight:700;color:#111827;margin:14px 0 6px 0;\">一、价格与合同范围</div><table style=\"border-collapse:collapse;width:100%;margin:8px 0 12px 0;font-size:13px;line-height:1.55;\"><tr><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">合同</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">流程签约金额</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">可比标准总价</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">签约比例/风险</th></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同1：梆梆-安卓加固合同(2).docx</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">36000.00</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">133000.00</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"color:#b42318;font-weight:700;background:#fff1f0;padding:1px 4px;border-radius:4px;\">【重点复核】</span>Android应用加固软件V7.0、Android应用加固软件V7.0：流程签约总额 36000.00，可比价金额 36000.00，可比标准总价 133000.00，签约比例 27.07%，低于标准价 72.93%</td></tr></table><div style=\"font-size:15px;font-weight:700;color:#111827;margin:14px 0 6px 0;\">二、逐合同风险与建议</div><div style=\"border:1px solid #d0d5dd;border-radius:10px;padding:12px 14px;margin:10px 0;background:#ffffff;\"><div style=\"font-size:14px;font-weight:700;margin-bottom:6px;\">合同1：梆梆-安卓加固合同(2).docx</div><table style=\"border-collapse:collapse;width:100%;margin:8px 0 12px 0;font-size:13px;line-height:1.55;\"><tr><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">风险点</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">等级</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">标准要求</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">合同原文或缺失说明</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">处理建议</th><th style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;background:#f2f4f7;color:#344054;font-weight:700;\">责任角色</th></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">签订价低于标准价 20% 及以上，可能存在毛利不足、成本倒挂或异常折扣。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">价格与分项：流程分项金额、标准价、折扣/毛利或价格依据应闭环</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">价格与分项：合同原文“号开通之日起始计算； 产品开通有效时间为2026年11月1日至2027年10月31日 第二条 付款方式 2.1本合同总价为：4336000元人民币（含税），大写： 肆万叁仟叁万陆仟元人民币，在合同生效后 5日内并收到增值税专用发票后后甲”</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">建议谨慎或暂缓签署，先补充折扣审批、毛利测算、成本覆盖说明和业务负责人确认；签署影响：影响价格审批、毛利测算、收入确认和签署风险判断。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">商务/财务</td></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">流程分项中的产品或服务未在合同正文/附件稳定体现，可能导致履约和收入拆分依据不足。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">流程分项一致性：合同中的产品/服务、数量、服务边界应与流程分项一致，作为履约、验收和收入确认依据</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">流程分项一致性：历史同类审核经验：流程分项一致性；触发信号：流程分项</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">商务补充服务清单或附件，明确每个流程分项在合同中的对应条款；签署影响：影响交付范围、验收和财务收入确认。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">商务/交付/财务</td></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同存在可能偏向单方权利、无限责任或验收裁量过大的表述，需要法务重点复核。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#b42318;background:#fff1f0;border:1px solid #fecdca;font-weight:700;padding:2px 8px;border-radius:999px;\">【重点复核】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同原文风险片段：存在需复核表述</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">合同原文风险片段：合同原文“行安装后，经双方协商一致，可以退、换货。如产品存在质量问题，乙方应当自甲方报修之日起立即提供解决方案，并免费换货、退货，甲方有权单方解除协议。 甲方在产品进行安装前提出退货的，征得乙方书面同意后，甲方应当自费并完好无损地退还本合同产品。 …”</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">建议法务逐字复核该条款，限制单方解释权、无限责任和不合理验收裁量，并补充责任上限与异议机制；签署影响：影响责任边界、争议处理、赔偿范围和合同可执行性。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">法务</td></tr><tr><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">回款条件审查</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\"><span style=\"display:inline-block;color:#067647;background:#ecfdf3;border:1px solid #abefc6;font-weight:700;padding:2px 8px;border-radius:999px;\">【可接受】</span></td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">付款/开票/账期：合同应明确付款节点、开票条件、账期、尾款、逾期责任和必要的暂停服务权<br>逾期付款/暂停服务：合同应明确付款节点、开票条件、账期、尾款、逾期责任和必要的暂停服务权</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">付款/开票/账期：合同原文“合同第三条约定的账号开通之日起始计算； 产品开通有效时间为2026年11月1日至2027年10月31日 第二条 付款方式 2.1本合同总价为：4336000元人民币（含税），大写： 肆万叁仟叁万陆仟元人民币，在合同生效后 5日内并收”<br>逾期付款/暂停服务：合同原文“数据并出具书面证明。 第八条 违约责任 8.1 甲方无故未按约定支付款项的，每逾期一日按逾期未支付款项的千分之一支付违约金。违约金最高不超过本合同总金额的百分之五。累计逾期超过三十日的，乙方有权单方中止服务或以书面形式通知甲方终止合同，通…”</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">财务复核付款节点、开票条件、账期、尾款条件、逾期付款责任和必要的暂停服务权。</td><td style=\"border:1px solid #d0d5dd;padding:7px 8px;vertical-align:top;font-size:13px;line-height:1.55;text-align:left;\">财务/商务</td></tr></table></div><div style=\"font-size:15px;font-weight:700;color:#111827;margin:14px 0 6px 0;\">三、共性复核要求</div><ol style=\"margin:4px 0 0 22px;padding:0;\"><li>商务/财务补折扣审批、毛利测算和成本覆盖说明。</li><li>交付补验收口径。</li><li>法务补关键法律条款。</li></ol></div><!--AI_WORKFLOW_OPINION_CALLBACK:ai-opinion:882663:f65d899f394eecfe5fd2493afb612268-->",
+   "log_operatedate": "2026-10-26",
+   "log_operatetime": "15:47:55",
+   "receiveUser": "何钰其"
+  }
+ ]
+}
