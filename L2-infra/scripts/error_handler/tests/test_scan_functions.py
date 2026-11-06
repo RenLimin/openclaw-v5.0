@@ -3,11 +3,13 @@
 import os
 import sys
 import unittest
+import unittest.mock  # noqa: E402 (Python 3.14 需显式导入)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scan_errors import (  # noqa: E402
     scan_llm_timeouts,
     scan_compaction_failures,
+    scan_zombie_processes,
     _resolve_file_ref,
 )
 
@@ -141,6 +143,61 @@ class ScanFileRefTest(unittest.TestCase):
         )
         self.assertIn("error", res)
         self.assertIn("no_such_alias", res["error"])
+
+
+class ScanZombieProcessTest(unittest.TestCase):
+    """scan_zombie_processes 身份记录（2026-11-06 改进）。
+
+    回归基线：命中时必须记录 pid/ppid/stat/comm + 父进程命令行，
+    否则只能看到数量，无法追查 zombie 来源（此前多次"抓到数量抓不到身份"）。
+    """
+
+    def _fake_run_cmd(self, parent_table):
+        def fake(cmd, timeout=15):
+            if "ps -eo pid,ppid,stat,comm" in cmd:
+                return "1234 56 Z node\n5678 90 Z python3", 0
+            if cmd.startswith("ps -p "):
+                ppid = cmd.split()[2]
+                return parent_table.get(ppid, ""), 0
+            if "sandboxes" in cmd:
+                return "0", 0
+            return "", 0
+        return fake
+
+    def test_zombie_detail_contains_identity(self):
+        with unittest.mock.patch(
+            "scan_errors.run_cmd",
+            side_effect=self._fake_run_cmd(
+                {"56": "/usr/bin/node /opt/x.js", "90": "python3 worker.py"}
+            ),
+        ):
+            errors = scan_zombie_processes()
+        self.assertEqual(len(errors), 1)
+        z = errors[0]
+        self.assertEqual(z["type"], "zombie_processes")
+        self.assertIn("pid=1234", z["detail"])
+        self.assertIn("ppid=56", z["detail"])
+        self.assertIn("comm=node", z["detail"])
+        self.assertIn("/opt/x.js", z["detail"])  # 父进程命令行
+        self.assertEqual(len(z["zombies"]), 2)
+        self.assertEqual(z["zombies"][0]["pid"], "1234")
+        self.assertEqual(z["zombies"][0]["parent_cmd"], "/usr/bin/node /opt/x.js")
+        self.assertEqual(z["zombies"][1]["parent_cmd"], "python3 worker.py")
+
+    def test_parent_gone_unknown(self):
+        """父进程已退出（ppid=1）→ parent_cmd 标 unknown 不崩溃"""
+        with unittest.mock.patch(
+            "scan_errors.run_cmd",
+            side_effect=self._fake_run_cmd({}),
+        ):
+            errors = scan_zombie_processes()
+        self.assertEqual(len(errors), 1)
+        z = errors[0]["zombies"][0]
+        self.assertIn("unknown", z["parent_cmd"])
+
+    def test_no_zombie_empty(self):
+        with unittest.mock.patch("scan_errors.run_cmd", return_value=("", 0)):
+            self.assertEqual(scan_zombie_processes(), [])
 
 
 if __name__ == "__main__":

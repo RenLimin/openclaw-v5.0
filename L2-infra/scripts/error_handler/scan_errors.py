@@ -663,21 +663,44 @@ def scan_asset_consistency():
 
 
 def scan_zombie_processes():
-    """检测僵尸进程和已完成会话残留，建议清理"""
+    """检测僵尸进程和已完成会话残留，建议清理
+
+    2026-11-06 改进：命中时记录每个 zombie 的 pid/ppid/stat/comm 与父进程
+    命令行，便于定位产生者（之前只报数量，无法追查身份/来源）。
+    """
     errors = []
     # 注意：grep 'Z' 会误匹配路径中的字母 Z（如 WeDrive），必须用 awk 精确匹配 stat 列
     output, rc = run_cmd("ps -eo pid,ppid,stat,comm | awk '$3 ~ /^Z/' | head -20")
     if rc == 0 and output.strip():
-        zombie_count = len(output.strip().split("\n"))
-        if zombie_count > 0:
+        zombies = []
+        for line in output.strip().split("\n"):
+            parts = line.split(None, 3)
+            if len(parts) < 4:
+                continue
+            pid, ppid, stat, comm = parts[0], parts[1], parts[2], parts[3]
+            # 父进程命令行（父已退出时 ppid 会变 1，取不到标 unknown）
+            parent_cmd, prc = run_cmd(f"ps -p {ppid} -o command= 2>/dev/null", timeout=5)
+            zombies.append({
+                "pid": pid,
+                "ppid": ppid,
+                "stat": stat,
+                "comm": comm,
+                "parent_cmd": parent_cmd if prc == 0 and parent_cmd else "(gone/unknown)",
+            })
+        if zombies:
             errors.append({
                 "type": "zombie_processes",
-                "detail": f"Found {zombie_count} zombie processes. Recommend system reboot or manual kill."
+                "detail": "Found " + str(len(zombies)) + " zombie processes: "
+                + "; ".join(
+                    f"pid={z['pid']} ppid={z['ppid']} comm={z['comm']} "
+                    f"parent={z['parent_cmd']}" for z in zombies
+                ),
+                "zombies": zombies,
             })
     
     # 检查残留子会话目录
     output, rc = run_cmd("ls -d /Users/bangcle/.openclaw/sandboxes/workspace-* 2>/dev/null | wc -l")
-    if rc == 0:
+    if rc == 0 and output.strip():
         count = int(output.strip())
         if count > 5:
             errors.append({
