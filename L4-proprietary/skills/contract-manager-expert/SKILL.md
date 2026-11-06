@@ -91,6 +91,25 @@ python3 cli/contractctl.py --db <path> ontology proposals --status committed
 
 黄金基准：`python3 -m pytest tests/integration/test_ontology_bridge.py -q`（7 组：提交闭环/越权拒绝/非法转移/幂等重放/Saga 补偿/CWA 拒绝/CLI 冒烟）。
 
+## 二b. OA 审批流对账（Palantir P4.4，v1.2）
+
+> 只读对账本地合同状态 ↔ OA 真实审批流，产出四态偏差报告；**永不自动写回**。
+
+```bash
+cd /Users/bangcle/.openclaw/workspace/L4-proprietary/components/bangcle-contract
+
+# 手动触发（全量 / 精简 / 单合同）
+python3 scripts/reconcile_oa.py
+python3 scripts/reconcile_oa.py --quiet
+python3 scripts/reconcile_oa.py --contract-id 5
+```
+
+数据链（只读）：`contracts.oa_billid → CubeClient 卡片『合同审批流程→』= requestid → ApprovalLogReader 审批链 → reconcile 四态`。
+四态：`in_sync` / `oa_ahead`（OA 已推进本地未记录）/ `local_ahead`（本地超前）/ `oa_unknown`（读不到，不伪造）；单合同失败降级 `no_billid` / `no_requestid` 不中断整批。
+输出：`memory/oa-reconcile-latest.json`（gitignored）。
+调度：Gateway cron `oa-reconcile-daily (P4.4)`，每日 09:30 Asia/Shanghai（⚠️ 用绝对路径 `/opt/homebrew/opt/python@3.14/bin/python3.14`，cron 环境 `python3` 是系统 3.9 x86_64 numpy 不兼容）。
+语义提醒：对账只检测不修复；偏差 → 人工处置（同步/冲销工单），写永远走提案 + 授权（P4.3 冻结）。
+
 ## 三、关键规则与红线（强制）
 
 - **风险规则单一来源**：22 条 rule_id 与法条依据**只能来自 L3 `contract-management` 的 `CHECK_RULES`**，L4 不得增删改规则；黄金基准要求 rule_id 集合 100% 匹配。

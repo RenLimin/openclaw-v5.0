@@ -61,7 +61,7 @@ $ python3 -m pytest tests/ -x -q
 |---|---|---|
 | P4.1 审批链读取器（读路径） | ✅ 验收 | — |
 | P4.3 连接器契约（dry-run / 补偿语义） | ✅ 验收 | — |
-| P4.4 对账函数（只读） | ✅ 验收 | 挂 cron 需 OPERATIONS + Rex 拍板频率 |
+| P4.4 对账（函数 + runner + cron 每日 09:30） | ✅ 验收并已调度 | — |
 | P4.2 真实写端点 | ⏸ 暂缓 | 测试流程单据（人工验收一环）+ Rex 二次授权 + 增量文档 `p4-write-v1.1` |
 | OaWritebackConnector 接入 ProposalService 编排 | ⏸ 冻结 | 涉及 P3 核心路径，独立详设 + Rex 评审 |
 
@@ -70,11 +70,12 @@ $ python3 -m pytest tests/ -x -q
 ## 3. 后续动作
 
 1. P4.2：等测试流程单据后，抓包写端点契约 → 增量 `p4-write-v1.1` → 测试单据白名单验证 → 人工验收。
-2. P4.4：对账业务口径确认后（见对账语义说明），挂 cron（默认每 30 分钟、只读、偏差仅报告 + 落审计，不自动写）。
+2. ~~P4.4 挂 cron~~ ✅ 已完成（2026-11-06）：`oa-reconcile-daily (P4.4)`，每日 09:30 Asia/Shanghai，command payload 只读跑 `reconcile_oa.py --quiet`，落盘 `memory/oa-reconcile-latest.json`，force run 实测通过。
 3. 审批人身份映射（OA 工号 ↔ L3 reviewer）：P4.2 落地时按 OA 流程图/节点实现。
 
 ---
 
 ## 变更历史
 
-- v1.0（2026-11-06）：初版验收记录，Rex 按实测结果通过。
+- v1.0（2026-11-06）：初版验收记录，Rex 按实测结果通过（P4.1/P4.3/P4.4 函数）。
+- v1.1（2026-11-06）：P4.4 落地 `scripts/reconcile_oa.py` 可调度 runner + 8 单元测试；修复退回事件误判（纯 rank 把 OA 退回 draft vs 本地 review 错判 local_ahead → `_classify_event` 感知退回 = oa_ahead）；cron 每日 09:30 调度并 force-run 实测通过（`b36c64d`）。

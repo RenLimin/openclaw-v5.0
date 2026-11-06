@@ -38,8 +38,9 @@ bangcle-contract/
 │   ├── ingest.py / digitize.py / parser.py
 │   ├── risk.py / kb_match.py / report.py
 ├── repository/db.py
-├── services/oa/{cube.py,browser_fallback.py}
+├── services/oa/{cube.py,browser_fallback.py,approval_log.py}
 ├── cli/contractctl.py
+├── scripts/{register_contract_ontology.py,reconcile_oa.py}
 ├── data/                     # SQLite、暂存（gitignored）
 ├── tests/{unit,e2e}
 └── docs/
@@ -116,6 +117,41 @@ contractctl --db <path> ontology proposals --status committed
 
 ---
 
+## 4b. OA 审批流每日对账（Palantir P4.4，v1.2）
+
+> 只读对账：本地合同状态 ↔ OA 真实审批流，产出四态偏差报告，**永不自动写回**。
+> 依赖：泛微 OA 会话（见 §5）+ CubeClient + ApprovalLogReader。
+
+```bash
+# 手动触发（全量）
+python3 scripts/reconcile_oa.py                 # 详细 JSON
+python3 scripts/reconcile_oa.py --quiet         # 精简 JSON
+python3 scripts/reconcile_oa.py --contract-id 5 # 只对单个合同
+```
+
+**数据链（全部只读）：**
+```
+contracts.oa_billid
+  → CubeClient.get_contract(billid).main_fields["合同审批流程→"] = requestid
+  → ApprovalLogReader.read_approval_chain(requestid) = 真实审批链
+  → reconcile() 四态比对
+```
+
+**输出：** `memory/oa-reconcile-latest.json`（gitignored，最新机读报告）。
+四态：`in_sync` / `oa_ahead`（OA 已推进本地未记录）/ `local_ahead`（本地超前）/ `oa_unknown`（读不到，不伪造）。
+单合同失败降级 `no_billid` / `no_requestid`，不中断整批。
+
+**调度（Gateway cron）：**
+- job：`oa-reconcile-daily (P4.4)`，每天 `30 9 * * *` Asia/Shanghai；
+- payload：command `["/opt/homebrew/opt/python@3.14/bin/python3.14", "scripts/reconcile_oa.py", "--quiet"]`，cwd=组件根；
+  ⚠️ 必须用绝对路径解释器：cron 环境 `python3` 解析到系统 Python 3.9（x86_64 numpy 不兼容 arm64）；
+- 只落盘 + run history，不投递通知（有偏差后再按业务接通知渠道）；
+- 手动触发：`openclaw cron run <job-id>`。
+
+**语义提醒：** 对账只检测不修复；发现偏差 → 人工处置（同步本地 / 冲销工单），写永远走提案 + 授权（P4.3）。
+
+---
+
 ## 5. OA / 凭据运行说明
 
 - OA 为 **泛微 e-cology 9 Cube**，主键 `billid`；会话经 IAM SSO 换票（IAM 登录后点「OA协同办公平台」应用卡片换票，直导 OA / 跨 context 注入 cookie 均不建立 ecology 会话）。
@@ -160,3 +196,4 @@ contractctl --db <path> ontology proposals --status committed
 | 2026-10-29 | v1.0 | 更正 OA 会话有效期为实测约 2h idle（原误记 12h）；补换票/落盘/验证码/DOM 判定/E2E skip 等运维事实 |
 | 2026-10-29 | v1.0 | OA 审查改用合同附件**原文全文**（原仅审卡片字段摘要）；附件临时目录**即用即焚**（finally rmtree，不留存/不入库）；新增 `contract_review/oa_text.py` + 5 条回归（含临时目录焚毁集成测试），全量 127 passed |
 | 2026-11-05 | v1.1 | 新增 Contract Ontology Bridge 运维：`ontology register/submit/approve/reject/status/proposals` 子命令 + 装配脚本 + 关键语义（CWA 登记前置 / validated≠committed / 越权拒绝 / 幂等 / Saga 补偿） |
+| 2026-11-06 | v1.2 | 新增 §4b OA 审批流每日对账（P4.4）：`scripts/reconcile_oa.py` 手动/调度用法、数据链、四态与降级语义、cron 调度参数（绝对路径 python3.14，每日 09:30 Asia/Shanghai） |
