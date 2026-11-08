@@ -73,19 +73,25 @@ def gql(query: str, team_uuid: str = DEFAULT_TEAM_UUID) -> dict:
     )
     _run_js(inject)
 
-    for _ in range(15):
+    for attempt in range(20):
         time.sleep(1)
         v = _run_js("window.__r")
         if v and v != "null":
             if v.startswith("ERR"):
                 raise RuntimeError(v)
-            d = json.loads(v)
+            try:
+                d = json.loads(v)
+            except json.JSONDecodeError:
+                # 空响应或截断，重试
+                if attempt < 19:
+                    continue
+                raise RuntimeError(f"GraphQL 返回非 JSON: {v[:200]}")
             if "errors" in d:
                 raise RuntimeError(json.dumps(d["errors"], ensure_ascii=False))
             if "code" in d and d.get("code") == 500:
                 raise RuntimeError(f"ONES ServerError: {d.get('errcode', 'unknown')}")
             return d["data"]
-    raise TimeoutError("GraphQL 无响应（15s 超时）")
+    raise TimeoutError("GraphQL 无响应（20s 超时）")
 
 
 def gql_with_retry(query: str, team_uuid: str = DEFAULT_TEAM_UUID) -> dict:
@@ -106,20 +112,64 @@ def gql_with_retry(query: str, team_uuid: str = DEFAULT_TEAM_UUID) -> dict:
 
 
 # ── 项目枚举 ─────────────────────────────────────────────────────────
-def fetch_projects(team_uuid: str) -> list:
-    """枚举团队下所有项目，取合同字段 _7KF6tXvk。"""
+def fetch_projects(team_uuid: str, customer: str = "") -> list:
+    """枚举团队下所有项目，按客户名过滤，取合同字段 _7KF6tXvk。
+    
+    实测：团队下有 19000+ 项目，必须按客户名过滤，否则遍历全部项目会超时。
+    过滤规则：projectName 包含客户名关键词，或 contractNo 非空且 projectName 匹配。
+    """
     query = 'query { projects { uuid name _7KF6tXvk } }'
-    data = gql_with_retry(query, team_uuid)
+    for attempt in range(3):
+        try:
+            data = gql_with_retry(query, team_uuid)
+            break
+        except Exception as e:
+            if attempt < 2:
+                print(f"[WARN] 项目枚举失败，重试 ({attempt+1}/3): {e}", file=sys.stderr)
+                time.sleep(2)
+            else:
+                raise
+    
+    all_projects = data.get("projects", [])
+    print(f"[INFO] 团队项目总数: {len(all_projects)}", file=sys.stderr)
+    
+    # 按客户名过滤
+    customer_keywords = []
+    if customer:
+        # 提取客户名关键词（去掉"股份有限公司"等后缀）
+        customer_keywords = [customer]
+        # 常见简称映射
+        if "建设银行" in customer or "建行" in customer:
+            customer_keywords.extend(["建行", "中国建设银行", "建设银行"])
+        if "华夏银行" in customer:
+            customer_keywords.extend(["华夏"])
+    
     projects = []
-    for p in data.get("projects", []):
-        projects.append({
-            "projectUUID": p.get("uuid", ""),
-            "projectCode": _extract_project_code(p.get("name", "")),
-            "projectName": p.get("name", ""),
-            "contractNo": p.get("_7KF6tXvk") or None,
-            "standardProduct": None,
-            "status": "unknown",
-        })
+    for p in all_projects:
+        name = p.get("name", "") or ""
+        contract_no = p.get("_7KF6tXvk") or ""
+        
+        # 过滤：项目名包含任一关键词
+        matched = False
+        if customer_keywords:
+            for kw in customer_keywords:
+                if kw in name:
+                    matched = True
+                    break
+        else:
+            matched = True  # 无客户名时取全部（不推荐）
+        
+        if matched:
+            projects.append({
+                "projectUUID": p.get("uuid", ""),
+                "projectCode": _extract_project_code(name),
+                "projectName": name,
+                "contractNo": contract_no or None,
+                "standardProduct": None,
+                "status": "unknown",
+            })
+    
+    print(f"[INFO] 过滤后项目数: {len(projects)} (关键词: {customer_keywords})", file=sys.stderr)
     return projects
 
 
@@ -144,8 +194,23 @@ def fetch_tasks_for_project(project_uuid: str, team_uuid: str) -> dict:
         '} }'
     ) % project_uuid
 
-    data = gql_with_retry(query, team_uuid)
-    tasks = data.get("tasks", [])
+    for attempt in range(3):
+        try:
+            data = gql_with_retry(query, team_uuid)
+            tasks = data.get("tasks", [])
+            if isinstance(tasks, list):
+                break
+            print(f"[WARN] 项目 {project_uuid} 返回非列表，重试 ({attempt+1}/3)", file=sys.stderr)
+            time.sleep(2)
+        except Exception as e:
+            if attempt < 2:
+                print(f"[WARN] 项目 {project_uuid} 取数失败，重试 ({attempt+1}/3): {e}", file=sys.stderr)
+                time.sleep(2)
+            else:
+                raise
+    else:
+        print(f"[ERROR] 项目 {project_uuid} 连续 3 次失败", file=sys.stderr)
+        sys.exit(2)
 
     if not isinstance(tasks, list):
         print(f"[ERROR] 项目 {project_uuid} 返回非列表: {type(tasks)}", file=sys.stderr)
@@ -185,8 +250,8 @@ def main():
     print(f"[INFO] 取数: customer={customer}, period={period}, team={team_uuid}",
           file=sys.stderr)
 
-    # S1: 项目枚举
-    projects = fetch_projects(team_uuid)
+    # S1: 项目枚举（按客户名过滤）
+    projects = fetch_projects(team_uuid, customer)
     print(f"[INFO] 枚举到 {len(projects)} 个项目", file=sys.stderr)
 
     # S2: 逐项目取全

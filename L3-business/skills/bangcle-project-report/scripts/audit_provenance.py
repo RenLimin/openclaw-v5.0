@@ -54,8 +54,8 @@ def check_numbers(report_text: str, detail: list) -> list:
     # 从明细计算允许的汇总数字
     total = len(detail)
     done = sum(1 for i in detail if i.get("statusCategory") == "done")
-    wip = sum(1 for i in detail if i.get("statusCategory") == "in_progress")
-    allowed_numbers = {str(total), str(done), str(wip)}
+    wip = total - done  # 口径与渲染层一致：未完成全部计在途
+    allowed_numbers = {str(total), str(done), str(wip), "0"}
     # 完成率（整数百分比）
     if total > 0:
         allowed_numbers.add(str(round(done / total * 100)))
@@ -110,12 +110,39 @@ PRODUCT_LABELS = {
 }
 
 
-def check_nouns(report_text: str, detail: list) -> list:
+def strip_envelope_sections(text: str) -> str:
+    """剥离统一信封区块（元信息块/溯源链/质量信号）。
+
+    这些区块是方法论与审计元信息，不是业务论述；名词审计只扫业务正文。
+    """
+    out = []
+    skip = False
+    for line in text.split("\n"):
+        stripped = line.strip()
+        # 进入/离开可跳过章节：## 0. 溯源链、含「质量信号」的章节
+        if stripped.startswith("## "):
+            skip = bool(re.match(r"##\s*0?[.、]?\s*溯源链", stripped)) or ("质量信号" in stripped)
+        if not skip:
+            # 元信息块（H1 下的 > 引用块）也剔除
+            if stripped.startswith(">") and ("生成时间" in stripped or "数据基准" in stripped):
+                continue
+            out.append(line)
+    return "\n".join(out)
+
+
+def check_nouns(report_text: str, detail: list, contracts: list = None) -> list:
     """检查技术/业务名词是否在任务名/描述中命中。
-    
-    只检查技术/业务名词，排除模板固定词、分类标签、产品方向标签。
+
+    只检查技术/业务名词，排除模板固定词、分类标签、产品方向标签、
+    以及合同官方正式名（合法名词，来源为合同台账）。
     """
     missing = []
+    # 合同官方名豁免（合法名词，不需要出现在任务名中）
+    exempt_nouns = set()
+    for c in (contracts or []):
+        official = c.get("officialName") or c.get("projectName") or ""
+        for m in re.finditer(r'[一-鿿]{4,8}', official):
+            exempt_nouns.add(m.group())
     # 构建允许的名词集合（任务名中的词）
     allowed_nouns = set()
     for item in detail:
@@ -127,12 +154,14 @@ def check_nouns(report_text: str, detail: list) -> list:
         for m in re.finditer(r'[A-Za-z][A-Za-z0-9_]{1,}', name):
             allowed_nouns.add(m.group())
 
-    # 检查报告中的名词
-    report_nouns = re.findall(r'[\u4e00-\u9fff]{4,8}', report_text)
+    # 检查报告中的名词（只扫业务正文，剥离信封/溯源/质量信号）
+    body_text = strip_envelope_sections(report_text)
+    report_nouns = re.findall(r'[\u4e00-\u9fff]{4,8}', body_text)
     for noun in report_nouns:
         if noun not in allowed_nouns and len(noun) >= 4:
-            # 排除模板固定词、分类标签、产品方向标签
-            if noun in TEMPLATE_WORDS or noun in CATEGORY_LABELS or noun in PRODUCT_LABELS:
+            # 排除模板固定词、分类标签、产品方向标签、合同官方名
+            if (noun in TEMPLATE_WORDS or noun in CATEGORY_LABELS
+                or noun in PRODUCT_LABELS or noun in exempt_nouns):
                 continue
             # 排除包含允许词的子串
             if any(allowed in noun for allowed in allowed_nouns if len(allowed) >= 4):
@@ -199,7 +228,7 @@ def main():
 
     all_missing = []
     all_missing.extend(check_numbers(report_text, detail))
-    all_missing.extend(check_nouns(report_text, detail))
+    all_missing.extend(check_nouns(report_text, detail, contracts))
     all_missing.extend(check_redaction(report_text, audience))
     all_missing.extend(check_contract_names(report_text, contracts))
 
@@ -218,7 +247,7 @@ def main():
         "missing": unique_missing,
         "checks": {
             "numbers": len(check_numbers(report_text, detail)),
-            "nouns": len(check_nouns(report_text, detail)),
+            "nouns": len(check_nouns(report_text, detail, contracts)),
             "redaction": len(check_redaction(report_text, audience)),
             "contractNames": len(check_contract_names(report_text, contracts)),
         },

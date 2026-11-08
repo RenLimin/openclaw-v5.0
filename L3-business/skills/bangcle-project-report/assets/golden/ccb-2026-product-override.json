@@ -1,0 +1,686 @@
+{
+  "description": "建行 2026 年度汇报黄金基准 — 113 项实际交付逐条产品方向人工核定（来源：建行项目工作汇报.md 明细表 + 16 合同 907 任务对齐）",
+  "source": "analysis_output/ccb_delivery/建行项目工作汇报.md (2026-11-08 版)",
+  "scope": "2026-01-01 ~ 2026-12-31, 16 签约合同",
+  "count": 113,
+  "entries": {
+    "347121": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347123": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347124": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347125": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347126": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347127": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347128": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347130": {
+      "product": "鸿蒙 NEXT 加固",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347138": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347139": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-04",
+      "contract": "XSZS2512101030"
+    },
+    "347439": {
+      "product": "安全监测",
+      "category": "产研支持",
+      "date": "01-05",
+      "contract": "XSZS2512101030"
+    },
+    "347454": {
+      "product": "安全监测",
+      "category": "专项任务",
+      "date": "01-05",
+      "contract": "XSZS2512101030"
+    },
+    "347536": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-05",
+      "contract": "XSZS2512101030"
+    },
+    "347374": {
+      "product": "安卓/SDK 加固",
+      "category": "专项任务",
+      "date": "01-05",
+      "contract": "XSZS2403040098"
+    },
+    "347923": {
+      "product": "安全监测",
+      "category": "问题工单",
+      "date": "01-07",
+      "contract": "XSZS2512101030"
+    },
+    "348016": {
+      "product": "合规检测",
+      "category": "产研支持",
+      "date": "01-07",
+      "contract": "XSZS2311170921"
+    },
+    "348302": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-09",
+      "contract": "XSZS2512101030"
+    },
+    "348303": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-09",
+      "contract": "XSZS2512101030"
+    },
+    "348521": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-09",
+      "contract": "XSZS2512101030"
+    },
+    "348575": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-12",
+      "contract": "XSZS2512101030"
+    },
+    "348864": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-13",
+      "contract": "XSZS2512101030"
+    },
+    "349496": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-14",
+      "contract": "XSZS2512101030"
+    },
+    "349497": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-14",
+      "contract": "XSZS2512101030"
+    },
+    "349742": {
+      "product": "安全监测",
+      "category": "问题工单",
+      "date": "01-15",
+      "contract": "XSZS2512101030"
+    },
+    "350301": {
+      "product": "安全监测",
+      "category": "问题工单",
+      "date": "01-19",
+      "contract": "XSZS2512101030"
+    },
+    "350307": {
+      "product": "安卓/SDK 加固",
+      "category": "缺陷修复",
+      "date": "01-19",
+      "contract": "XSZS2512101030"
+    },
+    "350329": {
+      "product": "安卓/SDK 加固",
+      "category": "缺陷修复",
+      "date": "01-19",
+      "contract": "XSZS2512101030"
+    },
+    "350511": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-19",
+      "contract": "XSZS2512101030"
+    },
+    "350512": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-19",
+      "contract": "XSZS2512101030"
+    },
+    "350513": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-19",
+      "contract": "XSZS2512101030"
+    },
+    "350292": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-19",
+      "contract": "XSZS2311170921"
+    },
+    "350563": {
+      "product": "安卓/SDK 加固",
+      "category": "缺陷修复",
+      "date": "01-20",
+      "contract": "XSZS2512101030"
+    },
+    "350614": {
+      "product": "安卓/SDK 加固",
+      "category": "缺陷修复",
+      "date": "01-20",
+      "contract": "XSZS2512101030"
+    },
+    "350641": {
+      "product": "安全监测",
+      "category": "问题工单",
+      "date": "01-20",
+      "contract": "XSZS2512101030"
+    },
+    "350605": {
+      "product": "H5/API 安全",
+      "category": "产研支持",
+      "date": "01-20",
+      "contract": "XSZS2509180694"
+    },
+    "350868": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-21",
+      "contract": "XSZS2512101030"
+    },
+    "350871": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-21",
+      "contract": "XSZS2512101030"
+    },
+    "350878": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-21",
+      "contract": "XSZS2512101030"
+    },
+    "350879": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-21",
+      "contract": "XSZS2512101030"
+    },
+    "350880": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-21",
+      "contract": "XSZS2512101030"
+    },
+    "350984": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-22",
+      "contract": "XSZS2512101030"
+    },
+    "350993": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-22",
+      "contract": "XSZS2512101030"
+    },
+    "351155": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-22",
+      "contract": "XSZS2512101030"
+    },
+    "350990": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-22",
+      "contract": "XSZS2311170921"
+    },
+    "351599": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "01-26",
+      "contract": "XSZS2512101030"
+    },
+    "351644": {
+      "product": "安全监测",
+      "category": "问题工单",
+      "date": "01-26",
+      "contract": "XSZS2512101030"
+    },
+    "351497": {
+      "product": "H5/API 安全",
+      "category": "产研支持",
+      "date": "01-26",
+      "contract": "XSZS2509180694"
+    },
+    "351769": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "01-27",
+      "contract": "XSZS2512101030"
+    },
+    "352193": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "01-29",
+      "contract": "XSZS2512101030"
+    },
+    "352572": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "02-02",
+      "contract": "XSZS2512101030"
+    },
+    "352573": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "02-02",
+      "contract": "XSZS2512101030"
+    },
+    "352574": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "02-02",
+      "contract": "XSZS2512101030"
+    },
+    "352612": {
+      "product": "安全监测",
+      "category": "产研支持",
+      "date": "02-02",
+      "contract": "XSZS2512101030"
+    },
+    "352794": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "02-03",
+      "contract": "XSZS2512101030"
+    },
+    "353106": {
+      "product": "安全监测",
+      "category": "产研支持",
+      "date": "02-04",
+      "contract": "XSZS2512101030"
+    },
+    "353234": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "02-04",
+      "contract": "XSZS2512101030"
+    },
+    "353262": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "02-04",
+      "contract": "XSZS2512101030"
+    },
+    "353409": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "02-05",
+      "contract": "XSZS2512101030"
+    },
+    "353412": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "02-05",
+      "contract": "XSZS2512101030"
+    },
+    "353455": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "02-05",
+      "contract": "XSZS2512101030"
+    },
+    "353710": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "02-06",
+      "contract": "XSZS2512101030"
+    },
+    "353796": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "02-09",
+      "contract": "XSZS2512101030"
+    },
+    "354008": {
+      "product": "安全监测",
+      "category": "问题工单",
+      "date": "02-10",
+      "contract": "XSZS2512101030"
+    },
+    "354973": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "02-28",
+      "contract": "XSZS2512101030"
+    },
+    "355061": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "03-02",
+      "contract": "XSZS2512101030"
+    },
+    "355081": {
+      "product": "合规检测",
+      "category": "产研支持",
+      "date": "03-02",
+      "contract": "XSZS2311170921"
+    },
+    "355096": {
+      "product": "合规检测",
+      "category": "专项任务",
+      "date": "03-02",
+      "contract": "XSZS2311170921"
+    },
+    "355621": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "03-04",
+      "contract": "XSZS2512101030"
+    },
+    "355771": {
+      "product": "合规检测",
+      "category": "专项任务",
+      "date": "03-05",
+      "contract": "XSZS2311170921"
+    },
+    "356267": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "03-09",
+      "contract": "XSZS2512101030"
+    },
+    "356269": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "03-09",
+      "contract": "XSZS2512101030"
+    },
+    "356834": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "03-12",
+      "contract": "XSZS2512101030"
+    },
+    "357113": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "03-13",
+      "contract": "XSZS2512101030"
+    },
+    "358326": {
+      "product": "安卓/SDK 加固",
+      "category": "问题工单",
+      "date": "03-20",
+      "contract": "XSZS2512101030"
+    },
+    "359785": {
+      "product": "小程序加固",
+      "category": "客户定制需求",
+      "date": "03-30",
+      "contract": "XSZS2511110886"
+    },
+    "359788": {
+      "product": "小程序加固",
+      "category": "客户定制需求",
+      "date": "03-30",
+      "contract": "XSZS2511110886"
+    },
+    "361495": {
+      "product": "安卓/SDK 加固",
+      "category": "问题工单",
+      "date": "04-09",
+      "contract": "XSZS2512101030"
+    },
+    "367467": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "05-18",
+      "contract": "XSZS2512101030"
+    },
+    "369857": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "06-01",
+      "contract": "XSZS2512101030"
+    },
+    "374756": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "06-30",
+      "contract": "XSZS2512101030"
+    },
+    "374757": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "06-30",
+      "contract": "XSZS2512101030"
+    },
+    "375259": {
+      "product": "安全监测",
+      "category": "客户定制需求",
+      "date": "07-02",
+      "contract": "XSZS2512101030"
+    },
+    "375731": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "07-06",
+      "contract": "XSZS2512101030"
+    },
+    "381290": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-07",
+      "contract": "XSZS2311170921"
+    },
+    "381297": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-07",
+      "contract": "XSZS2311170921"
+    },
+    "381298": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-07",
+      "contract": "XSZS2311170921"
+    },
+    "381957": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-12",
+      "contract": "XSZS2311170921"
+    },
+    "381958": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-12",
+      "contract": "XSZS2311170921"
+    },
+    "382176": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-13",
+      "contract": "XSZS2311170921"
+    },
+    "382177": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-13",
+      "contract": "XSZS2311170921"
+    },
+    "382178": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-13",
+      "contract": "XSZS2311170921"
+    },
+    "382179": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-13",
+      "contract": "XSZS2311170921"
+    },
+    "382180": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-13",
+      "contract": "XSZS2311170921"
+    },
+    "382181": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-13",
+      "contract": "XSZS2311170921"
+    },
+    "382559": {
+      "product": "合规检测",
+      "category": "缺陷修复",
+      "date": "08-14",
+      "contract": "XSZS2311170921"
+    },
+    "382806": {
+      "product": "合规检测",
+      "category": "缺陷修复",
+      "date": "08-17",
+      "contract": "XSZS2311170921"
+    },
+    "382834": {
+      "product": "小程序加固",
+      "category": "缺陷修复",
+      "date": "08-17",
+      "contract": "XSZS2311170921"
+    },
+    "382859": {
+      "product": "合规检测",
+      "category": "缺陷修复",
+      "date": "08-17",
+      "contract": "XSZS2311170921"
+    },
+    "383872": {
+      "product": "合规检测",
+      "category": "问题工单",
+      "date": "08-22",
+      "contract": "XSZS2311170921"
+    },
+    "384217": {
+      "product": "合规检测",
+      "category": "客户定制需求",
+      "date": "08-25",
+      "contract": "XSZS2311170921"
+    },
+    "386598": {
+      "product": "安卓/SDK 加固",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386599": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386623": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386624": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386625": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386626": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386647": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386648": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386649": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386650": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386651": {
+      "product": "应用安全测评",
+      "category": "客户定制需求",
+      "date": "09-08",
+      "contract": "XSZS2509180700"
+    },
+    "386930": {
+      "product": "安全监测",
+      "category": "缺陷修复",
+      "date": "09-09",
+      "contract": "XSZS2512101030"
+    },
+    "390063": {
+      "product": "安卓/SDK 加固",
+      "category": "缺陷修复",
+      "date": "09-22",
+      "contract": "XSZS2509180700"
+    }
+  }
+}

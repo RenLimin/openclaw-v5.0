@@ -90,7 +90,8 @@ def main():
 
     for direction, items in sorted(direction_items.items()):
         done = sum(1 for i in items if i.get("statusCategory") == "done")
-        in_progress = [i for i in items if i.get("statusCategory") == "in_progress"]
+        # 在途口径：未完成全部计在途（与报告汇总一致，含 to_do）
+        in_progress = [i for i in items if i.get("statusCategory") != "done"]
         total = len(items)
 
         level = classify_realization(direction, done, total, in_progress)

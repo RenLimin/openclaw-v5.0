@@ -51,7 +51,7 @@ def main():
     active = [w for w in work_items if w.get("isWork") and w.get("inPeriod")]
 
     # 三维汇总
-    by_category = aggregate_dimension(active, "issueType")
+    by_category = aggregate_dimension(active, "category")
     by_product = aggregate_dimension(active, "productDirection")
 
     # 按季度
