@@ -104,7 +104,8 @@ class ContractOntologyBridge:
         return ai, svc
 
     def _new_service_oa(self, target: Dict[str, Any],
-                        identity: Optional[Any] = None):
+                        identity: Optional[Any] = None,
+                        directory: Optional[Any] = None):
         """构造带 OA 写回连接器的 ProposalService（P5.2）。
 
         注入 connectors={'oa_writeback': OaWritebackConnector(dry_run=True)}：
@@ -114,6 +115,8 @@ class ContractOntologyBridge:
 
         identity（P6.2 可选）：传入 IdentityAuthority 即启用 run-scoped
         身份治理（enforce fail-closed）；不传则保持 P5 兼容路径。
+        directory（P7.4 可选）：传入 MarkingDirectory 即启用对象级
+        mandatory markings 治理（fail-closed）；不传保持 P6 兼容。
         """
         ai, reg, ProposalService = self._open_l2()
         from .oa_connector import OaWritebackConnector
@@ -125,6 +128,7 @@ class ContractOntologyBridge:
                 ),
             },
             identity=identity,
+            directory=directory,
         )
         return ai, svc
 
@@ -366,6 +370,11 @@ class ContractOntologyBridge:
         idempotency_key: Optional[str] = None,
         reviewer_operator: Optional[str] = None,
         authority: Optional[Any] = None,
+        directory: Optional[Any] = None,
+        agent_markings: Optional[List[str]] = None,
+        agent_clearance: Optional[str] = None,
+        reviewer_markings: Optional[List[str]] = None,
+        reviewer_clearance: str = "restricted",
     ) -> Dict[str, Any]:
         """P6.2 首实例：agent 经 OntologyToolchain 消费 submit_to_oa。
 
@@ -376,6 +385,10 @@ class ContractOntologyBridge:
 
         红线不变：commit 只由 human 令牌触发；连接器恒 dry-run（P4.2）。
         authority 不传时用默认 secret 路径（生产）；测试注入固定 secret。
+
+        P7.4：directory 传入即启用对象级 mandatory markings；
+        agent_markings/clearance 写入 run 令牌 claims；
+        reviewer_markings/clearance 写入 human reviewer 令牌 claims。
         """
         action_type = "submit_to_oa"
         row = self._contract_row(contract_id)
@@ -401,7 +414,8 @@ class ContractOntologyBridge:
             "comment": comment,
         }
 
-        ai, svc = self._new_service_oa(target, identity=authority)
+        ai, svc = self._new_service_oa(target, identity=authority,
+                                       directory=directory)
         try:
             chain = OntologyToolchain(svc, svc.registry, authority)
             reviewer_token = None
@@ -409,6 +423,8 @@ class ContractOntologyBridge:
                 reviewer_token = operator_token(
                     authority, reviewer_operator,
                     run_id=run_id, domain_code=DOMAIN_CODE,
+                    markings=reviewer_markings,
+                    clearance=reviewer_clearance,
                 )
             result = chain.run_action(
                 run_id=run_id,
@@ -423,6 +439,8 @@ class ContractOntologyBridge:
                 scopes=[f"propose:submit_to_oa:{DOMAIN_CODE}"],
                 subject=f"agent:{agent}",
                 kind="agent",
+                markings=agent_markings,
+                clearance=agent_clearance,
                 rationale=rationale,
                 idempotency_key=idempotency_key,
                 reviewer_token=reviewer_token,

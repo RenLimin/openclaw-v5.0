@@ -82,6 +82,8 @@ class OntologyToolchain:
         scopes: List[str],
         subject: str,
         kind: str,
+        markings: Optional[List[str]] = None,
+        clearance: Optional[str] = None,
         auto_review: bool = False,
         reviewer_token: Optional[str] = None,
         rationale: Optional[str] = None,
@@ -92,6 +94,8 @@ class OntologyToolchain:
         参数：
         - scopes：run 令牌 scope（通常含 propose:<action>:<domain>）；
         - subject/kind：run 主体（agent 或 human 自提案）；
+        - markings/clearance（P7.4）：对象级权限属性，签发时写入令牌
+          claims（由签发方/装配目录决定，agent 不可自报提权）；
         - auto_review：True 时必须同时给 reviewer_token（human），否则
           报错——agent 无法凭自身令牌 commit；
         - reviewer_token：human reviewer/operator 令牌，存在即触发
@@ -106,9 +110,10 @@ class OntologyToolchain:
                 "self-commit"
             )
 
-        # 1) 签发 run-scoped 令牌
+        # 1) 签发 run-scoped 令牌（含对象级属性）
         run_token = self.authority.issue(
             run_id=run_id, subject=subject, kind=kind, scopes=scopes,
+            markings=markings, clearance=clearance,
         )
 
         # 2) propose（Gate 校验 run 令牌 + scope）
