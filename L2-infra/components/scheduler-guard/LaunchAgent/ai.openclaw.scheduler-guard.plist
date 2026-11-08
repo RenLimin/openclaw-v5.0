@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.scheduler-guard</string>
+    <key>Comment</key>
+    <string>调度资产审计 — 每 6h 核对 manifest.yaml 中「自动」脚本是否真被 launchd/cron 调度（2026-11-08 建系统性防线）</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-c</string>
+      <string>source ~/.zshenv 2>/dev/null; exec /opt/homebrew/bin/python3 /Users/bangcle/.openclaw/workspace/L2-infra/components/scheduler-guard/audit.py --json > /Users/bangcle/.openclaw/workspace/L2-infra/components/scheduler-guard/logs/audit-latest.json 2&gt;&amp;1</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/scheduler-guard</string>
+    <key>StartInterval</key>
+    <integer>21600</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/scheduler-guard/logs/scheduler-guard.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/scheduler-guard/logs/scheduler-guard.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/bangcle</string>
+    </dict>
+  </dict>
+</plist>

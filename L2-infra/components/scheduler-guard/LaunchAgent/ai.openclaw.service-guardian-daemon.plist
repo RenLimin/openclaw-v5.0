@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.service-guardian-daemon</string>
+    <key>Comment</key>
+    <string>Gateway ↔ 自定义服务生命周期同步守护（常驻版）— KeepAlive 每 3s 检查 Gateway health 同步启停（2026-11-08 补齐调度落地，与 5min cron 版 .py 并存）</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-c</string>
+      <string>source ~/.zshenv 2>/dev/null; exec /bin/sh /Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/service_guardian.sh</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling</string>
+    <key>KeepAlive</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/logs/service-guardian-daemon.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/logs/service-guardian-daemon.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/bangcle</string>
+    </dict>
+  </dict>
+</plist>

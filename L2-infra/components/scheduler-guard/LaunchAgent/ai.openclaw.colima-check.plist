@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.colima-check</string>
+    <key>Comment</key>
+    <string>Colima/Docker 健康巡检和自动修复 — 每 30min 执行（2026-11-08 补齐调度落地）</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-c</string>
+      <string>source ~/.zshenv 2>/dev/null; exec /opt/homebrew/bin/python3 /Users/bangcle/.openclaw/workspace/L2-infra/components/maintenance/colima-docker-check.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/maintenance</string>
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/maintenance/logs/colima-check.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/maintenance/logs/colima-check.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/bangcle</string>
+    </dict>
+  </dict>
+</plist>

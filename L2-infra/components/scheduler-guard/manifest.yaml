@@ -1,0 +1,89 @@
+version: 1
+updated: '2026-11-08T21:40:00+08:00'
+entries:
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.quota-restore.plist
+  schedule: 每 6h + RunAtLoad
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.model-scheduling.plist
+  schedule: KeepAlive 常驻
+  status: scheduled
+  note: model-scheduling 代理本体
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/service_guardian.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.service-guardian.plist
+  schedule: 每 5min
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/service_guardian.sh
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.service-guardian-daemon.plist
+  schedule: KeepAlive 常驻（每 3s）
+  status: scheduled
+  note: 2026-11-08 补齐调度落地（常驻版，与 5min cron 版 .py 并存）
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/backup/backup.sh
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.backup.plist
+  schedule: 每天 03:00
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/context-management/auto_recovery.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.auto-recovery.plist
+  schedule: 每 10min
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/scripts/error_handler/scan_errors.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.error-scan.plist
+  schedule: 每 2h
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/observability/cron/provider-health-check.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.provider-health.plist
+  schedule: 每小时
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/observability/cron/daily-summary-delivery.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.daily-summary.plist
+  schedule: 每天 23:50
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/observability/gateway_watchdog.sh
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.gateway-watchdog.plist
+  schedule: 每 5min
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/session-recovery/scripts/check_and_retry.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.session-recovery.plist
+  schedule: 每 10min
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/session-recovery/scripts/session_cleanup.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.session-cleanup.plist
+  schedule: 每天 02:00
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/maintenance/colima-docker-check.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.colima-check.plist
+  schedule: 每 30min
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/scripts/maintenance/scheduling_health_check.sh
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.scheduling-health.plist
+  schedule: 每小时
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/scripts/system_full_audit.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.system-audit.plist
+  schedule: 每天 09:00
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/observability/scripts/agent_observer.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.agent-observer.plist
+  schedule: 每 15min
+  status: scheduled
+  note: 2026-11-08 补齐调度落地
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/session-recovery/scripts/cron_retry.sh
+  plist: null
+  schedule: null
+  status: manual_only
+  note: cron_retry.sh 是 check_and_retry.py --apply 的包装，后者已由 ai.openclaw.session-recovery
+    调度（每10min），无需重复调度

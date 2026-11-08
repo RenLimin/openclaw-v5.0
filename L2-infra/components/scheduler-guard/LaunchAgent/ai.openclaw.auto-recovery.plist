@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.auto-recovery</string>
+    <key>Comment</key>
+    <string>自动上下文压缩恢复 — 每 10min 检测压缩失败并三阶梯恢复（2026-11-08 补齐调度落地）</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-c</string>
+      <string>source ~/.zshenv 2>/dev/null; exec /opt/homebrew/bin/python3 /Users/bangcle/.openclaw/workspace/L2-infra/components/context-management/auto_recovery.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/context-management</string>
+    <key>StartInterval</key>
+    <integer>600</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/context-management/logs/auto-recovery.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/context-management/logs/auto-recovery.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/bangcle</string>
+    </dict>
+  </dict>
+</plist>

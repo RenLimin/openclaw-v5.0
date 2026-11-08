@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-08 21:06 UTC+08:00
+最后生成：2026-11-08 21:21 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -274,8 +274,8 @@ _自建技能总计: 22 个（L2: 8, L3: 6, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `c101237` |
-| Commit 数 | 626 |
+| HEAD | `42b5d6c` |
+| Commit 数 | 627 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -307,6 +307,7 @@ _自建技能总计: 22 个（L2: 8, L3: 6, L4: 8, 根目录: 0）_
 | `persistence` | 8 | 0 | 1 | `L2-infra/components/persistence` |
 | `role-library` | 0 | 0 | 0 | `L2-infra/components/role-library` |
 | `sandbox` | 9 | 0 | 1 | `L2-infra/components/sandbox` |
+| `scheduler-guard` | 1 | 0 | 0 | `L2-infra/components/scheduler-guard` |
 | `session-boundary-guard` | 0 | 0 | 0 | `L2-infra/components/session-boundary-guard` |
 | `session-isolation` | 17 | 0 | 6 | `L2-infra/components/session-isolation` |
 | `session-recovery` | 12 | 0 | 5 | `L2-infra/components/session-recovery` |

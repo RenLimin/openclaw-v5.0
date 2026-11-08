@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>ai.openclaw.agent-observer</string>
+    <key>Comment</key>
+    <string>L2 可观测性埋点 — 每 15min 采集会话/调度/系统状态（2026-11-08 补齐调度落地）</string>
+    <key>ProgramArguments</key>
+    <array>
+      <string>/bin/bash</string>
+      <string>-c</string>
+      <string>source ~/.zshenv 2>/dev/null; exec /opt/homebrew/bin/python3 /Users/bangcle/.openclaw/workspace/L2-infra/components/observability/scripts/agent_observer.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/observability</string>
+    <key>StartInterval</key>
+    <integer>900</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/observability/logs/agent-observer.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/observability/logs/agent-observer.log</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/bangcle</string>
+    </dict>
+  </dict>
+</plist>
