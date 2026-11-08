@@ -30,6 +30,7 @@ logs/observability/
 L2-infra/components/model-scheduling/logs/
 L2-infra/components/model-scheduling/config/usage.json
 L2-infra/components/model-scheduling/config/quota_state.json
+L2-infra/components/scheduler-guard/logs/
 *.err
 *.out
 
