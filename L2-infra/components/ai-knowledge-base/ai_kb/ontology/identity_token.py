@@ -26,6 +26,7 @@ _LEEWAY = 60
 
 _KINDS = {"human", "agent"}
 _VERBS = {"propose", "review", "*"}
+_CLEARANCES = {"public", "internal", "confidential", "restricted"}
 
 _DEFAULT_SECRET_PATH = (
     Path.home() / ".openclaw" / "state" / "ontology-identity.secret"
@@ -178,6 +179,8 @@ class IdentityAuthority:
         subject: str,
         kind: str,
         scopes: List[str],
+        markings: Optional[List[str]] = None,
+        clearance: Optional[str] = None,
         ttl: Optional[int] = None,
         now: Optional[int] = None,
     ) -> str:
@@ -192,6 +195,15 @@ class IdentityAuthority:
         # 签发前校验每个 scope 合法
         for sc in scopes:
             parse_scope(sc)
+        # P7：markings / clearance 校验（由签发方传入，agent 不可自报）
+        subject_markings = list(markings) if markings else []
+        if not all(isinstance(m, str) and m for m in subject_markings):
+            raise InvalidToken("markings must be non-empty strings")
+        subject_clearance = clearance if clearance is not None else "internal"
+        if subject_clearance not in _CLEARANCES:
+            raise InvalidToken(
+                f"clearance must be one of {sorted(_CLEARANCES)}"
+            )
 
         iat = int(now if now is not None else time.time())
         exp = iat + int(ttl if ttl is not None else self.default_ttl)
@@ -200,6 +212,8 @@ class IdentityAuthority:
             "sub": subject,
             "kind": kind,
             "scopes": list(scopes),
+            "markings": subject_markings,
+            "clearance": subject_clearance,
             "iat": iat,
             "exp": exp,
             "jti": "tok-" + secrets.token_hex(8),
@@ -241,6 +255,20 @@ class IdentityAuthority:
         for sc in claims["scopes"]:
             parse_scope(sc)
 
+        # P7：新字段类型校验；旧令牌缺字段时补默认（向后兼容，不提权）
+        marks = claims.get("markings", [])
+        if not isinstance(marks, list) or not all(
+            isinstance(m, str) and m for m in marks
+        ):
+            raise InvalidToken("markings must be a list of non-empty strings")
+        claims["markings"] = list(marks)
+        clr = claims.get("clearance", "internal")
+        if clr not in _CLEARANCES:
+            raise InvalidToken(
+                f"clearance must be one of {sorted(_CLEARANCES)}"
+            )
+        claims["clearance"] = clr
+
         current = int(now if now is not None else time.time())
         if int(claims["exp"]) < current - _LEEWAY:
             raise TokenExpired("token expired")
@@ -277,11 +305,14 @@ def operator_token(
     *,
     run_id: str = "local-operator",
     domain_code: str = "*",
+    markings: Optional[List[str]] = None,
+    clearance: str = "restricted",
     ttl: Optional[int] = None,
 ) -> str:
     """签发 local operator 令牌（全 scope），人工 REST/CLI 兼容路径。
 
-    sub 前缀 operator: 以区分 agent 主体；kind=human。
+    sub 前缀 operator: 以区分 agent 主体；kind=human。默认 clearance 最高
+    （restricted），但 mandatory marking 仍需显式传入（不天然豁免）。
     """
     if not operator_id:
         raise InvalidToken("operator_id must not be empty")
@@ -291,5 +322,7 @@ def operator_token(
         subject=subject,
         kind="human",
         scopes=[f"*:*:{domain_code}"],
+        markings=markings,
+        clearance=clearance,
         ttl=ttl,
     )

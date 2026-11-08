@@ -892,6 +892,56 @@ class AIKB:
         if self.get_current_migration_version() < 12:
             self.apply_migration(12, "ontology_identity_token_fingerprint")
 
+    # --- Operational ontology: P7 object-level markings (migration v13) ---
+    def init_ontology_marking_tables(self):
+        """Create ont_marking / ont_marking_grant tables, register v13.
+
+        Object-level (mandatory) security layer. Grants are time-bounded
+        (expires_at NOT NULL) to avoid stale grants after role changes.
+        No backfill: existing ont_identity rows are untouched, so a legacy
+        database behaves exactly as P6 until markings are configured.
+        """
+        if not self.conn:
+            self.connect()
+        cursor = self.conn.cursor()
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_marking (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            domain_id   INTEGER NOT NULL REFERENCES domain(id),
+            code        TEXT NOT NULL,
+            name        TEXT NOT NULL,
+            sensitivity TEXT NOT NULL DEFAULT 'normal',
+            owner       TEXT,
+            created_at  TEXT NOT NULL,
+            UNIQUE(domain_id, code)
+        )
+        """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ont_marking_grant (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            marking_id  INTEGER NOT NULL REFERENCES ont_marking(id),
+            subject     TEXT NOT NULL,
+            source      TEXT NOT NULL,
+            granted_at  TEXT NOT NULL,
+            expires_at  TEXT NOT NULL,
+            revoked_at  TEXT,
+            granted_by  TEXT,
+            UNIQUE(marking_id, subject)
+        )
+        """)
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ont_grant_subject "
+            "ON ont_marking_grant(subject)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ont_grant_marking "
+            "ON ont_marking_grant(marking_id)"
+        )
+        self.conn.commit()
+        cursor.close()
+        if self.get_current_migration_version() < 13:
+            self.apply_migration(13, "object_level_markings")
+
     # --- Operational ontology: one-shot bootstrap for runtime entrypoints ---
     def init_ontology_tables(self):
         """Create ALL ontology tables (v8-v11) in dependency order.
@@ -907,6 +957,7 @@ class AIKB:
         self.init_ontology_proposal_tables()
         self.init_ontology_saga_tables()
         self.init_ontology_identity_token_tables()
+        self.init_ontology_marking_tables()
 
     # --- Migration ---
     def get_current_migration_version(self) -> int:
