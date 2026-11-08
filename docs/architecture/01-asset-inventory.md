@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-08 21:35 UTC+08:00
+最后生成：2026-11-08 21:45 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -274,8 +274,8 @@ _自建技能总计: 22 个（L2: 8, L3: 6, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `4fbe741` |
-| Commit 数 | 628 |
+| HEAD | `13ff4c4` |
+| Commit 数 | 629 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -300,7 +300,7 @@ _自建技能总计: 22 个（L2: 8, L3: 6, L4: 8, 根目录: 0）_
 | `logs` | 3 | 0 | 0 | `L2-infra/components/logs` |
 | `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
 | `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |
-| `model-scheduling` | 16 | 0 | 2 | `L2-infra/components/model-scheduling` |
+| `model-scheduling` | 17 | 0 | 3 | `L2-infra/components/model-scheduling` |
 | `observability` | 9 | 0 | 1 | `L2-infra/components/observability` |
 | `ocr-digitalization` | 24 | 0 | 7 | `L2-infra/components/ocr-digitalization` |
 | `office-generation` | 16 | 0 | 6 | `L2-infra/components/office-generation` |

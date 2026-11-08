@@ -202,3 +202,32 @@ Python dict 遍历顺序不保证稳定，排序 key 必须包含唯一字段（
 
 - ctx 声明必须实测校准，不能抄默认值（deepseek-v4-flash-ga 声明 131k 实际 1M）
 - `openclaw agent --local` 测试必须指定 `--session-key`，否则污染主会话（今日实测踩坑）
+
+---
+
+## 2026-11-08: exhausted 永久卡死根因修复 + 恢复脚本调度落地
+
+**背景**: deepseek 余额耗尽后，系统反复撞 402、永久卡死。Rex 指出「不要在同一个问题上反复出现同样的问题」。
+
+**根因（3 处，均为建设期遗漏/逻辑洞）**:
+1. **恢复脚本从未被调度**: `check_quota_and_restore.py` 写好但无 cron/LaunchAgent 引用（crontab 无、LaunchAgents 无），只出现在 memory 文档里 → 从未执行。所谓「几周前就完成了」，完成的是**脚本本身**，不是**调度落地**。
+2. **TTL 自愈逻辑洞**: 402 每次都刷新 `last_checked` → 1h TTL 永远归零 → exhausted **永不自愈**。
+3. **探活无条件覆盖 `last_checked`**: 每次 proxy 重启都重置 TTL 时钟（根因2 的变体）。
+
+**变更**:
+1. **proxy.py `_get_provider_health`**: exhausted 状态在 TTL 内返回 `unreachable`（跳过路由，不撞 402），超 1h TTL 返回 `unknown`（重新试探）。旧逻辑把 exhausted 降级为 `degraded` 仅排链尾，全链不可用时成为唯一选择 → 死循环。
+2. **proxy.py 402 标记**: 仅在**首次**标记 exhausted 时写 `last_checked`，后续 402 不刷新时间戳。
+3. **proxy.py `startup_probe`**: 仅在**状态变化**或**首次标记**时刷新 `last_checked`，状态不变时保留原时间戳。
+4. **新增 `LaunchAgent/ai.openclaw.quota-restore.plist`**: 每 6h 执行 `check_quota_and_restore.py`，RunAtLoad=true。
+
+**验证**:
+- 新增 13 个回归测试（`tests/test_proxy_exhausted.py`），全量 22 passed
+- 极简环境（`env -i`）复现 error-scan: Traceback 0
+- launchd 重新触发: error-scan 无 traceback
+- TTL 逻辑验证: 2h 前 → `unknown`（重新试探），2min 前 → `unreachable`（跳过）
+- quota-restore 调度实测: RunAtLoad 执行成功，正确识别 exhausted 模型
+
+**教训**:
+- 「脚本交付 ≠ 机制交付」：写好脚本不等于落地，必须有调度引用 + 审计机制（scheduler-guard）
+- TTL 自愈机制的时间戳只能由**状态变化**触发刷新，不能被周期性探活/重复错误覆盖
+- 恢复脚本必须配置调度并验证 RunAtLoad，不能只存在于文档里
