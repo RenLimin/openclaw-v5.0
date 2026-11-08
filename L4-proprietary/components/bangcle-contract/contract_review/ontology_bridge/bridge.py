@@ -103,13 +103,17 @@ class ContractOntologyBridge:
         svc = ProposalService(ai, reg, default_connector=connector)
         return ai, svc
 
-    def _new_service_oa(self, target: Dict[str, Any]):
+    def _new_service_oa(self, target: Dict[str, Any],
+                        identity: Optional[Any] = None):
         """构造带 OA 写回连接器的 ProposalService（P5.2）。
 
         注入 connectors={'oa_writeback': OaWritebackConnector(dry_run=True)}：
         submit_to_oa 动作经 ont_writeback_step 指向该 connector_key；
         运行期 gate 关闭，连接器由装配方注入。dry_run 冻结语义不变
         （P4.2 未闭合前绝不真实外发）。
+
+        identity（P6.2 可选）：传入 IdentityAuthority 即启用 run-scoped
+        身份治理（enforce fail-closed）；不传则保持 P5 兼容路径。
         """
         ai, reg, ProposalService = self._open_l2()
         from .oa_connector import OaWritebackConnector
@@ -120,6 +124,7 @@ class ContractOntologyBridge:
                     dry_run=True, target=target,
                 ),
             },
+            identity=identity,
         )
         return ai, svc
 
@@ -347,6 +352,104 @@ class ContractOntologyBridge:
             action=action, comment=comment, rationale=rationale,
             idempotency_key=idempotency_key,
         )
+
+    def submit_to_oa_agent(
+        self,
+        contract_id: int,
+        *,
+        run_id: str,
+        agent: str,
+        requestid: str,
+        action: str = "提交",
+        comment: str = "",
+        rationale: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+        reviewer_operator: Optional[str] = None,
+        authority: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        """P6.2 首实例：agent 经 OntologyToolchain 消费 submit_to_oa。
+
+        流程：agent run 令牌 → propose → validate → 停在 **validated**
+        （agent 永不 commit）；若给 reviewer_operator，则现场签发 human
+        operator 令牌 review→commit（dry-run 连接器），决策链含两条
+        令牌指纹，oa_submitted_at 落库。
+
+        红线不变：commit 只由 human 令牌触发；连接器恒 dry-run（P4.2）。
+        authority 不传时用默认 secret 路径（生产）；测试注入固定 secret。
+        """
+        action_type = "submit_to_oa"
+        row = self._contract_row(contract_id)
+        contract_no = row.get("contract_no") or ""
+        canonical = canonical_contract_no(contract_no)
+        if not canonical:
+            raise ValueError(f"contract {contract_id} has no contract_no")
+        if not self.registry.is_registered(contract_no):
+            raise ValueError(
+                f"contract not registered as operational object: {contract_no} "
+                f"(run 'contractctl ontology register' first)"
+            )
+        if not requestid or not str(requestid).strip():
+            raise ValueError("requestid must not be empty (OA workflow id)")
+
+        from ai_kb.ontology.agent_toolchain import OntologyToolchain
+        from ai_kb.ontology.identity_token import IdentityAuthority, operator_token
+
+        authority = authority or IdentityAuthority()
+        target = {
+            "requestid": str(requestid).strip(),
+            "action": action,
+            "comment": comment,
+        }
+
+        ai, svc = self._new_service_oa(target, identity=authority)
+        try:
+            chain = OntologyToolchain(svc, svc.registry, authority)
+            reviewer_token = None
+            if reviewer_operator:
+                reviewer_token = operator_token(
+                    authority, reviewer_operator,
+                    run_id=run_id, domain_code=DOMAIN_CODE,
+                )
+            result = chain.run_action(
+                run_id=run_id,
+                domain=DOMAIN_CODE,
+                action=action_type,
+                object_refs=[canonical],
+                params={
+                    "requestid": str(requestid).strip(),
+                    "action": action,
+                    "comment": comment,
+                },
+                scopes=[f"propose:submit_to_oa:{DOMAIN_CODE}"],
+                subject=f"agent:{agent}",
+                kind="agent",
+                rationale=rationale,
+                idempotency_key=idempotency_key,
+                reviewer_token=reviewer_token,
+            )
+            out = self._out(
+                ok=True,
+                proposal_id=result["proposal_id"],
+                proposal_status=result["status"],
+                contract_id=contract_id,
+                action=action_type,
+                decision_record=result.get("decision_record"),
+                idempotent_replay=result.get("idempotent_replay", False),
+            )
+            out["run_token_fingerprint"] = result["run_token_fingerprint"]
+            if result.get("reviewer_token_fingerprint"):
+                out["reviewer_token_fingerprint"] = (
+                    result["reviewer_token_fingerprint"]
+                )
+            # commit 后审计元数据（同 _run_oa 语义；OA 态以对账为准）
+            if result["status"] == "committed":
+                self.registry.sync_metadata(
+                    contract_id, status=row["status"],
+                    fields={"oa_submitted_at": ai.get_now()},
+                )
+            return out
+        finally:
+            ai.close()
 
     def submit(
         self,
