@@ -26,12 +26,15 @@ class SagaContext:
 
     payloads: 编排器在 apply 前写入的步骤输入（连接器可读）；
     results: 连接器通过 mark_success 写入的输出。
+    dry_run: True=preflight 预演（连接器只记录不真正外发）；
+             False=真实 commit（默认）。
     """
 
     steps: List[str] = field(default_factory=list)
     results: Dict[str, Any] = field(default_factory=dict)
     errors: Dict[str, str] = field(default_factory=dict)
     payloads: Dict[str, Any] = field(default_factory=dict)
+    dry_run: bool = False
 
     def add_step(self, name: str) -> None:
         if name not in self.steps:

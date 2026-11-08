@@ -51,6 +51,7 @@ _ACTIONS = {
     "submit": ("submit_contract", "auto", "review1"),
     "approve": ("approve_contract", "human", "approved"),
     "reject": ("reject_contract", "human", "draft"),
+    "submit_to_oa": ("submit_to_oa", "human", "review"),
 }
 
 
@@ -100,6 +101,26 @@ class ContractOntologyBridge:
             self.db_path, target=target, before=before,
         )
         svc = ProposalService(ai, reg, default_connector=connector)
+        return ai, svc
+
+    def _new_service_oa(self, target: Dict[str, Any]):
+        """构造带 OA 写回连接器的 ProposalService（P5.2）。
+
+        注入 connectors={'oa_writeback': OaWritebackConnector(dry_run=True)}：
+        submit_to_oa 动作经 ont_writeback_step 指向该 connector_key；
+        运行期 gate 关闭，连接器由装配方注入。dry_run 冻结语义不变
+        （P4.2 未闭合前绝不真实外发）。
+        """
+        ai, reg, ProposalService = self._open_l2()
+        from .oa_connector import OaWritebackConnector
+        svc = ProposalService(
+            ai, reg,
+            connectors={
+                "oa_writeback": OaWritebackConnector(
+                    dry_run=True, target=target,
+                ),
+            },
+        )
         return ai, svc
 
     # ---------------------------------------------------------------
@@ -207,6 +228,125 @@ class ContractOntologyBridge:
             )
         finally:
             ai.close()
+
+    def _run_oa(
+        self,
+        contract_id: int,
+        *,
+        operator: str,
+        requestid: str,
+        action: str = "提交",
+        comment: str = "",
+        rationale: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """submit_to_oa：把合同状态动作提交到 OA 审批流（P5.2）。
+
+        流程：propose（params=OA payload）→ validate（无 L3 handler
+        precondition，仅 OutputGuard）→ review(approve, human) → commit
+        （Saga 多步：oa_writeback 连接器，dry-run 审计）。
+
+        caller_kind 强制 human：OA 外部写为 human 级动作，agent 不可审。
+        commit 后不强制本地状态机转移——OA 态以对账为准（P4.4），
+        registry.sync_metadata 仅记录审计元数据。
+        """
+        action_type = "submit_to_oa"
+        row = self._contract_row(contract_id)
+        contract_no = row.get("contract_no") or ""
+        canonical = canonical_contract_no(contract_no)
+        if not canonical:
+            raise ValueError(f"contract {contract_id} has no contract_no")
+        if not self.registry.is_registered(contract_no):
+            raise ValueError(
+                f"contract not registered as operational object: {contract_no} "
+                f"(run 'contractctl ontology register' first)"
+            )
+        if not requestid or not str(requestid).strip():
+            raise ValueError("requestid must not be empty (OA workflow id)")
+
+        # OA 写回 target（连接器构造注入；多步 Saga 不传 payload）
+        target = {
+            "requestid": str(requestid).strip(),
+            "action": action,
+            "comment": comment,
+        }
+
+        ai, svc = self._new_service_oa(target)
+        try:
+            # 1) propose（只建 pending + 快照，零业务写）
+            proposal = svc.propose_action(
+                DOMAIN_CODE, action_type, [canonical],
+                {
+                    "requestid": str(requestid).strip(),
+                    "action": action,
+                    "comment": comment,
+                },
+                caller_id=operator,
+                caller_kind="human",
+                rationale=rationale,
+                idempotency_key=idempotency_key,
+            )
+            proposal_id = proposal["id"]
+            if proposal.get("idempotent_replay"):
+                return self._out(
+                    ok=True, proposal_id=proposal_id,
+                    proposal_status=proposal["status"],
+                    contract_id=contract_id, action="submit_to_oa",
+                    idempotent_replay=True,
+                )
+
+            # 2) validate（OutputGuard；无 precondition，仅 schema/权限）
+            vr = svc.validate(proposal_id, {
+                "user_id": operator,
+                "role": operator,
+                "clearance": "internal",
+            })
+            if not vr["ok"]:
+                return self._out(
+                    ok=False, proposal_id=proposal_id,
+                    proposal_status=vr["status"], contract_id=contract_id,
+                    action="submit_to_oa", violations=vr["violations"],
+                )
+
+            # 3) review + commit（human 级动作，agent 审 → L2 抛 PermissionError）
+            result = svc.review(
+                proposal_id, "approve", operator,
+                reviewer_kind="human", auto_commit=True,
+            )
+
+            # 4) 审计元数据（不强制本地状态机转移；OA 态以对账为准）
+            self.registry.sync_metadata(
+                contract_id, status=row["status"],
+                fields={"oa_submitted_at": ai.get_now()},
+            )
+
+            return self._out(
+                ok=True, proposal_id=proposal_id,
+                proposal_status=result["status"],
+                contract_id=contract_id, action="submit_to_oa",
+                contract_status=row["status"],
+                decision_record=result.get("decision_record"),
+            )
+        finally:
+            ai.close()
+
+    def submit_to_oa(
+        self,
+        contract_id: int,
+        operator: str,
+        *,
+        requestid: str,
+        action: str = "提交",
+        comment: str = "",
+        rationale: Optional[str] = None,
+        idempotency_key: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """提交到 OA 审批流（human 级动作；P4.2 未闭合前连接器恒 dry-run）。"""
+        return self._run_oa(
+            contract_id, operator=operator, requestid=requestid,
+            action=action, comment=comment, rationale=rationale,
+            idempotency_key=idempotency_key,
+        )
 
     def submit(
         self,

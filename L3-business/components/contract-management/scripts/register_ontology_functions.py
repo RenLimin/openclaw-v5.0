@@ -63,6 +63,19 @@ SUBMIT_SCHEMA = {
     "required": ["contract_no", "target_state"],
 }
 
+# P5.2: submit_to_oa 动作的 payload schema（写回 OA 流程所需字段）。
+# requestid 为泛微 OA 流程单据 id；action 为 OA 节点动作（提交/批准/退回）；
+# comment 为审批意见（可空）。写端点契约（P4.2）未闭合前连接器恒 dry-run。
+OA_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "requestid": {"type": "string", "minLength": 1},
+        "action": {"type": "string", "default": "提交"},
+        "comment": {"type": "string"},
+    },
+    "required": ["requestid", "action"],
+}
+
 ACTION_TYPES = [
     ("submit_contract", SUBMIT_SCHEMA,
      {"fn": "validate_submit_state"}, "auto", None),
@@ -70,6 +83,8 @@ ACTION_TYPES = [
      {"fn": "validate_approve_state"}, "human", None),
     ("reject_contract", SUBMIT_SCHEMA,
      {"fn": "validate_reject_state"}, "human", None),
+    ("submit_to_oa", OA_SCHEMA,
+     None, "human", "oa_writeback"),
 ]
 
 
@@ -100,14 +115,24 @@ def register_all(db_path: str) -> dict:
 
     for name, schema, precond, approval, target in ACTION_TYPES:
         if reg.get_action(DOMAIN_CODE, name) is None:
-            reg.register_action_type(
+            action_type_id = reg.register_action_type(
                 DOMAIN_CODE, name, "contract", schema,
                 precondition=precond, required_approval=approval,
                 writeback_target=target,
             )
             summary["actions"].append(f"registered:{name}")
         else:
+            action_type_id = reg.get_action(DOMAIN_CODE, name)["id"]
             summary["actions"].append(f"skipped(dup):{name}")
+
+        # P5.2: submit_to_oa 注册多步写回（连接器由装配方注入，
+        # 注册期只记录 connector_key，运行期由 ProposalService.connectors 解析）。
+        if name == "submit_to_oa":
+            reg.register_writeback_steps(action_type_id, [
+                {"seq": 1, "connector_key": "oa_writeback",
+                 "payload_schema": OA_SCHEMA},
+            ])
+            summary["actions"].append(f"writeback_steps:submit_to_oa->oa_writeback")
 
     # 装配闭合校验：precondition 引用的函数必须存在且 deterministic=1
     bindings = reg.validate_action_bindings(DOMAIN_CODE)

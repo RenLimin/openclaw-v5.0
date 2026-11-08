@@ -46,19 +46,27 @@ class TestL2Integration(unittest.TestCase):
     # --- 装配 ---
     def test_assembly_registers_all(self):
         self.assertEqual(len(self.summary["functions"]), 9)
-        self.assertEqual(len(self.summary["actions"]), 3)
-        self.assertEqual(len(self.summary["bindings"]), 3)
-        # 每个 action 的 precondition 绑定都存在
+        # 4 个 action type + 1 条 writeback_steps 注册记录（P5.2 submit_to_oa）
+        self.assertEqual(len(self.summary["actions"]), 5)
+        self.assertEqual(len(self.summary["bindings"]), 4)
+        # 每个 action 的 precondition 绑定都存在（submit_to_oa 无 precondition → refs 空）
         for b in self.summary["bindings"]:
-            self.assertTrue(b["refs"], f"action {b['action']} has no refs")
+            if b["action"] == "submit_to_oa":
+                self.assertEqual(b["refs"], [])
+            else:
+                self.assertTrue(b["refs"], f"action {b['action']} has no refs")
 
     def test_assembly_idempotent(self):
         s2 = register_all(self.db_path)
-        # 第二次全部 skipped(dup)，总数不变
+        # 第二次全部 skipped(dup)，总数不变；writeback_steps 记录为幂等重注册
         self.assertTrue(all(x.startswith("skipped") for x in s2["functions"]))
-        self.assertTrue(all(x.startswith("skipped") for x in s2["actions"]))
+        action_entries = [
+            x for x in s2["actions"]
+            if not x.startswith("writeback_steps:")
+        ]
+        self.assertTrue(all(x.startswith("skipped") for x in action_entries))
         self.assertEqual(len(s2["functions"]), 9)
-        self.assertEqual(len(s2["actions"]), 3)
+        self.assertEqual(len(s2["actions"]), 5)
 
     def test_assembly_registers_deterministic(self):
         reg = _registry(self.db)

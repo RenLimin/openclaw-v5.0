@@ -473,3 +473,22 @@ class ActionRegistry:
             item["precondition"] = _loads_json_field(item.get("precondition"), "precondition")
             actions.append(item)
         return actions
+
+    def list_functions(self, domain: Union[int, str]) -> List[Dict[str, Any]]:
+        """MCP 工具发现用：列出 domain 下全部 status=active 的函数定义。
+
+        与 list_actions 对称：按 domain_id 过滤、仅返回 active；
+        io_schema 反序列化后返回。按 name、version 排序。
+        """
+        domain_id = self._resolve_domain_id(domain)
+        cursor = self.db.execute("""
+        SELECT * FROM ont_function_def
+        WHERE domain_id = ? AND status = 'active'
+        ORDER BY name, version
+        """, (domain_id,))
+        functions: List[Dict[str, Any]] = []
+        for row in cursor.fetchall():
+            item = dict(row)
+            item["io_schema"] = _loads_json_field(item["io_schema"], "io_schema")
+            functions.append(item)
+        return functions

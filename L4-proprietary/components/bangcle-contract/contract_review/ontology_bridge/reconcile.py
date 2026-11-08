@@ -41,6 +41,42 @@ STATE_ORDER = {
     "archived": 5,
 }
 
+# 决策动作 → 本地预期态（P5.3：权威源统一到 DecisionService.replay）
+ACTION_TO_STATE = {
+    "approve_contract": "approved",
+    "reject_contract": "draft",
+    "submit_contract": "review",
+    "submit_to_oa": "review",
+}
+
+
+def local_state_from_decisions(
+    decisions: List[Dict[str, Any]],
+    *,
+    default: str = "",
+) -> str:
+    """从决策链取最近一条 committed 决策记录 → 本地预期态（P5.3）。
+
+    decisions 为 DecisionService.replay 返回的决策链（按 id 升序）；
+    取最后一条 result='allowed'（committed）记录的 action_type 映射：
+    - approve_contract → 'approved'
+    - reject_contract → 'draft'
+    - submit_contract → 'review'
+    - submit_to_oa → 'review'
+    无 committed 记录（或全为 rejected/compensated）→ default。
+
+    只读：不写任何状态，纯函数。
+    """
+    committed = [
+        d for d in (decisions or [])
+        if d.get("result") == "allowed"
+    ]
+    if not committed:
+        return default
+    latest = committed[-1]
+    action_type = latest.get("action_type") or ""
+    return ACTION_TO_STATE.get(action_type, default)
+
 
 @dataclass
 class ReconcileDiff:
@@ -152,6 +188,7 @@ __all__ = [
     "ReconcileDiff",
     "derive_oa_state",
     "reconcile",
+    "local_state_from_decisions",
     "IN_SYNC",
     "OA_AHEAD",
     "LOCAL_AHEAD",

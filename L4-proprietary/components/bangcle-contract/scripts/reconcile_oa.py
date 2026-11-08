@@ -66,14 +66,21 @@ def _resolve_requestid(cube, billid: str):
     return rid, None
 
 
-def run_reconcile(contract_id=None, *, reader=None, cube=None):
+def run_reconcile(contract_id=None, *, reader=None, cube=None, bridge=None):
     """执行对账，返回 (report_dict, per_item_statuses)。纯只读。
 
-    reader/cube 可注入 fake（测试用）。
+    reader/cube/bridge 可注入 fake（测试用）。
+    P5.3：本地预期态改由 DecisionService 决策链推导（bridge.decision_chain），
+    不再直接读 contracts.status——contracts 表为业务执行态，决策链才是
+    经 Proposal Gate 留痕的权威动作序列。
     """
     from repository.db import Repository, default_db_path
     from services.oa.cube import CubeClient
-    from contract_review.ontology_bridge.reconcile import reconcile
+    from contract_review.ontology_bridge.reconcile import (
+        local_state_from_decisions,
+        reconcile,
+    )
+    from contract_review.ontology_bridge.bridge import ContractOntologyBridge
 
     cube = cube if cube is not None else CubeClient()
     started = datetime.now().isoformat()
@@ -92,7 +99,7 @@ def run_reconcile(contract_id=None, *, reader=None, cube=None):
         item = {
             "contract_id": row.get("id"),
             "contract_no": row.get("contract_no"),
-            "local_state": row.get("status"),
+            "local_state": None,  # P5.3: 决策链推导，第一轮先解析 rid
             "billid": (row.get("oa_billid") or "").strip(),
         }
         if not item["billid"]:
@@ -107,7 +114,29 @@ def run_reconcile(contract_id=None, *, reader=None, cube=None):
                 item["requestid"] = rid
         plan.append(item)
 
-    # 第二阶段：对成功解析出 requestid 的合同批量只读对账
+    # P5.3：本地预期态 = 决策链推导（只读）。bridge 可注入（测试用）；
+    # 默认按 runner 同库路径构造（db_path + 同目录 ai_kb.db）。
+    if bridge is None:
+        from repository.db import default_db_path as _default_db
+        bridge = ContractOntologyBridge(
+            db_path=_default_db(),
+            ai_kb_path=os.path.join(
+                os.path.dirname(_default_db()), "ai_kb.db",
+            ),
+        )
+    for p in plan:
+        if p.get("skip") or not p.get("contract_no"):
+            continue
+        try:
+            chain = bridge.decision_chain(p["contract_no"])
+            p["local_state"] = local_state_from_decisions(chain)
+            p["source"] = "decision_chain"
+        except Exception:  # noqa: BLE001 - 单合同降级，不中断整批
+            p["local_state"] = None
+            p["skip"] = True
+            p["skip_reason"] = "no_decision_source"
+
+    # 第二阶段：对成功解析出 requestid 且决策链可用的合同批量只读对账
     active = [p for p in plan if not p.get("skip")]
     requestids = [p["requestid"] for p in active]
     local_states = {
@@ -123,20 +152,25 @@ def run_reconcile(contract_id=None, *, reader=None, cube=None):
     counts = {
         "in_sync": 0, "oa_ahead": 0, "local_ahead": 0,
         "oa_unknown": 0, "no_billid": 0, "no_requestid": 0,
+        "no_decision_source": 0,
     }
     for p in plan:
         if p.get("skip"):
-            kind = "no_billid" if p["skip_reason"] == "no_billid" else "no_requestid"
+            reason = p.get("skip_reason", "no_requestid")
+            kind = reason if reason in counts else (
+                "no_billid" if reason == "no_billid" else "no_requestid"
+            )
             counts[kind] = counts.get(kind, 0) + 1
             items.append({
                 "contract_id": p["contract_id"],
                 "contract_no": p["contract_no"],
                 "billid": p["billid"],
                 "requestid": None,
-                "local_state": p["local_state"],
+                "local_state": p.get("local_state"),
                 "oa_state": None,
                 "kind": kind,
-                "detail": p["skip_reason"],
+                "detail": reason,
+                "source": p.get("source", "contract_row"),
             })
             continue
         d = diff_by_rid.get(p["requestid"])
@@ -147,9 +181,10 @@ def run_reconcile(contract_id=None, *, reader=None, cube=None):
             "contract_no": p["contract_no"],
             "billid": p["billid"],
             "requestid": p["requestid"],
-            "local_state": p["local_state"],
+            "local_state": p.get("local_state"),
             "oa_state": d.oa_state if d else "oa_unknown",
             "kind": kind,
+            "source": p.get("source", "contract_row"),
         })
 
     report = {

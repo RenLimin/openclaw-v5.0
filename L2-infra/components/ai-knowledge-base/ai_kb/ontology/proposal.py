@@ -402,6 +402,88 @@ class ProposalService:
             return out
         return self.get(proposal_id)
 
+    def preflight(self, proposal_id: int) -> Dict[str, Any]:
+        """preflight dry-run（P5.4）：完整演练写回路径，零真实副作用。
+
+        - 复用 commit 的 Saga 编排：连接器在 SagaContext(dry_run=True)
+          下执行，OaWritebackConnector 只落审计、不发任何 HTTP；
+        - 不应用 change_set、不写决策记录、不更新提案状态（保持
+          validated）；提案本身不产生任何业务副作用；
+        - 返回结构化 preflight 报告（每步结果 + 是否可提交）。
+
+        只读演练：任何连接器若在 dry_run 下仍产生副作用，视为违约。
+        """
+        row = self._load_row(proposal_id)
+        if row["status"] != "validated":
+            raise ValueError(
+                f"proposal {proposal_id} is {row['status']}; preflight "
+                f"requires 'validated'"
+            )
+        action = self.db.execute(
+            "SELECT * FROM ont_action_type WHERE id = ?",
+            (row["action_type_id"],),
+        ).fetchone()
+        proposal = self._hydrate(row)
+        params = proposal["params"]
+        writeback_steps = self._writeback_steps(action)
+        connector = self.connectors.get(
+            action["writeback_target"], self.default_connector
+        )
+        saga = SagaContext(dry_run=True)
+        steps_out: List[Dict[str, Any]] = []
+
+        try:
+            if writeback_steps:
+                steps = []
+                for sr in writeback_steps:
+                    ckey = sr["connector_key"]
+                    if ckey not in self.connectors:
+                        raise ValueError(
+                            f"connector not registered for step: {ckey}"
+                        )
+                    steps.append(SagaStep(
+                        name=ckey, connector=self.connectors[ckey],
+                    ))
+                orchestrator = SagaOrchestrator(steps, context=saga)
+                saga_report = orchestrator.run()
+                if not saga_report.ok:
+                    return {
+                        "ok": False,
+                        "proposal_id": proposal_id,
+                        "action": action["name"],
+                        "dry_run": True,
+                        "saga_report": saga_report.as_dict(),
+                        "steps": [s.name for s in steps],
+                        "error": saga_report.error,
+                    }
+                connector_name = "+".join(saga_report.executed_steps)
+                steps_out = [
+                    {"step": s.name, "ok": True,
+                     "result": saga.results.get(s.name)}
+                    for s in steps
+                ]
+            else:
+                connector.apply(saga)
+                connector_name = connector.name
+                steps_out = [
+                    {"step": connector.name, "ok": True,
+                     "result": saga.results.get(connector.name)}
+                ]
+
+            return {
+                "ok": True,
+                "proposal_id": proposal_id,
+                "action": action["name"],
+                "dry_run": True,
+                "connector": connector_name,
+                "steps": steps_out,
+                "note": "preflight dry-run: zero side effects, no decision record",
+            }
+        finally:
+            # preflight 绝不留下事务副作用：即便连接器写入 ctx，
+            # 这里不 commit 任何内容（全程无 db 写）。
+            pass
+
     def commit(self, proposal_id: int) -> Dict[str, Any]:
         """单事务提交（详设 §3.3 事务时序）。
 
