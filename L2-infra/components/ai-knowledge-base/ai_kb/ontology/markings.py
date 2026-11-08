@@ -361,3 +361,31 @@ class PolicyEvaluator:
                         live_missing,
                     )
         return Decision(True, "allowed", [])
+
+    def realtime_assert(
+        self,
+        subject: str,
+        object_metadata: Any,
+        *,
+        domain: Union[int, str],
+        now: Optional[_dt.datetime] = None,
+    ) -> Decision:
+        """commit 层高敏复查：只查 high-sensitivity marking 是否仍有效。
+
+        clearance 已在 review 层验证过，这里不重复判；仅防
+        review→commit 间隙内高敏授予被吊销/过期（D2 双保险）。
+        无 marking / 非 high 敏 → 直接放行。
+        """
+        sec = self._extract_object_security(object_metadata)
+        if sec is None:
+            return Decision(False, "bad_metadata")
+        required = set(sec["markings"])
+        if not required:
+            return Decision(True, "allowed", [])
+        if not self.directory.has_high_sensitivity(domain, required):
+            return Decision(True, "allowed", [])
+        live = self.directory.active_markings(subject, domain=domain, now=now)
+        missing = sorted(required - live)
+        if missing:
+            return Decision(False, f"realtime_revoked:{missing[0]}", missing)
+        return Decision(True, "allowed", [])

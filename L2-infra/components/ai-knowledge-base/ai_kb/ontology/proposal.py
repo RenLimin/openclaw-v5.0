@@ -35,7 +35,9 @@ from .identity_token import (
     IdentityAuthority,
     IdentityError,
     InvalidToken,
+    ScopeDenied,
 )
+from .markings import MarkingDirectory, PolicyEvaluator
 from ..guardrails.output_guard import OutputGuard
 
 # 五态状态机
@@ -57,6 +59,8 @@ class ProposalService:
         default_connector: Optional[WritebackConnector] = None,
         identity: Optional[IdentityAuthority] = None,
         enforce_identity: bool = True,
+        directory: Optional[MarkingDirectory] = None,
+        enforce_object_security: bool = True,
     ) -> None:
         self.db = db
         self.registry = registry
@@ -69,6 +73,12 @@ class ProposalService:
         # P6 身份治理：authority + fail-closed 开关（False 仅限测试/历史兼容）
         self.identity = identity
         self.enforce_identity = enforce_identity
+        # P7 对象级安全：marking 目录 + 评估器（fail-closed；False 仅测试逃生口）
+        self.directory = directory
+        self.enforce_object_security = enforce_object_security
+        self.evaluator = (
+            PolicyEvaluator(db, directory) if directory is not None else None
+        )
 
     # --- P6 身份校验 ---
     def _domain_code(self, domain_id: int) -> str:
@@ -101,6 +111,47 @@ class ProposalService:
         domain_code = self._domain_code(domain_id)
         self.identity.authorize(claims, verb, action_name, domain_code)
         return claims
+
+    # --- P7 对象级 enforce ---
+    def _enforce_objects(
+        self,
+        claims: Optional[Dict[str, Any]],
+        snapshot: Dict[str, Any],
+        *,
+        verb: str,
+        domain: Union[int, str],
+        now: Optional[Any] = None,
+    ) -> None:
+        """P7 对象级 enforce：逐对象评估，任一不过 => ScopeDenied。
+
+        - evaluator 为 None（未注入 directory）=> 对象级安全未启用，放行
+          （兼容路径，audit 标 object_security_enforced=false）；
+        - claims 为 None 但 evaluator 已注入 => fail-closed 拒绝
+          （对象级权限依赖身份 claims，无身份不给写）。
+        """
+        if self.evaluator is None:
+            return
+        if claims is None:
+            if self.enforce_object_security:
+                raise IdentityError(
+                    f"object-level security requires identity claims for {verb}"
+                )
+            return
+        domain_code = self._domain_code(domain)
+        for identity in snapshot.get("identities", []):
+            decision = self.evaluator.evaluate(
+                claims,
+                identity.get("metadata"),
+                verb=verb,
+                domain=domain_code,
+                realtime=(verb in ("review", "commit")),
+                now=now,
+            )
+            if not decision.allowed:
+                raise ScopeDenied(
+                    f"object-level deny ({verb}) on "
+                    f"{identity.get('canonical_key', '?')}: {decision.reason}"
+                )
 
     # --- 内部辅助 ---
     def _resolve_domain_id(self, domain: Union[int, str]) -> int:
@@ -272,6 +323,15 @@ class ProposalService:
         snapshot = self._build_snapshot(
             domain_id, action["object_type"], list(object_refs)
         )
+
+        # P7 对象级 enforce（mandatory markings + clearance）：
+        # 对 snapshot 中【每个】目标对象校验；任一不过 => ScopeDenied，
+        # 不建提案、不留 pending（在 INSERT 之前）。
+        self._enforce_objects(
+            claims, snapshot, verb="propose",
+            domain=domain_id, now=None,
+        )
+
         snapshot_text = json.dumps(snapshot, ensure_ascii=False)
         now = self.db.get_now()
 
@@ -442,6 +502,14 @@ class ProposalService:
             raise PermissionError(
                 "this action requires human approval; agent may not review"
             )
+
+        # P7 对象级 enforce（review）：reviewer 必须能看见目标对象；
+        # realtime=True 对 high-sensitivity marking 实时查 grant 表（D2）
+        proposal_snapshot = self._hydrate(row)["target_snapshot"]
+        self._enforce_objects(
+            claims, proposal_snapshot, verb="review",
+            domain=row["domain_id"], now=None,
+        )
 
         now = self.db.get_now()
 
@@ -634,6 +702,22 @@ class ProposalService:
         proposal = self._hydrate(row)
         params = proposal["params"]
         snapshot = proposal["target_snapshot"]
+
+        # P7 commit 层实时复查（D2）：review→commit 间隙内 high-sensitivity
+        # marking 被吊销/过期 => 拒提交。subject 用 review_by（review 时已验
+        # 的权威身份）；无目录（evaluator=None）=> 对象级安全未启用，跳过。
+        if self.evaluator is not None and row.get("review_by"):
+            for identity in snapshot.get("identities", []):
+                decision = self.evaluator.realtime_assert(
+                    row["review_by"],
+                    identity.get("metadata"),
+                    domain=row["domain_id"],
+                )
+                if not decision.allowed:
+                    raise ScopeDenied(
+                        f"commit-time realtime deny on "
+                        f"{identity.get('canonical_key', '?')}: {decision.reason}"
+                    )
         refs = [i["canonical_key"] for i in snapshot["identities"]]
         writeback_steps = self._writeback_steps(action)
         connector = self.connectors.get(

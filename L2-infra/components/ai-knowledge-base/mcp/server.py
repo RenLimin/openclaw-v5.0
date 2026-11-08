@@ -68,11 +68,14 @@ class KBMCPHandler:
             identity = IdentityService(kb)
             decisions = DecisionService(kb)
             from ai_kb.ontology.identity_token import IdentityAuthority
+            from ai_kb.ontology.markings import MarkingDirectory
             authority = IdentityAuthority(
                 secret=self._identity_secret,
             ) if self._identity_secret is not None else IdentityAuthority()
+            directory = MarkingDirectory(kb)
             proposals = ProposalService(
                 kb, registry, decisions=decisions, identity=authority,
+                directory=directory,
             )
             self._ont_services = {
                 "kb": kb,
@@ -81,6 +84,7 @@ class KBMCPHandler:
                 "proposals": proposals,
                 "decisions": decisions,
                 "authority": authority,
+                "directory": directory,
             }
         return self._ont_services
 
@@ -281,11 +285,36 @@ class KBMCPHandler:
                 "role": "viewer",
                 "clearance": "internal",
             }
+            # P7 mandatory 评估（markings + clearance）优先于 discretionary：
+            # 令牌有 claims 则用 claims，否则映射 caller_attrs（兼容旧形态）
             from ai_kb.permissions import PermissionChecker
+            from ai_kb.ontology.markings import PolicyEvaluator
+            from ai_kb.ontology.identity_token import IdentityError
 
+            evaluator = PolicyEvaluator(ont["kb"], ont["directory"])
+            claims = None
+            token = arguments.get("token")
+            if token:
+                try:
+                    claims = ont["authority"].verify(token)
+                except IdentityError:
+                    return {"found": True, "allowed": False,
+                            "error": "invalid token"}
+            if claims is None:
+                claims = {
+                    "sub": caller_attrs.get("user_id", "anonymous"),
+                    "markings": [],
+                    "clearance": caller_attrs.get("clearance", "internal"),
+                }
+            obj_meta = obj["metadata"] if isinstance(obj["metadata"], dict) else None
+            mandatory = evaluator.evaluate(
+                claims, obj_meta, verb="read", domain=obj.get("domain_id"),
+            )
+            if not mandatory.allowed:
+                return {"found": True, "allowed": False, "error": "access denied"}
             perms = None
-            if isinstance(obj["metadata"], dict):
-                perms = obj["metadata"].get("permissions")
+            if isinstance(obj_meta, dict):
+                perms = obj_meta.get("permissions")
             if isinstance(perms, (dict, list)):
                 perms = _json.dumps(perms, ensure_ascii=False)
             if not PermissionChecker(ont["kb"]).can_access_doc(caller_attrs, perms):
