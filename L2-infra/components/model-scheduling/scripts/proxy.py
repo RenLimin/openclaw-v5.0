@@ -220,20 +220,47 @@ def build_fallback_chain(task_type: str, est_tokens: int = 0) -> list[dict]:
     # 修复(2026-09-28): ctx 过滤后链空 → 放宽重建(不过滤 ctx)
     # 背景: 1.05M tokens 会话把 longCat(1M) 也过滤掉 → 空链 → 503。
     # 宁可让最大的模型硬试(可能被 provider 截断),不可直接 503。
+    # P7 修复(2026-11-08): 放宽时【能力匹配仍保留】——结构性不可能
+    # (如 multimodal 需要 image,longCat 仅 text)不因 ctx 放宽而豁免;
+    # longCat 兜底插入前检查能力 + provider 健康,避免每次请求先打
+    # 一个必然失败的模型再 fallback。
     if not result and est_tokens > 0:
         logger.warning(f"ctx 过滤后链空({est_tokens} tokens), 放宽 ctx 过滤重建链")
         result = build_fallback_chain(task_type, 0)
+        # 能力过滤不因放宽而豁免
+        if required_input_types:
+            result = [
+                m for m in result
+                if all(t in set(m.get("input_types", ["text"]))
+                       for t in required_input_types)
+            ]
         # 大 ctx 优先: 按 context_window 降序
         result.sort(key=lambda m: -m.get("context_window", 0))
-        # longCat(1M) 不在链里 → 强制追加为兜底(它是全系统唯一 1M ctx 模型)
+        # longCat(1M) 不在链里 → 作为大 ctx 兜底插入（能力 + 健康检查）
         LONGCAT_ID = "longCat/LongCat-2.0"
         all_ids = [m["id"] for m in result]
         if LONGCAT_ID not in all_ids:
             models_config = watcher.get("models.yaml")
             for m in models_config.get("models", []):
-                if m["id"] == LONGCAT_ID and m.get("status") == "active":
-                    result.insert(0, m)  # 1M ctx 最大,放最前
+                if m["id"] != LONGCAT_ID or m.get("status") != "active":
+                    continue
+                m_types = set(m.get("input_types", ["text"]))
+                if required_input_types and any(
+                    t not in m_types for t in required_input_types
+                ):
+                    logger.warning(
+                        f"longCat 兜底跳过: 能力不匹配 {required_input_types}"
+                    )
                     break
+                if _get_provider_health("longCat") == "unreachable":
+                    logger.warning("longCat 兜底跳过: provider unreachable")
+                    break
+                if result:
+                    # 链内已有窗口足够模型时,兜底放末尾(优先走 healthy 快模型)
+                    result.append(m)
+                else:
+                    result.insert(0, m)
+                break
     return result
 
 def select_model(task_type: str) -> dict | None:

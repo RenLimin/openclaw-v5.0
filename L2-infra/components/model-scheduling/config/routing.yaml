@@ -44,16 +44,15 @@ task_routing:
   chat:
     description: 日常对话、简单问答、状态查询
     fallback_chain:
-    - coding-plan/doubao-seed-2-0-lite-260215
-    - deepseek/deepseek-chat
     - coding-plan/doubao-seed-2-1-turbo
+    - deepseek/deepseek-chat
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
     preferred_context: 100000
   coding:
     description: 代码生成、调试、重构、代码审查
     fallback_chain:
-    - coding-plan/doubao-seed-2-0-lite-260215
+    - coding-plan/doubao-seed-2-1-turbo
     - deepseek/deepseek-chat
     - coding-plan/doubao-seed-code-preview-251028
     - coding-plan/deepseek-v4-flash-ga-260731
@@ -70,7 +69,7 @@ task_routing:
     description: 图片识别、视频分析、OCR、视觉理解
     fallback_chain:
     - coding-plan/doubao-seed-2-1-turbo
-    - coding-plan/doubao-seed-2-0-lite-260215
+    - coding-plan/doubao-seed-2-1-pro-260628
     - coding-plan/doubao-seed-code-preview-251028
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
@@ -84,7 +83,6 @@ task_routing:
     - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
-    - coding-plan/doubao-seed-2-0-lite
     preferred_context: 500000
   research:
     description: 网络搜索、信息收集、文档分析
@@ -93,7 +91,6 @@ task_routing:
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
     - deepseek/deepseek-chat
-    - coding-plan/doubao-seed-2-0-lite-260215
     preferred_context: 200000
 usage_thresholds:
   daily_token_limit: 1000000

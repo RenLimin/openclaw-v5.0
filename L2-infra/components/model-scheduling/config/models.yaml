@@ -29,7 +29,7 @@ models:
   priority: 20
   provider: coding-plan
   reasoning: false
-  status: active
+  status: inactive
   tags: []
 - context_window: 262144
   cost_input: 0
