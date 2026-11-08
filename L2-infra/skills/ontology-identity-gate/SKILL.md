@@ -1,18 +1,19 @@
 ---
 name: ontology-identity-gate
-description: 为 Agent 运营本体（Proposal Gate）提供 run-scoped 身份令牌（HMAC-SHA256，零第三方依赖）+ 两阶段提交治理：agent 只到 validated，commit 仅由 human 令牌触发；含指纹审计、scope 授权与 fail-closed 渐进启用。触发：运营动作身份治理、agent-as-tool 消费编排、提案门禁 fail-open 收敛、决策指纹审计。
+description: 为 Agent 运营本体（Proposal Gate）提供 run-scoped 身份令牌（HMAC-SHA256，零第三方依赖）+ 两阶段提交治理：agent 只到 validated，commit 仅由 human 令牌触发；含指纹审计、scope 授权与 fail-closed 渐进启用。v1.1 增补对象级权限（mandatory Markings 行级 Visibility + clearance，单一 PolicyEvaluator 全入口 enforce）。触发：运营动作身份治理、agent-as-tool 消费编排、提案门禁 fail-open 收敛、决策指纹审计、对象/行级 ABAC 访问控制、PII/区域隔离。
 metadata:
-  version: "1.0"
+  version: "1.1"
   updated: "2026-11-08"
   layer: "L2-infra"
   input:
-    kinds: [proposal_gate, identity_token, agent_toolchain]
+    kinds: [proposal_gate, identity_token, agent_toolchain, object_markings]
     max_chars: 200000
   boundaries:
     - "commit 只由 human 令牌触发，agent 令牌无法自提"
     - "secret 永不落 markdown/日志/git；默认 ~/.openclaw/state（0600）"
     - "identity 未配置 = 渐进兼容（P5 路径行为不变）；注入后 enforce 默认 fail-closed"
-    - "不引入 OAuth/IdP/第三方依赖；对象级权限（行级 markings）不在本能力范围"
+    - "不引入 OAuth/IdP/第三方依赖；v1.1 起对象级权限仅用标准库自实现"
+    - "mandatory markings 走 AND + deny 优先/fail-closed；marking 挂标/移除须 owner 流程 + 审计"
 ---
 
 # Ontology Identity Gate — 运营本体身份治理 + agent-as-tool 消费
@@ -94,16 +95,63 @@ out = chain.run_action(
 6. 测试：令牌原语 18 用例（fail-closed/篡改/过期/scope/指纹/逃生口）+ toolchain 7 用例
    + 端到端黄金用例（agent 停 validated / human 令牌 commit 双指纹）
 
+## 6. 对象级权限（v1.1 增补，P7）
+
+在 run/action 级 scope 之上叠加**行级 Visibility**：对象挂 mandatory markings，
+主体须持有**全部** marking 且 clearance 达标。读/写/审/提/MCP **共用单一评估器**，
+无旁路。
+
+### 6.1 数据模型（migration v13）
+
+- `ont_marking(domain_id, code, name, sensitivity[normal|high], owner)`：marking 注册
+- `ont_marking_grant(marking_id, subject, source, granted_at, expires_at, revoked_at, granted_by)`：主体授予
+- 对象不加新列：`metadata.markings=[...]` + `metadata.permissions.clearance`（JSON 内）
+
+### 6.2 判定顺序（`PolicyEvaluator.evaluate`，deny 优先 / fail-closed）
+
+1. **clearance**：四级 `public<internal<confidential<restricted`，主体须 ≥ 对象；claims 缺省 internal（不提权）
+2. **markings AND**：缺任一 ⇒ deny(`missing_marking:<code>`)；引用未注册 code ⇒ deny(`unregistered_marking`)
+3. **realtime 高敏复查**（仅 review/commit + sensitivity=high）：实时查 grant 表，吊销/过期 ⇒ deny(`realtime_revoked:<code>`)
+
+坏 metadata（非 dict / markings 非数组 / clearance 非法）⇒ 一律 deny(`bad_metadata`)。
+
+### 6.3 全入口接入
+
+```python
+# claims 由签发方写入，agent 不可自报提权
+tok = authority.issue(subject="agent:a", kind="agent",
+                      markings=["pii"], clearance="confidential", ...)
+# ProposalService / MCP query / 动态工具全部透传 directory + token
+# 读拒统一口径，不泄字段：{"found": true, "allowed": false, "error": "access denied"}
+# commit 层 realtime_assert：防 review→commit 间隙高敏授予被吊销
+```
+
+### 6.4 授予可治理（D1/D2/D3）
+
+- **D1**：grant 强制 `expires_at`、TTL 上限（默认 90 天）、`source` 枚举、revoke 留痕
+- **D2**：高敏 marking review/commit 实时查 grant，短 TTL 收敛吊销延迟
+- **D3**：clearance 单字段，`confidence_level` 仅只读别名
+- 渐进启用：未注入 directory ⇒ 行为完全同 v1.0；对象无 marking 退化为只看 clearance；不回填历史
+
 ## 红线
 
 - **validated ≠ committed**：validate 永不产生副作用；commit 只由 human 令牌触发
 - **secret 永不落 markdown/日志/git**
-- 不新增第三方依赖（仅标准库 hmac/hashlib/base64/json/secrets）
+- 不新增第三方依赖（仅标准库 hmac/hashlib/base64/json/secrets/datetime/dataclasses）
 - 运行期结构 gate 关闭；注册仅装配期
+- **mandatory markings AND + deny 优先/fail-closed**；marking 挂标/移除走 owner 流程 + 审计
+- 写不过不落地：propose 校验须在 INSERT 之前；读拒不泄存在性字段
 
 ## 参考实现
 
 - L2 组件：`L2-infra/components/ai-knowledge-base/ai_kb/ontology/identity_token.py`、
   `agent_toolchain.py`、`proposal.py`、`mcp/server.py`
-- 验收：`L2-infra/components/ai-knowledge-base/docs/VERIFICATION-P6-operational-ontology-v1.0.md`
-- 详设：`L2-infra/components/ai-knowledge-base/docs/DESIGN-DETAIL-operational-ontology-p6-v1.0.md`
+- 验收：`L2-infra/components/ai-knowledge-base/docs/VERIFICATION-P6-operational-ontology-v1.0.md`、
+  `VERIFICATION-P7-operational-ontology-v1.0.md`
+- 详设：`L2-infra/components/ai-knowledge-base/docs/DESIGN-DETAIL-operational-ontology-p6-v1.0.md`、
+  `DESIGN-DETAIL-operational-ontology-p7-v1.0.md`
+
+## 变更历史
+
+- v1.1（2026-11-08）：增补对象级权限（P7）— migration v13、MarkingDirectory、PolicyEvaluator、claims 扩展、全入口 enforce
+- v1.0（2026-11-08）：初版 — run-scoped 身份令牌（P6）+ agent-as-tool
