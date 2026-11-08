@@ -71,7 +71,7 @@ $ python3 -m pytest tests/ -x -q
 
 1. P4.2：等测试流程单据后，抓包写端点契约 → 增量 `p4-write-v1.1` → 测试单据白名单验证 → 人工验收。
 2. ~~P4.4 挂 cron~~ ✅ 已完成（2026-11-06）：`oa-reconcile-daily (P4.4)`，每日 09:30 Asia/Shanghai，command payload 只读跑 `reconcile_oa.py --quiet`，落盘 `memory/oa-reconcile-latest.json`，force run 实测通过。
-3. 审批人身份映射（OA 工号 ↔ L3 reviewer）：P4.2 落地时按 OA 流程图/节点实现。
+3. ~~审批人身份映射（OA 工号 ↔ L3 reviewer）~~ ✅ 已落地（2026-11-08）：`services/oa/approval_identity.py` 证据驱动初版 + 9 单测（`test_approval_identity.py`）。数据源：黄金夹具 `oa_log_882663` 10 条真实审批链（7 人工号/5 节点）；未确认角色（法务总监/财务总监节点归属）待 OA 流程图补充。
 
 ---
 
