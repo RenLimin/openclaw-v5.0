@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""normalize_and_classify.py — S3 口径清洗与分类
+
+输入 (stdin JSON): fetch_project_tasks.py 的输出
+  {projects, tasks, completeness}
+
+输出 (stdout JSON):
+  {workItems: WorkItem[], stats: {excluded, inPeriod, outPeriod, byIssueType}}
+
+退出码: 0=成功, 2=数据/BLOCK
+"""
+import json
+import re
+import sys
+from datetime import datetime, timezone, timedelta
+from collections import Counter
+
+CST = timezone(timedelta(hours=8))
+
+# ── 口径规则 ─────────────────────────────────────────────────────────
+# 不计数 issueType（建档/范围记录）
+EXCLUDED_ISSUE_TYPES = {
+    "客户信息", "合同信息", "项目信息",
+    "设备领用情况", "外包（外采）情况", "外包/外采情况",
+    "项目履约义务",
+}
+
+# 实际工作 5 类
+WORK_ISSUE_TYPES = {
+    "客户定制需求", "缺陷修复", "问题工单", "产研支持", "专项任务",
+}
+
+# ── 产品方向映射 ─────────────────────────────────────────────────────
+PRODUCT_KEYWORDS = [
+    # (关键字列表, 产品方向)
+    (["监测", "客户端", "SDK 在线", "Root", "APatch", "SukiSU"], "安全监测"),
+    (["合规", "检测报告", "Stim", "监管"], "合规检测"),
+    (["加固", "加壳", "16KB", "防代理"], "安卓/SDK 加固"),
+    (["测评", "TDSQL", "V5.x 测评"], "应用安全测评"),
+    (["小程序", "ZIP 小程序"], "小程序加固"),
+    (["H5", "API", "设备指纹"], "H5/API 安全"),
+    (["鸿蒙", "NEXT"], "鸿蒙 NEXT 加固"),
+]
+
+
+def normalize_timestamp(v) -> float:
+    """三精度归一为秒级 epoch。"""
+    if v is None:
+        return 0.0
+    v = int(v)
+    if v > 1e14:      # 微秒
+        return v / 1e6
+    elif v > 1e11:    # 毫秒
+        return v / 1e3
+    else:             # 秒
+        return float(v)
+
+
+def epoch_to_iso(epoch_s: float) -> str:
+    """秒级 epoch → ISO8601 (Asia/Shanghai)。"""
+    if epoch_s <= 0:
+        return ""
+    dt = datetime.fromtimestamp(epoch_s, tz=CST)
+    return dt.isoformat()
+
+
+def classify_product(name: str, products: list) -> str:
+    """从任务名+产品列表映射产品方向。"""
+    text = (name or "") + " " + " ".join(
+        p.get("name", "") for p in (products or [])
+    )
+    for keywords, direction in PRODUCT_KEYWORDS:
+        for kw in keywords:
+            if kw.lower() in text.lower():
+                return direction
+    return "【缺失】"
+
+
+def is_work_issue(issue_type: str) -> bool:
+    """判断是否计入工作量。"""
+    if not issue_type:
+        return True  # 未知类型保守计入
+    if issue_type in EXCLUDED_ISSUE_TYPES:
+        return False
+    return True
+
+
+def in_period(iso_time: str, period: dict) -> bool:
+    """判断时间是否在统计周期内（含端点）。"""
+    if not iso_time:
+        return False
+    start = period.get("start", "")
+    end = period.get("end", "")
+    if start and iso_time < start:
+        return False
+    if end and iso_time > end:
+        return False
+    return True
+
+
+def classify_status(category: str) -> str:
+    """状态归类。"""
+    cat = (category or "").lower()
+    if cat in ("done", "completed", "closed", "resolved"):
+        return "done"
+    elif cat in ("in_progress", "in-progress", "progress", "doing"):
+        return "in_progress"
+    elif cat in ("to_do", "todo", "open", "new"):
+        return "to_do"
+    return "unknown"
+
+
+def main():
+    try:
+        data = json.load(sys.stdin)
+    except json.JSONDecodeError as e:
+        print(json.dumps({"error": f"Invalid JSON: {e}"}))
+        sys.exit(2)
+
+    tasks = data.get("tasks", [])
+    projects = data.get("projects", [])
+    # 从输入或 completeness 取 period
+    period = data.get("period", {})
+    if not period:
+        # 默认 2026 年度
+        period = {"start": "2026-01-01", "end": "2026-12-31"}
+
+    # 项目映射
+    proj_map = {p["projectUUID"]: p for p in projects}
+
+    work_items = []
+    excluded_count = 0
+    in_period_count = 0
+    out_period_count = 0
+    issue_type_counter = Counter()
+
+    for t in tasks:
+        issue_type = ""
+        it = t.get("issueType")
+        if isinstance(it, dict):
+            issue_type = it.get("name", "")
+        elif isinstance(it, str):
+            issue_type = it
+
+        issue_type_counter[issue_type] += 1
+
+        # 时间戳归一
+        raw_ct = t.get("createTime")
+        epoch_s = normalize_timestamp(raw_ct)
+        iso_time = epoch_to_iso(epoch_s)
+
+        # 口径判断
+        is_work = is_work_issue(issue_type)
+        if not is_work:
+            excluded_count += 1
+
+        # 周期判断
+        period_ok = in_period(iso_time, period)
+        if period_ok:
+            in_period_count += 1
+        else:
+            out_period_count += 1
+
+        # 项目信息
+        proj = {}
+        p_ref = t.get("project")
+        if isinstance(p_ref, dict):
+            proj = proj_map.get(p_ref.get("uuid"), {})
+        elif isinstance(p_ref, str):
+            proj = proj_map.get(p_ref, {})
+
+        # 产品方向
+        products = t.get("products", [])
+        product_dir = classify_product(t.get("name", ""), products)
+
+        # 状态
+        status_cat = classify_status(t.get("statusCategory", ""))
+
+        item = {
+            "number": t.get("number"),
+            "uuid": t.get("uuid", ""),
+            "name": t.get("name", ""),
+            "projectCode": proj.get("projectCode", ""),
+            "contractNo": proj.get("contractNo"),
+            "issueType": issue_type,
+            "productDirection": product_dir,
+            "statusCategory": status_cat,
+            "createTime": iso_time,
+            "createEpochUs": int(epoch_s * 1e6) if epoch_s > 0 else 0,
+            "inPeriod": period_ok,
+            "isWork": is_work,
+            "excludeReason": None if is_work else f"建档/范围记录: {issue_type}",
+        }
+        work_items.append(item)
+
+    stats = {
+        "total": len(tasks),
+        "excluded": excluded_count,
+        "inPeriod": in_period_count,
+        "outPeriod": out_period_count,
+        "byIssueType": dict(issue_type_counter),
+        "missingProductDirection": sum(
+            1 for w in work_items if w["productDirection"] == "【缺失】"
+        ),
+    }
+
+    output = {
+        "workItems": work_items,
+        "stats": stats,
+        "period": period,
+    }
+    print(json.dumps(output, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()

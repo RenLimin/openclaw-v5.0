@@ -1,0 +1,38 @@
+{
+  "description": "黄金基准 — 建行 2026 年度汇报材料回放",
+  "source": "analysis_output/ccb_delivery/建行项目工作汇报.md",
+  "period": {"start": "2026-01-01", "end": "2026-12-31"},
+  "baseline": {
+    "rawTasks": 907,
+    "excludedRecords": 64,
+    "workItems": 113,
+    "done": 104,
+    "inProgress": 9,
+    "byCategory": {
+      "客户定制需求": {"total": 66, "done": 58},
+      "缺陷修复": {"total": 17, "done": 16},
+      "问题工单": {"total": 19, "done": 19},
+      "产研支持": {"total": 7, "done": 7},
+      "专项任务": {"total": 4, "done": 4}
+    },
+    "byProduct": {
+      "安全监测": {"total": 44, "done": 43},
+      "合规检测": {"total": 34, "done": 33},
+      "安卓/SDK 加固": {"total": 19, "done": 19},
+      "应用安全测评": {"total": 10, "done": 3},
+      "小程序加固": {"total": 3, "done": 3},
+      "H5/API 安全": {"total": 2, "done": 2},
+      "鸿蒙 NEXT 加固": {"total": 1, "done": 1}
+    },
+    "byPeriod": {
+      "Q1": {"total": 76, "done": 76},
+      "Q2": {"total": 5, "done": 5},
+      "Q3": {"total": 32, "done": 23}
+    }
+  },
+  "verification": {
+    "reconciliation": "categoryTotal == productTotal == periodTotal == detailCount == 113",
+    "donePlusWip": "104 + 9 == 113",
+    "goldenFile": "assets/golden/golden-baseline.json"
+  }
+}

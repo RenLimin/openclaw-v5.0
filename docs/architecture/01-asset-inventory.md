@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-08 20:58 UTC+08:00
+最后生成：2026-11-08 21:05 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -40,13 +40,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 113 个（可用 102）
+**总计** 114 个（可用 103）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 34 | 插件附带技能 |
+| `openclaw-extra` | 35 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -63,6 +63,7 @@
 | L4 专有业务 | `product-manager-expert` | Bangcle 产品管理专家 — L4 层 Bangcle 产品相关的统一入口。产品咨询解答、跨产品组合方案、产品知识库检准与维护、O... | `L4-proprietary/skills/product-manager-expert` |
 | L3 通用业务 | `bangcle-customer-profile` | Bangcle 客户画像分析：业务目标是制定客户画像，基于项目工作项/评论/附件与知识库，输出客户画像，重点为客户环境（云/OS/CP... | `L3-business/skills/bangcle-customer-profile` |
 | L3 通用业务 | `bangcle-obligation-summary` | Bangcle 项目履约义务汇总：业务目标是为指定的项目经理服务，参考历史项目的交付情况，按最终用户/客户检索全部项目履约义务工作项，... | `L3-business/skills/bangcle-obligation-summary` |
+| L3 通用业务 | `bangcle-project-report` | Bangcle 项目汇报材料生成：输入「客户 + 周期 + 受众」，从 ONES/合同台账取数，经完整取数→口径清洗→多维汇总→目标闭... | `L3-business/skills/bangcle-project-report` |
 | L3 通用业务 | `bangcle-project-retrospective` | Bangcle 项目复盘建议：业务目标是对项目或项目集（Program）做复盘，输出产品差异/优化空间与项目管理复盘（含责任方建议），... | `L3-business/skills/bangcle-project-retrospective` |
 | L3 通用业务 | `bangcle-project-summary` | Bangcle 项目信息汇总：业务目标是汇总项目交付实施情况，从 ONES 等系统汇总客户名下全部项目/产品/工作项/交付物/责任人，... | `L3-business/skills/bangcle-project-summary` |
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
@@ -75,7 +76,7 @@
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
+_自建技能总计: 22 个（L2: 8, L3: 6, L4: 8, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -140,8 +141,8 @@ _自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
-| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 900s | `isolated` | wecom/1313 |
+| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
@@ -273,8 +274,8 @@ _自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `bb16c3e` |
-| Commit 数 | 624 |
+| HEAD | `adb135e` |
+| Commit 数 | 625 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
