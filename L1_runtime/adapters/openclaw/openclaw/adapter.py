@@ -13,6 +13,13 @@ import shutil
 from pathlib import Path
 from dataclasses import dataclass
 
+# 2026-11-08 修复: launchd 环境下 PATH 极简（不含 ~/.openclaw/tmp/agent-cli），
+# 裸调 "openclaw" 会 FileNotFoundError 崩溃（曾导致 error-scan 整轮扫描失败）。
+# 统一用绝对路径解析，缺失时回退到 /opt/homebrew/bin/openclaw。
+OPENCLAW_BIN = shutil.which("openclaw") or str(
+    Path.home() / ".openclaw" / "tmp" / "agent-cli" / "openclaw"
+)
+
 # L1 最小能力契约接口
 # 对应 docs/architecture/00-system-architecture.md §3.2.1
 
@@ -63,7 +70,7 @@ class OpenClawAdapter:
         """调用已注册工具"""
         # 通过 OpenClaw gateway RPC 调用
         # 实际使用中由运行时路由
-        cmd = ["openclaw", "gateway", "call", name, "--params", json.dumps(input)]
+        cmd = [OPENCLAW_BIN, "gateway", "call", name, "--params", json.dumps(input)]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             return ToolCallResult(
@@ -139,7 +146,7 @@ class OpenClawAdapter:
     # 6. 配置管理
     def config_get(self, path: str) -> Optional[Any]:
         """读取配置"""
-        cmd = ["openclaw", "config", "get", path]
+        cmd = [OPENCLAW_BIN, "config", "get", path]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             return json.loads(result.stdout)
@@ -155,7 +162,7 @@ class OpenClawAdapter:
         3. 读回确认写入值与期望一致
         """
         # 1. dry-run 预检
-        dry_cmd = ["openclaw", "config", "patch", "--stdin", "--dry-run"]
+        dry_cmd = [OPENCLAW_BIN, "config", "patch", "--stdin", "--dry-run"]
         patch_data = json.dumps({path: val})
         try:
             subprocess.run(dry_cmd, input=patch_data, check=True, capture_output=True, text=True)
@@ -164,7 +171,7 @@ class OpenClawAdapter:
             return False
 
         # 2. 正式写入（使用 patch 而非 set，支持嵌套路径）
-        patch_cmd = ["openclaw", "config", "patch", "--stdin"]
+        patch_cmd = [OPENCLAW_BIN, "config", "patch", "--stdin"]
         try:
             subprocess.run(patch_cmd, input=patch_data, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError:
@@ -197,7 +204,7 @@ class OpenClawAdapter:
 
     def config_validate(self) -> Tuple[bool, List[str]]:
         """验证配置合法性"""
-        cmd = ["openclaw", "config", "validate"]
+        cmd = [OPENCLAW_BIN, "config", "validate"]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             return (True, [])
@@ -257,7 +264,7 @@ class OpenClawAdapter:
         """运行时健康检查"""
         try:
             # 执行 openclaw doctor 检查
-            result = subprocess.run(["openclaw", "doctor"], capture_output=True, text=True, check=True)
+            result = subprocess.run([OPENCLAW_BIN, "doctor"], capture_output=True, text=True, check=True)
             return HealthStatus(
                 status="ok",
                 message="OpenClaw 运行正常",

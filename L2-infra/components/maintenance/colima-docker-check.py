@@ -13,10 +13,16 @@ import subprocess
 import sys
 import os
 import shutil
+import time
 from pathlib import Path
 
 def is_docker_available() -> bool:
     """检测 Docker 是否可用"""
+    # 2026-11-08 修复: 旧代码直接调 docker，若 binary 不存在则
+    # FileNotFoundError 崩溃，导致整个 colima-check 调度静默失败。
+    # 现在先 which 检查，缺失时返回 False（走后续 Colima 修复流程）。
+    if shutil.which("docker") is None:
+        return False
     result = subprocess.run(
         ["docker", "info"],
         capture_output=True,
@@ -27,6 +33,10 @@ def is_docker_available() -> bool:
 
 def is_colima_running() -> bool:
     """检测 Colima 是否正在运行"""
+    # 2026-11-08 修复: 旧代码直接调 colima，若 binary 不存在则
+    # FileNotFoundError 崩溃。现在先 which 检查，缺失时返回 False。
+    if shutil.which("colima") is None:
+        return False
     result = subprocess.run(
         ["colima", "status"],
         capture_output=True,
@@ -90,7 +100,7 @@ def restart_colima_via_launchd() -> bool:
     for _ in range(3):
         if is_docker_available():
             return True
-        sys.sleep(5)
+        time.sleep(5)  # 2026-11-08 修复: 旧代码 sys.sleep(5) 拼写错误导致 AttributeError
     
     return is_docker_available()
 

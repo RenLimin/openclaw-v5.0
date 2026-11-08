@@ -108,7 +108,9 @@ def run_scan_items(items, *, budget=SCAN_ITEM_BUDGET_SEC, max_workers=3):
         if kind == "ok":
             errors.extend(payload or [])
         else:
-            item_errors.extend(payload)
+            # 2026-11-08 修复: payload 可能为 None（异常隔离时 _item_error 未返回 list），
+            # 旧代码直接 extend(None) → TypeError 崩溃，污染 all_errors 导致整个扫描失败。
+            item_errors.extend(payload or [])
     return errors, item_errors
 
 def run_cmd(cmd, timeout=15):
@@ -1064,6 +1066,14 @@ def auto_fix(errors):
     # P1-a：先处理上一轮因 guard 阻断而挂起的补偿重启（可能在本轮 guard 放行）
     resolve_pending_restart(fixes)
 
+    # 2026-11-08 修复: errors 可能为 None（上游扫描无结果时），
+    # 旧代码直接迭代 None → TypeError 崩溃，导致整个 error-scan 调度静默失败。
+    # 同时过滤: ①元素为 None；②无 "type" 键的 dict（如 scan_cron_errors 失败时
+    # 返回 {"error": ...}，后续 e.get("type") 返回 None，"context_" in None 崩溃）。
+    if not errors:
+        return fixes
+    errors = [e for e in errors if e is not None and isinstance(e, dict) and e.get("type") is not None]
+
     timeout_errors = [e for e in errors if e.get("type") == "llm_timeout"]
     context_errors = [e for e in errors if "context_" in e.get("type")]
     provider_errors = [e for e in errors if "provider" in e.get("type") or "api_key" in e.get("type") or "asset" in e.get("type")]
@@ -1417,7 +1427,11 @@ def main():
     if all_errors:
         print(f"⚠️ 发现 {len(all_errors)} 个异常:\n")
         for err in all_errors:
-            print(f"  [{err['type']}] {err.get('name', '')} — {err['detail'][:100]}")
+            # 2026-11-08 修复: scan_cron_errors 等失败时返回 {"error": ...}（无 type 键），
+            # 旧代码 err['type'] 直接 KeyError 崩溃。改用 .get 并回退到 error 字段。
+            etype = err.get('type') or 'error'
+            detail = err.get('detail') or err.get('error') or ''
+            print(f"  [{etype}] {err.get('name', '')} — {detail[:100]}")
         print(f"\n--- Auto-Fix ---")
         for fix in fixes:
             status = "✅" if fix.get("executed") else "⚠️"

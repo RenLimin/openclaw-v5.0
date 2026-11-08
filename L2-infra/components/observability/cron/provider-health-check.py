@@ -15,9 +15,12 @@ from datetime import datetime
 os.chdir("/Users/bangcle/.openclaw/workspace")
 
 # 执行健康检查脚本（带 --force 跳过交互式确认）
+# 2026-11-08 修复: 旧路径 "model-scheduling/scripts/health_check.py" 不存在
+# （实际在 L2-infra/components/model-scheduling/scripts/），导致 FileNotFoundError 静默失败。
+HEALTH_CHECK = "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/health_check.py"
 print("=== 开始 provider 健康探测 ===")
 result = subprocess.run(
-    [sys.executable, "model-scheduling/scripts/health_check.py", "--force"],
+    [sys.executable, HEALTH_CHECK, "--force"],
     capture_output=False,
     check=False
 )

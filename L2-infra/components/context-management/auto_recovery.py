@@ -11,15 +11,28 @@
 设计依据：PRD-v1.0 F2 需求，上下文过大处理流程
 """
 import json
+import os
 import shlex
+import shutil
 import subprocess
 import sys
+from pathlib import Path
 from typing import Tuple, Optional
+
+# 2026-11-08 修复: launchd 环境下 PATH 极简（不含 /opt/homebrew/bin 和 ~/.openclaw/tmp/agent-cli），
+# 直接调 "openclaw" 会 FileNotFoundError 崩溃。
+# 用绝对路径解析，缺失时给出明确提示而非 traceback。
+# 真实路径: ~/.openclaw/tmp/agent-cli/openclaw（agent-cli 包装器）
+OPENCLAW_BIN = shutil.which("openclaw") or str(Path.home() / ".openclaw" / "tmp" / "agent-cli" / "openclaw")
+if not os.path.exists(OPENCLAW_BIN):
+    print(f"⚠️ openclaw 未找到（{OPENCLAW_BIN} 不存在），上下文恢复功能不可用")
 
 def get_current_session() -> Optional[dict]:
     """获取当前活跃会话信息（openclaw sessions list --json）"""
+    if not os.path.exists(OPENCLAW_BIN):
+        return None
     result = subprocess.run(
-        ["openclaw", "sessions", "list", "--json", "--limit", "10"],
+        [OPENCLAW_BIN, "sessions", "list", "--json", "--limit", "10"],
         capture_output=True, text=True, timeout=30,
     )
     if result.returncode != 0:
@@ -64,8 +77,13 @@ def check_context_usage(session: dict) -> Tuple[float, bool]:
 def execute_command(cmd: str) -> bool:
     """执行 openclaw 命令（用 shlex.split 正确解析引号内的 session key）"""
     print(f"🔧 执行: {cmd}")
+    # 2026-11-08 修复: 把裸 "openclaw" 替换为绝对路径，
+    # 否则 launchd 环境下 PATH 不含 /opt/homebrew/bin → FileNotFoundError 崩溃。
+    argv = shlex.split(cmd)
+    if argv and argv[0] == "openclaw":
+        argv[0] = OPENCLAW_BIN
     result = subprocess.run(
-        shlex.split(cmd),
+        argv,
         capture_output=False,
         timeout=120,
     )
