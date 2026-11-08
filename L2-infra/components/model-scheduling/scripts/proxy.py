@@ -106,8 +106,13 @@ def _get_provider_health(provider_id: str) -> str:
             health = pdata.get("health", {})
             status = health.get("status", "")
             last_checked = health.get("last_checked", "")
-            # exhausted(余额不足) → degraded(路由排到末尾),带 TTL 自愈
-            # 超时后降级 unknown,让请求实际试探(配额可能已恢复)
+            # exhausted(余额不足) → 跳过(与 unreachable 同待遇),带 TTL 自愈
+            #
+            # 2026-11-08 修复(根因): 旧逻辑把 exhausted 降级为 degraded(仅排到链尾),
+            # 当其他 provider 全部 unreachable 时,链尾 exhausted 模型成为唯一选择,
+            # 每次请求都撞 402 → 刷新 last_checked → TTL 永远归零 → 永久卡死。
+            # 现改为: exhausted 直接跳过(不参与路由),TTL 到期后降级 unknown 重新试探。
+            # 若无其他可用模型,由调用方 fail-fast 报"无可用 provider",不再撞 402。
             if status == "exhausted":
                 if last_checked:
                     try:
@@ -121,7 +126,8 @@ def _get_provider_health(provider_id: str) -> str:
                             return "unknown"
                     except (ValueError, TypeError):
                         pass
-                return "degraded"
+                logger.debug(f"Provider {provider_id} exhausted，跳过路由")
+                return "unreachable"
             # unreachable TTL 自动降级
             if status == "unreachable" and last_checked:
                 try:
@@ -195,9 +201,10 @@ def build_fallback_chain(task_type: str, est_tokens: int = 0) -> list[dict]:
         pconf = provider_confs_lower.get(provider_id.lower(), {})
         if not pconf.get("enabled", False):
             continue
-        # provider 健康状态 unreachable → 跳过(exhausted 不跳过,放进去让请求时触发 fallback)
+        # provider 健康状态 unreachable/exhausted → 跳过
+        # 2026-11-08: exhausted 也跳过(旧逻辑仅排链尾,导致全链不可用时反复撞 402)
         health = _get_provider_health(provider_id)
-        if health == "unreachable":
+        if health in ("unreachable", "exhausted"):
             continue
         # 能力匹配检查
         model_input_types = set(model.get("input_types", ["text"]))
@@ -208,7 +215,7 @@ def build_fallback_chain(task_type: str, est_tokens: int = 0) -> list[dict]:
             ctx = model.get("context_window", 262144)
             if est_tokens > ctx * 0.9:  # 留 10% 余量给输出
                 continue
-        # degraded(余额不足) → 标记,后续排到链末尾
+        # degraded → 标记,后续排到链末尾
         if health == "degraded":
             chain.append({"model": model, "_degraded": True})
         else:
@@ -608,11 +615,18 @@ class ProxyHandler:
                         providers = usage.setdefault("providers", {})
                         for pid, pdata in providers.items():
                             if pid.lower() == provider_id.lower():
-                                pdata.setdefault("health", {})["status"] = "exhausted"
-                                pdata["health"]["detail"] = "402 余额不足 (proxy 运行时标记)"
-                                pdata["health"]["last_checked"] = _time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                                h = pdata.setdefault("health", {})
+                                # 2026-11-08 修复: 仅在【首次】标记 exhausted 时写 last_checked。
+                                # 旧逻辑每次 402 都刷新 last_checked → TTL 永远归零 → 永不自愈。
+                                # 现在首次标记后时间戳冻结,1h 后 _get_provider_health 自动降级 unknown 重试探。
+                                if h.get("status") != "exhausted":
+                                    h["status"] = "exhausted"
+                                    h["detail"] = "402 余额不足 (proxy 运行时标记)"
+                                    h["last_checked"] = _time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                                    logger.info(f"Provider {provider_id} 余额不足(402), 首次标记 exhausted")
+                                else:
+                                    logger.info(f"Provider {provider_id} 仍 402, 保持 exhausted (last_checked 不刷新, 等待 1h TTL)")
                         usage_path.write_text(_json.dumps(usage, indent=2, ensure_ascii=False))
-                        logger.info(f"Provider {provider_id} 余额不足(402), 标记 exhausted")
                 except Exception as e:
                     logger.warning(f"标记 exhausted 失败: {e}")
             # 4xx 中只有 401/403 不可重试(鉴权问题,换 provider 也没用)
@@ -857,11 +871,24 @@ async def startup_probe():
             continue
         pid, status, detail = result
         usage["providers"].setdefault(pid, {})
-        usage["providers"][pid]["health"] = {
-            "status": status,
-            "last_checked": now,
-            "detail": detail
-        }
+        prev_health = usage["providers"].get(pid, {}).get("health", {})
+        # 2026-11-08 修复(根因2): 探活不得无条件覆盖 last_checked。
+        # 旧逻辑每次探活都写 now → 每次 proxy 重启都把 exhausted 的 TTL 时钟归零,
+        # 导致 1h 自愈永远到不了。现在仅在【状态变化】或【首次标记】时刷新时间戳,
+        # 状态不变则保留原 last_checked,让 TTL 正常衰减。
+        prev_status = prev_health.get("status", "")
+        if status != prev_status or not prev_health.get("last_checked"):
+            usage["providers"][pid]["health"] = {
+                "status": status,
+                "last_checked": now,
+                "detail": detail,
+            }
+        else:
+            usage["providers"][pid]["health"] = {
+                "status": status,
+                "last_checked": prev_health.get("last_checked"),
+                "detail": detail or prev_health.get("detail", ""),
+            }
         if status == "healthy":
             healthy_count += 1
         logger.info(f"  {pid}: {status} — {detail}")
