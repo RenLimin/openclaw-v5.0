@@ -119,11 +119,15 @@ bash model-scheduling/setup.sh --dry-run
 
 ## 定期任务(建议通过 cron 调度)
 
-| 任务 | 频率 | 命令 |
-|---|---|---|
-| 模型同步 | 每周 | `python3 model-scheduling/scripts/sync_models.py --force` |
-| 用量获取 | 每周 | `python3 model-scheduling/scripts/fetch_usage.py --force` |
-| 健康探测 | 每小时 | `python3 model-scheduling/scripts/health_check.py --force` |
+| 任务 | 频率 | 命令 | 调度状态 |
+|---|---|---|---|
+| 模型同步 | 每周 | `python3 model-scheduling/scripts/sync_models.py --force` | ✅ LaunchAgent |
+| 用量获取 | 每周 | `python3 model-scheduling/scripts/fetch_usage.py --force` | ✅ LaunchAgent |
+| 健康探测 | 每小时 | `python3 model-scheduling/scripts/health_check.py --force` | ✅ LaunchAgent |
+| 额度恢复 | 每 6h | `python3 model-scheduling/scripts/check_quota_and_restore.py` | ✅ `ai.openclaw.quota-restore` |
+| 调度审计 | 每 6h | `python3 L2-infra/components/scheduler-guard/audit.py` | ✅ LaunchAgent |
+
+> 调度一致性由 `scheduler-guard` 每 6h 自动审计，防止「脚本交付≠机制交付」。
 
 ## 配置文件
 

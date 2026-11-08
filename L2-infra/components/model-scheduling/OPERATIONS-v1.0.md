@@ -69,3 +69,26 @@ python3 fetch_usage.py
 - **症状**: 路由失败
 - **原因**: 模型未配置或 API key 错误
 - **解决**: 检查模型配置和凭据
+
+### deepseek/longCat 额度耗尽（402）
+
+- **症状**: 请求返回 402，系统反复撞 402
+- **原因**: 余额不足，exhausted 状态未自愈
+- **解决**: 等待 1h TTL 自动重试探，或充值后执行恢复脚本
+
+```bash
+# 手动检查并恢复（--detail 强制输出）
+python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail
+
+# 调度状态（每 6h 自动执行）
+launchctl list ai.openclaw.quota-restore
+```
+
+### 调度资产审计
+
+```bash
+# 核对 manifest 与 launchctl 实际调度一致性
+python3 L2-infra/components/scheduler-guard/audit.py
+
+# 预期: 总计 17 | 已调度 16 | 未调度 0 | 不一致 0
+```
