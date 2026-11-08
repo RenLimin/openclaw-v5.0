@@ -62,8 +62,8 @@ $ python3 -m pytest tests/ -x -q
 | P4.1 审批链读取器（读路径） | ✅ 验收 | — |
 | P4.3 连接器契约（dry-run / 补偿语义） | ✅ 验收 | — |
 | P4.4 对账（函数 + runner + cron 每日 09:30） | ✅ 验收并已调度 | — |
-| P4.2 真实写端点 | ⏸ 暂缓 | 测试流程单据（人工验收一环）+ Rex 二次授权 + 增量文档 `p4-write-v1.1` |
-| OaWritebackConnector 接入 ProposalService 编排 | ⏸ 冻结 | 涉及 P3 核心路径，独立详设 + Rex 评审 |
+| P4.2 真实写端点 | ⏸ 冻结（2026-11-08 Rex 拍板） | **合并至人工验收测试环境执行**；届时需测试流程单据 + Rex 针对单据二次授权 + 增量文档 `p4-write-v1.1` |
+| OaWritebackConnector 接入 ProposalService 编排 | ✅ 已完成（P5.2，`9f92ba5`） | submit_to_oa 已注册为 human 级 action + writeback_steps，commit 经 dry-run 连接器，oa_submitted_at 落库 |
 
 ---
 
