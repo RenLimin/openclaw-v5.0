@@ -46,6 +46,7 @@ metadata:
 | 项目交付管理（台账/履约/复盘/客户画像） | `bangcle-project-manager-expert`（PJME-001，L4 项目管理统一入口） | L4 |
 | ONES 数据导出 | `ones-browser-export` | L4 |
 | 收入确认 / 报表 | `revenue-recognition`（组件） | L4 |
+| 确收预算预测 / 收入预估 / 确收缺口分析 | `bdms-revenue-forecast`（RF-001） | L4 |
 
 > 注意：`bangcle-contract` 在审查中会**调用 product-kb 做合同标的参照**——这是组件间数据复用，不改变本入口"仅产品相关"的边界。
 

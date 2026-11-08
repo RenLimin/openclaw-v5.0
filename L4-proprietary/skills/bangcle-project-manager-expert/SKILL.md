@@ -51,6 +51,7 @@ metadata:
 | 合同审查 / 风险扫描 / 销售合同审批 / 合同生成 | `contract-manager-expert`（CME-001，合同管理统一入口） | L4 |
 | PPT 生成 / 官方模板 | `bangcle-ppt`（CPT-012） | L4 |
 | 收入确认 / 报表 | `revenue-recognition`（组件） | L4 |
+| 确收预算预测 / 收入预估 / 确收缺口分析 | `bdms-revenue-forecast`（RF-001） | L4 |
 
 > 注意：`bangcle-project-retrospective` 复盘时会调用 `product-kb` 做标准基线对标——这是组件间数据复用，不改变本入口"仅项目管理相关"的边界。
 

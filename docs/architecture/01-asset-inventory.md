@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-08 22:26 UTC+08:00
+最后生成：2026-11-08 22:38 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -40,13 +40,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 114 个（可用 103）
+**总计** 115 个（可用 104）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 35 | 插件附带技能 |
+| `openclaw-extra` | 36 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -55,6 +55,7 @@
 |---|---|---|---|
 | L4 专有业务 | `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `L4-proprietary/skills/bangcle-ppt` |
 | L4 专有业务 | `bangcle-project-manager-expert` | Bangcle 项目管理专家 — L4 层 Bangcle 项目管理相关的统一入口。识别项目管理意图并路由协调：交付实施台账、履约义务... | `L4-proprietary/skills/bangcle-project-manager-expert` |
+| L4 专有业务 | `bdms-revenue-forecast` | BDMS 确收预算预测（Revenue Forecast）— 基于已提供财报（上一账期收入预算执行对比表）实时/动态确认收入预估的 L... | `L4-proprietary/skills/bdms-revenue-forecast` |
 | L4 专有业务 | `bdms-web-ui-design` |  | `L4-proprietary/skills/bdms-web-ui-design` |
 | L4 专有业务 | `contract-manager-expert` | Bangcle 合同管理专家 — L4 层 Bangcle 合同管理相关的统一入口。合同智能审查（全文扫描/数字化/22 条风险规则）... | `L4-proprietary/skills/contract-manager-expert` |
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
@@ -77,7 +78,7 @@
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 23 个（L2: 9, L3: 6, L4: 8, 根目录: 0）_
+_自建技能总计: 24 个（L2: 9, L3: 6, L4: 9, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -142,8 +143,8 @@ _自建技能总计: 23 个（L2: 9, L3: 6, L4: 8, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
-| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 900s | `isolated` | wecom/1313 |
+| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
@@ -275,8 +276,8 @@ _自建技能总计: 23 个（L2: 9, L3: 6, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `ffb106c` |
-| Commit 数 | 632 |
+| HEAD | `8391872` |
+| Commit 数 | 633 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

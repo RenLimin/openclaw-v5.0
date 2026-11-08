@@ -77,3 +77,5 @@ L4-proprietary/components/product-kb/data/
 # 视觉回归测试运行时产物（每次跑测试重新生成，不入库）
 **/tests/visual/diff/*_diff.png
 **/tests/visual/golden/**/*.actual.png
+# BDMS e2e 视觉产物（截图不入库）
+L4-proprietary/components/bdms/tmp/

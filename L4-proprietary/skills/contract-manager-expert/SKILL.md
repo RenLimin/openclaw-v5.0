@@ -143,6 +143,7 @@ python3 scripts/reconcile_oa.py --contract-id 5
 | 项目交付管理（台账/履约/复盘/客户画像/交付月报） | `bangcle-project-manager-expert`（PJME-001） | L4 |
 | ONES 数据导出 | `ones-browser-export` | L4 |
 | 收入确认（ASC 606 / IFRS 15 合同识别与报表） | `revenue-recognition`（组件） | L4 |
+| 确收预算预测 / 收入预估 / 确收缺口分析 | `bdms-revenue-forecast`（RF-001） | L4 |
 
 > 注意：本入口在合同审查中会**调用 product-kb 做合同标的参照**——这是组件间数据复用，不改变本入口"仅合同相关"的边界；纯产品咨询仍归 PME。
 
