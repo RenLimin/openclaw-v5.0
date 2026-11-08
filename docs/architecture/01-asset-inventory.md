@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-06 17:06 UTC+08:00
+最后生成：2026-11-08 10:29 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -40,13 +40,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 111 个（可用 100）
+**总计** 112 个（可用 101）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 32 | 插件附带技能 |
+| `openclaw-extra` | 33 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -67,13 +67,14 @@
 | L3 通用业务 | `bangcle-project-summary` | Bangcle 项目信息汇总：业务目标是汇总项目交付实施情况，从 ONES 等系统汇总客户名下全部项目/产品/工作项/交付物/责任人，... | `L3-business/skills/bangcle-project-summary` |
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
 | L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
+| L2 基础设施 | `meeting-minutes` | 把会议录音转写/速记提炼为结构化、可溯源、术语统一的正式纪要，支持会后材料合并与多格式交付。触发：整理会议纪要、会议记录、校订智能纪要... | `L2-infra/skills/meeting-minutes` |
 | L2 基础设施 | `ocr-digitalization` | L2 OCR 文档数字化组件 — 扫描件/图片 → 高精度文本 + 签名/印章自动检测 | `L2-infra/skills/ocr-digitalization` |
 | L2 基础设施 | `pdf-toolkit` | Page-level PDF operations: merge multiple PDFs into one, split into... | `L2-infra/skills/pdf-toolkit` |
 | L2 基础设施 | `role-library` | 标准化 Agent 角色库。支持按角色执行任务，覆盖数据分析、报告生成、系统运维、文档管理等场景。 | `L2-infra/skills/role-library` |
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
+_自建技能总计: 20 个（L2: 7, L3: 5, L4: 8, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -271,8 +272,8 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9f843ad` |
-| Commit 数 | 604 |
+| HEAD | `cf2e3b9` |
+| Commit 数 | 605 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -285,7 +286,7 @@ _自建技能总计: 19 个（L2: 6, L3: 5, L4: 8, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `.deprecated` | 0 | 0 | 0 | `L2-infra/components/.deprecated` |
-| `ai-knowledge-base` | 86 | 20 | 9 | `L2-infra/components/ai-knowledge-base` |
+| `ai-knowledge-base` | 86 | 21 | 9 | `L2-infra/components/ai-knowledge-base` |
 | `backup` | 0 | 0 | 0 | `L2-infra/components/backup` |
 | `browser-automation` | 0 | 0 | 0 | `L2-infra/components/browser-automation` |
 | `config` | 6 | 0 | 2 | `L2-infra/components/config` |
