@@ -23,9 +23,22 @@ from ai_kb.ontology import (
     AssemblyGate,
     IdentityService,
 )
+from ai_kb.ontology.identity_token import IdentityAuthority
 from mcp.server import KBMCPHandler
 
 DOMAIN_CODE = "test-domain"
+
+# Fixed secret injected into the handler so tests can mint real tokens
+# without touching ~/.openclaw/state/ontology-identity.secret.
+_SECRET = b"test-secret-0123456789abcdef-test"
+
+
+def _mint(kind, subject, verb, action, run_id="test-run"):
+    auth = IdentityAuthority(secret=_SECRET)
+    return auth.issue(
+        run_id=run_id, subject=subject, kind=kind,
+        scopes=[f"{verb}:{action}:{DOMAIN_CODE}"],
+    )
 
 ACTION_SCHEMA = {
     "type": "object",
@@ -87,7 +100,9 @@ def db_path():
 
 @pytest.fixture()
 def handler(db_path):
-    h = KBMCPHandler(db_path, instance_code=DOMAIN_CODE)
+    h = KBMCPHandler(
+        db_path, instance_code=DOMAIN_CODE, identity_secret=_SECRET,
+    )
     yield h
     h.close()
 
@@ -145,6 +160,7 @@ def test_dispatch_propose_creates_pending_proposal(handler):
         "caller_id": "rex",
         "caller_kind": "human",
         "rationale": "p51 test",
+        "token": _mint("human", "rex", "propose", "demo_action"),
     })
     assert result["status"] == "pending"
     from ai_kb.ontology.actions import ActionRegistry as _AR

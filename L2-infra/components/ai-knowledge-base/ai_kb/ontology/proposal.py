@@ -31,6 +31,11 @@ from .connectors.saga import (
     SagaStep,
 )
 from .decision import DecisionService
+from .identity_token import (
+    IdentityAuthority,
+    IdentityError,
+    InvalidToken,
+)
 from ..guardrails.output_guard import OutputGuard
 
 # 五态状态机
@@ -50,6 +55,8 @@ class ProposalService:
         decisions: Optional[DecisionService] = None,
         connectors: Optional[Dict[str, WritebackConnector]] = None,
         default_connector: Optional[WritebackConnector] = None,
+        identity: Optional[IdentityAuthority] = None,
+        enforce_identity: bool = True,
     ) -> None:
         self.db = db
         self.registry = registry
@@ -59,6 +66,41 @@ class ProposalService:
         # 连接器表：writeback_target（connector key）→ connector
         self.connectors: Dict[str, WritebackConnector] = connectors or {}
         self.default_connector = default_connector or NullConnector()
+        # P6 身份治理：authority + fail-closed 开关（False 仅限测试/历史兼容）
+        self.identity = identity
+        self.enforce_identity = enforce_identity
+
+    # --- P6 身份校验 ---
+    def _domain_code(self, domain_id: int) -> str:
+        row = self.db.execute(
+            "SELECT code FROM domain WHERE id = ?", (domain_id,)
+        ).fetchone()
+        return row["code"] if row else "*"
+
+    def _authenticate_token(
+        self, token: Optional[str], verb: str,
+        action_name: str, domain_id: int,
+    ) -> Optional[Dict[str, Any]]:
+        """验令牌 + scope，返 claims。
+
+        渐进启用（P6）：identity 未配置 = 身份治理未启用，返回 None
+        （向后兼容既有装配点）；一旦注入 IdentityAuthority，enforce 下
+        缺 token / 验签失败 / scope 不符一律 fail-closed。
+        """
+        if self.identity is None:
+            # 未配置身份权威：未启用身份治理（兼容路径），audit 已标
+            # identity_enforced=false
+            return None
+        if not token:
+            if self.enforce_identity:
+                raise IdentityError(
+                    f"missing identity token for {verb}:{action_name}"
+                )
+            return None
+        claims = self.identity.verify(token)
+        domain_code = self._domain_code(domain_id)
+        self.identity.authorize(claims, verb, action_name, domain_code)
+        return claims
 
     # --- 内部辅助 ---
     def _resolve_domain_id(self, domain: Union[int, str]) -> int:
@@ -174,8 +216,12 @@ class ProposalService:
         caller_kind: str,
         rationale: Optional[str] = None,
         idempotency_key: Optional[str] = None,
+        token: Optional[str] = None,
     ) -> Dict[str, Any]:
         """只建 pending + 目标快照，零业务写。
+
+        身份（P6）：enforce 下必须传 token，claims 的 sub/kind 为权威
+        身份；入参 caller_id/caller_kind 若与 claims 冲突 → InvalidToken。
 
         幂等：同 idempotency_key 重复提交直接返回既有提案（不重放），
         由 UNIQUE 约束兜底（并发下 IntegrityError 也转为读既有记录）。
@@ -194,6 +240,30 @@ class ProposalService:
                 return existing
 
         domain_id = self._resolve_domain_id(domain)
+
+        # P6 身份校验（token → claims；scope: propose:<action>:<domain>）
+        claims = self._authenticate_token(
+            token, "propose", action_name, domain_id
+        )
+        token_fingerprint: Optional[str] = None
+        if claims is not None:
+            # claims 为权威身份：与自报值核对，冲突即拒（杜绝身份不一致）
+            claims_sub = claims["sub"]
+            claims_kind = claims["kind"]
+            if claims_kind != caller_kind:
+                raise InvalidToken(
+                    f"caller_kind {caller_kind!r} != token kind {claims_kind!r}"
+                )
+            # sub 可能带 operator: 前缀；与 caller_id 双向核对
+            sub_bare = claims_sub.split(":", 1)[1] if ":" in claims_sub else claims_sub
+            if caller_id not in (claims_sub, sub_bare):
+                raise InvalidToken(
+                    f"caller_id {caller_id!r} != token subject {claims_sub!r}"
+                )
+            caller_id = claims_sub
+            caller_kind = claims_kind
+            token_fingerprint = self.identity.fingerprint(token)
+
         action = self.registry.get_action(domain_id, action_name)
         if action is None:
             raise ValueError(f"action_type not found: {action_name}")
@@ -236,6 +306,9 @@ class ProposalService:
                 "object_refs": list(object_refs),
                 "rationale": rationale,
                 "idempotency_key": idempotency_key,
+                "identity_enforced": self.enforce_identity and self.identity is not None,
+                "token_fingerprint": token_fingerprint,
+                "run_id": claims["run_id"] if claims else None,
             }, ensure_ascii=False),
         )
         return self.get(proposal_id)
@@ -313,8 +386,12 @@ class ProposalService:
         *,
         reviewer_kind: str = "human",
         auto_commit: bool = True,
+        token: Optional[str] = None,
     ) -> Dict[str, Any]:
         """human 审：approve/reject；approve 后按策略触发内部 commit。
+
+        身份（P6）：enforce 下必须传 review 令牌（scope review:<action>:<domain>）；
+        human 级 action 要求 claims.kind=human；reviewer 以 claims.sub 为准。
 
         - reject：终态 rejected，写 rejected 决策记录 + 审计（拒绝留痕）；
         - approve：仅 human 可审 human 级提案；required_approval=auto 的
@@ -340,6 +417,27 @@ class ProposalService:
                 f"proposal {proposal_id} is {row['status']}; only validated "
                 f"proposals can be reviewed"
             )
+
+        # P6 身份校验：scope review:<action>:<domain>；claims 为权威身份
+        claims = self._authenticate_token(
+            token, "review", action["name"], row["domain_id"]
+        )
+        review_fingerprint: Optional[str] = None
+        if claims is not None:
+            claims_kind = claims["kind"]
+            claims_sub = claims["sub"]
+            if claims_kind != reviewer_kind:
+                raise InvalidToken(
+                    f"reviewer_kind {reviewer_kind!r} != token kind {claims_kind!r}"
+                )
+            sub_bare = claims_sub.split(":", 1)[1] if ":" in claims_sub else claims_sub
+            if reviewer not in (claims_sub, sub_bare):
+                raise InvalidToken(
+                    f"reviewer {reviewer!r} != token subject {claims_sub!r}"
+                )
+            reviewer = claims_sub
+            review_fingerprint = self.identity.fingerprint(token)
+
         if action["required_approval"] == "human" and reviewer_kind != "human":
             raise PermissionError(
                 "this action requires human approval; agent may not review"
@@ -367,6 +465,7 @@ class ProposalService:
                     "reviewer": reviewer,
                 },
                 result="rejected",
+                token_fingerprint=review_fingerprint,
             )
             self.audit.log(
                 operation_type="ont_review", user_id=reviewer,
@@ -393,10 +492,15 @@ class ProposalService:
             operation_type="ont_review", user_id=reviewer,
             object_type="ont_proposal", object_id=proposal_id,
             risk_level="low", action_taken="approve",
-            details=json.dumps({"proposal_id": proposal_id}, ensure_ascii=False),
+            details=json.dumps({
+                "proposal_id": proposal_id,
+                "token_fingerprint": review_fingerprint,
+            }, ensure_ascii=False),
         )
         if auto_commit:
-            record = self.commit(proposal_id)
+            record = self.commit(
+                proposal_id, token_fingerprint=review_fingerprint
+            )
             out = self.get(proposal_id)
             out["decision_record"] = record
             return out
@@ -484,8 +588,14 @@ class ProposalService:
             # 这里不 commit 任何内容（全程无 db 写）。
             pass
 
-    def commit(self, proposal_id: int) -> Dict[str, Any]:
+    def commit(
+        self, proposal_id: int,
+        token_fingerprint: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """单事务提交（详设 §3.3 事务时序）。
+
+        token_fingerprint：P6 审批者令牌指纹（review approve 传入），
+        落 decision_record.token_fingerprint（可空 = 历史/兼容路径）。
 
         BEGIN
           1) 幂等校验：已 committed → 直接返回既有 decision_record，不重放
@@ -577,6 +687,7 @@ class ProposalService:
                     ),
                 },
                 result="allowed",
+                token_fingerprint=token_fingerprint,
             )
             now = self.db.get_now()
             self.db.execute("""

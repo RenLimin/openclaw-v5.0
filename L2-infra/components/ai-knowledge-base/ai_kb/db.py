@@ -822,6 +822,7 @@ class AIKB:
             change_set  TEXT NOT NULL,
             evidence    TEXT,
             result      TEXT NOT NULL,
+            token_fingerprint TEXT,
             ts          DATETIME NOT NULL
         )
         """)
@@ -865,6 +866,32 @@ class AIKB:
         if self.get_current_migration_version() < 11:
             self.apply_migration(11, "operational_ontology_saga")
 
+    # --- Operational ontology: P6 identity token fingerprint (migration v12) ---
+    def init_ontology_identity_token_tables(self):
+        """Add ont_decision_record.token_fingerprint column, register v12.
+
+        Incremental ALTER TABLE (idempotent via PRAGMA table_info); legacy rows
+        stay NULL (= pre-v12 historical decisions, not backfilled). Stores only
+        a non-reversible token fingerprint, never the token plaintext.
+        """
+        if not self.conn:
+            self.connect()
+        cursor = self.conn.cursor()
+        cols = {r[1] for r in cursor.execute("PRAGMA table_info(ont_decision_record)")}
+        if "token_fingerprint" not in cols:
+            cursor.execute(
+                "ALTER TABLE ont_decision_record "
+                "ADD COLUMN token_fingerprint TEXT"
+            )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_ont_decision_tokenfp "
+            "ON ont_decision_record(token_fingerprint)"
+        )
+        self.conn.commit()
+        cursor.close()
+        if self.get_current_migration_version() < 12:
+            self.apply_migration(12, "ontology_identity_token_fingerprint")
+
     # --- Operational ontology: one-shot bootstrap for runtime entrypoints ---
     def init_ontology_tables(self):
         """Create ALL ontology tables (v8-v11) in dependency order.
@@ -879,6 +906,7 @@ class AIKB:
         self.init_ontology_kinetic_tables()
         self.init_ontology_proposal_tables()
         self.init_ontology_saga_tables()
+        self.init_ontology_identity_token_tables()
 
     # --- Migration ---
     def get_current_migration_version(self) -> int:

@@ -61,6 +61,7 @@ class DecisionService:
         rationale: Optional[str] = None,
         evidence: Union[str, Dict[str, Any], None] = None,
         result: str = "allowed",
+        token_fingerprint: Optional[str] = None,
     ) -> int:
         """写一条决策记录 → decision_record id。
 
@@ -75,6 +76,7 @@ class DecisionService:
             domain, action_type, object_refs, actor_id, actor_kind,
             change_set, proposal_id=proposal_id, rationale=rationale,
             evidence=evidence, result=result, do_commit=True,
+            token_fingerprint=token_fingerprint,
         )
 
     def record_no_commit(
@@ -90,12 +92,14 @@ class DecisionService:
         rationale: Optional[str] = None,
         evidence: Union[str, Dict[str, Any], None] = None,
         result: str = "allowed",
+        token_fingerprint: Optional[str] = None,
     ) -> int:
         """同 record，但不自行 commit（供 ProposalService.commit 单事务内调用）。"""
         return self._record(
             domain, action_type, object_refs, actor_id, actor_kind,
             change_set, proposal_id=proposal_id, rationale=rationale,
             evidence=evidence, result=result, do_commit=False,
+            token_fingerprint=token_fingerprint,
         )
 
     def _record(
@@ -112,6 +116,7 @@ class DecisionService:
         evidence: Union[str, Dict[str, Any], None],
         result: str,
         do_commit: bool,
+        token_fingerprint: Optional[str] = None,
     ) -> int:
         if result not in _RESULTS:
             raise ValueError(f"result must be one of {sorted(_RESULTS)}, got {result!r}")
@@ -133,10 +138,12 @@ class DecisionService:
         cursor = self.db.execute("""
         INSERT INTO ont_decision_record
             (proposal_id, domain_id, action_type, object_refs, actor_id,
-             actor_kind, rationale, change_set, evidence, result, ts)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             actor_kind, rationale, change_set, evidence, result,
+             token_fingerprint, ts)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (proposal_id, domain_id, action_type, object_refs_text, actor_id,
-              actor_kind, rationale, change_set_text, evidence_text, result, now))
+              actor_kind, rationale, change_set_text, evidence_text, result,
+              token_fingerprint, now))
         record_id = cursor.lastrowid
         if do_commit:
             self.db.commit()

@@ -17,7 +17,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from ai_kb.db import AIKB
 from ai_kb.ontology import ActionRegistry, AssemblyGate, IdentityService
+from ai_kb.ontology.identity_token import IdentityAuthority
 from mcp.server import KBMCPHandler
+
+_SECRET = b"test-secret-0123456789abcdef-e2e"
+
+
+def _mint(kind, subject, verb, action, domain="ont", run_id="e2e-run"):
+    auth = IdentityAuthority(secret=_SECRET)
+    return auth.issue(
+        run_id=run_id, subject=subject, kind=kind,
+        scopes=[f"{verb}:{action}:{domain}"],
+    )
 
 PARAMS_SCHEMA = {
     "type": "object",
@@ -156,7 +167,9 @@ def test_mcp_three_way_classification(ontology_env):
 
 def test_mcp_propose_review_chain(ontology_env):
     """Exercise proposal flow via real MCP tool dispatch (no direct commit tool)."""
-    handler = KBMCPHandler(ontology_env, instance_code="ont")
+    handler = KBMCPHandler(
+        ontology_env, instance_code="ont", identity_secret=_SECRET,
+    )
 
     proposed = handler.call_tool("ont_propose_action", {
         "action": "submit_contract",
@@ -164,6 +177,7 @@ def test_mcp_propose_review_chain(ontology_env):
         "params": {"contract_no": "HT-100", "target_state": "submitted"},
         "caller_id": "agent-9", "caller_kind": "agent",
         "idempotency_key": "mcp-1",
+        "token": _mint("agent", "agent-9", "propose", "submit_contract"),
     })
     pid = proposed["id"]
     assert proposed["status"] == "pending"
@@ -211,6 +225,7 @@ def test_mcp_propose_review_chain(ontology_env):
     reviewed = handler.call_tool("ont_review_proposal", {
         "proposal_id": pid, "decision": "approve",
         "reviewer": "rex", "reviewer_kind": "human",
+        "token": _mint("human", "rex", "review", "submit_contract"),
     })
     assert reviewed["status"] == "committed"
 

@@ -29,9 +29,11 @@ class KBMCPHandler:
     and tool invocation (call_tool) matching the MCP protocol shape.
     """
 
-    def __init__(self, db_path: str, instance_code: str = "default"):
+    def __init__(self, db_path: str, instance_code: str = "default",
+                 identity_secret: Optional[bytes] = None):
         self.db_path = db_path
         self.instance_code = instance_code
+        self._identity_secret = identity_secret
         self._service: Optional[AIKBService] = None
         self._ont_services: Optional[Dict[str, Any]] = None
 
@@ -65,13 +67,20 @@ class KBMCPHandler:
             registry = ActionRegistry(kb, gate=AssemblyGate(open_by_default=False))
             identity = IdentityService(kb)
             decisions = DecisionService(kb)
-            proposals = ProposalService(kb, registry, decisions=decisions)
+            from ai_kb.ontology.identity_token import IdentityAuthority
+            authority = IdentityAuthority(
+                secret=self._identity_secret,
+            ) if self._identity_secret is not None else IdentityAuthority()
+            proposals = ProposalService(
+                kb, registry, decisions=decisions, identity=authority,
+            )
             self._ont_services = {
                 "kb": kb,
                 "registry": registry,
                 "identity": identity,
                 "proposals": proposals,
                 "decisions": decisions,
+                "authority": authority,
             }
         return self._ont_services
 
@@ -130,6 +139,10 @@ class KBMCPHandler:
                 "caller_kind": {"type": "string", "enum": ["human", "agent"]},
                 "rationale": {"type": "string"},
                 "idempotency_key": {"type": "string"},
+                "token": {
+                    "type": "string",
+                    "description": "Run-scoped identity token (P6). Required when identity enforced.",
+                },
             })
             if "object_refs" not in required:
                 required.append("object_refs")
@@ -305,6 +318,7 @@ class KBMCPHandler:
                 caller_kind=arguments.get("caller_kind", "agent"),
                 rationale=arguments.get("rationale"),
                 idempotency_key=arguments.get("idempotency_key"),
+                token=arguments.get("token"),
             )
 
         if tool == "ont_list_actions":
@@ -326,6 +340,7 @@ class KBMCPHandler:
                 arguments.get("reviewer", "human"),
                 reviewer_kind=arguments.get("reviewer_kind", "human"),
                 auto_commit=arguments.get("auto_commit", True),
+                token=arguments.get("token"),
             )
 
         # P5.1: dynamic dispatch for ont_propose_<name> / ont_compute_<name>
@@ -341,6 +356,7 @@ class KBMCPHandler:
                 caller_kind=arguments.get("caller_kind", "agent"),
                 rationale=arguments.get("rationale"),
                 idempotency_key=arguments.get("idempotency_key"),
+                token=arguments.get("token"),
             )
 
         if tool.startswith("ont_compute_"):
@@ -410,6 +426,7 @@ class KBMCPHandler:
                         "caller_kind": {"type": "string", "enum": ["human", "agent"]},
                         "rationale": {"type": "string"},
                         "idempotency_key": {"type": "string"},
+                        "token": {"type": "string", "description": "Run-scoped identity token (P6). Required when identity enforced."},
                     },
                     "required": ["action", "object_refs"],
                 },
@@ -445,6 +462,7 @@ class KBMCPHandler:
                         "reviewer": {"type": "string"},
                         "reviewer_kind": {"type": "string", "enum": ["human", "agent"]},
                         "auto_commit": {"type": "boolean", "default": True},
+                        "token": {"type": "string", "description": "Run-scoped identity token (P6). Required when identity enforced."},
                     },
                     "required": ["proposal_id", "decision"],
                 },
