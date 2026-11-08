@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-08 15:09 UTC+08:00
+最后生成：2026-11-08 15:11 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -273,8 +273,8 @@ _自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `762152a` |
-| Commit 数 | 620 |
+| HEAD | `16c4759` |
+| Commit 数 | 621 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -287,7 +287,7 @@ _自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `.deprecated` | 0 | 0 | 0 | `L2-infra/components/.deprecated` |
-| `ai-knowledge-base` | 92 | 28 | 12 | `L2-infra/components/ai-knowledge-base` |
+| `ai-knowledge-base` | 93 | 28 | 13 | `L2-infra/components/ai-knowledge-base` |
 | `backup` | 0 | 0 | 0 | `L2-infra/components/backup` |
 | `browser-automation` | 0 | 0 | 0 | `L2-infra/components/browser-automation` |
 | `config` | 6 | 0 | 2 | `L2-infra/components/config` |
