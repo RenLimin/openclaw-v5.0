@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% set page_title = '收入预估' %}
+
+{% block content %}
+<div class="card-header" style="border:none;padding:0;margin-bottom:12px;">
+  <h2 style="margin:0;font-size:1.25rem;">📈 收入预估</h2>
+  <div class="text-muted" style="margin-top:4px;">上传财报生成双口径（锁定预算 / 动态预估）确认收入预估，支持账期切换、月度分布与履约明细</div>
+</div>
+
+<!-- 1. 上传 + 账期切换 -->
+<div class="card">
+  <div class="card-title">上传财报</div>
+  <div class="form-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+    <div>
+      <label class="field-label">财报文件（.xlsx）</label>
+      <input type="file" id="fc-file" class="input" accept=".xlsx">
+    </div>
+    <div>
+      <label class="field-label">账期（YYYYMM，可空→取文件名）</label>
+      <input type="text" id="fc-period" class="input" placeholder="如 202609" maxlength="6" style="width:160px;">
+    </div>
+    <div>
+      <label class="field-label">预估年份</label>
+      <input type="number" id="fc-year" class="input" value="2026" style="width:100px;">
+    </div>
+    <button class="btn btn-primary" id="fc-upload-btn" onclick="uploadReport()">上传并生成</button>
+    <div>
+      <label class="field-label">查看账期</label>
+      <select id="fc-view-period" class="input" onchange="loadAll()" style="min-width:160px;"></select>
+    </div>
+  </div>
+
+  <!-- 实时进度条 -->
+  <div id="fc-progress" style="display:none;margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+      <span id="fc-progress-step" class="text-muted">等待处理</span>
+      <strong id="fc-progress-pct">0%</strong>
+    </div>
+    <div class="progress-bar" style="height:10px;background:rgba(127,127,127,.15);border-radius:6px;overflow:hidden;">
+      <div id="fc-progress-fill" class="progress-fill" style="height:100%;width:0%;background:var(--c-primary,#2d74bb);transition:width .3s;"></div>
+    </div>
+    <div id="fc-progress-error" class="badge badge-danger" style="display:none;margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- 2. 概览四卡 -->
+<div class="dashboard-grid" id="fc-overview">
+  <div class="stat-card">
+    <div class="stat-label">锁定预算</div>
+    <div class="stat-value" id="ov-locked-total">-</div>
+    <div class="text-muted" id="ov-locked-split" style="font-size:.85rem;margin-top:6px;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">动态预估</div>
+    <div class="stat-value" id="ov-dynamic-total" style="color:var(--c-primary,#2d74bb);">-</div>
+    <div class="text-muted" id="ov-dynamic-split" style="font-size:.85rem;margin-top:6px;"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">实际发生（YTD）</div>
+    <div class="stat-value" id="ov-actual-total" style="color:var(--c-success,#16a34a);">-</div>
+    <div class="text-muted" style="font-size:.85rem;margin-top:6px;">截至财报账期的累计实际确收</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">差异（动态 − 锁定）</div>
+    <div class="stat-value" id="ov-gap-total">-</div>
+    <div class="text-muted" style="font-size:.85rem;margin-top:6px;">正数 = 提前确收；负数 = 延后</div>
+  </div>
+</div>
+
+<!-- 3. 月度图 -->
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <div class="card-title" style="margin:0;">月度确收分布</div>
+    <div>
+      <button class="btn" id="fc-basis-locked" onclick="switchBasis('locked')">锁定口径（12月）</button>
+      <button class="btn" id="fc-basis-dynamic" onclick="switchBasis('dynamic')">动态口径（12月 + Pipeline）</button>
+    </div>
+  </div>
+  <div style="height:340px;margin-top:12px;">
+    <canvas id="fc-chart"></canvas>
+  </div>
+</div>
+
+<!-- 4. 明细表 -->
+<div class="card">
+  <div class="card-title">履约明细</div>
+  <div class="form-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px;">
+    <div>
+      <label class="field-label">动态分类</label>
+      <select id="fl-category" class="input" onchange="loadLines(1)">
+        <option value="">全部</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">是否计入动态口径</label>
+      <select id="fl-inplan" class="input" onchange="loadLines(1)">
+        <option value="">全部</option>
+        <option value="true">计入</option>
+        <option value="false">不计入</option>
+      </select>
+    </div>
+    <div>
+      <label class="field-label">每页</label>
+      <select id="fl-pagesize" class="input" onchange="loadLines(1)">
+        <option>10</option><option selected>20</option><option>50</option>
+      </select>
+    </div>
+  </div>
+  <div class="table-wrapper" style="overflow-x:auto;">
+    <table class="table" id="fl-table" style="font-size:.86rem;min-width:1200px;">
+      <thead>
+        <tr>
+          <th></th><th>履约ID</th><th>合同编号</th><th>合同名称</th><th>客户</th>
+          <th>新签/递延</th><th>方法</th><th>动态分类</th><th>col42（未来额）</th>
+          <th>是否计入</th><th>计入额</th>
+        </tr>
+      </thead>
+      <tbody id="fl-body">
+        <tr><td colspan="11" class="text-muted" style="text-align:center;padding:20px;">暂无数据</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;flex-wrap:wrap;gap:8px;">
+    <span id="fl-info" class="text-muted"></span>
+    <div>
+      <button class="btn" id="fl-prev" onclick="flPrev()">上一页</button>
+      <span id="fl-page" style="margin:0 10px;">1 / 1</span>
+      <button class="btn" id="fl-next" onclick="flNext()">下一页</button>
+    </div>
+  </div>
+</div>
+
+<!-- 5. PartB 状态 -->
+<div class="card">
+  <div class="card-title">Part B 外部动态数据源</div>
+  <div id="fc-partb" class="text-muted">读取中…</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/app/js/chart.umd.min.js"></script>
+<script>
+const CATEGORIES = ['DUE_2026','FUTURE_YEAR','IN_PIPELINE','ALREADY_DONE','EXCEPTION',
+  'TERMINATED','ADJUSTED','NOT_STARTED','ZERO_AMOUNT','MISSING_DATE'];
+
+let curPeriod = null;
+let basis = 'locked';
+let chart = null;
+let flPage = 1, flTotalPages = 1;
+
+// ── 金额格式化：自动万元/亿元 ──
+function fmtMoney(v) {
+  if (v == null || isNaN(v)) return '-';
+  const abs = Math.abs(v);
+  const sign = v < 0 ? '-' : '';
+  if (abs >= 1e7) return sign + (abs / 1e8).toLocaleString('zh-CN', {maximumFractionDigits: 2}) + ' 亿';
+  return sign + (abs / 1e4).toLocaleString('zh-CN', {maximumFractionDigits: 1}) + ' 万';
+}
+function splitHtml(g) {
+  g = g || {};
+  return `新签 ${fmtMoney(g['新签'] || 0)} ｜ 递延 ${fmtMoney(g['递延'] || 0)}`;
+}
+
+// ── 账期列表 ──
+async function loadPeriods(selectPeriod) {
+  const r = await fetch('/api/forecast/periods');
+  const d = await r.json();
+  const sel = document.getElementById('fc-view-period');
+  const periods = (d.periods || []).map(p => typeof p === 'string' ? p : p.period);
+  sel.innerHTML = periods.length
+    ? periods.map(p => `<option value="${p}">${p.slice(0,4)}年${p.slice(4)}月</option>`).join('')
+    : '<option value="">（暂无账期，请先上传）</option>';
+  curPeriod = selectPeriod || d.current || periods[0] || null;
+  if (curPeriod) sel.value = curPeriod;
+}
+
+// ── 概览 ──
+async function loadOverview() {
+  if (!curPeriod) return;
+  const r = await fetch('/api/forecast/overview?period=' + encodeURIComponent(curPeriod));
+  if (!r.ok) return;
+  const d = await r.json();
+  document.getElementById('ov-locked-total').textContent = fmtMoney(d.locked.total);
+  document.getElementById('ov-locked-split').innerHTML = splitHtml(d.locked.by_group);
+  document.getElementById('ov-dynamic-total').textContent = fmtMoney(d.dynamic.total);
+  document.getElementById('ov-dynamic-split').innerHTML =
+    splitHtml(d.dynamic.by_group) +
+    ` ｜ Pipeline ${fmtMoney(d.dynamic.pipeline || 0)}`;
+  document.getElementById('ov-actual-total').textContent = fmtMoney(d.actual);
+  const gap = d.gap || 0;
+  const gapEl = document.getElementById('ov-gap-total');
+  gapEl.textContent = (gap > 0 ? '+' : '') + fmtMoney(gap);
+  gapEl.style.color = gap >= 0 ? 'var(--c-success,#16a34a)' : 'var(--c-danger,#dc2626)';
+}
+
+// ── 月度图 ──
+async function loadMonthly() {
+  if (!curPeriod) return;
+  const r = await fetch(`/api/forecast/monthly?period=${encodeURIComponent(curPeriod)}&basis=${basis}`);
+  if (!r.ok) return;
+  const d = await r.json();
+  const months = d.months || {};
+  const labels = [];
+  const data = [];
+  for (let m = 1; m <= 12; m++) {
+    const key = String(m).padStart(2, '0');
+    labels.push(m + '月');
+    data.push((months[key] || 0) / 1e4);
+  }
+  if (basis === 'dynamic') {
+    labels.push('Pipeline');
+    data.push((d.pipeline || 0) / 1e4);
+  }
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('fc-chart').getContext('2d'), {
+    type: 'bar',
+    data: {labels, datasets: [{
+      label: basis === 'locked' ? '锁定口径（万元）' : '动态口径（万元）',
+      data,
+      backgroundColor: labels.map((_, i) =>
+        i === labels.length - 1 && basis === 'dynamic' ? '#f59e0b' : '#2d74bb'),
+      borderRadius: 4,
+    }]},
+    options: {responsive: true, maintainAspectRatio: false,
+      plugins: {legend: {position: 'top'}},
+      scales: {y: {ticks: {callback: v => v + '万'}}}}
+  });
+}
+
+function switchBasis(b) {
+  basis = b;
+  document.getElementById('fc-basis-locked').className = b === 'locked' ? 'btn btn-primary' : 'btn';
+  document.getElementById('fc-basis-dynamic').className = b === 'dynamic' ? 'btn btn-primary' : 'btn';
+  loadMonthly();
+}
+
+// ── 明细表 ──
+function initCategoryFilter() {
+  const sel = document.getElementById('fl-category');
+  for (const c of CATEGORIES) {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  }
+}
+
+async function loadLines(page) {
+  if (!curPeriod) return;
+  flPage = page || 1;
+  const cat = document.getElementById('fl-category').value;
+  const inPlan = document.getElementById('fl-inplan').value;
+  const pageSize = document.getElementById('fl-pagesize').value;
+  const params = new URLSearchParams({period: curPeriod, page: flPage, page_size: pageSize});
+  if (cat) params.set('category', cat);
+  if (inPlan) params.set('in_plan', inPlan);
+  const r = await fetch('/api/forecast/lines?' + params);
+  if (!r.ok) return;
+  const d = await r.json();
+  const body = document.getElementById('fl-body');
+  if (!d.items || !d.items.length) {
+    body.innerHTML = '<tr><td colspan="11" class="text-muted" style="text-align:center;padding:20px;">无符合条件的明细</td></tr>';
+  } else {
+    body.innerHTML = d.items.map(it => {
+      const isPipe = it.dyn_category === 'IN_PIPELINE';
+      return `
+      <tr${isPipe ? ' style="cursor:pointer;"' : ''} onclick="${isPipe ? `toggleDetail('${it.obligation_id}')` : ''}">
+        <td>${isPipe ? '▸' : ''}</td>
+        <td>${it.obligation_id ?? ''}</td>
+        <td>${it.contract_no ?? ''}</td>
+        <td>${it.contract_name ?? ''}</td>
+        <td>${it.customer ?? ''}</td>
+        <td>${it.category_group ?? ''}</td>
+        <td>${it.revenue_method ?? ''}</td>
+        <td><span class="badge ${isPipe ? 'badge-warning' : 'badge-primary'}">${it.dyn_category}</span></td>
+        <td>${fmtMoney(it.amount_future)}</td>
+        <td>${it.dyn_in_plan ? '<span class="badge badge-success">计入</span>' : '不计入'}</td>
+        <td>${fmtMoney(it.dyn_counted)}</td>
+      </tr>
+      <tr id="detail-${it.obligation_id}" style="display:none;">
+        <td></td>
+        <td colspan="10" class="text-muted" style="font-size:.85rem;background:rgba(127,127,127,.06);">
+          IN_PIPELINE 说明：该行底稿标注「已提交资料」，金额 ${fmtMoney(it.amount_future)}
+          计入动态口径 Pipeline 桶，预计/要求交付时间原文：${it.raw_due ? String(it.raw_due).replace(/</g,'&lt;') : '（空）'}。
+          该行锁定口径全年额 ${fmtMoney(it.locked_year)}、本年已实际确认 ${fmtMoney(it.actual_ytd)}。
+          注意：逐月分布仅在账期整体口径（月度图）提供，无单行月份数据。
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  flTotalPages = Math.max(1, Math.ceil((d.total || 0) / pageSize));
+  document.getElementById('fl-page').textContent = `${flPage} / ${flTotalPages}`;
+  document.getElementById('fl-info').textContent = `共 ${d.total || 0} 行`;
+  document.getElementById('fl-prev').disabled = flPage <= 1;
+  document.getElementById('fl-next').disabled = flPage >= flTotalPages;
+}
+
+function toggleDetail(id) {
+  const el = document.getElementById('detail-' + id);
+  if (el) el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+function flPrev() { if (flPage > 1) loadLines(flPage - 1); }
+function flNext() { if (flPage < flTotalPages) loadLines(flPage + 1); }
+
+// ── PartB ──
+async function loadPartB() {
+  try {
+    const r = await fetch('/api/forecast/provider-status');
+    const d = await r.json();
+    const pb = d.part_b || {};
+    const name = (pb.name || 'ones').toUpperCase();
+    document.getElementById('fc-partb').innerHTML =
+      `<span class="badge badge-warning">${name}：待接入</span>
+       <div style="margin-top:8px;">${pb.message || ''}</div>`;
+  } catch (e) {
+    document.getElementById('fc-partb').textContent = '状态读取失败：' + e;
+  }
+}
+
+// ── 上传 + 进度轮询 ──
+async function uploadReport() {
+  const fileInput = document.getElementById('fc-file');
+  if (!fileInput.files.length) { alert('请先选择财报文件'); return; }
+  const fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  const period = document.getElementById('fc-period').value.trim();
+  if (period) fd.append('period', period);
+  fd.append('year', document.getElementById('fc-year').value || '2026');
+
+  const btn = document.getElementById('fc-upload-btn');
+  btn.disabled = true;
+
+  const box = document.getElementById('fc-progress');
+  box.style.display = 'block';
+  document.getElementById('fc-progress-error').style.display = 'none';
+  setProgress('提交中…', 0);
+
+  try {
+    const r = await fetch('/api/forecast/upload', {method: 'POST', body: fd});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '上传失败');
+    pollProgress(d.job_id, d.period);
+  } catch (e) {
+    const errEl = document.getElementById('fc-progress-error');
+    errEl.textContent = '⚠ ' + e.message;
+    errEl.style.display = 'inline-block';
+    btn.disabled = false;
+  }
+}
+
+function setProgress(step, pct) {
+  document.getElementById('fc-progress-step').textContent = step;
+  document.getElementById('fc-progress-pct').textContent = pct + '%';
+  document.getElementById('fc-progress-fill').style.width = pct + '%';
+}
+
+function pollProgress(jobId, newPeriod) {
+  const timer = setInterval(async () => {
+    try {
+      const r = await fetch('/api/forecast/progress/' + jobId);
+      const d = await r.json();
+      setProgress(d.step || '', d.pct || 0);
+      if (d.status === 'done') {
+        clearInterval(timer);
+        document.getElementById('fc-progress-fill').classList.add('success');
+        document.getElementById('fc-upload-btn').disabled = false;
+        await loadPeriods(newPeriod);
+        await loadAll();
+      } else if (d.status === 'failed' || d.status === 'not_found') {
+        clearInterval(timer);
+        const errEl = document.getElementById('fc-progress-error');
+        errEl.textContent = '⚠ ' + (d.error || '任务失败');
+        errEl.style.display = 'inline-block';
+        document.getElementById('fc-progress-fill').style.background = 'var(--c-danger,#dc2626)';
+        document.getElementById('fc-upload-btn').disabled = false;
+      }
+    } catch (e) {
+      // 轮询偶发失败不停表，下一轮重试
+    }
+  }, 700);
+}
+
+async function loadAll() {
+  curPeriod = document.getElementById('fc-view-period').value || curPeriod;
+  await Promise.all([loadOverview(), loadMonthly(), loadLines(1)]);
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  initCategoryFilter();
+  switchBasis('locked');
+  await loadPeriods();
+  await loadAll();
+  loadPartB();
+});
+</script>
+{% endblock %}

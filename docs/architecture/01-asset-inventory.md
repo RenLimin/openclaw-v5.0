@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-08 15:21 UTC+08:00
+最后生成：2026-11-08 20:58 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -140,8 +140,8 @@ _自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
-| 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 900s | `isolated` | wecom/1313 |
 | session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
+| 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 900s | `isolated` | wecom/1313 |
 | quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
@@ -273,8 +273,8 @@ _自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `b48613b` |
-| Commit 数 | 623 |
+| HEAD | `bb16c3e` |
+| Commit 数 | 624 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -334,7 +334,7 @@ _自建技能总计: 21 个（L2: 8, L3: 5, L4: 8, 根目录: 0）_
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
 | `bangcle-contract` | 82 | 12 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 183 | 9 | 19 | `L4-proprietary/components/bdms` |
+| `bdms` | 198 | 9 | 24 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |
 | `fin-l4` | 58 | 0 | 14 | `L4-proprietary/components/fin-l4` |

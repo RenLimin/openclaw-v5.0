@@ -10,7 +10,7 @@
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -667,3 +667,134 @@ async def settings_set(req: SettingUpdate):
 @router.get("/health")
 async def health():
     return {"status": "ok", "component": "bdms-web"}
+
+
+# ========== 6. 实时动态确认收入预估（revenue_forecast Phase 4）==========
+
+@router.post("/forecast/upload")
+async def forecast_upload(
+    file: UploadFile = File(...),
+    period: Optional[str] = Form(default=None),
+    year: int = Form(default=2026),
+):
+    """上传财报（multipart，异步解析）→ {job_id, period}。
+
+    表单字段：file（.xlsx）、可选 period=YYYYMM（缺省由文件名推断）、year=2026。
+    后台：保存文件 → parser.parse → engine.forecast → repository.save_result；
+    失败 job=failed 且不切换 current。
+    """
+    from bdms.modules.revenue_forecast.service import (
+        ForecastService, ForecastServiceError,
+    )
+    content = await file.read()
+    try:
+        return ForecastService().start_upload(
+            content, filename=file.filename or "upload.xlsx",
+            period=period, year=year,
+        )
+    except ForecastServiceError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/forecast/progress/{job_id}")
+async def forecast_progress(job_id: int):
+    from bdms.modules.revenue_forecast.service import ForecastService
+    return ForecastService().get_progress(job_id)
+
+
+@router.get("/forecast/periods")
+async def forecast_periods():
+    from bdms.modules.revenue_forecast.service import ForecastService
+    return ForecastService().list_periods()
+
+
+@router.get("/forecast/overview")
+async def forecast_overview(period: Optional[str] = None):
+    from bdms.modules.revenue_forecast.service import (
+        ForecastService, ForecastServiceError,
+    )
+    try:
+        return ForecastService().get_overview(period)
+    except ForecastServiceError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/forecast/monthly")
+async def forecast_monthly(period: Optional[str] = None, basis: str = "locked"):
+    from bdms.modules.revenue_forecast.service import (
+        ForecastService, ForecastServiceError,
+    )
+    try:
+        return ForecastService().get_monthly(period, basis=basis)
+    except ForecastServiceError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/forecast/lines")
+async def forecast_lines(
+    period: Optional[str] = None,
+    category: Optional[str] = None,
+    in_plan: Optional[bool] = None,
+    page: int = 1,
+    page_size: int = 20,
+):
+    from bdms.modules.revenue_forecast.service import (
+        ForecastService, ForecastServiceError,
+    )
+    try:
+        return ForecastService().get_lines(
+            period, category=category, in_plan=in_plan,
+            page=page, page_size=page_size,
+        )
+    except ForecastServiceError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.get("/forecast/provider-status")
+async def forecast_provider_status():
+    from bdms.modules.revenue_forecast.providers import NotConfiguredProvider
+    status = NotConfiguredProvider().get_status()
+    return {"part_b": status.to_dict()}
+
+
+@router.get("/forecast/export")
+async def forecast_export(period: Optional[str] = None):
+    """导出双口径预估 Excel（多 Sheet），文件名含 period。"""
+    from bdms.modules.revenue_forecast.exporter import ForecastExporter
+    from bdms.modules.revenue_forecast.service import (
+        ForecastService, ForecastServiceError,
+    )
+    # period 缺省时取 current（与 overview/monthly 一致）
+    svc = ForecastService()
+    from bdms.core.paths import DB_PATH
+    try:
+        if period:
+            resolved = _db.normalize_month(period)
+        else:
+            from bdms.modules.revenue_forecast.repository import ForecastRepository
+            repo = ForecastRepository(DB_PATH)
+            try:
+                repo.ensure_schema()
+                current = repo.get_current_period()
+            finally:
+                repo.close()
+            if current is None:
+                raise ForecastServiceError("未指定 period 且当前无生效账期")
+            resolved = current["period"]
+        from bdms.modules.revenue_forecast.repository import ForecastRepository as _FR
+        _repo = _FR(DB_PATH)
+        try:
+            _repo.ensure_schema()
+            if _repo.get_totals(resolved) is None:
+                raise ForecastServiceError(
+                    f"账期 {resolved} 不存在，请先上传财报")
+        finally:
+            _repo.close()
+        path = ForecastExporter().export(resolved)
+    except ForecastServiceError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, f"导出失败: {e}")
+    return FileResponse(
+        path, filename=f"收入预估_{resolved}.xlsx",
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
