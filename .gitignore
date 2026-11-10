@@ -62,6 +62,9 @@ L4-proprietary/components/*/output/*
 analysis_output/
 /tmp/
 
+# 历史文件归档区（system-governor v1.0，dot 目录，不入库）
+.archive/
+
 # SQLite WAL/SHM 运行时文件
 *.db-shm
 *.db-wal

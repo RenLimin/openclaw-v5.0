@@ -11,6 +11,12 @@ This folder is home. Treat it that way.
 查找业界最佳实践必须覆盖：AI Agent官方文档、AI Agent对应社区的方案、GitHub/Clawhub等相关开源网站的方案，不能只找本地已有或用户提供的个别案例。
 <!-- observed: 2026-10-10 | status: active -->
 
+## 子进程执行规范（防静默失控）
+- Always 执行预计 >8s 的 exec 命令时设 `yieldMs>=60000`，让命令在前台跑完直接拿输出，避免超过默认 10s 被自动转后台、回执静默导致状态断层。
+- 若命令已被转后台（session id 但无输出），立即用 `process(action=log)` 拉取该 session 日志确认，不盲猜、不重复跑。
+- Never 对同一命令无确认地重复执行（防并行重复）；先 `process(action=list)` 或 `ps` 确认无残留。
+<!-- observed: 2026-11-10 | status: active -->
+
 ## First Run
 
 If `BOOTSTRAP.md` exists, follow it, figure out who you are, then delete it.
@@ -47,6 +53,20 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --j
 - **核对已有规范**：如果是已有规范的领域（开发、测试、验收等），先读对应规范文档
 - 如果用户需求不清晰（不满足：明确类型 + 已有资产位置 + 期望结果），持续提问直至需求清晰，不要猜测着开始
 
+### 已建成能力检索铁律 ★★★（2026-11-10，FB-20261110-01）
+
+> Rex 批评：接合同/业务任务时，我先查本地库/文件，本地空就换数据源（BDMS），
+> 而没有先查 memory + skill + 已建组件能力——导致把**已建成能力**当缺口，反复犯。
+> 此规则与「品牌素材检索铁律」同源：**先查记忆与已建能力，再判定缺失**。
+
+- Always 接业务需求（合同/财务/DMS/PPT/ONES 等）先 `memory_search` + 读对应 `SKILL.md`
+  的**路由表与已建能力清单**，确认能力是否已存在，再决定是复用还是新建。
+- Always 判断"能力缺失"前，先确认是否只是**未固化**（/tmp 临时脚本、散落脚本、
+  会话记忆里有使用记录）——未固化 = 沉淀修复，不是重新建设。
+- Always 当天生产验证过的临时脚本/管线，**当日固化**进组件 + 更新 SKILL.md，不留 /tmp 资产。
+- 合同正文权威来源 = OA（`contractctl oa-fetch`/`review --oa-billid`）；BDMS/底稿摘要
+  只作财务/确收视角的补充，**禁止**作为合同条款结论的替代来源。 <!-- observed: 2026-11-10 | status: active -->
+
 ### 3. 记忆/文档检索（三层，缺一不可）
 
 **第一层：知识库（必须先搜）**
@@ -60,6 +80,11 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --j
 **第二层：memory / SKILL**
 - 涉及已有决策、偏好、历史记录：`memory_search` 检索相关记忆
 - 涉及已有技能领域：读对应 `SKILL.md`
+
+> **品牌/官方素材检索铁律 ★★★（2026-11-09，FB-20261109-01）：**
+> - 用户**当场提供的路径 / 凭据 / 边界 / 命名口径**，必须**当回合**写入 `USER.md`（Always 指令 + observed 元数据），不得只留在会话或 `dreaming` 语料。
+> - 凡涉及 Bangcle 品牌素材（PPT/Logo/模板/图标/字体/色板），检索范围**必须**覆盖 `/Users/bangcle/Bangcle Workspace/00. Bangcle Manual/02. Bangcle Template/`，不得只搜 workspace。
+> - 已知信息不得反向反复询问；压缩恢复后先查 USER.md + 该品牌目录再决定是否需要用户补充。违反 = 重复询问事故。
 
 **第三层：代码/文档**
 - 涉及已有文档规范：先读对应文档，确认规则
@@ -108,6 +133,8 @@ Write It Down: "remember this" → update daily file; lesson learned → update 
 **旧代码迁移规范：** 迁移前必须先读 DESIGN-DETAIL 文档；旧代码与文档契约不一致时以文档为准；迁移完成后验证数据流、生命周期、接口签名。
 
 **测试规范：** Web/安全功能验收必须用真实 HTTP；禁止用 FastAPI TestClient 测试网络安全/Cookie/访问控制；所有 E2E 自测务必使用真实的模拟人工操作的方式进行；E2E 测试必须覆盖真实用户操作路径；后端 API 应同时兼容多种输入格式。 <!-- observed: 2026-10-07 | status: active -->
+
+**PPT 字体与布局校验铁律：** 生成 PPT 一律使用目标机确定已安装的字体（Windows/Office 环境优先微软雅黑、宋体），禁止假设「思源黑体/Source Han」等用户未声明安装的字体；布局是否溢出不得只看渲染预览（预览可能用替代字体造成假象），必须用真实字体的字宽（fontTools 读 hmtx）机器校验折行与碰撞。 <!-- observed: 2026-11-09 | status: active -->
 
 **进度条铁律：** 所有响应时间超过 10s 的用户操作，必须展示实时进度条（分步进度 + 当前步骤说明），禁止让用户面对空白页面等待。后端用 job 表异步 + 前端轮询模式实现。 <!-- observed: 2026-10-21 | status: active -->
 
