@@ -24,6 +24,13 @@ This folder is home. Treat it that way.
 - 待根本修复：tracker 按 task_id 分文件 + complete 强制 task_id 校验（单独立项）。
 <!-- observed: 2026-11-10 | status: active -->
 
+## git index 共享红线（事故 2026-11-10 22:11）
+- git index 是**跨会话共享**的：别的会话 `git add` 过的文件会留在 index 里，本会话 `git add <自己的文件>` + 裸 `git commit` 会把**所有已 stage 内容**一起提交（曾把 CDI 会话的 SKILL/DECISION 捎带进 governor 的 commit）。
+- Always commit 前先 `git diff --cached --name-only` 核对 staged 列表，只应有自己的文件。
+- Always 若 index 里有外来 staged 文件：用 `git commit -- <自己的路径列表>`（只提交指定路径），**绝不裸 commit**；不擅自 unstage/改别人的文件。
+- 已推送的混合 commit 不自动 rewrite（force-push 需 Rex 批准）；发现即汇报，记录而非掩盖。
+<!-- observed: 2026-11-10 | status: active -->
+
 ## First Run
 
 If `BOOTSTRAP.md` exists, follow it, figure out who you are, then delete it.
