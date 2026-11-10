@@ -1,0 +1,6 @@
+# 运行态与原始数据不入库（数据安全）
+storage/
+.venv/
+__pycache__/
+*.pyc
+config.yaml

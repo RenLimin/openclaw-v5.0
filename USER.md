@@ -78,3 +78,10 @@ python3 L2-infra/components/model-scheduling/scripts/fetch_usage.py
 ---
 
 SOUL.md · AGENTS.md · MEMORY.md · docs/knowledge-base/
+
+## Bangcle 品牌素材
+- Always 制作 Bangcle PPT 优先用官方模板目录：`/Users/bangcle/Bangcle Workspace/00. Bangcle Manual/02. Bangcle Template/PPT模版`（浅/深两套，含品牌位图）。 <!-- observed: 2026-11-09 | status: active -->
+
+## 取数与浏览器自动化（不重复建设）
+- Never 重复建设 OA / ONES 的浏览器自动化操作——已完整建成，直接复用既有能力（delivery-center collectors、ones-browser-export、clm-oa-recon）。 <!-- observed: 2026-11-10 | status: active -->
+- Always 新业务需要 OA/ONES 原始数据时，先定位并调用既有自动化入口，只在其上层做编排与汇总，不自写登录/导航/抓取。 <!-- observed: 2026-11-10 | status: active -->

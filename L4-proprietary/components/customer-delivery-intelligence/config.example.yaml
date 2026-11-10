@@ -1,0 +1,19 @@
+oa:
+  base_url: "https://oa.bangcle.com"
+ones:
+  base_url: "https://ones.bangcle.com"
+  team_uuid: "RZxvwUZ8"
+browser:
+  session_dir: "~/.openclaw/data/clm-oa-recon/sessions"
+  fallback: "browser-use"   # UI 漂移兜底
+hitl:
+  wecom_webhook: ""
+  timeout_hours: 24
+storage:
+  checkpoint_db: "storage/cdi.db"
+  raw_dir: "storage/raw"
+  artifacts_dir: "storage/artifacts"
+  golden_dir: "golden"
+retention:
+  success_days: 90
+  failed_days: 30

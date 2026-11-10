@@ -1,0 +1,2565 @@
+{
+  "projectRegister": [
+    {
+      "projectId": "PROJ-2026-CCB-001",
+      "customer": "中国建设银行股份有限公司深圳市分行",
+      "projectName": "XSZS2609200710",
+      "projectType": "software_service",
+      "contractNo": "XSZS2609200710",
+      "contractAmount": 14800.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2026-09-16",
+      "endDate": "2027-09-16",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349066+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-002",
+      "customer": "中国建设银行股份有限公司吉林省分行",
+      "projectName": "XSZS2602280111",
+      "projectType": "software_service",
+      "contractNo": "XSZS2602280111",
+      "contractAmount": 250000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2026-02-01",
+      "endDate": "2029-01-31",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349129+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-003",
+      "customer": "中国建设银行股份有限公司广州人工智能与数字经济试验区支行",
+      "projectName": "XSZS2509220712",
+      "projectType": "software_service",
+      "contractNo": "XSZS2509220712",
+      "contractAmount": 36000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2024-03-01",
+      "endDate": "2025-12-31",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349159+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-004",
+      "customer": "中国建设银行股份有限公司常州分行",
+      "projectName": "甲方邮件确认视为验收合格",
+      "projectType": "software_service",
+      "contractNo": "XSZS2412241145",
+      "contractAmount": 30000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2024-12-01",
+      "endDate": "2025-05-30",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349184+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-005",
+      "customer": "中国建设银行股份有限公司云南省分行",
+      "projectName": "到期无异议，视为合格",
+      "projectType": "software_service",
+      "contractNo": "XSZS2412051023",
+      "contractAmount": 20000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2024-12-01",
+      "endDate": "2025-11-30",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349208+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-006",
+      "customer": "中国建设银行股份有限公司",
+      "projectName": "验收报告",
+      "projectType": "software_service",
+      "contractNo": "XSZS2403190156",
+      "contractAmount": 1150000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2024-03-11",
+      "endDate": "2026-03-31",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349231+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-007",
+      "customer": "中国建设银行股份有限公司陕西省分行",
+      "projectName": "其他,无特定样式",
+      "projectType": "software_service",
+      "contractNo": "XSZS2111220874ZZ",
+      "contractAmount": -15000.0,
+      "currency": "CNY",
+      "projectManager": "冯刚",
+      "startDate": "2021-11-19",
+      "endDate": "2021-11-19",
+      "phaseStatus": "done",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349253+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-008",
+      "customer": "中国建设银行股份有限公司咸阳分行",
+      "projectName": "XSZS2108100514ZZ",
+      "projectType": "software_service",
+      "contractNo": "XSZS2108100514ZZ",
+      "contractAmount": -15000.0,
+      "currency": "CNY",
+      "projectManager": "冯刚",
+      "startDate": "2021-08-10",
+      "endDate": "2021-11-09",
+      "phaseStatus": "done",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349274+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-009",
+      "customer": "中国建设银行股份有限公司赣州市分行",
+      "projectName": "XSZS2301160030",
+      "projectType": "software_service",
+      "contractNo": "XSZS2301160030",
+      "contractAmount": 35000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2022-06-22",
+      "endDate": "2022-09-22",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349294+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-010",
+      "customer": "中国建设银行股份有限公司深圳市分行",
+      "projectName": "甲方邮件确认视为验收合格",
+      "projectType": "software_service",
+      "contractNo": "XSZS2207260488",
+      "contractAmount": 15000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": "2022-06-06",
+      "endDate": "2022-12-06",
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349313+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-011",
+      "customer": "中国建设银行股份有限公司",
+      "projectName": "XSZS181023384",
+      "projectType": "software_service",
+      "contractNo": "XSZS181023384",
+      "contractAmount": 885000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": null,
+      "endDate": null,
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "final_pass",
+      "paymentStatus": "paid",
+      "lastUpdated": "2026-11-10T21:19:06.349336+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-012",
+      "customer": "中国建设银行股份有限公司",
+      "projectName": "XSZS181116433",
+      "projectType": "software_service",
+      "contractNo": "XSZS181116433",
+      "contractAmount": 1450000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": null,
+      "endDate": null,
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "final_pass",
+      "paymentStatus": "paid",
+      "lastUpdated": "2026-11-10T21:19:06.349356+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-013",
+      "customer": "中国建设银行股份有限公司",
+      "projectName": "YP20160284",
+      "projectType": "software_service",
+      "contractNo": "YP20160284",
+      "contractAmount": 86000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": null,
+      "endDate": null,
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "not_started",
+      "paymentStatus": "not_invoiced",
+      "lastUpdated": "2026-11-10T21:19:06.349374+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "projectId": "PROJ-2026-CCB-014",
+      "customer": "中国建设银行股份有限公司",
+      "projectName": "XSZS180312067",
+      "projectType": "software_service",
+      "contractNo": "XSZS180312067",
+      "contractAmount": 1680000.0,
+      "currency": "CNY",
+      "projectManager": null,
+      "startDate": null,
+      "endDate": null,
+      "phaseStatus": "in_progress",
+      "health": "green",
+      "acceptanceStatus": "final_pass",
+      "paymentStatus": "paid",
+      "lastUpdated": "2026-11-10T21:19:06.349392+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    }
+  ],
+  "contractRegister": [
+    {
+      "contractNo": "XSZS2609200710",
+      "officialName": null,
+      "signDate": "2026-09-30",
+      "contractType": "fixed_price",
+      "amount": 14800.0,
+      "taxRate": 0.06,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司深圳市分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "乙方通过wenbo.wang@bangcle.com邮箱（官方邮箱）向甲方     liuyangyang@xyunsec.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到即为验收",
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 14800.0,
+            "triggerCondition": "乙方通过wenbo.wang@bangcle.com邮箱（官方邮箱）向甲方     liuyangyang@xyunsec.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到即为验收",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": "税率 6%",
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349044+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "auto",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2602280111",
+      "officialName": null,
+      "signDate": "2026-03-13",
+      "contractType": "fixed_price",
+      "amount": 250000.0,
+      "taxRate": 0.13,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司吉林省分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "3.3甲方选择按照3.3.1款约定方式在乙方交付当月内进行产品验收，若甲方未在当月内及时对产品进行验收，则视为产品已通过验收：3.3.1甲方指定授权jiangpengfei.jl@ccb.com邮箱（官方邮箱）向乙方li2.zhang@bangcle.com邮箱（官方邮箱）发送验收确认信息，同时抄送至乙方delivery@bangcle.com备份邮箱。",
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 250000.0,
+            "triggerCondition": "3.3甲方选择按照3.3.1款约定方式在乙方交付当月内进行产品验收，若甲方未在当月内及时对产品进行验收，则视为产品已通过验收：3.3.1甲方指定授权jiangpengfei.jl@ccb.com邮箱（官方邮箱）向乙方li2.zhang@bangcle.com邮箱（官方邮箱）发送验收确认信息，同时抄送至乙方delivery@bangcle.com备份邮箱。",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": "税率 13%",
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349123+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "auto",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2509220712",
+      "officialName": null,
+      "signDate": "2025-09-22",
+      "contractType": "fixed_price",
+      "amount": 36000.0,
+      "taxRate": 0.06,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司广州人工智能与数字经济试验区支行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "签字验收，但无法规定具体人员信息，届时可协商配合盖章",
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 36000.0,
+            "triggerCondition": "签字验收，但无法规定具体人员信息，届时可协商配合盖章",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": "税率 6%",
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349155+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "auto",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2412241145",
+      "officialName": null,
+      "signDate": "2024-12-31",
+      "contractType": "fixed_price",
+      "amount": 30000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司常州分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "乙方通过yueyi.shen@bangcle.com邮箱（官方邮箱）向甲方dongkai.l@verifone.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。",
+          "process": null,
+          "documentsRequired": [
+            "甲方邮件确认视为验收合格"
+          ],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 30000.0,
+            "triggerCondition": "乙方通过yueyi.shen@bangcle.com邮箱（官方邮箱）向甲方dongkai.l@verifone.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349180+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "auto",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2412051023",
+      "officialName": null,
+      "signDate": "2024-12-06",
+      "contractType": "fixed_price",
+      "amount": 20000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司云南省分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "乙方通过yanchuan.ni@bangcle.com邮箱（官方邮箱）向甲方yn_km_cn_xykzx.yn@ccb.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "process": null,
+          "documentsRequired": [
+            "到期无异议，视为合格"
+          ],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 20000.0,
+            "triggerCondition": "乙方通过yanchuan.ni@bangcle.com邮箱（官方邮箱）向甲方yn_km_cn_xykzx.yn@ccb.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349204+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "auto",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2403190156",
+      "officialName": null,
+      "signDate": "2024-03-22",
+      "contractType": "fixed_price",
+      "amount": 1150000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "5.2.4 安装调试服务工作完成后（或双方书面另行约定其他时点），安装调试服务提供方应当在10日内做好验收的必要准备并向甲方发出可以进行验收的书面通知。甲方自收到安装调试服务提供方可以进行验收的通知之日起10日内开始对安装调试服务进行验收，验收合格后甲方签署验收合格证明。\n7.3 培训服务工作完成后（或双方书面另行约定其他时点），培训服务提供方应当在3日内做好验收的必要准备并向甲方发出可 以进行验收的书面通知。甲方自收到培训服务提供方可以进行验收 的通知之日起3日内开始对培训服务进行验收，验收合格后甲方签 署验收合格证明。",
+          "process": null,
+          "documentsRequired": [
+            "验收报告"
+          ],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 1150000.0,
+            "triggerCondition": "5.2.4 安装调试服务工作完成后（或双方书面另行约定其他时点），安装调试服务提供方应当在10日内做好验收的必要准备并向甲方发出可以进行验收的书面通知。甲方自收到安装调试服务提供方可以进行验收的通知之日起10日内开始对安装调试服务进行验收，验收合格后甲方签署验收合格证明。\n7.3 培训服务工作完成后（或双方书面另行约定其他时点），培训服务提供方应当在3日内做好验收的必要准备并向甲方发出可 以进行验收的书面通知。甲方自收到培训服务提供方可以进行验收 的通知之日起3日内开始对培训服务进行验收，验收合格后甲方签 署验收合格证明。",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349227+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "auto",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2111220874ZZ",
+      "officialName": null,
+      "signDate": "2024-02-04",
+      "contractType": "fixed_price",
+      "amount": -15000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司陕西省分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "不涉及",
+          "process": null,
+          "documentsRequired": [
+            "其他,无特定样式"
+          ],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 0.0,
+            "triggerCondition": "不涉及",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349249+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "needs_human",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2108100514ZZ",
+      "officialName": null,
+      "signDate": "2023-05-15",
+      "contractType": "fixed_price",
+      "amount": -15000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司咸阳分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "不涉及",
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 0.0,
+            "triggerCondition": "不涉及",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349271+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "needs_human",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2301160030",
+      "officialName": null,
+      "signDate": "2023-01-04",
+      "contractType": "fixed_price",
+      "amount": 35000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司赣州市分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": null,
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 35000.0,
+            "triggerCondition": null,
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349291+08:00",
+      "extractionConfidence": 0.3,
+      "reviewStatus": "needs_human",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS2207260488",
+      "officialName": null,
+      "signDate": "2022-07-26",
+      "contractType": "fixed_price",
+      "amount": 15000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司深圳市分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": "乙方通过meifang.chen@bangcle.com邮箱（官方邮箱）向甲方wangfangfang@sangfor.com.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "process": null,
+          "documentsRequired": [
+            "甲方邮件确认视为验收合格"
+          ],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 15000.0,
+            "triggerCondition": "乙方通过meifang.chen@bangcle.com邮箱（官方邮箱）向甲方wangfangfang@sangfor.com.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349310+08:00",
+      "extractionConfidence": 0.6,
+      "reviewStatus": "auto",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS181023384",
+      "officialName": null,
+      "signDate": null,
+      "contractType": "fixed_price",
+      "amount": 885000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": null,
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 885000.0,
+            "triggerCondition": null,
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349332+08:00",
+      "extractionConfidence": 0.3,
+      "reviewStatus": "needs_human",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS181116433",
+      "officialName": null,
+      "signDate": null,
+      "contractType": "fixed_price",
+      "amount": 1450000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": null,
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 1450000.0,
+            "triggerCondition": null,
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349352+08:00",
+      "extractionConfidence": 0.3,
+      "reviewStatus": "needs_human",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "YP20160284",
+      "officialName": null,
+      "signDate": null,
+      "contractType": "fixed_price",
+      "amount": 86000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": null,
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 86000.0,
+            "triggerCondition": null,
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349371+08:00",
+      "extractionConfidence": 0.3,
+      "reviewStatus": "needs_human",
+      "extractionErrors": []
+    },
+    {
+      "contractNo": "XSZS180312067",
+      "officialName": null,
+      "signDate": null,
+      "contractType": "fixed_price",
+      "amount": 1680000.0,
+      "taxRate": null,
+      "currency": "CNY",
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "customerContractNo": null,
+      "scope": {
+        "deliverables": [],
+        "exclusions": [],
+        "techSpecRef": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "milestones": [],
+      "acceptance": {
+        "method": "one_time",
+        "initialAcceptance": {
+          "criteria": null,
+          "process": null,
+          "documentsRequired": [],
+          "disputeResolution": null,
+          "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+          "clauseRefs": []
+        },
+        "finalAcceptance": null
+      },
+      "payment": {
+        "schedule": [
+          {
+            "node": "single",
+            "ratio": 1.0,
+            "amount": 1680000.0,
+            "triggerCondition": null,
+            "daysAfterTrigger": null,
+            "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+            "clauseRefs": []
+          }
+        ],
+        "invoiceRequirements": null,
+        "overdueClause": null,
+        "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+      },
+      "warranty": null,
+      "ipAndData": null,
+      "breach": null,
+      "complianceRefs": [],
+      "clauseExtracts": [],
+      "sourceFileUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "extractedAt": "2026-11-10T21:19:06.349389+08:00",
+      "extractionConfidence": 0.3,
+      "reviewStatus": "needs_human",
+      "extractionErrors": []
+    }
+  ],
+  "performanceObligation": [
+    {
+      "obligationId": "PO-XSZS2609200710-01",
+      "contractNo": "XSZS2609200710",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 14800.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 14800.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2602280111-01",
+      "contractNo": "XSZS2602280111",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 250000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 250000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2509220712-01",
+      "contractNo": "XSZS2509220712",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 36000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 36000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2412241145-01",
+      "contractNo": "XSZS2412241145",
+      "description": "甲方邮件确认视为验收合格",
+      "isDistinct": true,
+      "allocatedPrice": 30000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 30000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2412051023-01",
+      "contractNo": "XSZS2412051023",
+      "description": "到期无异议，视为合格",
+      "isDistinct": true,
+      "allocatedPrice": 20000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 20000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2403190156-01",
+      "contractNo": "XSZS2403190156",
+      "description": "验收报告",
+      "isDistinct": true,
+      "allocatedPrice": 1150000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 1150000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2111220874ZZ-01",
+      "contractNo": "XSZS2111220874ZZ",
+      "description": "其他,无特定样式",
+      "isDistinct": true,
+      "allocatedPrice": 0.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 0.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2108100514ZZ-01",
+      "contractNo": "XSZS2108100514ZZ",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 0.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 0.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2301160030-01",
+      "contractNo": "XSZS2301160030",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 35000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 35000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS2207260488-01",
+      "contractNo": "XSZS2207260488",
+      "description": "甲方邮件确认视为验收合格",
+      "isDistinct": true,
+      "allocatedPrice": 15000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 15000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS181023384-01",
+      "contractNo": "XSZS181023384",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 885000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 885000.0,
+      "remainingAmount": 0.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS181116433-01",
+      "contractNo": "XSZS181116433",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 1450000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 1450000.0,
+      "remainingAmount": 0.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-YP20160284-01",
+      "contractNo": "YP20160284",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 86000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 0.0,
+      "remainingAmount": 86000.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    },
+    {
+      "obligationId": "PO-XSZS180312067-01",
+      "contractNo": "XSZS180312067",
+      "description": "合同交付义务",
+      "isDistinct": true,
+      "allocatedPrice": 1680000.0,
+      "recognitionMethod": "point_in_time",
+      "acceptanceMilestoneId": null,
+      "recognizedAmount": 1680000.0,
+      "remainingAmount": 0.0,
+      "recognizedAt": null,
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx",
+      "clauseRefs": []
+    }
+  ],
+  "acceptanceChecklist": [
+    {
+      "checklistId": "ACL-XSZS2609200710-ONE",
+      "contractNo": "XSZS2609200710",
+      "acceptanceType": "one_time",
+      "items": [
+        {
+          "itemId": "ITEM-001",
+          "clauseRefs": [],
+          "clauseText": "乙方通过wenbo.wang@bangcle.com邮箱（官方邮箱）向甲方     liuyangyang@xyunsec.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到即为验收",
+          "checkContent": "按合同验收条件核查交付与客户确认",
+          "criteria": "乙方通过wenbo.wang@bangcle.com邮箱（官方邮箱）向甲方     liuyangyang@xyunsec.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到即为验收",
+          "evidenceUri": null,
+          "method": "inspection",
+          "conclusion": null,
+          "outstandingIssues": [],
+          "reviewedBy": null,
+          "reviewedAt": null
+        }
+      ],
+      "summaryConclusion": null,
+      "generatedAt": "2026-11-10T21:19:06.349083+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "checklistId": "ACL-XSZS2602280111-ONE",
+      "contractNo": "XSZS2602280111",
+      "acceptanceType": "one_time",
+      "items": [
+        {
+          "itemId": "ITEM-001",
+          "clauseRefs": [],
+          "clauseText": "3.3甲方选择按照3.3.1款约定方式在乙方交付当月内进行产品验收，若甲方未在当月内及时对产品进行验收，则视为产品已通过验收：3.3.1甲方指定授权jiangpengfei.jl@ccb.com邮箱（官方邮箱）向乙方li2.zhang@bangcle.com邮箱（官方邮箱）发送验收确认信息，同时抄送至乙方delivery@bangcle.com备份邮箱。",
+          "checkContent": "按合同验收条件核查交付与客户确认",
+          "criteria": "3.3甲方选择按照3.3.1款约定方式在乙方交付当月内进行产品验收，若甲方未在当月内及时对产品进行验收，则视为产品已通过验收：3.3.1甲方指定授权jiangpengfei.jl@ccb.com邮箱（官方邮箱）向乙方li2.zhang@bangcle.com邮箱（官方邮箱）发送验收确认信息，同时抄送至乙方delivery@bangcle.com备份邮箱。",
+          "evidenceUri": null,
+          "method": "inspection",
+          "conclusion": null,
+          "outstandingIssues": [],
+          "reviewedBy": null,
+          "reviewedAt": null
+        }
+      ],
+      "summaryConclusion": null,
+      "generatedAt": "2026-11-10T21:19:06.349136+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "checklistId": "ACL-XSZS2509220712-ONE",
+      "contractNo": "XSZS2509220712",
+      "acceptanceType": "one_time",
+      "items": [
+        {
+          "itemId": "ITEM-001",
+          "clauseRefs": [],
+          "clauseText": "签字验收，但无法规定具体人员信息，届时可协商配合盖章",
+          "checkContent": "按合同验收条件核查交付与客户确认",
+          "criteria": "签字验收，但无法规定具体人员信息，届时可协商配合盖章",
+          "evidenceUri": null,
+          "method": "inspection",
+          "conclusion": null,
+          "outstandingIssues": [],
+          "reviewedBy": null,
+          "reviewedAt": null
+        }
+      ],
+      "summaryConclusion": null,
+      "generatedAt": "2026-11-10T21:19:06.349165+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "checklistId": "ACL-XSZS2412241145-ONE",
+      "contractNo": "XSZS2412241145",
+      "acceptanceType": "one_time",
+      "items": [
+        {
+          "itemId": "ITEM-001",
+          "clauseRefs": [],
+          "clauseText": "乙方通过yueyi.shen@bangcle.com邮箱（官方邮箱）向甲方dongkai.l@verifone.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。",
+          "checkContent": "按合同验收条件核查交付与客户确认",
+          "criteria": "乙方通过yueyi.shen@bangcle.com邮箱（官方邮箱）向甲方dongkai.l@verifone.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。",
+          "evidenceUri": null,
+          "method": "inspection",
+          "conclusion": null,
+          "outstandingIssues": [],
+          "reviewedBy": null,
+          "reviewedAt": null
+        }
+      ],
+      "summaryConclusion": null,
+      "generatedAt": "2026-11-10T21:19:06.349189+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "checklistId": "ACL-XSZS2412051023-ONE",
+      "contractNo": "XSZS2412051023",
+      "acceptanceType": "one_time",
+      "items": [
+        {
+          "itemId": "ITEM-001",
+          "clauseRefs": [],
+          "clauseText": "乙方通过yanchuan.ni@bangcle.com邮箱（官方邮箱）向甲方yn_km_cn_xykzx.yn@ccb.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "checkContent": "按合同验收条件核查交付与客户确认",
+          "criteria": "乙方通过yanchuan.ni@bangcle.com邮箱（官方邮箱）向甲方yn_km_cn_xykzx.yn@ccb.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "evidenceUri": null,
+          "method": "inspection",
+          "conclusion": null,
+          "outstandingIssues": [],
+          "reviewedBy": null,
+          "reviewedAt": null
+        }
+      ],
+      "summaryConclusion": null,
+      "generatedAt": "2026-11-10T21:19:06.349213+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "checklistId": "ACL-XSZS2403190156-ONE",
+      "contractNo": "XSZS2403190156",
+      "acceptanceType": "one_time",
+      "items": [
+        {
+          "itemId": "ITEM-001",
+          "clauseRefs": [],
+          "clauseText": "5.2.4 安装调试服务工作完成后（或双方书面另行约定其他时点），安装调试服务提供方应当在10日内做好验收的必要准备并向甲方发出可以进行验收的书面通知。甲方自收到安装调试服务提供方可以进行验收的通知之日起10日内开始对安装调试服务进行验收，验收合格后甲方签署验收合格证明。\n7.3 培训服务工作完成后（或双方书面另行约定其他时点），培训服务提供方应当在3日内做好验收的必要准备并向甲方发出可 以进行验收的书面通知。甲方自收到培训服务提供方可以进行验收 的通知之日起3日内开始对培训服务进行验收，验收合格后甲方签 署验收合格证明。",
+          "checkContent": "按合同验收条件核查交付与客户确认",
+          "criteria": "5.2.4 安装调试服务工作完成后（或双方书面另行约定其他时点），安装调试服务提供方应当在10日内做好验收的必要准备并向甲方发出可以进行验收的书面通知。甲方自收到安装调试服务提供方可以进行验收的通知之日起10日内开始对安装调试服务进行验收，验收合格后甲方签署验收合格证明。\n7.3 培训服务工作完成后（或双方书面另行约定其他时点），培训服务提供方应当在3日内做好验收的必要准备并向甲方发出可 以进行验收的书面通知。甲方自收到培训服务提供方可以进行验收 的通知之日起3日内开始对培训服务进行验收，验收合格后甲方签 署验收合格证明。",
+          "evidenceUri": null,
+          "method": "inspection",
+          "conclusion": null,
+          "outstandingIssues": [],
+          "reviewedBy": null,
+          "reviewedAt": null
+        }
+      ],
+      "summaryConclusion": null,
+      "generatedAt": "2026-11-10T21:19:06.349235+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "checklistId": "ACL-XSZS2207260488-ONE",
+      "contractNo": "XSZS2207260488",
+      "acceptanceType": "one_time",
+      "items": [
+        {
+          "itemId": "ITEM-001",
+          "clauseRefs": [],
+          "clauseText": "乙方通过meifang.chen@bangcle.com邮箱（官方邮箱）向甲方wangfangfang@sangfor.com.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "checkContent": "按合同验收条件核查交付与客户确认",
+          "criteria": "乙方通过meifang.chen@bangcle.com邮箱（官方邮箱）向甲方wangfangfang@sangfor.com.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "evidenceUri": null,
+          "method": "inspection",
+          "conclusion": null,
+          "outstandingIssues": [],
+          "reviewedBy": null,
+          "reviewedAt": null
+        }
+      ],
+      "summaryConclusion": null,
+      "generatedAt": "2026-11-10T21:19:06.349318+08:00",
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    }
+  ],
+  "acceptanceReport": [
+    {
+      "reportNo": "ACPT-XSZS2609200710",
+      "contractNo": "XSZS2609200710",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司深圳市分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2609200710",
+        "台账验收条件: 乙方通过wenbo.wang@bangcle.com邮箱（官方邮箱）向甲方     liuyangyang@xyunsec.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到即为验收"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2609200710-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2602280111",
+      "contractNo": "XSZS2602280111",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司吉林省分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2602280111",
+        "台账验收条件: 3.3甲方选择按照3.3.1款约定方式在乙方交付当月内进行产品验收，若甲方未在当月内及时对产品进行验收，则视为产品已通过验收：3.3.1甲方指定授权jiangpengfei.jl@ccb.com邮箱（官方邮箱）向乙方li2.zhang@bangcle.com邮箱（官方邮箱）发送验收确认信息，同时抄送至乙方delivery@bangcle.com备份邮箱。"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2602280111-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2509220712",
+      "contractNo": "XSZS2509220712",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司广州人工智能与数字经济试验区支行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2509220712",
+        "台账验收条件: 签字验收，但无法规定具体人员信息，届时可协商配合盖章"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2509220712-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2412241145",
+      "contractNo": "XSZS2412241145",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司常州分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "甲方邮件确认视为验收合格",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2412241145",
+        "台账验收条件: 乙方通过yueyi.shen@bangcle.com邮箱（官方邮箱）向甲方dongkai.l@verifone.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2412241145-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2412051023",
+      "contractNo": "XSZS2412051023",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司云南省分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "到期无异议，视为合格",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2412051023",
+        "台账验收条件: 乙方通过yanchuan.ni@bangcle.com邮箱（官方邮箱）向甲方yn_km_cn_xykzx.yn@ccb.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2412051023-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2403190156",
+      "contractNo": "XSZS2403190156",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "验收报告",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2403190156",
+        "台账验收条件: 5.2.4 安装调试服务工作完成后（或双方书面另行约定其他时点），安装调试服务提供方应当在10日内做好验收的必要准备并向甲方发出可以进行验收的书面通知。甲方自收到安装调试服务提供方可以进行验收的通知之日起10日内开始对安装调试服务进行验收，验收合格后甲方签署验收合格证明。\n7.3 培训服务工作完成后（或双方书面另行约定其他时点），培训服务提供方应当在3日内做好验收的必要准备并向甲方发出可 以进行验收的书面通知。甲方自收到培训服务提供方可以进行验收 的通知之日起3日内开始对培训服务进行验收，验收合格后甲方签 署验收合格证明。"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2403190156-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2111220874ZZ",
+      "contractNo": "XSZS2111220874ZZ",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司陕西省分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "其他,无特定样式",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "qualified",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2111220874ZZ",
+        "台账验收条件: 不涉及"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2111220874ZZ-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2108100514ZZ",
+      "contractNo": "XSZS2108100514ZZ",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司咸阳分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "qualified",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2108100514ZZ",
+        "台账验收条件: 不涉及"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2108100514ZZ-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2301160030",
+      "contractNo": "XSZS2301160030",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司赣州市分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2301160030",
+        "无"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2301160030-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS2207260488",
+      "contractNo": "XSZS2207260488",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司深圳市分行",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "甲方邮件确认视为验收合格",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS2207260488",
+        "台账验收条件: 乙方通过meifang.chen@bangcle.com邮箱（官方邮箱）向甲方wangfangfang@sangfor.com.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-XSZS2207260488-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS181023384",
+      "contractNo": "XSZS181023384",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS181023384",
+        "无"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": true,
+        "obligationIds": [
+          "PO-XSZS181023384-01"
+        ],
+        "recognizedAmount": 885000.0,
+        "recognizedDate": "2018-11-13"
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS181116433",
+      "contractNo": "XSZS181116433",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS181116433",
+        "无"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": true,
+        "obligationIds": [
+          "PO-XSZS181116433-01"
+        ],
+        "recognizedAmount": 1450000.0,
+        "recognizedDate": "2018-12-12"
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-YP20160284",
+      "contractNo": "YP20160284",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 YP20160284",
+        "无"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": false,
+        "obligationIds": [
+          "PO-YP20160284-01"
+        ],
+        "recognizedAmount": 0.0,
+        "recognizedDate": null
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "reportNo": "ACPT-XSZS180312067",
+      "contractNo": "XSZS180312067",
+      "acceptanceType": "one_time",
+      "date": "2026-11-10",
+      "location": null,
+      "partyA": "中国建设银行股份有限公司",
+      "partyB": "北京梆梆安全科技有限公司",
+      "deliverablesChecklist": [
+        {
+          "name": "交付物",
+          "delivered": false,
+          "version": null,
+          "remark": null
+        }
+      ],
+      "conclusion": "needs_rectification",
+      "outstandingList": [],
+      "basis": [
+        "合同 XSZS180312067",
+        "无"
+      ],
+      "signatures": {
+        "acceptanceTeam": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyARep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        },
+        "partyBRep": {
+          "signed": false,
+          "name": null,
+          "date": null
+        }
+      },
+      "attachments": [],
+      "revenueRecognition": {
+        "recognized": true,
+        "obligationIds": [
+          "PO-XSZS180312067-01"
+        ],
+        "recognizedAmount": 1680000.0,
+        "recognizedDate": "2018-03-23"
+      },
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    }
+  ],
+  "paymentTracker": [
+    {
+      "contractNo": "XSZS2609200710",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 14800.0,
+          "triggerCondition": "乙方通过wenbo.wang@bangcle.com邮箱（官方邮箱）向甲方     liuyangyang@xyunsec.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到即为验收",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 14800.0,
+        "received": 0.0,
+        "outstanding": 14800.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2602280111",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 250000.0,
+          "triggerCondition": "3.3甲方选择按照3.3.1款约定方式在乙方交付当月内进行产品验收，若甲方未在当月内及时对产品进行验收，则视为产品已通过验收：3.3.1甲方指定授权jiangpengfei.jl@ccb.com邮箱（官方邮箱）向乙方li2.zhang@bangcle.com邮箱（官方邮箱）发送验收确认信息，同时抄送至乙方delivery@bangcle.com备份邮箱。",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 250000.0,
+        "received": 0.0,
+        "outstanding": 250000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2509220712",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 36000.0,
+          "triggerCondition": "签字验收，但无法规定具体人员信息，届时可协商配合盖章",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 36000.0,
+        "received": 0.0,
+        "outstanding": 36000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2412241145",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 30000.0,
+          "triggerCondition": "乙方通过yueyi.shen@bangcle.com邮箱（官方邮箱）向甲方dongkai.l@verifone.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 30000.0,
+        "received": 0.0,
+        "outstanding": 30000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2412051023",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 20000.0,
+          "triggerCondition": "乙方通过yanchuan.ni@bangcle.com邮箱（官方邮箱）向甲方yn_km_cn_xykzx.yn@ccb.com邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 20000.0,
+        "received": 0.0,
+        "outstanding": 20000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2403190156",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 1150000.0,
+          "triggerCondition": "5.2.4 安装调试服务工作完成后（或双方书面另行约定其他时点），安装调试服务提供方应当在10日内做好验收的必要准备并向甲方发出可以进行验收的书面通知。甲方自收到安装调试服务提供方可以进行验收的通知之日起10日内开始对安装调试服务进行验收，验收合格后甲方签署验收合格证明。\n7.3 培训服务工作完成后（或双方书面另行约定其他时点），培训服务提供方应当在3日内做好验收的必要准备并向甲方发出可 以进行验收的书面通知。甲方自收到培训服务提供方可以进行验收 的通知之日起3日内开始对培训服务进行验收，验收合格后甲方签 署验收合格证明。",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 1150000.0,
+        "received": 0.0,
+        "outstanding": 1150000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2111220874ZZ",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 0.0,
+          "triggerCondition": "不涉及",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 0.0,
+        "received": 0.0,
+        "outstanding": 0.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2108100514ZZ",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 0.0,
+          "triggerCondition": "不涉及",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 0.0,
+        "received": 0.0,
+        "outstanding": 0.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2301160030",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 35000.0,
+          "triggerCondition": null,
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 35000.0,
+        "received": 0.0,
+        "outstanding": 35000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS2207260488",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 15000.0,
+          "triggerCondition": "乙方通过meifang.chen@bangcle.com邮箱（官方邮箱）向甲方wangfangfang@sangfor.com.cn邮箱（官方邮箱）发送服务交付物，同时抄送至乙方delivery@bangcle.com备份邮箱，由甲方邮件反馈确认收到。如果在乙方发送服务交付物后10日后，甲方既未反馈确认收到，也未向乙方提出关于技术服务的书面异议，即视为乙方向甲方交付完成。服务期限届满或乙方交付内容完成，本项目服务履约完成。如服务期内甲方未使用合同约定服务，视为乙方已提供服务。",
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 15000.0,
+        "received": 0.0,
+        "outstanding": 15000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS181023384",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 885000.0,
+          "triggerCondition": null,
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "paid"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 885000.0,
+        "received": 885000.0,
+        "outstanding": 0.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS181116433",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 1450000.0,
+          "triggerCondition": null,
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "paid"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 1450000.0,
+        "received": 1450000.0,
+        "outstanding": 0.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "YP20160284",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 86000.0,
+          "triggerCondition": null,
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "not_invoiced"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 86000.0,
+        "received": 0.0,
+        "outstanding": 86000.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    },
+    {
+      "contractNo": "XSZS180312067",
+      "paymentPlan": [
+        {
+          "node": "single",
+          "ratio": 1.0,
+          "amount": 1680000.0,
+          "triggerCondition": null,
+          "triggerDate": null,
+          "expectedDate": null,
+          "status": "paid"
+        }
+      ],
+      "acceptanceTriggers": [],
+      "invoices": [],
+      "receivables": {
+        "totalReceivable": 1680000.0,
+        "received": 1680000.0,
+        "outstanding": 0.0
+      },
+      "aging": {
+        "current": 0,
+        "days0_30": 0,
+        "days31_60": 0,
+        "days61_90": 0,
+        "days90_plus": 0
+      },
+      "overdueItems": [],
+      "writeOffs": [],
+      "sourceUri": "file:///Users/bangcle/.openclaw/data/oa_exports/contract_ledger_202610.xlsx"
+    }
+  ]
+}
