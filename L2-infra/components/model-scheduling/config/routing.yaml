@@ -2,8 +2,8 @@ compaction_routing:
   fallback_chain:
   - coding-plan-2/deepseek-v4-flash-ga-260731
   - coding-plan-2/doubao-seed-2-1-turbo
-  - coding-plan/deepseek-v4-flash-ga-260731
   - longCat/LongCat-2.0
+  - coding-plan/deepseek-v4-flash-ga-260731
   - deepseek/deepseek-reasoner
   - coding-plan/doubao-seed-2-1-turbo
   strategy: same_provider_largest_ctx
@@ -76,10 +76,10 @@ task_routing:
     fallback_chain:
     - coding-plan-2/doubao-seed-2-1-turbo
     - coding-plan-2/doubao-seed-2-1-pro-260628
+    - longCat/LongCat-2.0
     - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/doubao-seed-2-1-pro-260628
     - coding-plan/deepseek-v4-flash-ga-260731
-    - longCat/LongCat-2.0
     preferred_context: 200000
     requires_input_types:
     - image
@@ -89,10 +89,10 @@ task_routing:
     - coding-plan-2/doubao-seed-2-1-turbo
     - coding-plan-2/doubao-seed-2-1-pro-260628
     - coding-plan-2/deepseek-v4-flash-ga-260731
+    - longCat/LongCat-2.0
     - deepseek/deepseek-reasoner
     - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/deepseek-v4-flash-ga-260731
-    - longCat/LongCat-2.0
     preferred_context: 500000
   research:
     description: 网络搜索、信息收集、文档分析

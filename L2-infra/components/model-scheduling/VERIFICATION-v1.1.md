@@ -54,3 +54,27 @@
 **全量测试**: 22 passed（原 9 + 新增 13）
 
 **验证方式**: 不触网、不依赖真实 usage.json（monkeypatch 注入），可重复执行。
+
+---
+
+## v1.2 增补（2026-11-10）
+
+**背景**: 带图大上下文请求（~360k tokens）回退链结构性为空 + 429 语义混为一谈 + 流式中断静默（详见 CHANGELOG 2026-11-10 条目）。
+
+**新增测试**: `tests/test_fallback_resilience.py`（22 项）
+
+| 测试类 | 覆盖点 | 数量 |
+|---|---|---|
+| `TestClassify429` | 429 错误码分类（quota vs ratelimit） | 6 |
+| `TestWriteProviderHealth` | exhausted 首次标记/时间戳冻结/新建 provider/大小写 | 4 |
+| `TestMultimodalChainHasLargeCtxFallback` | multimodal 大 ctx 链含 longCat、能力过滤不放宽 | 4 |
+| `TestStreamInterruptionNotSilent` | 流式无 finish 标志/连接中断 → 报 502 | 3 |
+| `TestClassifyTaskMedia` | 带图但文本意图明确时不误判 multimodal | 5 |
+
+**全量测试**: 44 passed（原 22 + 新增 22）
+
+**端到端验证**:
+- 真实请求 chat ✅ / multimodal 带图 ✅ / coding 跳过 exhausted cp1 ✅
+- multimodal 360k、900k 链均含 longCat（修复前为空 → 结构性故障）
+- 探活 429 正确分类：cp1 配额耗尽 → exhausted（非 degraded）
+- proxy 重启加载新代码，`/health` 正常

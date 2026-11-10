@@ -231,3 +231,45 @@ Python dict 遍历顺序不保证稳定，排序 key 必须包含唯一字段（
 - 「脚本交付 ≠ 机制交付」：写好脚本不等于落地，必须有调度引用 + 审计机制（scheduler-guard）
 - TTL 自愈机制的时间戳只能由**状态变化**触发刷新，不能被周期性探活/重复错误覆盖
 - 恢复脚本必须配置调度并验证 RunAtLoad，不能只存在于文档里
+
+---
+
+## 2026-11-10: 回退链结构性为空 + 429 语义混为一谈修复
+
+**背景**: Rex 报告「已新增 coding-plan-2 API key 且优先使用，余额用尽应自动切换，但仍报 `You have exceeded the monthly usage quota`」。人工切到 longcat 后恢复。
+
+**根因（3 处，均为回退链结构性缺口）**:
+
+1. **multimodal 大上下文链结构性为空**: 带图请求 ~360k tokens，`build_fallback_chain` 的 ctx 过滤（`est > ctx*0.9`）把所有 262k 模型滤掉；唯一 1M 窗口的 longCat 因 `input_types` 只声明 `text` 被 `requires_input_types: [image]` 能力过滤挡掉 → 放宽后链里**只剩 cp2 turbo 一个**。cp2 配额耗尽即全链空，429 原样透传 OpenClaw。
+   - 实测证据: 日志反复出现 `ctx 过滤后链空(357k~367k tokens)` + `longCat 兜底跳过: 能力不匹配 ['image']`。
+   - **实测确认 longCat-2.0 支持 image**（32x32 PNG 真实请求返回 200，响应含 `image_tokens` 字段）→ 能力声明缺失，不是不支持。
+
+2. **429 语义混为一谈**: 火山 429 有两个子类，处理方式相反：
+   - `AccountQuotaExceeded`（月配额耗尽）— 重试无意义，应按 exhausted 处理（1h TTL 自愈）
+   - `RequestBurstTooFast`（突发限流）— 短暂退让即可恢复，**不应**标记 exhausted（否则把整个 provider 隔离 1 小时）
+   - 旧逻辑：402 才标 exhausted，429 一律只 fallback 不标记 → 月配额耗尽时每次请求白撞一次；探活则把 429 一律标 degraded → cp1 因瞬时突发限流被降级排到链尾。
+
+3. **流式中断静默**: `_stream_response` 吞掉异常 → `_forward_once` 返回 `success=True` → fallback 链不重试 → 用户看到半截回复（14:35/14:37 事故，日志 `流式传输中断` 后无任何 fallback）。
+
+**变更**:
+
+1. **`config/models.yaml`**: `longCat/LongCat-2.0` 补 `image` 能力声明（实测支持）。
+2. **`config/routing.yaml`**: multimodal / reasoning / compaction 三条链把 longCat 提到 cp2 之后、cp1 之前，确保大 ctx 请求有 1M 窗口兜底。
+3. **`proxy.py` 新增 `classify_429()`**: 按错误码区分配额耗尽 vs 限流（无法识别时保守判 ratelimit）。
+4. **`proxy.py` 新增 `_write_provider_health()`**: 统一健康状态写入，exhausted 首次标记写时间戳、重复标记冻结（复用 2026-11-08 修复语义）；provider 不在 usage.json 时新建条目（旧逻辑静默丢失）。
+5. **`proxy.py` fallback 主循环**: 402 / 429+quota → exhausted；429+ratelimit → 不标记，继续 fallback。
+6. **`proxy.py` `startup_probe`**: 429 探测也走 `classify_429`，配额耗尽标 exhausted 而非 degraded。
+7. **`proxy.py` `_stream_response`**: 返回 `(ok, sent_bytes)`，未收到 `[DONE]`/`finish_reason` 或连接中断 → 报 502 让 fallback 链重试（不再静默）。
+8. **`proxy.py` `classify_task`**: 带媒体附件不再无条件判 multimodal —— 先看文本意图（「这段代码有 bug」+图 → coding），只有确实在「看/识别/描述图」时才判 multimodal；意图不明才保守判 multimodal。
+
+**验证**:
+- 新增 22 个回归测试（`tests/test_fallback_resilience.py`），全量 **44 passed**
+- 真实请求验证: chat ✅ / multimodal 带图 ✅ / coding 跳过 exhausted cp1 ✅
+- 链验证: multimodal 360k、900k 均含 longCat（修复前为空）
+- 探活验证: cp1 429 正确分类为 exhausted（配额耗尽），不再误标 degraded
+- proxy 重启加载新代码，`/health` 正常
+
+**教训**:
+- **能力声明必须实测**：longCat 支持 image 但配置没写，导致唯一的大 ctx 兜底被自己的能力过滤挡掉 —— 配置与实际能力脱节是隐形的链断点
+- **同一 HTTP 状态码可能语义相反**：429 既可能是永久配额耗尽也可能是瞬时限流，必须读错误码分类处理
+- **流式错误不能静默**：吞异常会让上游误以为成功，fallback 链形同虚设

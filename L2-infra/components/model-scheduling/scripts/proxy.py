@@ -78,17 +78,90 @@ def classify_task(messages: list[dict]) -> str:
 
     msg_lower = last_user_msg.lower()
     
-    # 有媒体附件时,优先判定为 multimodal
-    if has_media:
+    # 2026-11-10 修复: 带媒体附件不再无条件判 multimodal。
+    # 旧逻辑: has_media → 直接 multimodal,导致「带图问代码/推理」类请求被 image 能力
+    # 过滤后链里只剩 cp2 turbo(唯一声明 image 的快模型),cp2 配额耗尽即全链空。
+    # 现在: 先看文本意图,只有确实在「看/识别/描述图」时才判 multimodal。
+    MEDIA_TASK_KEYWORDS = ["图片","图像","看图","读图","截图","这张图","这张照片",
+                           "图里有","画面","帧","识别","ocr","文字识别","描述图",
+                           "image","picture","photo","vision","multimodal","识别一下"]
+    is_media_task = any(kw in msg_lower for kw in MEDIA_TASK_KEYWORDS)
+    if has_media and is_media_task:
         return "multimodal"
     
     for task_type in ["multimodal", "coding", "reasoning", "research"]:
         for kw in TASK_KEYWORDS[task_type]:
             if kw in msg_lower:
                 return task_type
+    # 带图但文本意图不明确 → 仍按 multimodal(保守,避免文本模型丢图上下文)
+    if has_media:
+        return "multimodal"
     return "chat"
 
 # ─── Provider 健康状态 ───
+# ─── 429 错误分类 ───
+# 火山的 429 有两种语义完全不同的子类(2026-11-10 实测):
+#   AccountQuotaExceeded  — 账号月配额耗尽,重试无意义 → 按 exhausted 处理(1h TTL 自愈)
+#   RequestBurstTooFast   — 突发限流,短暂退让即可恢复 → 不标记,继续 fallback
+# 旧逻辑把两者混为一谈: 月配额耗尽时每次请求都白撞一次才 fallback;
+# 突发限流时又可能误标 exhausted 把整个 provider 隔离 1 小时。
+QUOTA_ERROR_CODES = {"accountquotaexceeded", "insufficient_quota", "quotaexceeded",
+                     "insufficientbalance", "insufficient_balance", "arrears",
+                     "accountbalanceinsufficient", "monthly_usage_quota",
+                     "exceededthemonthly", "balanceinsufficient"}
+
+
+def classify_429(error_text: str) -> str:
+    """判定 429 错误文本属于「配额耗尽」还是「限流」。
+
+    返回 "quota" 或 "ratelimit"。无法识别时保守返回 "ratelimit"
+    (限流可重试,误判为 quota 会把整个 provider 隔离 1h)。
+    """
+    text = (error_text or "").lower().replace(" ", "_")
+    for code in QUOTA_ERROR_CODES:
+        if code in text:
+            return "quota"
+    return "ratelimit"
+
+
+def _write_provider_health(provider_id: str, status: str, detail: str) -> bool:
+    """把 provider 健康状态写入 usage.json(大小写不敏感匹配)。
+
+    exhausted 仅在【首次】标记时写 last_checked(TTL 时钟冻结,1h 后自愈);
+    重复标记不刷新时间戳。返回是否写入成功。
+    """
+    import time as _time
+    usage_path = Path(__file__).parent.parent / "config" / "usage.json"
+    try:
+        usage = json.loads(usage_path.read_text()) if usage_path.exists() else {}
+        providers = usage.setdefault("providers", {})
+        for pid, pdata in providers.items():
+            if pid.lower() == provider_id.lower():
+                h = pdata.setdefault("health", {})
+                if status == "exhausted" and h.get("status") == "exhausted":
+                    # 已 exhausted → 冻结时间戳,等待 TTL 衰减
+                    logger.info(f"Provider {provider_id} 仍 {detail}, 保持 exhausted (last_checked 不刷新, 等待 1h TTL)")
+                    return True
+                h["status"] = status
+                h["detail"] = detail
+                h["last_checked"] = _time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                usage_path.write_text(json.dumps(usage, indent=2, ensure_ascii=False))
+                logger.info(f"Provider {provider_id} 标记 {status}: {detail}")
+                return True
+        # provider 不在 usage.json 里 → 新建条目
+        providers[provider_id] = {"health": {
+            "status": status,
+            "detail": detail,
+            "last_checked": _time.strftime("%Y-%m-%dT%H:%M:%S+00:00"),
+        }}
+        usage_path.write_text(json.dumps(usage, indent=2, ensure_ascii=False))
+        logger.info(f"Provider {provider_id} 新建并标记 {status}: {detail}")
+        return True
+    except Exception as e:
+        logger.warning(f"写入 provider 健康状态失败: {e}")
+        return False
+
+
 def _get_provider_health(provider_id: str) -> str:
     """从 usage.json 获取 provider 健康状态(大小写不敏感)。
 
@@ -606,32 +679,20 @@ class ProxyHandler:
             last_error = result
             # 运行时健康反馈：连续网络失败 → 标记 unreachable（TTL 自愈）
             self._mark_provider_failure(provider_id, status_code)
-            # 402(余额不足) → 标记 provider exhausted,后续路由排到末尾
+            # 配额类故障 → 标记 provider exhausted（1h TTL 自愈）
+            # 2026-11-10 修复: 429 按错误码分类处理。
+            #   402 / 429+AccountQuotaExceeded → exhausted（账号级配额耗尽,换模型无用）
+            #   429+RequestBurstTooFast     → 不标记（突发限流,短暂退让即可,隔离 provider 反而扩大故障）
             if status_code == 402:
-                try:
-                    import json as _json, time as _time
-                    usage_path = Path(__file__).parent.parent / "config" / "usage.json"
-                    if usage_path.exists():
-                        usage = _json.loads(usage_path.read_text())
-                        providers = usage.setdefault("providers", {})
-                        for pid, pdata in providers.items():
-                            if pid.lower() == provider_id.lower():
-                                h = pdata.setdefault("health", {})
-                                # 2026-11-08 修复: 仅在【首次】标记 exhausted 时写 last_checked。
-                                # 旧逻辑每次 402 都刷新 last_checked → TTL 永远归零 → 永不自愈。
-                                # 现在首次标记后时间戳冻结,1h 后 _get_provider_health 自动降级 unknown 重试探。
-                                if h.get("status") != "exhausted":
-                                    h["status"] = "exhausted"
-                                    h["detail"] = "402 余额不足 (proxy 运行时标记)"
-                                    h["last_checked"] = _time.strftime("%Y-%m-%dT%H:%M:%S+00:00")
-                                    logger.info(f"Provider {provider_id} 余额不足(402), 首次标记 exhausted")
-                                else:
-                                    logger.info(f"Provider {provider_id} 仍 402, 保持 exhausted (last_checked 不刷新, 等待 1h TTL)")
-                        usage_path.write_text(_json.dumps(usage, indent=2, ensure_ascii=False))
-                except Exception as e:
-                    logger.warning(f"标记 exhausted 失败: {e}")
+                _write_provider_health(provider_id, "exhausted", "402 余额不足 (proxy 运行时标记)")
+            elif status_code == 429:
+                kind = classify_429(str(result))
+                if kind == "quota":
+                    _write_provider_health(provider_id, "exhausted", "429 配额耗尽 (proxy 运行时标记)")
+                else:
+                    logger.info(f"Provider {provider_id} 429 限流(非配额耗尽), 不标记 exhausted")
             # 4xx 中只有 401/403 不可重试(鉴权问题,换 provider 也没用)
-            # 402(余额不足)、429(限流)、404(模型不存在) → 继续 fallback
+            # 402(余额不足)、429(限流/配额)、404(模型不存在) → 继续 fallback
             if status_code in (401, 403):
                 break
         
@@ -686,8 +747,14 @@ class ProxyHandler:
                         error_text = await response.text()
                         logger.error(f"Provider API 错误 (stream): {model['id']} {response.status} {error_text[:200]}")
                         return False, response.status, error_text
-                    await self._stream_response(response, writer, model)
-                    return True, 200, ""
+                    ok, sent = await self._stream_response(response, writer, model)
+                    if ok:
+                        return True, 200, ""
+                    # 2026-11-10 修复: 流式中断不再静默。
+                    # 旧逻辑 _stream_response 吞掉异常 → _forward_once 返回 success=True →
+                    # fallback 链不重试 → 用户看到半截回复(14:35/14:37 事故)。
+                    # 现在: 未收到结束标志 → 报 502 让链继续 fallback。
+                    return False, 502, f"Stream interrupted after {sent} bytes (no finish flag)"
             else:
                 async with self.session.post(url, headers=headers, json=payload, timeout=timeout) as response:
                     if response.status != 200:
@@ -705,6 +772,11 @@ class ProxyHandler:
             return False, 504, "Timeout"
 
     async def _stream_response(self, response: aiohttp.ClientResponse, writer, model):
+        """转发流式响应。返回 (ok, sent_bytes)。
+
+        ok=True  — 收到 provider 的 finish 标志,正常结束
+        ok=False — 连接中断/未收到 finish,调用方应报 502 让 fallback 链重试
+        """
         header = (
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/event-stream\r\n"
@@ -714,13 +786,26 @@ class ProxyHandler:
         )
         writer.write(header.encode())
         await writer.drain()
+        sent = len(header)
+        got_finish = False
         try:
             async for line in response.content:
                 if line:
                     writer.write(line)
                     await writer.drain()
+                    sent += len(line)
+                    # OpenAI 流结束标志: data: [DONE] 或 finish_reason 非空
+                    if b"[DONE]" in line:
+                        got_finish = True
+                    elif b'"finish_reason"' in line and b'"finish_reason":null' not in line:
+                        got_finish = True
         except Exception as e:
-            logger.error(f"流式传输中断: {e}")
+            logger.error(f"流式传输中断: {model['id']} after {sent} bytes: {e}")
+            return False, sent
+        if not got_finish:
+            logger.error(f"流式传输未正常结束: {model['id']} (no finish flag, {sent} bytes)")
+            return False, sent
+        return True, sent
 
     async def _send_response(self, status: int, body: bytes, writer, model=None):
         try:
@@ -850,6 +935,11 @@ async def startup_probe():
                     elif resp.status in (401, 403):
                         return provider_id, "degraded", f"认证失败 ({resp.status})"
                     elif resp.status == 429:
+                        # 2026-11-10 修复: 探活 429 也需区分配额耗尽 vs 突发限流。
+                        # 旧逻辑一律标 degraded → cp1 因瞬时突发限流被降级,排到链尾。
+                        error_text = await resp.text()
+                        if classify_429(error_text) == "quota":
+                            return provider_id, "exhausted", "429 配额耗尽（配额探测）"
                         return provider_id, "degraded", f"限流 ({resp.status})"
                     else:
                         return provider_id, "degraded", f"HTTP {resp.status}"

@@ -79,3 +79,6 @@ L4-proprietary/components/product-kb/data/
 **/tests/visual/golden/**/*.actual.png
 # BDMS e2e 视觉产物（截图不入库）
 L4-proprietary/components/bdms/tmp/
+
+# 组件配置/脚本备份文件（临时产物，不入库）
+**/*.bak.*
