@@ -392,3 +392,24 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Always 调 task_tracker 命令：start 必带 `--session-key`；update/complete/increment-fail 必带 `--task-id` + `--session-key`；归属不匹配将 exit 2 拒绝。
 - 跨会话巡检（lane_d / check_and_retry）已改为按 session 维度读 `tasks.db`，不再读全局单文件。
 <!-- observed: 2026-11-10 | status: active -->
+
+## pre-commit hook auto-add 也是跨会话污染源 + 隔离 index 提交法（2026-11-10）
+- 实证（非推测）：`git commit -- <pathspec>` **挡不住 pre-commit hook 内部的 `git add`**；
+  hook 强 `git add` 的文件（如它自动重生的 `docs/architecture/01-asset-inventory.md`、
+  `docs/knowledge-base/INDEX.md`）照样进 commit。别的会话留下的相关未提交差异会被 hook
+  强行带入下一个任何人的提交 → 第三类跨会话污染（前两类：全局 current-task.md、共享 index）。
+- Always 需严格只提交本任务内容、且共享 index/hook 状态不可信时，用**隔离临时 index**：
+  ```bash
+  BASE=<最后干净点>; TMPIDX=$(mktemp -t cleanindex).idx
+  GIT_INDEX_FILE=$TMPIDX git read-tree "$BASE"
+  GIT_INDEX_FILE=$TMPIDX git add -- <只列自己的路径>
+  python3 L2-infra/components/config/secret-scan/secret_scan.py   # 手动补安全门禁
+  TREE=$(GIT_INDEX_FILE=$TMPIDX git write-tree)
+  NEW=$(git commit-tree "$TREE" -p "$BASE" -m "<msg>")
+  git update-ref refs/heads/main "$NEW" "<old-main>"   # old-value 守卫
+  git read-tree "$NEW"                                 # 同步共享 index，不触 working tree
+  ```
+  全程不碰共享 index、不跑会 auto-add 的 hook；secret scan 手动补，门禁不丢。
+- Never 因 hook 是「系统托管文件」就默认把它 auto-add 的内容当本任务内容——提交后必用
+  `git show --stat HEAD` 核对实际文件清单（`diff --cached` 在临时 index 口径下可能误导）。
+<!-- observed: 2026-11-10 | status: active -->
