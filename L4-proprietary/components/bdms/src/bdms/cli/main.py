@@ -58,7 +58,6 @@ def cmd_report(args) -> int:
 def cmd_revenue(args) -> int:
     from ..modules.revenue.engine import RevenueEngineAdapter
     from ..modules.revenue.summary_engine import SummaryEngine
-
     if args.action == "import":
         a = RevenueEngineAdapter()
         r = a.import_source(args.month)
@@ -124,6 +123,45 @@ def cmd_revenue(args) -> int:
                       f"手工{mp:>10,.2f}/{ma:>10,.2f} {flag}")
         print(f"\n结果: {ok} 匹配 / {diff} 差异 / {skipped} 月无基准")
         return 0 if diff == 0 else 2
+    return 1
+
+
+def cmd_revenue_analysis(args) -> int:
+    from ..modules.revenue_analysis.service import RevenueAnalysisService
+
+    svc = RevenueAnalysisService()
+    if args.action == "import":
+        if not args.source:
+            print("❌ import 需显式 --source 财报路径")
+            return 1
+        r = svc.import_source(args.period, Path(args.source))
+        _print_json(r)
+        return 0
+    if args.action == "generate":
+        try:
+            r = svc.generate(args.period, args.mode)
+        except Exception as e:
+            print(f"❌ {e}")
+            return 1
+        print(f"✅ {r['period'] if 'period' in r else r['month']} "
+              f"{r['action']} 完成, 共 {r['total_rows']} 行")
+        for k, n in r["sheets"].items():
+            if isinstance(n, (int, float)):
+                print(f"   {k}: {n}")
+        return 0
+    if args.action == "export":
+        out = svc.export(args.period, Path(args.out) if args.out else None)
+        print(f"✅ 导出: {out}")
+        return 0
+    if args.action == "summary":
+        _print_json(svc.summary(args.period))
+        return 0
+    if args.action == "caliber":
+        _print_json(svc.caliber(args.period))
+        return 0
+    if args.action == "trend":
+        _print_json(svc.trend(args.period))
+        return 0
     return 1
 
 
@@ -224,6 +262,16 @@ def build_parser() -> argparse.ArgumentParser:
     rv.add_argument("--manual", default=None)
     rv.add_argument("--mode", default="auto")
 
+    # revenue-analysis
+    rva = sub.add_parser("revenue-analysis", help="确收分析报告")
+    rva.add_argument("action", choices=["import", "generate", "export",
+                                        "summary", "caliber", "trend"])
+    rva.add_argument("period")
+    rva.add_argument("--source", default=None)
+    rva.add_argument("--mode", default="auto",
+                     choices=["auto", "read", "regenerate"])
+    rva.add_argument("--out", default=None)
+
     # master-data
     md = sub.add_parser("master-data", help="基础数据")
     md.add_argument("action", choices=["list"])
@@ -252,6 +300,7 @@ HANDLERS = {
     "init": cmd_init,
     "report": cmd_report,
     "revenue": cmd_revenue,
+    "revenue-analysis": cmd_revenue_analysis,
     "master-data": cmd_master_data,
     "dashboard": cmd_dashboard,
     "settings": cmd_settings,

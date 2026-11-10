@@ -933,6 +933,69 @@ CREATE TABLE IF NOT EXISTS rr_import_validation (
 CREATE INDEX IF NOT EXISTS idx_rr_val_month ON rr_import_validation(month, status);
 """
 
+# ===== 确收分析 v3 新增表（ra_period/ra_caliber/ra_trend_row/ra_trend_cell）=====
+
+RA_SCHEMA = """
+-- 账期登记
+CREATE TABLE IF NOT EXISTS ra_period (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    source_path TEXT,
+    generated_at TEXT,
+    row_counts TEXT,                  -- JSON: {sheet: count}
+    extra TEXT,                       -- JSON: Engine 计算结果缓存
+    UNIQUE(period)
+);
+
+-- 双口径快照
+CREATE TABLE IF NOT EXISTS ra_caliber (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    caliber TEXT NOT NULL,            -- locked / dynamic
+    total REAL NOT NULL,
+    by_group TEXT,                    -- JSON: {新签: x, 递延: y}
+    by_month TEXT,                    -- JSON: {202601: x, ...}
+    created_at TEXT,
+    UNIQUE(period, caliber)
+);
+
+-- 预算趋势分析行
+CREATE TABLE IF NOT EXISTS ra_trend_row (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    row_index INTEGER NOT NULL,       -- 4-19
+    category_group TEXT,              -- 递延 / 新签
+    status TEXT,                      -- 状态描述
+    init_count INTEGER,
+    init_amount_wan REAL,
+    normal_count INTEGER,
+    normal_amount_wan REAL,
+    exception_count INTEGER,
+    exception_amount_wan REAL,
+    disappear_count INTEGER,
+    disappear_amount_wan REAL,
+    future_count INTEGER,
+    future_amount_wan REAL,
+    check_count INTEGER,
+    check_amount REAL,
+    note TEXT,
+    routing_audit TEXT,               -- JSON 审计
+    amount_pending TEXT,
+    UNIQUE(period, row_index)
+);
+CREATE INDEX IF NOT EXISTS idx_ra_trend_period ON ra_trend_row(period);
+
+-- 预算趋势分析单元格（R19 等特殊单元格）
+CREATE TABLE IF NOT EXISTS ra_trend_cell (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    row_index INTEGER NOT NULL,
+    col_index INTEGER NOT NULL,
+    value TEXT,
+    UNIQUE(period, row_index, col_index)
+);
+"""
+
 # ===== 知识库模块 =====
 
 KB_SCHEMA = """

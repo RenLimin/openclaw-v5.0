@@ -252,44 +252,41 @@ modules/revenue_analysis/
 
 | 行 | 内容 |
 |---|---|
-| row 1 | 空行 |
+| row 1 | 版本备注行（AB=202608 等期间标记） |
 | row 2 | 分组标题行 |
 | row 3 | 表头行（50 列） |
 | row 4+ | 数据行 |
 
-**列定义（45 原始列，A–AS）**：
+**列定义（45 原始列，A–AS，202609 实测表头）**：
 
 | 列 | 列名 | 字段名 | 类型 | 说明 |
 |---|---|---|---|---|
 | A | 分类 | category | TEXT | 递延 / 新签 |
 | B | 合同编号 | contract_no | TEXT | 索引列 |
-| C | 合同编号（校准） | contract_no_cal | TEXT | 校准用 |
-| D | 客户名称 | customer | TEXT | |
-| E | 最终用户名称 | end_user | TEXT | |
-| F | 签约主体 | sign_subject | TEXT | |
-| G | 合同归档月份 | archive_month | TEXT | YYYYMM |
-| H | 履约ID（预算） | perf_id_budget | TEXT | 带 YS 后缀 |
-| I | 履约明细(预算） | perf_detail_budget | TEXT | |
-| J | 履约ID | perf_id | TEXT | 索引列 |
-| K | 收入确认方法 | rev_method | TEXT | 时点法 / 时段法 |
-| L | 单项履约义务金额 | perf_amount | NUMERIC | 核心金额 |
-| M | 截止20251231已确收金额 | rev_prior | NUMERIC | |
-| N | 2026年及以后计划确收 | rev_future | NUMERIC | |
-| O | 年初-未立项&项目异常未计划确收 | no_plan | NUMERIC | |
-| P | 截止20251231未确收金额 | unrev_prior | NUMERIC | |
-| Q | 截止20251231未确收金额（调整） | unrev_adj | NUMERIC | |
-| R | 计划开始时间 | plan_start | TEXT | |
-| S | 计划结束时间 | plan_end | TEXT | |
-| T | 计划完成时间 | plan_done | TEXT | |
-| U-AF | 202601 ~ 202612 | m202601~m202612 | NUMERIC | 各月**计划**确收 |
-| AG | 2026年预计 | year_est | NUMERIC | SUM(U:AF) |
-| AH | 202601-09预计 | h1_plan | NUMERIC | SUM(U:Z) |
-| AI | 202601-09确收 | h1_actual | NUMERIC | SUM(AL:AQ) |
-| AJ | 202601-09提前完成 | h1_ahead | NUMERIC | |
-| AK | 202601-09滞后未完成 | h1_behind | NUMERIC | |
-| AL-AQ | 202601 ~ 202609 | a202601~a202609 | NUMERIC | 各月**实际**确收 |
-| AR | 2026消失金额 | disappear_2026 | NUMERIC | |
-| AS | 2026年及以后消失金额 | disappear_future | NUMERIC | |
+| C | 签约主体 | sign_subject | TEXT | |
+| D | 合同归档月份 | archive_month | TEXT | YYYYMM |
+| E | 履约ID（预算） | perf_id_budget | TEXT | 带 YS 后缀 |
+| F | 履约明细(预算） | perf_detail_budget | TEXT | |
+| G | 履约ID | perf_id | TEXT | 索引列 |
+| H | 收入确认方法 | rev_method | TEXT | 时点法 / 时段法 |
+| I | 单项履约义务金额 | perf_amount | NUMERIC | 核心金额 |
+| J | 截止20251231已确收金额 | rev_prior | NUMERIC | ⚠️ 202609 全 0（无权威值，见 §4.1.1） |
+| K | 2026年及以后计划确收 | rev_future | NUMERIC | ⚠️ 202609 全 0 |
+| L | 年初-未立项&项目异常未计划确收 | no_plan | NUMERIC | ⚠️ 202609 全 0 |
+| M | 计划开始时间 | plan_start | TEXT | |
+| N | 计划结束时间 | plan_end | TEXT | |
+| O | 计划完成时间 | plan_done | TEXT | |
+| P–AA | 202601 ~ 202612 | m202601~m202612 | NUMERIC | 各月**计划**确收 |
+| AB | 2026年预计 | year_est | NUMERIC | SUM(P:AA) |
+| AC | 202601-09预计 | h1_plan | NUMERIC | SUM(P:X) |
+| AD | 202601-09确收 | h1_actual | NUMERIC | SUM(AG:AO) |
+| AE | 202601-09提前完成 | h1_ahead | NUMERIC | |
+| AF | 202601-09滞后未完成 | h1_behind | NUMERIC | |
+| AG–AO | 202601 ~ 202609 | a202601~a202609 | NUMERIC | 各月**实际**确收 |
+| AP | 2026消失金额 | disappear_2026 | NUMERIC | |
+| AQ | 2026年及以后消失金额 | disappear_future | NUMERIC | |
+| AR | 消失备注 | disappear_note | TEXT | |
+| AS | 重拆履约，提前和滞后同增 | restructure | NUMERIC | |
 
 **新增计算列（AT–AX）**：
 
@@ -299,20 +296,32 @@ modules/revenue_analysis/
 | AU | 统计位 | stat_flag | TEXT | 按 AT 去重首现标"统计" |
 | AV | 预算填报 | budget_fill | TEXT | 匹配 202606 → 日期判断 → 留空 |
 | AW | 预算趋势 | budget_trend | TEXT | 匹配 202606 → 日期判断 → 留空 |
-| AX | 预算趋势类别 | budget_trend_cat | TEXT | BU → 图例映射 |
+| AX | 预算趋势类别 | budget_trend_cat | TEXT | AV → 图例映射 |
 
-**恒等式**：
+**恒等式（202609 实测）**：
 ```
-AG「2026年预计」 = Σ(U..AF)                    ……(E1)
-N「2026及以后」 = AG + (N − AG)                ……(E2)
+AB「2026年预计」 = Σ(P..AA) ……(E1)
+AC「202601-09预计」 = Σ(P..X) ……(E2)
+AD「202601-09确收」 = Σ(AG..AO) ……(E3)
 ```
+
+### 4.1.1 金额列语义阻塞（202609 实测，红线）
+
+202609 的 `J`「截止20251231已确收金额」、`K`「2026年及以后计划确收」、`L`「年初-未立项&项目异常未计划确收」**全部 10,472 行均为 0**；而 202606 对应列（M/N/O）有真实业务值。表头名对应但**数据语义不等价**，禁止直接复刻 202606 公式取数。
+
+处理方式（待 Rex 拍板，当前未确认，不得自行选择）：
+- **A**：用 202606 的 M/N/O 按履约ID匹配回填；
+- **B**：用 202609 自身 `AB`「2026年预计」替代（仅覆盖计划确收口径，缺已确收/异常）；
+- **C**：留空并标注「202609 无此列」。
+
+预算趋势分析/双口径的金额取数在拍板前一律输出 `None` + 标注，不硬摊、不造假。
 
 ### 4.2 Sheet 2：计划确收底稿
 
 **类型**：核心数据（原始明细）
 **数据源**：手工 Excel 导入
-**行数**：~38,052 行（202609 实测）
-**列数**：45 列
+**行数**：~38,052 行（202609 实测 38,055 数据行）
+**列数**：52 列（202609 实测 A–AZ）
 
 **列定义（45 列）**：
 
@@ -363,10 +372,17 @@ N「2026及以后」 = AG + (N − AG)                ……(E2)
 | AQ | 2026年及以后计划确收 | rev_2026_future | NUMERIC | **动态金额取此列** |
 | AR | 计划-消失金额 | plan_disappear | NUMERIC | |
 | AS | 消失原因 | disappear_reason | TEXT | |
+| AT | 收入确认时点依据 | rev_time_basis | TEXT | |
+| AU | 交付开始时间 | delivery_start | TEXT | |
+| AV | 交付结束时间 | delivery_end | TEXT | |
+| AW | 交付完成时间 | delivery_done | TEXT | |
+| AX | 收入确认开始时间 | rev_start | TEXT | |
+| AY | 收入确认结束时间 | rev_end | TEXT | |
+| AZ | 收入确认完成时间 | rev_done | TEXT | |
 
-**恒等式**：
+**恒等式（202609 实测）**：
 ```
-AN「单项履约义务金额」 = AP「截止2025已确收」 + AQ「2026及以后计划确收」   ……(E3)
+AO「计划履约金额」 = AP「截止2025已确收」 + AQ「2026及以后计划确收」   ……(E3)
 ```
 
 ### 4.3 Sheet 3：汇总

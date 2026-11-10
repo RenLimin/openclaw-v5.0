@@ -156,7 +156,7 @@ def init_db(db_path: Optional[Path] = None) -> None:
         AS_SCHEMA, CH_SCHEMA, INT_SCHEMA, KB_SCHEMA,
         DASH_V2_SCHEMA, OUTBOX_SCHEMA, IMPORT_ERRORS_SCHEMA,
         DR_EXT_SCHEMA, RR_EXT_SCHEMA, PF_SCHEMA,
-        DR_CALIBRATION_SCHEMA,
+        DR_CALIBRATION_SCHEMA, RA_SCHEMA,
     )
     conn = get_connection(db_path)
     try:
@@ -182,6 +182,7 @@ def init_db(db_path: Optional[Path] = None) -> None:
         conn.executescript(DR_CALIBRATION_SCHEMA)
         conn.executescript(RR_EXT_SCHEMA)
         conn.executescript(PF_SCHEMA)
+        conn.executescript(RA_SCHEMA)
         seed_defaults(conn)
         conn.commit()
     finally:
