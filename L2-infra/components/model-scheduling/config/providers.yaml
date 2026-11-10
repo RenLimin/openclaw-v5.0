@@ -16,6 +16,20 @@ providers:
       tokens_per_minute: 100000
     notes: "火山方舟 Coding Plan,主力 provider"
 
+  coding-plan-2:
+    base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+    api_type: "openai-completions"
+    auth_type: "bearer"
+    api_key_ref: "coding-plan-2"
+    enabled: true
+    health_check:
+      endpoint: "/models"
+      timeout_ms: 5000
+    rate_limit:
+      requests_per_minute: 60
+      tokens_per_minute: 100000
+    notes: "火山方舟 Coding Plan #2 (独立账号),资源余量充足,优先 provider"
+
   longCat:
     base_url: "https://api.longcat.chat/openai/v1"
     api_type: "openai-completions"

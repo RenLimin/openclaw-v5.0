@@ -4,42 +4,32 @@
   <dict>
     <key>Label</key>
     <string>ai.openclaw.model-scheduling</string>
-
     <key>Comment</key>
-    <string>model-scheduling 智能模型调度代理服务 (v1.0.0)</string>
-
+    <string>model-scheduling v1.1.0 — 启动时 source zshenv 加载 API key</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/opt/homebrew/bin/python3</string>
-      <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py</string>
-      <string>--host</string>
-      <string>127.0.0.1</string>
-      <string>--port</string>
-      <string>3000</string>
+      <string>/bin/bash</string>
+      <string>-c</string>
+      <string>source ~/.zshenv 2>/dev/null; exec /opt/homebrew/bin/python3 /Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/scripts/proxy.py --host 127.0.0.1 --port 3000</string>
     </array>
-
     <key>WorkingDirectory</key>
     <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling</string>
-
     <key>RunAtLoad</key>
     <true/>
-
     <key>KeepAlive</key>
     <true/>
-
     <key>ExitTimeOut</key>
     <integer>10</integer>
-
     <key>ThrottleInterval</key>
     <integer>5</integer>
-
     <key>StandardOutPath</key>
     <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/logs/proxy.stdout.log</string>
-
     <key>StandardErrorPath</key>
     <string>/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/logs/proxy.stderr.log</string>
-
-    <key>ProcessType</key>
-    <string>Background</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>HOME</key>
+      <string>/Users/bangcle</string>
+    </dict>
   </dict>
 </plist>

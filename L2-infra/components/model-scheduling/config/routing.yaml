@@ -1,5 +1,8 @@
 compaction_routing:
   fallback_chain:
+  - coding-plan-2/deepseek-v4-flash-ga-260731
+  - coding-plan-2/doubao-seed-2-1-turbo
+  - coding-plan/deepseek-v4-flash-ga-260731
   - longCat/LongCat-2.0
   - deepseek/deepseek-reasoner
   - coding-plan/doubao-seed-2-1-turbo
@@ -44,17 +47,20 @@ task_routing:
   chat:
     description: 日常对话、简单问答、状态查询
     fallback_chain:
+    - coding-plan-2/doubao-seed-2-1-turbo
+    - coding-plan-2/deepseek-v4-flash-ga-260731
     - coding-plan/doubao-seed-2-1-turbo
-    - deepseek/deepseek-chat
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
     preferred_context: 100000
   coding:
     description: 代码生成、调试、重构、代码审查
     fallback_chain:
-    - coding-plan/doubao-seed-2-1-turbo
-    - deepseek/deepseek-chat
+    - coding-plan-2/doubao-seed-code-preview-251028
+    - coding-plan-2/doubao-seed-2-1-turbo
+    - coding-plan-2/deepseek-v4-flash-ga-260731
     - coding-plan/doubao-seed-code-preview-251028
+    - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
     preferred_context: 200000
@@ -68,9 +74,10 @@ task_routing:
   multimodal:
     description: 图片识别、视频分析、OCR、视觉理解
     fallback_chain:
+    - coding-plan-2/doubao-seed-2-1-turbo
+    - coding-plan-2/doubao-seed-2-1-pro-260628
     - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/doubao-seed-2-1-pro-260628
-    - coding-plan/doubao-seed-code-preview-251028
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
     preferred_context: 200000
@@ -79,6 +86,9 @@ task_routing:
   reasoning:
     description: 复杂推理、架构设计、深度分析
     fallback_chain:
+    - coding-plan-2/doubao-seed-2-1-turbo
+    - coding-plan-2/doubao-seed-2-1-pro-260628
+    - coding-plan-2/deepseek-v4-flash-ga-260731
     - deepseek/deepseek-reasoner
     - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/deepseek-v4-flash-ga-260731
@@ -87,10 +97,11 @@ task_routing:
   research:
     description: 网络搜索、信息收集、文档分析
     fallback_chain:
+    - coding-plan-2/doubao-seed-2-1-turbo
+    - coding-plan-2/deepseek-v4-flash-ga-260731
     - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/deepseek-v4-flash-ga-260731
     - longCat/LongCat-2.0
-    - deepseek/deepseek-chat
     preferred_context: 200000
 usage_thresholds:
   daily_token_limit: 1000000

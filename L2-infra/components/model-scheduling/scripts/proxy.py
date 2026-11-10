@@ -296,6 +296,7 @@ def get_api_key(provider_id: str) -> str:
     """
     env_keys = {
         "coding-plan": ["ARK_API_KEY", "VOLCENGINE_API_KEY", "CODING_PLAN_API_KEY"],
+        "coding-plan-2": ["CODING_PLAN_2_API_KEY", "ARK_API_KEY_2", "CODING_PLAN_API_KEY_2"],
         "longcat": ["LONGCAT_API_KEY", "LONGCAT_KEY"],
         "deepseek": ["DEEPSEEK_API_KEY"],
     }
