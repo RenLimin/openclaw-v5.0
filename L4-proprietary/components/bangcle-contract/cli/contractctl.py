@@ -161,6 +161,30 @@ def cmd_report(args) -> int:
     return 0
 
 
+def cmd_oa_fetch(args) -> int:
+    """按合同编号从 OA 拉取合同原文/附件（台账检索 → billid → 落盘）。"""
+    from services.oa.ledger import fetch_contract_by_no, LedgerError
+    _progress("台账检索 %s (modeId=112)" % args.contract_no)
+    try:
+        out = args.out_dir or None
+        manifest = fetch_contract_by_no(
+            args.contract_no,
+            out_dir=out,
+            heal_if_expired=args.heal,
+        )
+    except LedgerError as e:
+        print("❌", e)
+        return 1
+    print("✅ 合同原文已拉取")
+    print("  合同编号 :", manifest["contract_no"])
+    print("  billid   :", manifest["billid"])
+    for f in manifest["files"]:
+        status = "✅" if f.get("local_path") else ("⚠️ " + (f.get("error") or "?"))
+        print("  %s %s -> %s" % (status, f.get("name"), f.get("local_path") or ""))
+    print("  manifest :", manifest["manifest_path"])
+    return 0
+
+
 def cmd_oa_login(args) -> int:
     from services.oa.browser_fallback import heal_session
     _progress("IAM headless 登录（IMAP 验证码）")
@@ -289,6 +313,12 @@ def main(argv=None) -> int:
 
     p_login = sub.add_parser("oa-login", help="建立 OA 会话")
     p_login.set_defaults(func=cmd_oa_login)
+
+    p_fetch = sub.add_parser("oa-fetch", help="按合同编号拉取 OA 合同原文/附件")
+    p_fetch.add_argument("contract_no", help="合同编号（如 XSZS2609020659）")
+    p_fetch.add_argument("--heal", action="store_true",
+                         help="会话失效时自动重建（耗一次 IMAP 验证码）")
+    p_fetch.set_defaults(func=cmd_oa_fetch)
 
     # --- ontology 子命令（Contract Ontology Bridge） ---
     p_ont = sub.add_parser("ontology", help="合同运营对象（Proposal Gate）")
