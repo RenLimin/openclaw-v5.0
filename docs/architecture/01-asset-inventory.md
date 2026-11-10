@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-10 21:45 UTC+08:00
+最后生成：2026-11-10 22:11 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -40,13 +40,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 115 个（可用 104）
+**总计** 116 个（可用 105）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 36 | 插件附带技能 |
+| `openclaw-extra` | 37 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -58,6 +58,7 @@
 | L4 专有业务 | `bdms-revenue-forecast` | BDMS 确收预算预测（Revenue Forecast）— 基于已提供财报（上一账期收入预算执行对比表）实时/动态确认收入预估的 L... | `L4-proprietary/skills/bdms-revenue-forecast` |
 | L4 专有业务 | `bdms-web-ui-design` |  | `L4-proprietary/skills/bdms-web-ui-design` |
 | L4 专有业务 | `contract-manager-expert` | Bangcle 合同管理专家 — L4 层 Bangcle 合同管理相关的统一入口。合同智能审查（全文扫描/数字化/22 条风险规则）... | `L4-proprietary/skills/contract-manager-expert` |
+| L4 专有业务 | `customer-delivery-intelligence` | Bangcle 客户交付智能工作流（L4）统一入口：输入客户官方名/周期/受众，工作流确定性地经已建成的 OA、ONES 自动化直接取... | `L4-proprietary/skills/customer-delivery-intelligence` |
 | L4 专有业务 | `fin-l4` | 家庭及个人理财管理系统 FIN-L4：记账、预算、贷款、保险、投资、报表、导出。数据全本地 SQLite，Web UI + CLI +... | `L4-proprietary/skills/fin-l4` |
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
 | L4 专有业务 | `product-kb` | Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索；OA 产品中心文档自动增量同步（水位过滤/一键编排） | `L4-proprietary/skills/product-kb` |
@@ -75,10 +76,11 @@
 | L2 基础设施 | `ontology-identity-gate` | 为 Agent 运营本体（Proposal Gate）提供 run-scoped 身份令牌（HMAC-SHA256，零第三方依赖）+ ... | `L2-infra/skills/ontology-identity-gate` |
 | L2 基础设施 | `pdf-toolkit` | Page-level PDF operations: merge multiple PDFs into one, split into... | `L2-infra/skills/pdf-toolkit` |
 | L2 基础设施 | `role-library` | 标准化 Agent 角色库。支持按角色执行任务，覆盖数据分析、报告生成、系统运维、文档管理等场景。 | `L2-infra/skills/role-library` |
+| L2 基础设施 | `system-governor` |  | `L2-infra/skills/system-governor` |
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 24 个（L2: 9, L3: 6, L4: 9, 根目录: 0）_
+_自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -277,8 +279,8 @@ _自建技能总计: 24 个（L2: 9, L3: 6, L4: 9, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `644ecbf` |
-| Commit 数 | 644 |
+| HEAD | `2992ca7` |
+| Commit 数 | 645 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -342,7 +344,7 @@ _自建技能总计: 24 个（L2: 9, L3: 6, L4: 9, 根目录: 0）_
 | `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
 | `bdms` | 210 | 9 | 26 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
-| `customer-delivery-intelligence` | 21 | 6 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
+| `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |
 | `fin-l4` | 58 | 0 | 14 | `L4-proprietary/components/fin-l4` |
 | `office-contract` | 15 | 0 | 3 | `L4-proprietary/components/office-contract` |
