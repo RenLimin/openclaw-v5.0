@@ -636,20 +636,129 @@ def render_components() -> list:
     return lines
 
 
+def discover_completed_components() -> list[tuple[str, dict]]:
+    """全盘发现 L2/L3/L4「已建设完成」组件（替换旧的硬编码登记）。
+
+    「已建设完成」客观判据（满足其一，且组件非空）：
+      1. 含五件套收尾证据文件：OPERATIONS*.md / VERIFICATION*.md / STATUS*.md（maxdepth 2）；
+      2. 含 README.md 且目录内有实质代码（*.py，空目录/纯脚手架不算）。
+    名称/描述从 README 首个 H1 与首个正文段落提取；无 README 则用目录名。
+    返回 [(layer_label, info), ...]，按层级与名称排序。
+    """
+    layers = [
+        ("L2 基础设施", REPO_ROOT / "L2-infra" / "components"),
+        ("L3 通用业务", REPO_ROOT / "L3-business" / "components"),
+        ("L4 专有业务", REPO_ROOT / "L4-proprietary" / "components"),
+    ]
+    found: list[tuple[str, dict]] = []
+    for layer, base in layers:
+        if not base.is_dir():
+            continue
+        for comp in sorted(p for p in base.iterdir() if p.is_dir()):
+            if comp.name.startswith("."):
+                continue  # 隐藏目录（.deprecated 等）不是组件
+            markers = [
+                p.relative_to(REPO_ROOT).as_posix()
+                for p in comp.glob("**/*.md")
+                if p.name.upper().startswith(("OPERATIONS", "VERIFICATION", "STATUS"))
+                and len(p.relative_to(comp).parts) <= 2
+            ]
+            readme = comp / "README.md"
+            py_count = len(list(comp.rglob("*.py")))
+            has_evidence = bool(markers) or (readme.is_file() and py_count > 0)
+            if not has_evidence:
+                continue  # 空目录 / 纯脚手架 / 未建成
+            # README 自述为骨架/未实现且无代码 → 不算已建成
+            if py_count == 0 and readme.is_file() and _is_declared_skeleton(readme):
+                continue
+            name, desc = comp.name, ""
+            if readme.is_file():
+                name, desc = _read_readme_meta(readme, comp.name)
+            found.append((layer, {
+                "name": name,
+                "dir": comp.name,
+                "desc": desc,
+                "rel": comp.relative_to(REPO_ROOT).as_posix(),
+                "py": py_count,
+                "evidence": markers[:3],
+            }))
+    return found
+
+
+def _is_declared_skeleton(readme: Path) -> bool:
+    """README 前若干行是否自述为骨架/未实现（用于排除零代码假完成）。"""
+    import re
+    try:
+        head = "\n".join(readme.read_text(encoding="utf-8").splitlines()[:25])
+    except OSError:
+        return False
+    return bool(re.search(r"骨架|尚无.{0,8}代码|尚未实现|未建设|待实现|placeholder|TODO", head))
+
+
+def _read_readme_meta(readme: Path, fallback: str) -> tuple[str, str]:
+    """从 README 提取首个 H1 作为名称、首个正文叙述段作为描述（跳过代码块/表格/徽章）。"""
+    name = fallback
+    desc = ""
+    try:
+        lines = readme.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return name, desc
+    in_fence = False
+    codeish = ("$", "pip ", "npm ", "python ", "git ", "<", "{", "}", "//", "| ")
+    for raw in lines:
+        s = raw.strip()
+        if s.startswith("```"):
+            in_fence = not in_fence
+            continue
+        if in_fence or not s:
+            continue
+        if s.startswith("# ") and name == fallback:
+            name = s[2:].strip()
+            continue
+        if s.startswith(("#", ">", "|", "-", "`", "*")):
+            continue
+        if s.startswith(codeish) or s.count("`") >= 2:
+            continue
+        if s.endswith(("：", ":")):
+            continue  # 跳过“典型流程：”这类列表引导语，继续找真正叙述句
+        desc = s
+        break
+    return name, desc
+
+
 def render_l3_l4() -> list:
-    """L3/L4 业务组件资产（2026-11 BDMS 已建成，据实登记）。"""
-    return [
+    """L2/L3/L4 已建设完成组件资产（自动发现，2026-11-10 起取代硬编码）。"""
+    completed = discover_completed_components()
+    lines = [
         "---",
         "",
-        "## L3 / L4 资产",
+        "## L2 / L3 / L4 已建设完成组件（自动登记）",
         "",
-        "### L4 专有业务组件",
+        f"> 由 `gen_asset_inventory.discover_completed_components()` 全盘扫描，",
+        f"> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 {len(completed)} 个。",
         "",
-        "| 名称 | 描述 | 路径 | 状态 |",
-        "|---|---|---|---|",
-        "| `bdms` | BDMS 交付管理系统：交付月报（导入/校验/问题审核/审批工作流）、确认收入、对比分析、基础数据、统计看板、系统设定。FastAPI + SQLite + Jinja，复用 web-common | `L4-proprietary/components/bdms` | 活跃；v2.1 全量交付，2026-11 按定稿原型重建前端（后端 API 零改动） |",
-        "| `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `L4-proprietary/skills/bangcle-ppt` | 已交付 |",
-        "",
+    ]
+    last_layer = None
+    for layer, info in completed:
+        if layer != last_layer:
+            lines += [f"### {layer}", "",
+                      "| 名称 | 描述 | 路径 | 完成证据 |",
+                      "|---|---|---|---|"]
+            last_layer = layer
+        desc = info["desc"].replace("|", "\\|")
+        if len(desc) > 60:
+            desc = desc[:57] + "..."
+        ev = ", ".join(f"`{Path(e).name}`" for e in info["evidence"]) or "README+code"
+        lines.append(
+            f"| {info['name']} | {desc or '—'} | `{info['rel']}` | {ev} |"
+        )
+    lines.append("")
+
+    # BDMS 内部结构（保留为补充细节）
+    bdms = REPO_ROOT / "L4-proprietary" / "components" / "bdms"
+    if not bdms.is_dir():
+        return lines
+    lines += [
         "#### BDMS 内部结构",
         "",
         "| 部分 | 内容 |",
@@ -664,6 +773,7 @@ def render_l3_l4() -> list:
         "> 演进路线见 [架构文档 §6 演进路线](./00-system-architecture.md#6-演进路线)。",
         "",
     ]
+    return lines
 
 
 def main() -> int:

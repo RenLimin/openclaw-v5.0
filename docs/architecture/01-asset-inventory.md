@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-10 23:10 UTC+08:00
+最后生成：2026-11-10 23:29 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -146,9 +146,9 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
-| quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
-| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 900s | `isolated` | wecom/1313 |
+| session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
+| quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
 | daily-inspection-detail | ✅ | cron `0 9 * * *` | `isolated` | wecom/1313 |
@@ -279,8 +279,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `357ad37` |
-| Commit 数 | 650 |
+| HEAD | `8bb640a` |
+| Commit 数 | 651 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -353,14 +353,65 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 
 ---
 
-## L3 / L4 资产
+## L2 / L3 / L4 已建设完成组件（自动登记）
 
-### L4 专有业务组件
+> 由 `gen_asset_inventory.discover_completed_components()` 全盘扫描，
+> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 42 个。
 
-| 名称 | 描述 | 路径 | 状态 |
+### L2 基础设施
+
+| 名称 | 描述 | 路径 | 完成证据 |
 |---|---|---|---|
-| `bdms` | BDMS 交付管理系统：交付月报（导入/校验/问题审核/审批工作流）、确认收入、对比分析、基础数据、统计看板、系统设定。FastAPI + SQLite + Jinja，复用 web-common | `L4-proprietary/components/bdms` | 活跃；v2.1 全量交付，2026-11 按定稿原型重建前端（后端 API 零改动） |
-| `bangcle-ppt` | Bangcle PPT 模板系统，提供梆梆安全官方 VI 规范的 PPT 生成能力 | `L4-proprietary/skills/bangcle-ppt` | 已交付 |
+| AI Knowledge Base (ai-knowledge-base) | — | `L2-infra/components/ai-knowledge-base` | `VERIFICATION-P2-kinetic-v1.0.md`, `VERIFICATION-P1-identity-v1.0.md`, `OPERATIONS-v1.0.md` |
+| backup | — | `L2-infra/components/backup` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| config | — | `L2-infra/components/config` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| context-management | — | `L2-infra/components/context-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| credentials | — | `L2-infra/components/credentials` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| delivery-quality：交付质量反馈闭环 | 把 Rex 对交付结果的**问题反馈/纠正**默认沉淀为结构化记录，定期聚类 review，把复发/高危问题反哺到... | `L2-infra/components/delivery-quality` | README+code |
+| knowledge-base — 通用知识库组件 | 模型不可用时自动降级为 MockEmbedder，不影响系统可用性。 | `L2-infra/components/knowledge-base` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| logs | 当前为骨架阶段，尚无实际代码。目录结构预留给后续日志聚合、轮转、查询功能。 | `L2-infra/components/logs` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| maintenance | 返回退出码 0 = 健康，非 0 = 存在问题。 | `L2-infra/components/maintenance` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| memory-embedding — 内存嵌入计算组件 | 模型不可用时自动降级到 MockEmbedder（基于文本哈希的伪向量），保证系统可用但检索质量下降。 | `L2-infra/components/memory-embedding` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| model-scheduling — 智能模型调度组件 | 综合模型/供应商调度系统。参考 9router / OpenRouter / Portkey 业界最佳实践。 | `L2-infra/components/model-scheduling` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md`, `VERIFICATION-v1.1.md` |
+| observability | — | `L2-infra/components/observability` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| ocr-digitalization — OCR 文档数字化组件 | 1. **表格结构还原**：接入 PP-Structure，识别表格行列并输出结构化数据 | `L2-infra/components/ocr-digitalization` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| office-generation | — | `L2-infra/components/office-generation` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| 持久化适配 (L2 基础设施组件) | — | `L2-infra/components/persistence` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| sandbox | — | `L2-infra/components/sandbox` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| scheduler-guard — 调度资产守卫 | 防止「脚本写好了但从未被调度」这类静默失败。 | `L2-infra/components/scheduler-guard` | README+code |
+| session-boundary-guard — 会话边界护栏 | 判据：sessionKey 前缀（稳定契约，不查询实时状态）—— | `L2-infra/components/session-boundary-guard` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| L2 会话隔离组件 (session-isolation) | 统一的会话隔离与编排组件，提供**任务卡协议 + 共享状态 + 事件日志 + 任务调度**四大能力。 | `L2-infra/components/session-isolation` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| session-recovery — 会话失败自动重试与断点记忆（v1.2 SQLite） | 走**条件 UPDATE**，归属不匹配 rowcount=0 → exit 2 拒绝，绝不写入。 | `L2-infra/components/session-recovery` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| system-governor | — | `L2-infra/components/system-governor` | `VERIFICATION-system-governor-v1.0.md`, `OPERATIONS-system-governor-v1.0.md` |
+| tool-policy | — | `L2-infra/components/tool-policy` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| 🧩 Web Common — L2 通用 Web UI 组件库 | 1. **零依赖**：仅 Jinja2 + FastAPI，不引入 React/Vue 等前端框架 | `L2-infra/components/web-common` | `OPERATIONS-v1.0.md`, `VERIFICATION-v2.0.md`, `VERIFICATION-v1.0.md` |
+| workspace-temp-cleanup | — | `L2-infra/components/workspace-temp-cleanup` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+### L3 通用业务
+
+| 名称 | 描述 | 路径 | 完成证据 |
+|---|---|---|---|
+| cissp-learning | — | `L3-business/components/cissp-learning` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| contract-approval | 1. 合同扫描件 → OCR 识别 | `L3-business/components/contract-approval` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| contract-management | — | `L3-business/components/contract-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| delivery-management-framework | — | `L3-business/components/delivery-management-framework` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| DMS-Framework | L3 通用交付管理框架 — 框架引擎 + 通用模块 + 知识库 + L4 继承机制。 | `L3-business/components/dms-framework` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| Finance Engine — L3 通用理财引擎 | L3 通用业务层组件：纯函数式理财计算引擎，不持有数据、不访问 DB、不做持久化。 | `L3-business/components/finance-engine` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| health-management | — | `L3-business/components/health-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| office-business | — | `L3-business/components/office-business` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+### L4 专有业务
+
+| 名称 | 描述 | 路径 | 完成证据 |
+|---|---|---|---|
+| bangcle-contract | — | `L4-proprietary/components/bangcle-contract` | `OPERATIONS-v1.0.md`, `VERIFICATION-mvp-v1.0.md`, `VERIFICATION-v1.0.md` |
+| Bangcle PPT 模板系统 | 基于梆梆安全官方 VI 规范的 PPT 模板生成系统，提供 DSL + 模板引擎 + 34 个预置模板，一键生成符... | `L4-proprietary/components/bangcle-ppt` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| BDMS — Bangcle 交付管理系统 | — | `L4-proprietary/components/bdms` | `VERIFICATION-REVENUE-ANALYSIS-v1.0.md`, `VERIFICATION-REVENUE-FORECAST-v1.0.md`, `VERIFICATION-v2.1.md` |
+| CISSP Trainer — CISSP 学习系统 v2 | 1. **安全基础入门** — 域 1、2 达到 50% 掌握度 | `L4-proprietary/components/cissp-trainer` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| customer-delivery-intelligence | — | `L4-proprietary/components/customer-delivery-intelligence` | `OPERATIONS-customer-delivery-intelligence-v1.0.md`, `VERIFICATION-customer-delivery-intelligence-v1.0.md` |
+| BDMS — 交付月报系统 (Delivery Report Management System) | BDMS (Bangcle Delivery Monthly Statement) — 面向交付团队的自动化月报生... | `L4-proprietary/components/delivery-center` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| fin-l4 | 基于 OpenClaw L4 专有业务层架构，继承 L3 六大财务通用引擎 | `L4-proprietary/components/fin-l4` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| Office 合同审批模块 (OFC-001) | 面向企业 Office 场景的销售合同审批全流程管理，覆盖从合同起草到归档的完整生命周期。 | `L4-proprietary/components/office-contract` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| Bangcle 产品/服务知识库 | L4 专有业务模块，提供 Bangcle 产品知识库，支持合同标的比对、产品知识问答、产品对比等功能。 | `L4-proprietary/components/product-kb` | `VERIFICATION-identity-p1-v1.0.md`, `OPERATIONS-v1.0.md`, `VERIFICATION-identity-p3-v1.0.md` |
+| Revenue Recognition — 确收管理模块 | 自动化确收报表生成系统。从手工 Excel 报表读取计划确收底稿和预算执行数据，经 SQLite 存储、计算引擎汇... | `L4-proprietary/components/revenue-recognition` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 
 #### BDMS 内部结构
 
