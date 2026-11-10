@@ -9,14 +9,18 @@
 """
 from __future__ import annotations
 
+import os
 import re
+import sqlite3
 from collections import defaultdict
 from pathlib import Path
 
 from ..models import Finding
 
 WORKSPACE = Path("/Users/bangcle/.openclaw/workspace")
-CURRENT_TASK = WORKSPACE / "memory" / "current-task.md"
+def _tasks_db():
+    return Path(os.environ.get(
+        "TASK_TRACKER_DB", str(WORKSPACE / "memory" / "tasks.db")))
 HISTORY_DIR = WORKSPACE / "memory" / "task-history"
 ARCH_DIR = WORKSPACE / "docs" / "architecture"
 
@@ -44,25 +48,32 @@ def _iter_docs() -> list[Path]:
 
 
 def _current_task_findings() -> list[Finding]:
-    if not CURRENT_TASK.exists():
+    """从 SQLite 读取各会话 active 任务，逐任务一条 Finding（行级隔离）。"""
+    TASKS_DB = _tasks_db()
+    if not TASKS_DB.exists():
         return []
-    text = CURRENT_TASK.read_text(encoding="utf-8", errors="ignore")
-    m = re.search(r"task_id:\s*(\S+)", text)
-    n = re.search(r"name:\s*(.+)", text)
-    p = re.search(r"phase:\s*(.+)", text)
-    f = re.search(r"failure_count:\s*(\d+)", text)
-    out = [Finding(
-        lane="D", item="current_task", severity="info", status="open",
-        evidence=f"current-task.md: {m.group(1) if m else '?'} | "
-                 f"{n.group(1).strip() if n else '?'} | phase={p.group(1).strip() if p else '?'}",
-        action="继续推进该任务或 complete 归档",
-    )]
-    if f and int(f.group(1)) >= 2:
+    out: list[Finding] = []
+    try:
+        conn = sqlite3.connect(str(TASKS_DB), timeout=5.0)
+        rows = conn.execute(
+            "SELECT task_id,name,session_key,phase,failure_count "
+            "FROM tasks WHERE status='active' ORDER BY last_updated DESC"
+        ).fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return []
+    for task_id, name, skey, phase, fc in rows:
         out.append(Finding(
-            lane="D", item="current_task_stalled", severity="warning", status="open",
-            evidence=f"current-task failure_count={f.group(1)} ≥2",
-            action="停止重试，等待 Rex 拍板",
+            lane="D", item="current_task", severity="info", status="open",
+            evidence=f"tasks.db: {task_id} | {name} | session={skey} | phase={phase}",
+            action="继续推进该任务或 complete 归档",
         ))
+        if (fc or 0) >= 2:
+            out.append(Finding(
+                lane="D", item="current_task_stalled", severity="warning", status="open",
+                evidence=f"{task_id} failure_count={fc} ≥2 (session={skey})",
+                action="停止重试，等待 Rex 拍板",
+            ))
     return out
 
 

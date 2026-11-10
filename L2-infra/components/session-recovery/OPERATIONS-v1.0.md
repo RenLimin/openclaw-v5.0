@@ -61,3 +61,8 @@ python3 L2-infra/components/session-recovery/scripts/check_and_retry.py
 - **症状**: 断点恢复失败
 - **原因**: 中间状态丢失
 - **解决**: 检查 progress_entries 数据
+
+## v1.2 变更（2026-11-10）
+- 存储迁移：`memory/current-task.md` → `memory/tasks.db`（SQLite）。详见 README.md 与
+  DESIGN-DETAIL-task-tracker-v1.2.md。
+- 命令均需带 `--task-id` + `--session-key`（归属强校验）；`current` 支持 `--session-key` 与 `list`。

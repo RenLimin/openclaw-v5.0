@@ -85,3 +85,7 @@ SOUL.md · AGENTS.md · MEMORY.md · docs/knowledge-base/
 ## 取数与浏览器自动化（不重复建设）
 - Never 重复建设 OA / ONES 的浏览器自动化操作——已完整建成，直接复用既有能力（delivery-center collectors、ones-browser-export、clm-oa-recon）。 <!-- observed: 2026-11-10 | status: active -->
 - Always 新业务需要 OA/ONES 原始数据时，先定位并调用既有自动化入口，只在其上层做编排与汇总，不自写登录/导航/抓取。 <!-- observed: 2026-11-10 | status: active -->
+
+## session-recovery task_tracker 改造约束（2026-11-10）
+- Always task_tracker 的状态存储（SQLite）必须放在 workspace 的 memory/ 下（用户资产），OpenClaw 升级不得影响；禁止依赖或改写 Gateway 内部库/内部数据库。 <!-- observed: 2026-11-10 | status: active -->
+- Always 仅用 Python stdlib（sqlite3）实现，CLI 命令语义（start/update/current/complete）向后兼容。 <!-- observed: 2026-11-10 | status: active -->

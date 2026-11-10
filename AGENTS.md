@@ -385,3 +385,10 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Always 新建任何模块前，先自问：这个能力仓库里是否已存在？是否有 L2/L3/L4 组件或 skill 已提供？
 - 检索结果（找到了什么、为何不可直接复用）要在动手前能一句话说清。
 <!-- observed: 2026-11-10 | status: active -->
+
+## task_tracker v1.2 已根治（2026-11-10，FB-20261110-03 修复完成）
+- 存储已迁移 `memory/tasks.db`（SQLite，按 task_id+session_key 隔离，条件 UPDATE 归属强校验）；
+  单文件 `memory/current-task.md` 已停用（改名 current-task.legacy.bak.md 保留证据）。
+- Always 调 task_tracker 命令：start 必带 `--session-key`；update/complete/increment-fail 必带 `--task-id` + `--session-key`；归属不匹配将 exit 2 拒绝。
+- 跨会话巡检（lane_d / check_and_retry）已改为按 session 维度读 `tasks.db`，不再读全局单文件。
+<!-- observed: 2026-11-10 | status: active -->

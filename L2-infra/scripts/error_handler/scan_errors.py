@@ -1159,7 +1159,7 @@ def auto_fix(errors):
                                             "result": "需要用户手动执行 /new 启动全新会话（无 CLI 自动化路径）"
                                         })
                                         # 保存当前任务到 memory 供恢复
-                                        run_cmd("python3 L2-infra/components/session-recovery/scripts/task_tracker.py save --current 2>/dev/null")
+                                        run_cmd("python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --json >/dev/null 2>&1")
                                         fixes[-1]["executed"] = True
                                         fixes[-1]["result"] = "success" if rc == 0 else f"failed (rc={rc})"
             except Exception:

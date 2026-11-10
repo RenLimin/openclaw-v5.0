@@ -1,298 +1,439 @@
 #!/usr/bin/env python3
 """
-current-task.md 管理器 — 会话断点记忆
+task_tracker — 会话级任务状态（SQLite 隔离存储，v1.2）
+
+存储：memory/tasks.db（用户资产；OpenClaw 升级不触碰）。仅用 Python stdlib。
+归属：start/update/increment-fail/complete 均按 (task_id, session_key) 隔离，
+      update/complete 走条件 UPDATE，归属不匹配 rowcount=0 → 拒绝，绝不写入。
 
 用法：
-    # 开始新任务
-    python3 task_tracker.py start --task-id "task-20260909-retry" \
-        --name "会话失败自动重试" \
-        --description "实现主会话失败后的自动重试 + 断点恢复" \
-        --phase "设计方案" \
-        --steps '["盘现状","设计","实现","测试"]'
-
-    # 更新进度
-    python3 task_tracker.py update --phase "实现中" --step-index 2 --progress "已完成 current-task 模块"
-
-    # 标记失败（失败计数 +1）
-    python3 task_tracker.py increment-fail --reason "LLM timeout"
-
-    # 标记完成（归档）
-    python3 task_tracker.py complete --result "三个模块全部通过测试"
-
-    # 读取当前任务
-    python3 task_tracker.py current --json
+  start    --task-id T --name N --session-key S [--description D --phase P --steps JSON] [--replace]
+  update   --task-id T --session-key S [--phase P] [--step-index I] [--progress TEXT]
+  increment-fail --task-id T --session-key S [--reason R]
+  complete --task-id T --session-key S [--result R]
+  current  [--session-key S] [--json]
+  list     [--all] [--json]
+  migrate-legacy [--apply]
 """
 import json
+import os
 import sys
 import argparse
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-WORKSPACE = Path("/Users/bangcle/.openclaw/workspace")
-CURRENT_TASK_FILE = WORKSPACE / "memory" / "current-task.md"
+WORKSPACE = Path(os.environ.get(
+    "TASK_TRACKER_WORKSPACE", "/Users/bangcle/.openclaw/workspace"))
+CURRENT_TASK_FILE = WORKSPACE / "memory" / "current-task.md"   # legacy，仅迁移用
 HISTORY_DIR = WORKSPACE / "memory" / "task-history"
+DB_FILE = Path(os.environ.get(
+    "TASK_TRACKER_DB", str(WORKSPACE / "memory" / "tasks.db")))
+
+ACTIVE = "active"
+ACTIVE_STATUSES = (ACTIVE,)
 
 
 def _now():
     return datetime.now().isoformat(timespec="seconds")
 
 
-def _parse_frontmatter(content):
-    """解析 Markdown frontmatter，返回 (data_dict, body_text)"""
-    lines = content.split("\n")
-    if len(lines) < 3 or lines[0].strip() != "---":
-        return {}, content
-    end_idx = None
-    for i in range(1, len(lines)):
-        if lines[i].strip() == "---":
-            end_idx = i
-            break
-    if end_idx is None:
-        return {}, content
-    data = {}
-    for line in lines[1:end_idx]:
-        if ":" in line:
-            key, _, val = line.partition(":")
-            key = key.strip()
-            val = val.strip()
-            if val.startswith('"') and val.endswith('"'):
-                val = val[1:-1]
-            data[key] = val
-    for int_key in ["failure_count", "step_index", "total_steps"]:
-        if int_key in data:
-            try:
-                data[int_key] = int(data[int_key])
-            except (ValueError, TypeError):
-                pass
-    body = "\n".join(lines[end_idx + 1:]).strip()
-    return data, body
+# ── DB ────────────────────────────────────────────────────────────────────
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS tasks (
+  task_id       TEXT PRIMARY KEY,
+  name          TEXT NOT NULL,
+  session_key   TEXT NOT NULL,
+  description   TEXT NOT NULL DEFAULT '',
+  phase         TEXT NOT NULL DEFAULT '',
+  step_index    INTEGER NOT NULL DEFAULT 0,
+  total_steps   INTEGER NOT NULL DEFAULT 0,
+  failure_count INTEGER NOT NULL DEFAULT 0,
+  status        TEXT NOT NULL DEFAULT 'active',
+  result        TEXT NOT NULL DEFAULT '',
+  entries_json  TEXT NOT NULL DEFAULT '[]',
+  started_at    TEXT NOT NULL,
+  last_updated  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_tasks_session ON tasks(session_key);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_session_active ON tasks(session_key)
+  WHERE status='active';
+"""
 
 
-def _read_current():
-    """读取 current-task.md，解析为 dict。不存在返回 None。"""
-    if not CURRENT_TASK_FILE.exists():
-        return None
-    content = CURRENT_TASK_FILE.read_text()
-    data, body = _parse_frontmatter(content)
-    if not data.get("task_id"):
-        return None
-    # 从 body 解析进度条目（反向兼容）
-    entries = []
-    in_progress = False
-    for line in body.split("\n"):
-        if line.strip() == "### 进度记录":
-            in_progress = True
-            continue
-        if in_progress and line.startswith("- ["):
-            # - [2026-09-09T13:00:00] 文本
-            import re
-            m = re.match(r'^- \[(.+?)\] (.+)$', line.strip())
-            if m:
-                entries.append({"time": m.group(1), "text": m.group(2)})
-    data["progress_entries"] = entries
-    data["body"] = body
-    return data
+def _connect(db_file: Path = None):
+    db = db_file or DB_FILE
+    db.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db), timeout=5.0, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA user_version=1")
+    conn.executescript(SCHEMA)
+    return conn
 
 
-def _format_frontmatter(data):
-    """生成 frontmatter 字符串"""
-    keys_order = ["task_id", "name", "session_key", "phase", "step_index",
-                  "total_steps", "failure_count", "started_at", "last_updated",
-                  "archived_at", "archive_reason", "result"]
-    lines = ["---"]
-    for key in keys_order:
-        if key in data and data[key] is not None:
-            lines.append(f"{key}: {data[key]}")
-    lines.append("---")
-    return "\n".join(lines)
+def _row_to_dict(row: sqlite3.Row):
+    d = dict(row)
+    try:
+        d["progress_entries"] = json.loads(d.pop("entries_json") or "[]")
+    except json.JSONDecodeError:
+        d["progress_entries"] = []
+    return d
 
 
-def _format_body(data):
-    """生成 body 文本"""
-    parts = []
-    if data.get("description"):
-        parts.append(data["description"])
-    entries = data.get("progress_entries", [])
-    if entries:
-        parts.append("")
-        parts.append("### 进度记录")
-        for e in entries:
-            parts.append(f"- [{e.get('time', '?')}] {e.get('text', '')}")
-    return "\n".join(parts)
+def _get_active(conn, session_key):
+    cur = conn.execute(
+        "SELECT * FROM tasks WHERE session_key=? AND status='active'", (session_key,))
+    row = cur.fetchone()
+    return _row_to_dict(row) if row else None
 
 
-def _write_current(data):
-    """写入 current-task.md"""
-    CURRENT_TASK_FILE.parent.mkdir(parents=True, exist_ok=True)
-    data["last_updated"] = _now()
-    fm = _format_frontmatter(data)
-    body = _format_body(data)
-    CURRENT_TASK_FILE.write_text(fm + "\n\n" + body + "\n")
+def _get_task(conn, task_id):
+    cur = conn.execute("SELECT * FROM tasks WHERE task_id=?", (task_id,))
+    row = cur.fetchone()
+    return _row_to_dict(row) if row else None
 
 
-def _archive(data, reason="completed", result=None):
-    """归档到 task-history/"""
+# ── Markdown 归档（保审计链 + lane_d 历史读取不变）──────────────────────────
+_FM_ORDER = ["task_id", "name", "session_key", "phase", "step_index",
+             "total_steps", "failure_count", "started_at", "last_updated",
+             "archived_at", "archive_reason", "result"]
+
+
+def _write_md_archive(data, reason, result=None, archive_file=None):
     HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-    task_id = data.get("task_id", "unknown")
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    archive_file = HISTORY_DIR / f"{timestamp}_{task_id}.md"
-    # 加归档元数据
-    data = dict(data)
-    data["archived_at"] = _now()
-    data["archive_reason"] = reason
+    d = dict(data)
+    d["archived_at"] = _now()
+    d["archive_reason"] = reason
     if result:
-        data["result"] = result
-    fm = _format_frontmatter(data)
-    body = _format_body(data)
-    archive_file.write_text(fm + "\n\n" + body + "\n")
+        d["result"] = result
+    lines = ["---"]
+    for k in _FM_ORDER:
+        if d.get(k) not in (None, ""):
+            lines.append(f"{k}: {d[k]}")
+    lines.append("---")
+    if d.get("description"):
+        lines += ["", d["description"]]
+    entries = d.get("progress_entries", [])
+    if entries:
+        lines += ["", "### 进度记录"]
+        for e in entries:
+            lines.append(f"- [{e.get('time', '?')}] {e.get('text', '')}")
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = archive_file or (HISTORY_DIR / f"{ts}_{d.get('task_id','unknown')}.md")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+# ── Commands ───────────────────────────────────────────────────────────────
+def _require_scope(session_key):
+    if not session_key:
+        print("❌ 缺少 --session-key：无法确认任务归属（多会话隔离要求）", file=sys.stderr)
+        sys.exit(2)
 
 
 def cmd_start(args):
-    """开始新任务"""
-    existing = _read_current()
-    if existing and existing.get("task_id") != args.task_id:
-        _archive(existing, reason="interrupted-by-new")
-
-    steps = json.loads(args.steps) if args.steps else []
+    _require_scope(args.session_key)
     now = _now()
-    data = {
-        "task_id": args.task_id,
-        "name": args.name,
-        "session_key": getattr(args, "session_key", "") or "",
-        "description": args.description or "",
-        "phase": args.phase or "启动",
-        "step_index": 0,
-        "total_steps": len(steps),
-        "failure_count": 0,
-        "started_at": now,
-        "last_updated": now,
-        "progress_entries": [{"time": now, "text": f"任务启动: {args.name}"}],
-    }
-    _write_current(data)
+    steps = []
+    if args.steps:
+        try:
+            steps = json.loads(args.steps)
+        except json.JSONDecodeError:
+            print("❌ --steps 不是合法 JSON 数组", file=sys.stderr)
+            sys.exit(2)
+    conn = _connect()
+    try:
+        existing = _get_active(conn, args.session_key)
+        if existing and existing["task_id"] != args.task_id:
+            if not args.replace:
+                print(f"❌ 会话已有活跃任务 {existing['task_id']}；"
+                      f"先 complete 或加 --replace", file=sys.stderr)
+                sys.exit(3)
+            conn.execute(
+                "UPDATE tasks SET status='interrupted', last_updated=? "
+                "WHERE task_id=? AND session_key=? AND status='active'",
+                (now, existing["task_id"], args.session_key))
+            _write_md_archive(existing, reason="interrupted-by-new")
+        # 同 task_id 重入 → 幂等返回
+        same = _get_task(conn, args.task_id)
+        if same and same["status"] == ACTIVE and same["session_key"] == args.session_key:
+            print(f"✅ 任务已在进行（幂等）: {args.task_id}")
+            return
+        entries = [{"time": now, "text": f"任务启动: {args.name}"}]
+        conn.execute(
+            "INSERT INTO tasks(task_id,name,session_key,description,phase,step_index,"
+            "total_steps,failure_count,status,result,entries_json,started_at,last_updated)"
+            " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (args.task_id, args.name, args.session_key, args.description or "",
+             args.phase or "启动", 0, len(steps), 0, ACTIVE, "",
+             json.dumps(entries, ensure_ascii=False), now, now))
+        conn.commit()
+    finally:
+        conn.close()
     print(f"✅ 任务已启动: {args.task_id} — {args.name}")
-    print(f"   文件: {CURRENT_TASK_FILE}")
+    print(f"   DB: {DB_FILE}")
+
+
+def _load_owned(conn, task_id, session_key):
+    task = _get_task(conn, task_id)
+    if not task or task["session_key"] != session_key or task["status"] != ACTIVE:
+        print(f"❌ 拒绝：task_id={task_id} 不属于会话 {session_key} 或非活跃",
+              file=sys.stderr)
+        sys.exit(2)
+    return task
 
 
 def cmd_update(args):
-    """更新任务进度"""
-    data = _read_current()
-    if not data:
-        print("❌ 没有进行中的任务", file=sys.stderr)
-        sys.exit(1)
-    if args.phase:
-        data["phase"] = args.phase
-    if args.step_index is not None:
-        data["step_index"] = args.step_index
-    if args.progress:
-        entries = data.get("progress_entries", [])
-        entries.append({"time": _now(), "text": args.progress})
-        data["progress_entries"] = entries
-    _write_current(data)
-    print(f"✅ 进度已更新: phase={data.get('phase')}, step={data.get('step_index')}")
+    _require_scope(args.session_key)
+    conn = _connect()
+    try:
+        task = _load_owned(conn, args.task_id, args.session_key)
+        phase = args.phase if args.phase is not None else task["phase"]
+        step = args.step_index if args.step_index is not None else task["step_index"]
+        entries = list(task["progress_entries"])
+        if args.progress:
+            entries.append({"time": _now(), "text": args.progress})
+        cur = conn.execute(
+            "UPDATE tasks SET phase=?, step_index=?, entries_json=?, last_updated=? "
+            "WHERE task_id=? AND session_key=? AND status='active'",
+            (phase, step, json.dumps(entries, ensure_ascii=False), _now(),
+             args.task_id, args.session_key))
+        if cur.rowcount == 0:
+            print("❌ 更新被拒（归属/状态不匹配），未写入", file=sys.stderr)
+            sys.exit(2)
+        conn.commit()
+    finally:
+        conn.close()
+    print(f"✅ 进度已更新: phase={phase}, step={step}")
 
 
 def cmd_increment_fail(args):
-    """失败计数 +1"""
-    data = _read_current()
-    if not data:
-        print("❌ 没有进行中的任务", file=sys.stderr)
-        sys.exit(1)
-    data["failure_count"] = data.get("failure_count", 0) + 1
-    reason = args.reason or "未知原因"
-    entries = data.get("progress_entries", [])
-    entries.append({
-        "time": _now(),
-        "text": f"⚠️ 失败 #{data['failure_count']}: {reason}"
-    })
-    data["progress_entries"] = entries
-    _write_current(data)
-    print(f"⚠️ 失败计数: {data['failure_count']} (原因: {reason})")
+    _require_scope(args.session_key)
+    conn = _connect()
+    try:
+        task = _load_owned(conn, args.task_id, args.session_key)
+        count = task["failure_count"] + 1
+        entries = list(task["progress_entries"])
+        entries.append({"time": _now(),
+                        "text": f"⚠️ 失败 #{count}: {args.reason or '未知原因'}"})
+        cur = conn.execute(
+            "UPDATE tasks SET failure_count=?, entries_json=?, last_updated=? "
+            "WHERE task_id=? AND session_key=? AND status='active'",
+            (count, json.dumps(entries, ensure_ascii=False), _now(),
+             args.task_id, args.session_key))
+        if cur.rowcount == 0:
+            print("❌ 失败计数被拒（归属不匹配），未写入", file=sys.stderr)
+            sys.exit(2)
+        conn.commit()
+    finally:
+        conn.close()
+    print(f"⚠️ 失败计数: {count} (原因: {args.reason})")
 
 
 def cmd_complete(args):
-    """标记完成，归档"""
-    data = _read_current()
-    if not data:
-        print("ℹ️ 没有进行中的任务")
-        return
-    entries = data.get("progress_entries", [])
-    entries.append({"time": _now(), "text": f"✅ 完成: {args.result or '任务结束'}"})
-    data["progress_entries"] = entries
-    data["phase"] = "完成"
-    _archive(data, reason="completed", result=args.result)
-    CURRENT_TASK_FILE.unlink()
-    print(f"✅ 任务已完成并归档: {data.get('task_id')}")
+    _require_scope(args.session_key)
+    conn = _connect()
+    try:
+        task = _load_owned(conn, args.task_id, args.session_key)
+        entries = list(task["progress_entries"])
+        entries.append({"time": _now(),
+                        "text": f"✅ 完成: {args.result or '任务结束'}"})
+        now = _now()
+        cur = conn.execute(
+            "UPDATE tasks SET status='done', phase='完成', result=?, "
+            "entries_json=?, last_updated=? "
+            "WHERE task_id=? AND session_key=? AND status='active'",
+            (args.result or "", json.dumps(entries, ensure_ascii=False), now,
+             args.task_id, args.session_key))
+        if cur.rowcount == 0:
+            print("❌ 完成被拒（归属不匹配），未写入", file=sys.stderr)
+            sys.exit(2)
+        task.update(status="done", phase="完成", result=args.result or "",
+                    progress_entries=entries, last_updated=now)
+        path = _write_md_archive(task, reason="completed", result=args.result)
+        conn.commit()
+    finally:
+        conn.close()
+    print(f"✅ 任务已完成并归档: {args.task_id}")
+    print(f"   归档: {path}")
+
+
+def _public_view(task):
+    entries = task.get("progress_entries", [])
+    out = {"active": True,
+           "task_id": task["task_id"], "name": task["name"],
+           "session_key": task["session_key"], "description": task.get("description", ""),
+           "phase": task["phase"], "step_index": task["step_index"],
+           "total_steps": task["total_steps"], "failure_count": task["failure_count"],
+           "status": task["status"], "result": task.get("result", ""),
+           "started_at": task["started_at"], "last_updated": task["last_updated"],
+           "progress_entries_total": len(entries),
+           "progress_entries_recent": entries[-5:]}
+    return out
 
 
 def cmd_current(args):
-    """查看当前任务"""
-    data = _read_current()
-    if not data:
-        if args.json:
-            print(json.dumps({"active": False}, ensure_ascii=False, indent=2))
+    conn = _connect()
+    try:
+        if args.session_key:
+            task = _get_active(conn, args.session_key)
         else:
-            print("ℹ️ 没有进行中的任务")
+            rows = conn.execute(
+                "SELECT * FROM tasks WHERE status='active'").fetchall()
+            if len(rows) == 1:
+                task = _row_to_dict(rows[0])
+            else:
+                if args.json:
+                    print(json.dumps(
+                        {"active": False, "scope_needed": True,
+                         "active_count": len(rows)}, ensure_ascii=False, indent=2))
+                else:
+                    print("ℹ️ 存在多个/无活跃任务，请用 --session-key 指定")
+                return
+    finally:
+        conn.close()
+    if not task:
+        print(json.dumps({"active": False}, ensure_ascii=False, indent=2)
+              if args.json else "ℹ️ 没有进行中的任务")
         return
     if args.json:
-        out = {"active": True}
-        # 只输出元数据 + 最近 5 条进度，避免输出过大
-        out.update({k: v for k, v in data.items() if k != "progress_entries" and k != "body"})
-        entries = data.get("progress_entries", [])
-        out["progress_entries_total"] = len(entries)
-        out["progress_entries_recent"] = entries[-5:] if entries else []
-        print(json.dumps(out, ensure_ascii=False, indent=2))
+        print(json.dumps(_public_view(task), ensure_ascii=False, indent=2))
     else:
-        print(f"任务: {data.get('name')} ({data.get('task_id')})")
-        print(f"阶段: {data.get('phase')}")
-        print(f"步骤: {data.get('step_index', 0)}/{data.get('total_steps', '?')}")
-        print(f"失败次数: {data.get('failure_count', 0)}")
-        print(f"最后更新: {data.get('last_updated')}")
-        entries = data.get("progress_entries", [])
-        if entries:
-            print(f"\n最近进度:")
-            for e in entries[-5:]:
-                print(f"  - [{e.get('time')}] {e.get('text')}")
+        print(f"任务: {task['name']} ({task['task_id']})")
+        print(f"阶段: {task['phase']}")
+        print(f"步骤: {task['step_index']}/{task['total_steps']}")
+        print(f"失败次数: {task['failure_count']}")
+        print(f"最后更新: {task['last_updated']}")
+        for e in task["progress_entries"][-5:]:
+            print(f"  - [{e.get('time')}] {e.get('text')}")
+
+
+def cmd_list(args):
+    conn = _connect()
+    try:
+        where = "" if args.all else "WHERE status='active'"
+        rows = conn.execute(
+            f"SELECT * FROM tasks {where} ORDER BY last_updated DESC").fetchall()
+    finally:
+        conn.close()
+    tasks = [_public_view(_row_to_dict(r)) for r in rows]
+    if args.json:
+        print(json.dumps({"count": len(tasks), "tasks": tasks},
+                         ensure_ascii=False, indent=2))
+    else:
+        for t in tasks:
+            print(f"[{t['status']}] {t['task_id']} | {t['name']} | "
+                  f"sess={t['session_key']} | phase={t['phase']} | "
+                  f"fail={t['failure_count']}")
+
+
+# ── legacy 迁移 ───────────────────────────────────────────────────────────
+def _parse_frontmatter(content):
+    lines = content.split("\n")
+    if not lines or lines[0].strip() != "---":
+        return {}, content
+    end = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
+    if end is None:
+        return {}, content
+    data = {}
+    for line in lines[1:end]:
+        if ":" in line:
+            k, _, v = line.partition(":")
+            val = v.strip()
+            if val.startswith('"') and val.endswith('"'):
+                val = val[1:-1]
+            data[k.strip()] = val
+    for k in ("failure_count", "step_index", "total_steps"):
+        if k in data:
+            try:
+                data[k] = int(data[k])
+            except ValueError:
+                pass
+    return data, "\n".join(lines[end + 1:]).strip()
+
+
+def cmd_migrate_legacy(args):
+    if not CURRENT_TASK_FILE.exists():
+        print("ℹ️ 无 current-task.md，无需迁移")
+        return
+    data, body = _parse_frontmatter(CURRENT_TASK_FILE.read_text(encoding="utf-8"))
+    tid, skey = data.get("task_id"), data.get("session_key")
+    if not tid or not skey:
+        print("❌ legacy 记录缺 task_id/session_key，不导入（避免臆造归属）", file=sys.stderr)
+        sys.exit(2)
+    entries = []
+    in_prog = False
+    import re
+    for line in body.split("\n"):
+        if line.strip() == "### 进度记录":
+            in_prog = True
+            continue
+        if in_prog:
+            m = re.match(r'^- \[(.+?)\] (.+)$', line.strip())
+            if m:
+                entries.append({"time": m.group(1), "text": m.group(2)})
+    now = _now()
+    conn = _connect()
+    try:
+        if _get_task(conn, tid):
+            print(f"ℹ️ {tid} 已存在，跳过导入")
+        else:
+            conn.execute(
+                "INSERT INTO tasks(task_id,name,session_key,description,phase,step_index,"
+                "total_steps,failure_count,status,result,entries_json,started_at,last_updated)"
+                " VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (tid, data.get("name", tid), skey, data.get("description", ""),
+                 data.get("phase", ""), data.get("step_index", 0),
+                 data.get("total_steps", 0), data.get("failure_count", 0),
+                 ACTIVE, "", json.dumps(entries, ensure_ascii=False),
+                 data.get("started_at", now), data.get("last_updated", now)))
+            conn.commit()
+            print(f"✅ 已导入 {tid} (session={skey})")
+    finally:
+        conn.close()
+    if args.apply:
+        bak = CURRENT_TASK_FILE.with_name("current-task.legacy.bak.md")
+        CURRENT_TASK_FILE.rename(bak)
+        print(f"   原文件已保留为 {bak}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Task Tracker — current-task.md 断点记忆")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    p = argparse.ArgumentParser(description="task_tracker — SQLite 会话任务状态 v1.2")
+    sub = p.add_subparsers(dest="command", required=True)
 
-    p = subparsers.add_parser("start", help="开始新任务")
-    p.add_argument("--task-id", required=True)
-    p.add_argument("--name", required=True)
-    p.add_argument("--description", default="")
-    p.add_argument("--session-key", default="",
-                   help="绑定该任务的会话 key（如 agent:main:dashboard:xxx）；用于卡住恢复")
-    p.add_argument("--phase", default="启动")
-    p.add_argument("--steps", default="[]", help="JSON 数组")
+    s = sub.add_parser("start"); s.add_argument("--task-id", required=True)
+    s.add_argument("--name", required=True); s.add_argument("--description", default="")
+    s.add_argument("--session-key", default=""); s.add_argument("--phase", default="启动")
+    s.add_argument("--steps", default="[]"); s.add_argument("--replace", action="store_true")
 
-    p = subparsers.add_parser("update", help="更新进度")
-    p.add_argument("--phase")
-    p.add_argument("--step-index", type=int)
-    p.add_argument("--progress", help="进度说明（追加）")
+    u = sub.add_parser("update"); u.add_argument("--task-id", required=True)
+    u.add_argument("--session-key", default=""); u.add_argument("--phase")
+    u.add_argument("--step-index", type=int); u.add_argument("--progress")
 
-    p = subparsers.add_parser("increment-fail", help="失败计数 +1")
-    p.add_argument("--reason", default="未知原因")
+    f = sub.add_parser("increment-fail"); f.add_argument("--task-id", required=True)
+    f.add_argument("--session-key", default=""); f.add_argument("--reason", default="")
 
-    p = subparsers.add_parser("complete", help="完成并归档")
-    p.add_argument("--result", default="")
+    c = sub.add_parser("complete"); c.add_argument("--task-id", required=True)
+    c.add_argument("--session-key", default=""); c.add_argument("--result", default="")
 
-    p = subparsers.add_parser("current", help="查看当前任务")
-    p.add_argument("--json", action="store_true")
+    cur = sub.add_parser("current"); cur.add_argument("--session-key", default="")
+    cur.add_argument("--json", action="store_true")
 
-    args = parser.parse_args()
+    lst = sub.add_parser("list"); lst.add_argument("--all", action="store_true")
+    lst.add_argument("--json", action="store_true")
 
-    if args.command == "start":
-        cmd_start(args)
-    elif args.command == "update":
-        cmd_update(args)
-    elif args.command == "increment-fail":
-        cmd_increment_fail(args)
-    elif args.command == "complete":
-        cmd_complete(args)
-    elif args.command == "current":
-        cmd_current(args)
+    mig = sub.add_parser("migrate-legacy"); mig.add_argument("--apply", action="store_true")
+
+    args = p.parse_args()
+    {
+        "start": cmd_start, "update": cmd_update,
+        "increment-fail": cmd_increment_fail, "complete": cmd_complete,
+        "current": cmd_current, "list": cmd_list,
+        "migrate-legacy": cmd_migrate_legacy,
+    }[args.command](args)
 
 
 if __name__ == "__main__":

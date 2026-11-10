@@ -139,14 +139,40 @@ def test_orchestrate_timeout_isolated():
 
 # ── lane_d ───────────────────────────────────────────────────────────────
 
-def test_lane_d_returns_findings():
+def _seed_tasks_db(db_path):
+    """造一个含 active 任务的临时 tasks.db，隔离测试不碰生产库。"""
+    import sqlite3
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("CREATE TABLE IF NOT EXISTS tasks ("
+                 "task_id TEXT PRIMARY KEY, name TEXT NOT NULL, "
+                 "session_key TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', "
+                 "phase TEXT NOT NULL DEFAULT '', step_index INTEGER NOT NULL DEFAULT 0, "
+                 "total_steps INTEGER NOT NULL DEFAULT 0, failure_count INTEGER NOT NULL DEFAULT 0, "
+                 "status TEXT NOT NULL DEFAULT 'active', result TEXT NOT NULL DEFAULT '', "
+                 "entries_json TEXT NOT NULL DEFAULT '[]', started_at TEXT NOT NULL, "
+                 "last_updated TEXT NOT NULL)")
+    conn.execute("INSERT OR REPLACE INTO tasks VALUES("
+                 "'task-gov-test','测试任务','agent:main:dashboard:gov','',"
+                 "'实现',1,3,0,'active','','[]','2026-11-10T10:00:00','2026-11-10T10:00:00')")
+    conn.commit()
+    conn.close()
+
+
+def test_lane_d_returns_findings(tmp_path, monkeypatch):
+    db = tmp_path / "memory" / "tasks.db"
+    _seed_tasks_db(db)
+    monkeypatch.setenv("TASK_TRACKER_DB", str(db))
     findings = lane_d_tasks.run()
-    # 当前 task 是 active 的 system-governor，应至少有一条 current_task
+    # v1.2：从 SQLite 读 active 任务 → 至少一条 current_task
     assert any(f.item == "current_task" for f in findings)
 
 
-def test_lane_d_no_write():
+def test_lane_d_no_write(tmp_path, monkeypatch):
     """Lane D 纯只读：不产生任何写动作档位。"""
+    db = tmp_path / "memory" / "tasks.db"
+    _seed_tasks_db(db)
+    monkeypatch.setenv("TASK_TRACKER_DB", str(db))
     findings = lane_d_tasks.run()
     for f in findings:
         assert policy.tier_for(f) in (policy.CONFIRM, policy.FORBIDDEN)

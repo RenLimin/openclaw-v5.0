@@ -77,8 +77,23 @@ def _run(cmd, timeout=30):
         return str(e), -1
 
 
-def get_current_task():
-    """读取 current-task，返回 dict 或 None"""
+def get_current_task(session_key=""):
+    """读取某会话绑定的 active 任务，返回 dict 或 None。
+
+    指定 session_key 时只取该会话任务（多会话隔离）；未命中时回退到
+    「全局唯一 active」以兼容旧巡检；仍不唯一则返回 None。
+    """
+    if session_key:
+        out, rc = _run(
+            f"python3 {TRACKER_SCRIPT} current --session-key {session_key} --json")
+        if rc == 0 and out:
+            try:
+                data = json.loads(out)
+                if data.get("active"):
+                    return data
+            except json.JSONDecodeError:
+                pass
+        # fallback: 全局唯一 active（兼容旧单任务巡检）
     out, rc = _run(f"python3 {TRACKER_SCRIPT} current --json")
     if rc != 0 or not out:
         return None
@@ -91,9 +106,11 @@ def get_current_task():
         return None
 
 
-def increment_fail(reason):
-    """增加失败计数"""
-    _run(f"python3 {TRACKER_SCRIPT} increment-fail --reason '{reason}'")
+def increment_fail(task_id, session_key, reason):
+    """增加失败计数（按归属条件更新）。"""
+    _run(
+        f"python3 {TRACKER_SCRIPT} increment-fail "
+        f"--task-id {task_id} --session-key {session_key} --reason '{reason}'")
 
 
 def check_session_failed(session_key, lookback_minutes=30):
@@ -177,9 +194,9 @@ def wake_session(session_key, task_info, retry_count, reason):
 **最近进度**:
 {progress_summary}
 
-请从断点继续。current-task.md 已更新失败计数，你可以用以下命令查看：
+请从断点继续。任务状态已在 tasks.db 更新失败计数，你可以用以下命令查看：
 ```
-python3 L2-infra/components/session-recovery/scripts/task_tracker.py current
+python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --session-key {session_key}
 ```
 
 继续干活。"""
@@ -224,12 +241,12 @@ def _mark_blocked_notified(task_id):
     return first
 
 
-def check_and_retry(apply=False):
-    """主流程：检测主会话失败并尝试重试。正常巡检静默，只输出关键事件。"""
+def check_and_retry(apply=False, session_key="agent:main:main"):
+    """主流程：检测指定会话失败并尝试重试。正常巡检静默，只输出关键事件。"""
     _log("=== 会话失败检测 ===")
 
-    # 1. 读 current-task
-    task = get_current_task()
+    # 1. 读该会话绑定的 active 任务
+    task = get_current_task(session_key)
     if not task:
         _log("没有进行中的任务，静默跳过")
         return True
@@ -248,9 +265,8 @@ def check_and_retry(apply=False):
             notify(f"🛑 任务「{task_name}」已自动重试 {MAX_RETRIES} 次仍失败，已暂停，需人工介入。")
         return True
 
-    # 3. 检查主会话状态
-    main_session = "agent:main:main"
-    is_failed, error, last_run = check_session_failed(main_session)
+    # 3. 检查目标会话状态
+    is_failed, error, last_run = check_session_failed(session_key)
 
     # 子会话失败只做信息记录，不触发主会话重试（子会话有自己的任务卡）
     failed_subs = find_failed_sessions()
@@ -276,10 +292,10 @@ def check_and_retry(apply=False):
         return True
 
     fail_reason = error or "检测到会话运行失败"
-    increment_fail(fail_reason)
+    increment_fail(task_id, session_key, fail_reason)
 
     task["failure_count"] = fail_count + 1
-    ok = wake_session(main_session, task, task["failure_count"], fail_reason)
+    ok = wake_session(session_key, task, task["failure_count"], fail_reason)
     _log(f"重试触发结果: {'ok' if ok else 'failed'}")
     if ok:
         notify(f"🔄 任务「{task_name}」检测到失败，已自动重试（第 {task['failure_count']} 次）。")
@@ -288,7 +304,7 @@ def check_and_retry(apply=False):
     return True
 
 
-def detect_stalled_sessions(auto_wake=False):
+def detect_stalled_sessions(auto_wake=False, session_key="agent:main:main"):
     """检测"running 但 turn 超时卡住"的会话（P1-b）。
 
     独立游标 + 跨轮状态机（stall_detect.py）——不消费 error-scan 的增量行，
@@ -332,7 +348,7 @@ def detect_stalled_sessions(auto_wake=False):
         return
 
     # 按任务归属决定通知 vs 仅记录
-    task = get_current_task()
+    task = get_current_task(session_key)
     task_sessions = set()
     if task and task.get("session_key"):
         task_sessions.add(task["session_key"])
@@ -358,9 +374,9 @@ def main():
     args = parser.parse_args()
 
     try:
-        ok = check_and_retry(apply=args.apply)
+        ok = check_and_retry(apply=args.apply, session_key=args.session)
         # P1-b：卡住识别默认只通知；--auto-wake 才唤醒（默认保守，防重复副作用）
-        detect_stalled_sessions(auto_wake=args.auto_wake)
+        detect_stalled_sessions(auto_wake=args.auto_wake, session_key=args.session)
         # 仅输出关键通知；无事件则零输出（不推送）
         if NOTIFICATIONS:
             print("\n".join(NOTIFICATIONS))

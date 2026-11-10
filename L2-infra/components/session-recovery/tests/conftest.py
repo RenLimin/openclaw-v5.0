@@ -1,12 +1,10 @@
 """
-Shared fixtures for session-recovery tests.
+Shared fixtures for session-recovery tests (v1.2 SQLite).
 
-We override WORKSPACE to a tmpdir so task_tracker.py writes don't pollute
-the real workspace, and restore it after each test.
+We patch task_tracker module constants (WORKSPACE / CURRENT_TASK_FILE /
+HISTORY_DIR / DB_FILE) to a tmpdir so tests don't pollute the real workspace.
 """
-import os
 import sys
-import json
 import pytest
 from pathlib import Path
 
@@ -15,41 +13,41 @@ SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
 
+def _restore(task_tracker, saved):
+    (task_tracker.WORKSPACE, task_tracker.CURRENT_TASK_FILE,
+     task_tracker.HISTORY_DIR, task_tracker.DB_FILE) = saved
+
+
 @pytest.fixture
 def tmp_workspace(tmp_path):
-    """Create a fake workspace dir and patch WORKSPACE in task_tracker."""
+    """Isolate task_tracker state (SQLite + legacy md) into tmp dir."""
     memory_dir = tmp_path / "memory"
     memory_dir.mkdir(parents=True, exist_ok=True)
-
-    # Patch the module-level WORKSPACE constant
     import task_tracker
-    old_workspace = task_tracker.WORKSPACE
-    old_current = task_tracker.CURRENT_TASK_FILE
-    old_history = task_tracker.HISTORY_DIR
-
+    saved = (task_tracker.WORKSPACE, task_tracker.CURRENT_TASK_FILE,
+             task_tracker.HISTORY_DIR, task_tracker.DB_FILE)
     task_tracker.WORKSPACE = tmp_path
     task_tracker.CURRENT_TASK_FILE = memory_dir / "current-task.md"
     task_tracker.HISTORY_DIR = memory_dir / "task-history"
-
+    task_tracker.DB_FILE = memory_dir / "tasks.db"
     yield tmp_path
-
-    # Restore
-    task_tracker.WORKSPACE = old_workspace
-    task_tracker.CURRENT_TASK_FILE = old_current
-    task_tracker.HISTORY_DIR = old_history
+    _restore(task_tracker, saved)
 
 
 @pytest.fixture
-def clean_current_task(tmp_workspace):
-    """Ensure no current-task.md exists at start, clean up at end."""
-    ct = tmp_workspace / "memory" / "current-task.md"
-    if ct.exists():
-        ct.unlink()
-    yield
-    if ct.exists():
-        ct.unlink()
-    # Clean history
-    hist = tmp_workspace / "memory" / "task-history"
-    if hist.exists():
-        for f in hist.iterdir():
+def clean_workspace(tmp_workspace):
+    """Ensure no DB/legacy md/history exists at start, clean up at end."""
+    tt = __import__("task_tracker")
+    for path in (tt.DB_FILE, tt.CURRENT_TASK_FILE):
+        if path.exists():
+            path.unlink()
+    if tt.HISTORY_DIR.exists():
+        for f in tt.HISTORY_DIR.iterdir():
+            f.unlink()
+    yield tmp_workspace
+    for path in (tt.DB_FILE, tt.CURRENT_TASK_FILE):
+        if path.exists():
+            path.unlink()
+    if tt.HISTORY_DIR.exists():
+        for f in tt.HISTORY_DIR.iterdir():
             f.unlink()
