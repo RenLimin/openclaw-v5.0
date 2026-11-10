@@ -701,39 +701,70 @@ def restore_help(manifest_path: str) -> int:
     return 0
 
 
-def audit_asset_registration() -> list[dict]:
-    """11. 已建资产登记检测 — 全盘发现 vs 资产清单文档漂移。"""
-    results = []
-    if not ASSET_GENERATOR.exists():
-        results.append(check("asset registration", "❌", f"生成器不存在: {ASSET_GENERATOR}"))
-        return results
-
-    # 生成器 --check：当前清单文档是否与实时系统状态一致
-    rc, out, err = run(f"python3 {ASSET_GENERATOR} --check", timeout=60)
-    if rc == 0:
-        results.append(check("asset inventory drift", "✅", "资产清单与已建资产一致，无漂移"))
-        return results
-
-    # 漂移：解析已发现组件，指出磁盘上「已建成但未登记」的量
+def _count_discovered_components() -> str:
+    """全盘已建成组件数量（发现逻辑直调）。"""
     rc2, disc_out, _ = run(
         "python3 -c \"import sys; sys.path.insert(0,'" + str(ASSET_GENERATOR.parent) + "');"
         "import gen_asset_inventory as g; "
         "import json; print(json.dumps([i['rel'] for _,i in g.discover_completed_components()]))\"",
         timeout=60,
     )
-    n_discovered = "?"
     try:
-        n_discovered = str(len(json.loads(disc_out)))
+        return str(len(json.loads(disc_out)))
     except (json.JSONDecodeError, TypeError):
-        pass
+        return "?"
+
+
+def run_asset_registration() -> tuple[bool, str]:
+    """执行全盘已建资产重新登记，返回 (是否漂移归零, 信息)。幂等、只写生成文档。"""
+    if not ASSET_GENERATOR.exists():
+        return False, f"生成器不存在: {ASSET_GENERATOR}"
+    rc, _, err = run(f"python3 {ASSET_GENERATOR}", timeout=90)
+    if rc != 0:
+        return False, f"登记失败: {err}"
+    rc2, _, _ = run(f"python3 {ASSET_GENERATOR} --check", timeout=60)
+    return rc2 == 0, ""
+
+
+def audit_asset_registration(auto_register: bool = True) -> list[dict]:
+    """11. 已建资产登记检测（工作流内环节）。
+
+    默认：检测到漂移 → 自动重新登记 → 二次校验归零（自愈）。
+    auto_register=False（--no-auto-register）：只报告漂移，不改文档。
+    """
+    results = []
+    if not ASSET_GENERATOR.exists():
+        results.append(check("asset registration", "❌", f"生成器不存在: {ASSET_GENERATOR}"))
+        return results
+
+    rc, _, err = run(f"python3 {ASSET_GENERATOR} --check", timeout=60)
+    if rc == 0:
+        results.append(check("asset inventory", "✅", "资产清单与已建资产一致，无漂移"))
+        return results
+
+    n_discovered = _count_discovered_components()
+
+    # 仅报告模式
+    if not auto_register:
+        results.append(check(
+            "asset inventory drift", "⚠️",
+            f"资产清单已过期（全盘已建成 {n_discovered} 个组件）；未自动登记（--no-auto-register）"
+        ))
+        return results
+
+    # 工作流内自动登记
     results.append(check(
-        "asset inventory drift", "⚠️",
-        f"资产清单已过期（全盘已建成 {n_discovered} 个组件）。运行 --register-assets 重新登记"
+        "asset inventory drift", "📝",
+        f"检测到漂移（全盘已建成 {n_discovered} 个组件），正在自动重新登记..."
     ))
-    results.append(check(
-        "  register hint", "📝",
-        f"python3 L2-infra/scripts/system_full_audit.py --register-assets"
-    ))
+    ok, fail_msg = run_asset_registration()
+    if ok:
+        results.append(check(
+            "asset register", "✅",
+            f"已在本环节自动登记 {n_discovered} 个已建成组件至 {ASSET_INVENTORY_DOC.name}，二次校验漂移归零"
+        ))
+    else:
+        results.append(check("asset register", "❌", fail_msg or "自动登记后仍有漂移，请人工核对"))
     return results
 
 
@@ -796,7 +827,9 @@ def main():
     parser.add_argument("--yes", action="store_true", help="--purge-archived 时真正执行删除")
     parser.add_argument("--restore-help", metavar="MANIFEST", help="从 manifest 解压 .deleted.zst 归档 transcript")
     parser.add_argument("--register-assets", action="store_true",
-                        help="全盘扫描已建成资产并重新登记至资产清单文档")
+                        help="(独立入口) 全盘扫描已建成资产并重新登记至资产清单文档")
+    parser.add_argument("--no-auto-register", action="store_true",
+                        help="第11节只报告资产漂移，不自动重新登记")
     args = parser.parse_args()
 
     # --restore-help 模式：解压归档
@@ -835,7 +868,7 @@ def main():
         ("8. 备份状态检查", audit_backups),
         ("9. 子会话状态检测", audit_subagent_sessions),
         ("10. 已归档会话检测", audit_archived_sessions),
-        ("11. 已建资产登记检测", audit_asset_registration),
+        ("11. 已建资产登记检测", lambda: audit_asset_registration(auto_register=not args.no_auto_register)),
     ]
 
     if args.quick:
