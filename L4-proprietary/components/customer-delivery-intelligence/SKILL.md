@@ -41,7 +41,7 @@ N2 取数（直接调用既有 OA/ONES 自动化；默认复用其原始产出�
 N4 解析（条款事实源=OA 台账/合同原文，复用 contract-manager）
 N5 汇总成文（六类产物 + 数字一致性自校验，fail-closed）
 [gate2 对外稿签发 · HITL]
-N7 渲染交付（Markdown；docx/PPT 复用既有技能）
+N7 渲染交付（Markdown + PPTX + DOCX，均复用既有引擎）
 ```
 
 ## 六类标准产物
@@ -62,6 +62,18 @@ N7 渲染交付（Markdown；docx/PPT 复用既有技能）
 ## 首个实例 / 黄金基准
 - 中国建设银行（14 合同，净额 5,621,800 元）
 - 基准：`golden/ccb-2026/v1.0/`
+
+## 输出格式
+- **Markdown**：六类产物各一份（本组件渲染）
+- **PPTX**：复用既有 L4 `bangcle-ppt` 引擎，Bangcle VI 模板（封面/目录/章节/KPI/明细表/结束）
+- **DOCX**：复用既有 L2 `office-generation` Word 引擎，微软雅黑
+
+### 增强 Bangcle 模板（2026-11-10）
+- 修复 `bangcle-ppt` 表格页宽度 bug：`content_right`（右边界 x=12.33）被误当右边距，
+  导致表框仅 0.44in；改为 `content_right - content_left`（11.57in）。
+- PPT 布局用真实已装字体（Arial Unicode，字宽偏保守）经 fontTools hmtx 机器核算：
+  全部表格单元格 ≤2 行、0 overflow（本机未装思源/雅黑，已规避字体替换假象）。
+- 注：渲染器其余 5 处 `content_right` 同类误用本次未改（当前流水线只用 table 页），留待后续。
 
 ## 文档
 `docs/`：PRD / DESIGN-OUTLINE / DESIGN-DETAIL / VERIFICATION / OPERATIONS / IMPLEMENTATION-PLAN + `research/`（三份业界调研）。

@@ -17,6 +17,13 @@ This folder is home. Treat it that way.
 - Never 对同一命令无确认地重复执行（防并行重复）；先 `process(action=list)` 或 `ps` 确认无残留。
 <!-- observed: 2026-11-10 | status: active -->
 
+## task_tracker 并发竞态红线（事故 2026-11-10）
+- task_tracker 用**单一全局** `memory/current-task.md`，多会话并行时会互相覆盖；`complete`/`update` **不校验 task_id**。
+- Always 调 `complete` 前先读 `current-task.md` 的 `task_id`，确认是自己的任务；不一致（被并行线占用）→ **绝不 complete/update**，改用独立记录或等 Rex。
+- Never 把自己的 result 写进非本人任务的归档。发现文件被多线污染时，停手汇报，不擅自还原其他会话状态。
+- 待根本修复：tracker 按 task_id 分文件 + complete 强制 task_id 校验（单独立项）。
+<!-- observed: 2026-11-10 | status: active -->
+
 ## First Run
 
 If `BOOTSTRAP.md` exists, follow it, figure out who you are, then delete it.
@@ -360,3 +367,14 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - [Default AGENTS.md](/reference/AGENTS.default)
 - [Scheduled tasks vs heartbeat](/automation#automations-vs-heartbeat)
 - [Heartbeat](/gateway/heartbeat)
+
+## 资产检索前置铁律 ★★★（2026-11-10，FB-20261110-02）
+
+> Rex 批评：我每次先自己造，等他提示才转向复用已有资产。这是元能力缺陷。
+
+- Always 开工第一步：**穷尽检索已有资产**（memory_search + 知识库 + `find`/`grep` 全仓 + 对应 SKILL.md），
+  把「复用既有组件/模板/脚本」当**默认动作**，证明不可复用后才新建。
+- Never 未盘点就先写自实现（auth/client/取数器/渲染器/PPT 引擎等）。
+- Always 新建任何模块前，先自问：这个能力仓库里是否已存在？是否有 L2/L3/L4 组件或 skill 已提供？
+- 检索结果（找到了什么、为何不可直接复用）要在动手前能一句话说清。
+<!-- observed: 2026-11-10 | status: active -->

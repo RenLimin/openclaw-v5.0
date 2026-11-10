@@ -566,7 +566,8 @@ class TableLightRenderer(RendererBase):
 
         table_x = s.margins.content_left
         table_y = content_top + 0.3
-        table_w = s.slide.width - s.margins.content_right - table_x + 0.2
+        # content_right 是右边界 x 坐标（非右边距）；表宽=右边界-左边界
+        table_w = s.margins.content_right - table_x
         table_h = 4.5
 
         self.add_table(
