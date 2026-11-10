@@ -47,3 +47,7 @@ python3 scripts/task_tracker.py migrate-legacy [--apply]
 ## 测试
 - 单测：`tests/test_task_tracker.py`（26 用例）+ check_and_retry（34 用例）
 - 真实路径集成：`tests/integration_task_tracker_v12.py`（AC1-AC7，subprocess 跑真实 CLI，24 用例）
+
+## 已知限制与上游跟踪
+见 [KNOWN-ISSUES.md](KNOWN-ISSUES.md)：浏览器端 Outbox 留尸导致的黄三角
+（服务端无法清除），跟踪上游 #151986，v2026.9.8 已提供普通失败 Discard。
