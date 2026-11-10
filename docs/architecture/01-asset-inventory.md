@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-10 16:30 UTC+08:00
+最后生成：2026-11-10 17:57 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -277,8 +277,8 @@ _自建技能总计: 24 个（L2: 9, L3: 6, L4: 9, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `5d6d98f` |
-| Commit 数 | 639 |
+| HEAD | `862505b` |
+| Commit 数 | 640 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -314,6 +314,7 @@ _自建技能总计: 24 个（L2: 9, L3: 6, L4: 9, 根目录: 0）_
 | `session-boundary-guard` | 0 | 0 | 0 | `L2-infra/components/session-boundary-guard` |
 | `session-isolation` | 17 | 0 | 6 | `L2-infra/components/session-isolation` |
 | `session-recovery` | 12 | 0 | 5 | `L2-infra/components/session-recovery` |
+| `system-governor` | 12 | 0 | 1 | `L2-infra/components/system-governor` |
 | `tool-policy` | 0 | 0 | 0 | `L2-infra/components/tool-policy` |
 | `web-common` | 13 | 4 | 2 | `L2-infra/components/web-common` |
 | `workspace-temp-cleanup` | 2 | 0 | 1 | `L2-infra/components/workspace-temp-cleanup` |
@@ -341,6 +342,7 @@ _自建技能总计: 24 个（L2: 9, L3: 6, L4: 9, 根目录: 0）_
 | `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
 | `bdms` | 210 | 9 | 26 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
+| `customer-delivery-intelligence` | 0 | 6 | 0 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |
 | `fin-l4` | 58 | 0 | 14 | `L4-proprietary/components/fin-l4` |
 | `office-contract` | 15 | 0 | 3 | `L4-proprietary/components/office-contract` |
