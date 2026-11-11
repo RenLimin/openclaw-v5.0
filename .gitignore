@@ -85,3 +85,9 @@ L4-proprietary/components/bdms/tmp/
 
 # 组件配置/脚本备份文件（临时产物，不入库）
 **/*.bak.*
+
+# 跨会话恢复临时产物（属于对应 dashboard 会话，不进主仓库）
+recovered/
+
+# 本次审计整改的本地回滚包（不入库）
+backups/audit-remediation-*/

@@ -29,14 +29,14 @@ CUSTOM_SERVICES = [
     {
         "label": "ai.openclaw.model-scheduling",
         "plist": os.path.expanduser(
-            "~/.openclaw/workspace/model-scheduling/LaunchAgent/ai.openclaw.model-scheduling.plist"
+            "~/.openclaw/workspace/L2-infra/components/model-scheduling/LaunchAgent/ai.openclaw.model-scheduling.plist"
         ),
         "check_port": 3000,
         "enabled": True,
     },
 ]
 
-LOG_DIR = Path(os.path.expanduser("~/.openclaw/workspace/model-scheduling/logs"))
+LOG_DIR = Path(os.path.expanduser("~/.openclaw/workspace/L2-infra/components/model-scheduling/logs"))
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / "service_guardian.log"
 STATE_FILE = LOG_DIR / "service_guardian_state.json"

@@ -14,7 +14,7 @@ from ..models import Finding
 
 FULL_AUDIT = "/Users/bangcle/.openclaw/workspace/L2-infra/scripts/system_full_audit.py"
 GUARDIAN_STATE = Path(
-    "/Users/bangcle/.openclaw/workspace/model-scheduling/logs/service_guardian_state.json"
+    "/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling/logs/service_guardian_state.json"
 )
 
 # full_audit.py --json 的章节标题（实测）

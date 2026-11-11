@@ -14,13 +14,13 @@ set -eu
 # ─── 配置 ──────────────────────────────────────
 GATEWAY_HEALTH="http://127.0.0.1:18789/health"
 CHECK_INTERVAL=3
-STATE_FILE="${HOME}/.openclaw/workspace/model-scheduling/logs/guardian_state.json"
-LOG_FILE="${HOME}/.openclaw/workspace/model-scheduling/logs/guardian.log"
+STATE_FILE="${HOME}/.openclaw/workspace/L2-infra/components/model-scheduling/logs/guardian_state.json"
+LOG_FILE="${HOME}/.openclaw/workspace/L2-infra/components/model-scheduling/logs/guardian.log"
 MAX_LOG_SIZE=524288  # 512KB
 
 # 自定义服务列表（未来新增在此追加）
 # 格式: label|plist_path|check_port
-SERVICES="ai.openclaw.model-scheduling|${HOME}/.openclaw/workspace/model-scheduling/LaunchAgent/ai.openclaw.model-scheduling.plist|3000"
+SERVICES="ai.openclaw.model-scheduling|${HOME}/.openclaw/workspace/L2-infra/components/model-scheduling/LaunchAgent/ai.openclaw.model-scheduling.plist|3000"
 
 # ─── 工具函数 ──────────────────────────────────
 log() {
