@@ -124,28 +124,39 @@ def audit_system_status() -> list[dict]:
     else:
         results.append(check("cron tasks", "❌", out[:200]))
 
-    # cron 执行质量 — 读取错误扫描脚本的输出（权威来源）
-    if ERROR_SCAN_JSON.exists():
+    # cron 执行质量 — 以 automations 实际末次运行状态为准（权威来源）。
+    # 不再把 error-scan-latest.json（系统错误扫描）误读为 cron 失败。
+    rc, out, _ = run("openclaw automations list --json 2>/dev/null")
+    jobs = []
+    if rc == 0 and out:
         try:
-            with open(ERROR_SCAN_JSON) as f:
-                scan_data = json.load(f)
-            errors = scan_data.get("errors", [])
-            healthy = scan_data.get("healthy", True)
-            if errors:
-                names = "; ".join(
-                    f"{e.get('name','?')}(x{e.get('consecutive_failures', 1)})"
-                    for e in errors[:3]
-                )
-                results.append(check(
-                    "cron execution", "❌" if not healthy else "⚠️",
-                    f"{len(errors)} 个任务连续失败: {names}"
-                ))
-            else:
-                results.append(check("cron execution", "✅", "全部执行成功"))
-        except (json.JSONDecodeError, Exception) as e:
-            results.append(check("cron execution", "⚠️", f"扫描结果解析失败: {e}"))
+            auto_data = json.loads(out)
+            jobs = auto_data.get("jobs", []) if isinstance(auto_data, dict) else []
+        except json.JSONDecodeError:
+            jobs = []
+
+    if not jobs:
+        results.append(check("cron execution", "⚠️", "未能读取 automations 状态"))
     else:
-        results.append(check("cron execution", "⚠️", "未找到 error-scan-latest.json，建议先跑 scan_errors.sh"))
+        failed_jobs = [
+            j for j in jobs
+            if j.get("enabled", True)
+            and str(j.get("lastRunStatus", "")).lower() not in ("ok", "", "none")
+        ]
+        if failed_jobs:
+            names = "; ".join(
+                f"{j.get('name', j.get('declarationKey', '?'))}({j.get('lastRunStatus')})"
+                for j in failed_jobs[:4]
+            )
+            results.append(check(
+                "cron execution", "❌",
+                f"{len(failed_jobs)}/{len(jobs)} 个任务末次执行失败: {names}"
+            ))
+        else:
+            results.append(check(
+                "cron execution", "✅",
+                f"{len(jobs)} 个任务末次执行全部成功"
+            ))
 
     return results
 
@@ -431,11 +442,14 @@ def audit_subagent_sessions() -> list[dict]:
         return results
 
     # 分类统计
+    # 注意：CLI 回传的 kind 只有 direct/cron（main 与 dashboard 均为 direct），
+    # 不能靠 kind 区分，必须用 key 前缀。
     done_sessions = []
     timeout_sessions = []
     failed_sessions = []
     active_count = 0
     cron_count = 0
+    dashboard_count = 0
 
     for s in sessions:
         kind = s.get("kind", "")
@@ -443,11 +457,18 @@ def audit_subagent_sessions() -> list[dict]:
         label = s.get("label", s.get("displayName", ""))
         key = s.get("key", "")
 
-        if kind == "main":
+        if key == MAIN_SESSION_KEY or key.endswith(":main"):
             active_count += 1
             continue
         if kind == "cron":
             cron_count += 1
+            continue
+        if ":dashboard:" in key:
+            # 持久化交互项目会话（done=空闲待输入），不是可清理子会话
+            dashboard_count += 1
+            continue
+        if ":subagent:" not in key:
+            # 其它非 subagent 形态不纳入清理统计
             continue
 
         if status in ("done", "killed"):
@@ -466,6 +487,10 @@ def audit_subagent_sessions() -> list[dict]:
     results.append(check(
         "cron sessions", "✅",
         f"{cron_count} 个 cron"
+    ))
+    results.append(check(
+        "dashboard sessions", "✅",
+        f"{dashboard_count} 个项目交互会话（done=空闲待输入，不清理）"
     ))
 
     if done_sessions:
