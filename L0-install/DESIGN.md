@@ -122,7 +122,7 @@ ecosystem:
   model_providers: # 支持的 model provider 列表
 
 adapter:
-  path: L1-runtime/adapters/openclaw/
+  path: L1_runtime/adapters/openclaw/
   status: ready   # ready / reserved / in-progress
 
 known_limitations:

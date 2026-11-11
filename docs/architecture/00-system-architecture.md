@@ -259,14 +259,14 @@ L0 包含两个同级子层：
 **设计约束**:
 - **不可直接调用**: L2-L4 只能通过抽象接口调用,不能直接引用具体运行时 API
 - **最小契约**: 只抽象当前实际需要的接口,不为未来假设过度设计
-- **适配层隔离**: 每个运行时一个适配层,放在 `L1-runtime/adapters/<runtime>/` 目录下
+- **适配层隔离**: 每个运行时一个适配层,放在 `L1_runtime/adapters/<runtime>/` 目录下（物理目录用下划线 `L1_runtime`：它是可被 `import` 的 Python 包，连字符是非法标识符）
 
 #### 3.2.3 编码规范（强制）
 
 > 硬性规则，保障移植性：
 > - ❌ L2-L4 代码不允许 `import openclaw`（除非通过 L1 适配层导入）
 > - ❌ L2-L4 代码不允许直接调用 `openclaw.*` 方法
-> - ✅ 所有运行时能力必须通过 `L1-runtime` 抽象接口调用
+> - ✅ 所有运行时能力必须通过 `L1_runtime` 抽象接口调用
 > - ✅ 切换运行时只需要修改 L1 适配层，不需要修改 L2-L4
 > 
 > **理由**：保障跨 AI Agent 移植性——不同运行时只需要换适配层，业务层代码不动。
@@ -291,7 +291,7 @@ Agent 运行时必须提供以下能力,无论底层框架是什么:
 #### 3.2.2 适配层规范
 
 ```
-L1-runtime/
+L1_runtime/
 ├── adapters/                          ← 适配层（按运行时隔离）
 │   ├── base/                          ← 抽象基类（Runtime/MEMORY/Channel/Sandbox/Credential 接口）
 │   ├── openclaw/                      ← 当前默认实现
@@ -370,11 +370,11 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 
 | 组件 | 目录 | 职责 | 状态 |
 |---|---|---|---|
-| **tool-policy** | `L1-runtime/components/tool-policy/` | 工具白/黑名单、策略评估（allow/deny/need-approval）、速率限制 | 📐 骨架 |
-| **context-bus** | `L1-runtime/components/context-bus/` | 跨层事件发布/订阅、请求/响应、上下文传播（trace_id/会话/用户身份） | 📐 骨架 |
-| **agent-registry** | `L1-runtime/components/agent-registry/` | Agent 声明式注册、按能力/角色/标签发现、实例化 | 📐 骨架 |
-| **telemetry** | `L1-runtime/components/telemetry/` | 指标（计数器/直方图/计时器）、分布式追踪、结构化日志收集 | 📐 骨架 |
-| **error-handler** | `L1-runtime/components/error-handler/` | 统一错误处理策略（分级/重试/降级/熔断）、错误分类模型 | 📐 骨架 |
+| **tool-policy** | `L1_runtime/components/tool-policy/` | 工具白/黑名单、策略评估（allow/deny/need-approval）、速率限制 | ✅ 已实现 |
+| **context-bus** | `L1_runtime/components/context-bus/` | 跨层事件发布/订阅、请求/响应、上下文传播（trace_id/会话/用户身份） | ✅ 已实现 |
+| **agent-registry** | `L1_runtime/components/agent-registry/` | Agent 声明式注册、按能力/角色/标签发现、实例化 | ✅ 已实现 |
+| **telemetry** | `L1_runtime/components/telemetry/` | 指标（计数器/直方图/计时器）、分布式追踪、结构化日志收集 | ✅ 已实现 |
+| **error-handler** | `L1_runtime/components/error-handler/` | 统一错误处理策略（分级/重试/降级/熔断）、错误分类模型 | ✅ 已实现 |
 
 > **定位**：L1 自建组件是 L1 层的"能力增强"，为上层提供标准化的横切服务。与 L2 的区别在于——L1 组件**仅依赖 L1 抽象契约**，而 L2 组件依赖 L1 + 可能依赖其他 L2。
 

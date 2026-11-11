@@ -250,7 +250,7 @@ adapters/openclaw/openclaw/
 
 ## 7. 测试
 
-测试位于 `L1-runtime/tests/`，共 52 个用例，覆盖：
+测试位于 `L1_runtime/tests/`，共 52 个用例，覆盖：
 
 | 测试文件 | 用例数 | 覆盖内容 |
 |---|---|---|
@@ -262,7 +262,7 @@ adapters/openclaw/openclaw/
 
 ```bash
 cd openclaw-v5.0
-python3 -m pytest L1-runtime/tests/ -v
+python3 -m pytest L1_runtime/tests/ -v
 ```
 
 ---
@@ -324,7 +324,7 @@ python3 -m pytest L1-runtime/tests/ -v
 ## 9. 目录结构
 
 ```
-L1-runtime/
+L1_runtime/
 ├── DESIGN.md                          # 本文档
 ├── adapters/
 │   ├── __init__.py                    # 统一入口（注册 + 导出）

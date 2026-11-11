@@ -45,4 +45,4 @@ svc = SandboxIsolationService()
 ## 依赖
 
 - Python 3
-- L1-runtime 适配器层（`adapters.openclaw.openclaw.adapter`）
+- L1_runtime 适配器层（`adapters.openclaw.openclaw.adapter`）

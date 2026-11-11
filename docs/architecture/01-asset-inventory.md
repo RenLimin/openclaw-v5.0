@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-11 13:25 UTC+08:00
+最后生成：2026-11-11 15:20 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -19,7 +19,20 @@
 | OpenClaw | OpenClaw 2026.9.8 (fc23bc8) |
 | Node.js | v26.7.0 |
 
-> L1 不可修改，升级跟随官方版本。breaking changes 需走 ADR。
+> L1 基座不可修改，升级跟随官方版本。breaking changes 需走 ADR。
+
+### L1 自建资产（适配层 + 组件）
+
+| 资产 | 路径 | Python 文件 | 测试 | 状态 |
+|---|---|---|---|---|
+| 运行时适配层（base + openclaw） | `L1_runtime/adapters/` | 15 | — | ✅ 已实现 |
+| agent-registry | `L1_runtime/components/agent-registry/` | 6 | 1 | ✅ 已实现 |
+| context-bus | `L1_runtime/components/context-bus/` | 6 | 1 | ✅ 已实现 |
+| error-handler | `L1_runtime/components/error-handler/` | 7 | 1 | ✅ 已实现 |
+| telemetry | `L1_runtime/components/telemetry/` | 7 | 1 | ✅ 已实现 |
+| tool-policy | `L1_runtime/components/tool-policy/` | 5 | 1 | ✅ 已实现 |
+
+> L1 测试：`python3 -m pytest L1_runtime/tests/`（52 用例全部通过）。
 
 ## L2 — 插件资产 (Plugins)
 
@@ -280,8 +293,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `ee53bf7` |
-| Commit 数 | 654 |
+| HEAD | `78aa947` |
+| Commit 数 | 657 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

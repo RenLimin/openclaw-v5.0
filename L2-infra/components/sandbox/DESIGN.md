@@ -12,7 +12,7 @@
 | 组件类 | 沙箱隔离 |
 | 状态 | ✅ 已实现 |
 | ADR | ADR-013（沙箱隔离契约下沉到 L2） |
-| 依赖 | L1-runtime 适配器（openclaw.adapter） |
+| 依赖 | L1_runtime 适配器（openclaw.adapter） |
 
 ## 2. 职责
 
@@ -35,7 +35,7 @@
 │  SandboxManager  │        SandboxPolicy             │  生命周期 / 权限
 │  (生命周期管理)   │        (策略检查)                  │
 ├──────────────────┴──────────────────────────────────┤
-│         L1-runtime / openclaw.adapter                │  底层执行适配
+│         L1_runtime / openclaw.adapter                │  底层执行适配
 ├─────────────────────────────────────────────────────┤
 │         utils.py (通用工具函数)                        │  文件/时间/目录
 └─────────────────────────────────────────────────────┘
@@ -124,7 +124,7 @@ class SandboxInfo:
 
 ### 4.4 L1 适配器依赖
 
-通过动态 import 加载 `L1-runtime/adapters/openclaw/openclaw.adapter`，调用以下接口：
+通过动态 import 加载 `L1_runtime/adapters/openclaw/openclaw.adapter`，调用以下接口：
 
 | 适配器方法 | 用途 |
 |---|---|
@@ -202,7 +202,7 @@ config/
 
 | 依赖 | 来源 | 说明 |
 |---|---|---|
-| L1-runtime/openclaw.adapter | 内部 L1 层 | 底层命令执行、进程管理 |
+| L1_runtime/openclaw.adapter | 内部 L1 层 | 底层命令执行、进程管理 |
 | utils.utils | 本组件内 | 文件/时间/JSON 工具 |
 
 外部依赖仅 Python 标准库（`os`, `json`, `time`, `re`, `shutil`, `tempfile`, `dataclasses`）。

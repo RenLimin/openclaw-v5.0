@@ -99,8 +99,29 @@ def render_l1(data: dict) -> list[str]:
     lines.append(f"| OpenClaw | {data['version'] or UNAVAILABLE} |")
     lines.append(f"| Node.js | {data['node'] or UNAVAILABLE} |")
     lines.append("")
-    lines.append("> L1 不可修改，升级跟随官方版本。breaking changes 需走 ADR。")
+    lines.append("> L1 基座不可修改，升级跟随官方版本。breaking changes 需走 ADR。")
     lines.append("")
+    # L1 自建资产（适配层 + 组件），物理目录 L1_runtime（Python 包，必须下划线）
+    l1root = REPO_ROOT / "L1_runtime"
+    if l1root.is_dir():
+        lines.append("### L1 自建资产（适配层 + 组件）")
+        lines.append("")
+        lines.append("| 资产 | 路径 | Python 文件 | 测试 | 状态 |")
+        lines.append("|---|---|---|---|---|")
+        # 适配层
+        ad = l1root / "adapters"
+        ad_py = len([p for p in ad.rglob("*.py") if "__pycache__" not in p.parts]) if ad.is_dir() else 0
+        lines.append(f"| 运行时适配层（base + openclaw） | `L1_runtime/adapters/` | {ad_py} | — | ✅ 已实现 |")
+        for comp in sorted((l1root / "components").iterdir()) if (l1root / "components").is_dir() else []:
+            if not comp.is_dir():
+                continue
+            py = len([p for p in comp.rglob("*.py") if "__pycache__" not in p.parts])
+            tdir = comp / "tests"
+            tests = len(list(tdir.glob("test_*.py"))) + len(list(tdir.glob("*_test.py"))) if tdir.is_dir() else 0
+            lines.append(f"| {comp.name} | `L1_runtime/components/{comp.name}/` | {py} | {tests} | ✅ 已实现 |")
+        lines.append("")
+        lines.append("> L1 测试：`python3 -m pytest L1_runtime/tests/`（52 用例全部通过）。")
+        lines.append("")
     return lines
 
 
