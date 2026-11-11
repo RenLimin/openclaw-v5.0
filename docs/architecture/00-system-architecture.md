@@ -638,8 +638,8 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | 交付管理框架(DMS) | ADR-025 | `L3-business/components/delivery-management-framework/` | 通用交付运营框架 | ✅ 已上线 |
 | 个人理财通用框架 | ADR-026/027 | `docs/architecture/components/personal-finance/` (仅 DESIGN.md) | 个人理财引擎基类/规范（设计态） | 📐 设计态 |
 | DMS 核心框架 | — | `L3-business/components/dms-framework/` | DMS 底层引擎：工作流/状态机/事件总线/RACI/数据库迁移/WebUI | ✅ 已上线 |
-| CISSP 学习系统 | — | `L3-business/components/cissp-learning/` | CISSP 知识图谱 + 学习计划 + 测验 + 笔记 + 进度跟踪 | ✅ 已上线 |
-| 健康引擎 | — | `L3-business/components/health-engine/` | 6 大健康评分引擎(评分/生命体征/运动/营养/睡眠/压力) | ✅ 已上线 |
+| CISSP 学习系统 | — | `L4-proprietary/components/.deprecated/cissp-learning/` | CISSP 知识图谱 + 学习计划 + 测验 + 笔记 + 进度跟踪（L3 壳已合并入 deprecated，实现在 .deprecated 完整保留；L4 继承实现见 cissp-trainer） | 🗂️ 已弃用 |
+| 健康引擎 | — | `L3-business/components/health-engine/` | 6 大健康评分引擎(评分/生命体征/运动/营养/睡眠/压力)（骨架阶段，README/DESIGN 自述无实现） | 📐 设计态 |
 | 健康管理系统 | — | `L3-business/components/health-management/` | 体检/健康计划/用药/指标/风险评估/档案管理 | ✅ 已上线 |
 | 办公业务组件 | ADR-029 | `L3-business/components/office-business/` | 合同/方案/报告/演示模板 + 角色定义 + 变量系统 | ✅ 已上线 |
 | 家庭理财引擎 | ADR-026/027 | `L3-business/components/finance-engine/` | 账户/贷款/保险/投资/利率/建议 6 大引擎 + Web UI | ✅ 已上线 |
@@ -1236,9 +1236,9 @@ L4 专有业务
 | L3 | delivery-management-framework | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L3 | dms-framework | ✅ | ✅ | ✅ | ✅ (228/228) | ✅ | ✅ 完成 |
 | L3 | finance-engine | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
-| L3 | health-engine | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L3 | health-engine | — | — | 📐 | 📐 | 📐 | 设计态（骨架，无实现） |
 | L3 | health-management | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
-| L3 | office-business | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
+| L3 | office-business | ✅ | ✅ | ✅ | ✅ (内容型) | ✅ | ✅ 完成（模板/角色库，内容即实现） |
 | L4 | bangcle-ppt | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |
 | L4 | BDMS v2.1 | ✅ | ✅ | ✅ (7份) | ✅ | ✅ | ✅ 完成 |
 | L4 | cissp-trainer | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ 完成 |

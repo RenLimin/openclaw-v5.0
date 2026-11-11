@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-11 15:20 UTC+08:00
+最后生成：2026-11-11 15:37 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -293,8 +293,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `78aa947` |
-| Commit 数 | 657 |
+| HEAD | `979d91f` |
+| Commit 数 | 660 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -324,7 +324,6 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | `ocr-digitalization` | 24 | 0 | 7 | `L2-infra/components/ocr-digitalization` |
 | `office-generation` | 16 | 0 | 6 | `L2-infra/components/office-generation` |
 | `persistence` | 8 | 0 | 1 | `L2-infra/components/persistence` |
-| `role-library` | 0 | 0 | 0 | `L2-infra/components/role-library` |
 | `sandbox` | 9 | 0 | 1 | `L2-infra/components/sandbox` |
 | `scheduler-guard` | 1 | 0 | 0 | `L2-infra/components/scheduler-guard` |
 | `session-boundary-guard` | 0 | 0 | 0 | `L2-infra/components/session-boundary-guard` |
@@ -339,7 +338,6 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
-| `cissp-learning` | 0 | 0 | 0 | `L3-business/components/cissp-learning` |
 | `contract-approval` | 0 | 0 | 0 | `L3-business/components/contract-approval` |
 | `contract-management` | 27 | 6 | 10 | `L3-business/components/contract-management` |
 | `delivery-management-framework` | 40 | 0 | 10 | `L3-business/components/delivery-management-framework` |
@@ -370,7 +368,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 ## L2 / L3 / L4 已建设完成组件（自动登记）
 
 > 由 `gen_asset_inventory.discover_completed_components()` 全盘扫描，
-> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 42 个。
+> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 41 个。
 
 ### L2 基础设施
 
@@ -383,7 +381,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | credentials | — | `L2-infra/components/credentials` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | delivery-quality：交付质量反馈闭环 | 把 Rex 对交付结果的**问题反馈/纠正**默认沉淀为结构化记录，定期聚类 review，把复发/高危问题反哺到... | `L2-infra/components/delivery-quality` | README+code |
 | knowledge-base — 通用知识库组件 | 模型不可用时自动降级为 MockEmbedder，不影响系统可用性。 | `L2-infra/components/knowledge-base` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
-| logs | 当前为骨架阶段，尚无实际代码。目录结构预留给后续日志聚合、轮转、查询功能。 | `L2-infra/components/logs` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| logs | ✅ 已实现（聚合器核心可用）；日志查询 DSL、轮转策略为演进方向，尚未实现。 | `L2-infra/components/logs` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | maintenance | 返回退出码 0 = 健康，非 0 = 存在问题。 | `L2-infra/components/maintenance` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | memory-embedding — 内存嵌入计算组件 | 模型不可用时自动降级到 MockEmbedder（基于文本哈希的伪向量），保证系统可用但检索质量下降。 | `L2-infra/components/memory-embedding` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | model-scheduling — 智能模型调度组件 | 综合模型/供应商调度系统。参考 9router / OpenRouter / Portkey 业界最佳实践。 | `L2-infra/components/model-scheduling` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md`, `VERIFICATION-v1.1.md` |
@@ -404,7 +402,6 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 
 | 名称 | 描述 | 路径 | 完成证据 |
 |---|---|---|---|
-| cissp-learning | — | `L3-business/components/cissp-learning` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | contract-approval | 1. 合同扫描件 → OCR 识别 | `L3-business/components/contract-approval` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | contract-management | — | `L3-business/components/contract-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | delivery-management-framework | — | `L3-business/components/delivery-management-framework` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
