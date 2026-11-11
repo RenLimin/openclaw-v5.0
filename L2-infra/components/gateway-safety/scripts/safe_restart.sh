@@ -60,4 +60,4 @@ case $guard_rc in
 esac
 
 echo "=== restarting gateway ==="
-exec openclaw gateway restart "${args[@]}"
+exec openclaw gateway restart ${args[@]+"${args[@]}"}

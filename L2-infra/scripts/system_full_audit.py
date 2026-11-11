@@ -41,8 +41,13 @@ MODEL_SCHED_ERR = WORKSPACE / "L2-infra" / "components" / "model-scheduling" / "
 
 # 已归档会话删除（2026-11-10 新增）
 AGENT_SESSIONS_DIR = Path.home() / ".openclaw" / "agents" / "main" / "sessions"
+AGENT_DB = Path.home() / ".openclaw" / "agents" / "main" / "agent" / "openclaw-agent.sqlite"
 PURGE_LOG_DIR = WORKSPACE / "memory" / "session-purge-logs"
 MAIN_SESSION_KEY = "agent:main:main"
+
+# 仅清除「人工手动归档」：archivedAt 非空且 archiveReason == "manual"。
+# 系统自动留存（age-retention / stale-dashboard / active-session-cap 等）不在清除范围。
+MANUAL_ARCHIVE_REASON = "manual"
 
 # 已建资产自动登记（2026-11-10 新增）
 ASSET_INVENTORY_DOC = DOCS_DIR / "01-asset-inventory.md"
@@ -497,13 +502,13 @@ def audit_subagent_sessions() -> list[dict]:
 # 已归档会话：检测 / 删除留痕 / 恢复辅助（第 10 节，2026-11-10）
 # ---------------------------------------------------------------------------
 
-def _gateway_list_sessions(agent_id: str = "main", limit: int = 500) -> dict:
-    """通过 gateway RPC 列出会话（含已归档）。
+def _gateway_list_sessions(agent_id: str = "main", limit: int = 500, archived="all") -> dict:
+    """通过 gateway RPC 列出会话。
 
     sessions.list 的 archived 参数：true=仅归档 / false=仅活行 / "all"=全部。
     CLI 输出首行带 'Gateway call:' 前缀，取第一个 '{' 之后解析。
     """
-    params = json.dumps({"agentId": agent_id, "archived": "all", "limit": limit})
+    params = json.dumps({"agentId": agent_id, "archived": archived, "limit": limit})
     rc, out, err = run(
         f"openclaw gateway call sessions.list --params {shlex.quote(params)}",
         timeout=30,
@@ -514,15 +519,60 @@ def _gateway_list_sessions(agent_id: str = "main", limit: int = 500) -> dict:
     return json.loads(out[brace:])
 
 
+def _manual_archive_reason_by_key() -> dict[str, str]:
+    """直接读 agent SQLite 的 entry_json，返回 {session_key: archiveReason}。
+
+    sessions.list RPC 不回传 archiveReason，故从库内权威字段补齐。
+    """
+    import sqlite3 as _sqlite3
+
+    reasons: dict[str, str] = {}
+    if not AGENT_DB.exists():
+        return reasons
+    try:
+        conn = _sqlite3.connect(str(AGENT_DB))
+        try:
+            rows = conn.execute(
+                "SELECT session_key, entry_json FROM session_nodes "
+                "WHERE json_extract(entry_json, '$.archivedAt') IS NOT NULL"
+            ).fetchall()
+        finally:
+            conn.close()
+    except Exception:
+        return reasons
+    for key, entry_json in rows:
+        try:
+            reason = json.loads(entry_json).get("archiveReason")
+        except (json.JSONDecodeError, TypeError):
+            reason = None
+        if reason:
+            reasons[key] = reason
+    return reasons
+
+
 def _archived_sessions(agent_id: str = "main") -> list[dict]:
-    """返回已归档（archivedAt 非空）会话。"""
-    data = _gateway_list_sessions(agent_id)
+    """返回【人工手动归档】会话：archivedAt 非空 且 archiveReason == manual。
+
+    红线（2026-11-11 加固）：未手动归档（archivedAt 为空）的会话绝不返回；
+    系统自动留存（非 manual reason）也不返回，避免误删。
+    """
+    data = _gateway_list_sessions(agent_id, archived="all")
     sessions = data.get("sessions", [])
-    return [s for s in sessions if s.get("archivedAt")]
+    reasons = _manual_archive_reason_by_key()
+    out = []
+    for s in sessions:
+        key = s.get("key", "")
+        if not s.get("archivedAt"):
+            continue  # 未归档，永久排除
+        if reasons.get(key) != MANUAL_ARCHIVE_REASON:
+            continue  # 非人工手动归档（系统留存等），排除
+        s["archiveReason"] = MANUAL_ARCHIVE_REASON
+        out.append(s)
+    return out
 
 
 def audit_archived_sessions() -> list[dict]:
-    """10. 已归档会话检测 — 识别可安全删除（释放名称）的已归档会话。"""
+    """10. 已归档会话检测 — 仅识别人工手动归档（可安全删除、释放名称）的会话。"""
     results = []
     try:
         archived = _archived_sessions()
@@ -531,18 +581,19 @@ def audit_archived_sessions() -> list[dict]:
         return results
 
     if not archived:
-        results.append(check("archived sessions", "✅", "无已归档会话"))
+        results.append(check("archived sessions", "✅", "无人工手动归档会话（未归档/系统留存均不清除）"))
         return results
 
     results.append(check(
         "archived sessions", "⚠️",
-        f"{len(archived)} 个已归档会话可用 --purge-archived 删除（删除后名称可复用）"
+        f"{len(archived)} 个人工手动归档会话可用 --purge-archived 删除（删除后名称可复用）"
     ))
     for s in archived:
         label = s.get("label") or "(未命名)"
         results.append(check(
-            f"  archived · {label}", "📦",
-            f"key={s.get('key')} | status={s.get('status') or 'none'} | sessionId={s.get('sessionId')}"
+            f"  manual-archived · {label}", "📦",
+            f"key={s.get('key')} | reason={s.get('archiveReason')} | "
+            f"status={s.get('status') or 'none'} | sessionId={s.get('sessionId')}"
         ))
     return results
 
