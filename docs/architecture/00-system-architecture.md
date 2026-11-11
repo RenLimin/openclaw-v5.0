@@ -15,7 +15,7 @@
 | 文档版本 | 6.0 (2026-10-30 — ADR-035：Agent Prompt 规则体系（P0-P3 纵切层）与应答契约治理，新增 §4 Prompt 治理行 + §8 ADR-035 + §12 变更) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
-| 决策状态 | 5 层架构已锁定(ADR-012); 35 份 ADR accepted; L3 全部资产 5 件套完成; L4 七个组件已上线; Prompt 规则体系 P0-P3 纵切层已定(ADR-035) |
+| 决策状态 | 5 层架构已锁定(ADR-012); 32 份 ADR accepted; L3 全部资产 5 件套完成; L4 组件已上线（见 §4 资产清单）; Prompt 规则体系 P0-P3 纵切层已定(ADR-035) |
 | 配套文档 | `../knowledge-base/README.md` |
 | 待办 | 详见演进路线各阶段（L3 已完成，知识库自建系统 0/7 触发条件暂缓） |
 
@@ -694,8 +694,8 @@ L1 层除适配层外，还包含以下自建组件。这些组件**仅依赖 L1
 | CISSP 学习系统(v1) | `L4-proprietary/components/.deprecated/cissp-learning/` | 已被 cissp-trainer(v2) 替代 |
 
 
-**L2 组件建设状态**: **19 个 L2 基础设施组件设计齐备**,其中 19 个已上线,0 个设计态(会话任务编排已并入会话隔离与共享组件,不再单独计数)。
-总计 `docs/architecture/components/` 目录下有 **26 个 DESIGN.md**（含 L3/L4 组件设计）。
+**L2 组件建设状态**: **27 个 L2 基础设施组件目录**,其中已建设完成（含 OPERATIONS/VERIFICATION 证据或 README+实质代码）以《系统资产清单》自动登记为准,设计/骨架态组件在下表标注（会话任务编排已并入会话隔离与共享组件）。
+全库 DESIGN*.md 共 **31 份**，分布于 L2/L3/L4 各组件目录；`docs/architecture/components/` 目录下为 **6 份浏览器自动化（browser-automation）专项设计文档**。
 
 ### 新增 L2 基础设施组件（2026-09-11 纳入）
 
@@ -821,7 +821,7 @@ L4 专有业务
 | **流程扩展** | 继承 L3 流程,插入专有步骤 | `checkout` L3 + `risk_assessment` L4 |
 | **接口扩展** | L4 暴露专有 API,不影响 L3 | `/api/proprietary/*` |
 
-**当前**: ✅ 已上线 — 7 个 L4 实例全部完成
+**当前**: ✅ 已上线 — 10 个 L4 组件目录（已建设完成情况以《系统资产清单》自动登记为准）
 
 **已建设组件** (通用框架 → 专有实例):
 
@@ -832,7 +832,7 @@ L4 专有业务
 | SCA-001 (合同审批框架) | SCA-L4 (销售合同审批) | 通用框架: 分级审批流程 + 风险扫描 + 合同生成; 实例: 对应销售合同审批规则 | ADR-018 (框架) | `L3-business/skills/contract-approval/` (框架) | ✅ 已上线 |
 | FIN-L3 (家庭理财框架) | FIN-L4 (Rex 家庭理财) | 通用框架: 账户/贷款/保险/投资/利率/建议; 实例: Rex 家庭理财系统 (CLI + Web UI + 测试数据) | ADR-026 (框架) / ADR-027 (实例) | `docs/architecture/components/personal-finance/` (框架) | ✅ 已上线 |
 
-> **BDMS 详情**: 109 个 Python 文件，30079 行代码。9 个业务模块（delivery_report/revenue/dashboard/master_data/contract_management/profit_management/project_management/integration/settings）+ Web 层（FastAPI + Jinja + 9 模板）+ 审批流程 + 调度监控。2026-11 按定稿原型完成前端重建（P1–P4）。
+> **BDMS 详情**: 197 个 Python 文件，45683 行代码（排除 backups）。9 个业务模块（delivery_report/revenue/dashboard/master_data/contract_management/profit_management/project_management/integration/settings）+ Web 层（FastAPI + Jinja + 10 模板）+ 审批流程 + 调度监控。2026-11 按定稿原型完成前端重建（P1–P4）。
 
 > **与 L2 协同**: BDMS(L4) 调用持久化适配(L2, SQLite) + Office 文档生成(L2, openpyxl) + 知识库工具链(L2)。
 
