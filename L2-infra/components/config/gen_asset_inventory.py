@@ -354,7 +354,7 @@ def render_cron(data: dict) -> list[str]:
         lines += [UNAVAILABLE, ""]
         return lines
 
-    jobs = payload.get("jobs", [])
+    jobs = sorted(payload.get("jobs", []), key=lambda j: j.get("displayName") or j.get("name", ""))
     if not jobs:
         lines += ["_(无调度任务)_", ""]
         return lines
@@ -788,14 +788,24 @@ def main() -> int:
         sys.stdout.write(content)
         return 0
 
-    def strip_timestamp(text: str) -> str:
-        """比较时忽略时间戳行，避免每次都判定为漂移。"""
+    def strip_transient(text: str) -> str:
+        """比较时忽略瞬时状态行：生成时间戳 + git HEAD/Commit 数。
+
+        这些值每次提交都变，不属于资产实质内容；忽略后避免
+        “提交后首次检测必报漂移、文档反复变脏”的噪音。
+        """
+        transient_markers = (
+            "最后生成：",
+            "| HEAD |",
+            "| Commit 数 |",
+        )
         return "\n".join(
-            line for line in text.splitlines() if not line.startswith("最后生成：")
+            line for line in text.splitlines()
+            if not line.startswith(transient_markers)
         )
 
     old = OUTPUT_PATH.read_text(encoding="utf-8") if OUTPUT_PATH.exists() else ""
-    changed = strip_timestamp(old) != strip_timestamp(content)
+    changed = strip_transient(old) != strip_transient(content)
 
     if args.check:
         if changed:
