@@ -413,3 +413,16 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Never 因 hook 是「系统托管文件」就默认把它 auto-add 的内容当本任务内容——提交后必用
   `git show --stat HEAD` 核对实际文件清单（`diff --cached` 在临时 index 口径下可能误导）。
 <!-- observed: 2026-11-10 | status: active -->
+
+## 会话清理红线（事故 2026-11-11，FB：未归档空闲会话被批量剪枝）
+- **手动归档的唯一权威信号 = `archivedAt` 非空**（通常伴 `archiveReason=manual`/`stale-dashboard`）。
+  `status=done/failed` 只是「一轮跑完待输入」的**正常空闲态，绝不是可清除信号**。
+- **真凶**：内置 `session.maintenance` 默认 `mode=enforce` + 历史命令
+  `openclaw sessions cleanup --enforce --all-agents`，会按年龄自动剪枝**未归档**会话。
+  合法模式仅 `enforce|warn`（无 report/off）；已永久改为 **`warn`**（只警告、不自动剪枝，源码
+  `if (maintenance.mode !== "enforce") return`）。
+- Always 任何会话清理脚本：未归档（`archivedAt` 为空）一律不删，只删显式归档项。
+- launchd 跑 CLI 脚本必须先解析 `openclaw` 绝对路径（`shutil.which` 兜底），否则 PATH 缺失静默崩溃。
+- OpenClaw 无官方 undelete：恢复 = 从删除前快照把 `session_nodes` + transcript 等 10 张
+  实体表精确合并回活库（不整库还原），新行 `entry_valid=0` 需经 canonical 校验后置 1。
+<!-- observed: 2026-11-11 | status: active -->

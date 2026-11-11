@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""会话清理脚本 — 定期清理过期的子会话和已完成任务。
+"""会话清理脚本 — 定期清理过期且已归档的子会话。
 
-策略:
-- cron-run: 超过 6 小时自动清理（由 cron.sessionRetention 控制）
-- subagent: 已完成且超过 6 小时自动删除
-- dashboard: 已完成且超过 6 小时自动删除
+红线（2026-11-11 事故修复）：
+- ★ 未手动归档（archivedAt 为空）的会话一律不删，无论状态/年龄。
+  done/failed 只是「一轮跑完待输入」的空闲态，不是可清除信号。
+- 只有 archivedAt 非空（用户/系统显式归档）且超过阈值才清除。
 - 主会话、wecom 群会话、cron 主任务: 保留不删
 
 用法:
@@ -15,12 +15,18 @@
 
 import argparse
 import json
+import os
+import shutil
 import subprocess
 import sys
 from datetime import datetime
 
+# launchd 下 PATH 可能不含 openclaw；解析一次绝对路径兜底。
+_OPENCLAW = shutil.which("openclaw") or "/opt/homebrew/bin/openclaw"
+
 
 def run(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
+    cmd = [_OPENCLAW if c == "openclaw" else c for c in cmd]
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
@@ -65,13 +71,18 @@ def should_delete(s: dict, hours: float) -> tuple[bool, str]:
     if kind == "cron-run":
         return False, "由 cron.sessionRetention 管理"
 
-    # subagent 和 dashboard：已完成且超过过期时间才删
+    # subagent 和 dashboard：
+    # ★ 红线（2026-11-11 事故修复）：未手动归档（archivedAt 为空）的会话一律不删。
+    #   done/failed 只是「一轮跑完待输入」的空闲态，不等于可清除。
+    #   只有 archivedAt 非空（用户/系统显式归档）且超过阈值，才允许清除。
     if kind in ("subagent", "dashboard"):
         if status == "running":
             return False, "运行中"
+        if not s.get("archivedAt"):
+            return False, "未手动归档（archivedAt 为空），永久保留"
         if age_hours >= hours:
-            return True, f"已完成 {age_hours:.1f}h，超过 {hours}h 阈值"
-        return False, f"仅 {age_hours:.1f}h，未到阈值"
+            return True, f"已归档且 {age_hours:.1f}h，超过 {hours}h 阈值"
+        return False, f"已归档但仅 {age_hours:.1f}h，未到阈值"
 
     return False, f"未知类型: {kind}"
 

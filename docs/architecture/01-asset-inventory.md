@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-11 11:04 UTC+08:00
+最后生成：2026-11-11 13:25 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -23,13 +23,14 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 72 个（启用 8） · bundled 64 · config 1 · global 7
+**总计** 72 个（启用 9） · bundled 64 · config 1 · global 7
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
 | ID | 来源 | 提供的工具 | 提供的能力 |
 |---|---|---|---|
 | `context-guardian` | global | — | — |
+| `deepseek` | global | — | model-provider: deepseek |
 | `llama-cpp` | global | — | model-provider: llama-cpp |
 | `longcat` | global | — | model-provider: longcat |
 | `memory-core` | bundled | `intent`, `memory_get`, `memory_search` | — |
@@ -279,8 +280,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `64066ff` |
-| Commit 数 | 653 |
+| HEAD | `ee53bf7` |
+| Commit 数 | 654 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
