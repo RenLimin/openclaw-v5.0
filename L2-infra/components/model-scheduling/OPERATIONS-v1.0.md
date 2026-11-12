@@ -92,3 +92,36 @@ python3 L2-infra/components/scheduler-guard/audit.py
 
 # 预期: 总计 17 | 已调度 16 | 未调度 0 | 不一致 0
 ```
+
+### 长回合请求失败 / "malformed tool call"（2026-11-12）
+
+- **症状**: 长回合（>120s）报 `Provider returned an incomplete or malformed tool call`，日志出现 `流式传输中断: ... after N bytes`
+- **根因**: 流式请求误用 `aiohttp.ClientTimeout(total=120)` 总时长超时，长回合 SSE 输出超 120s 被 proxy 主动砍断 → gateway 收到半截 tool call
+- **已修复**: 流式请求改用 `sock_read=120` 空闲超时（总时长不设限）；非流式 `total=300`
+- **排查**: 若仍出现，先确认 proxy 进程是否已重启加载新代码（`ps -o lstart=,pid= -p <pid>` 启动时间应晚于修复时间）
+- **验证命令**:
+
+```bash
+# 确认代码中已是 sock_read（非 total=120）
+grep -n "ClientTimeout" L2-infra/components/model-scheduling/scripts/proxy.py
+# 预期: total=None, sock_connect=30, sock_read=120
+
+# 运行超时回归测试
+python3 -m pytest L2-infra/components/model-scheduling/tests/test_stream_timeout.py -v
+```
+
+### proxy 重启（加载代码/配置变更）
+
+```bash
+# 查看当前 pid
+pgrep -f "proxy.py --host 127.0.0.1 --port 3000"
+
+# kickstart 重启（LaunchAgent KeepAlive 会自动拉起）
+launchctl kickstart -k gui/$(id -u)/ai.openclaw.model-scheduling
+
+# 确认新 pid + 探活结果
+tail -10 L2-infra/components/model-scheduling/logs/proxy.stderr.log
+# 预期: 探活完成: N/M healthy + 代理服务已启动: 127.0.0.1:3000
+```
+
+> ⚠️ 注意: 改 `config/routing.yaml` / `models.yaml` / `providers.yaml` 是**热更新**（无需重启）；改 `scripts/proxy.py` 代码才需要重启。

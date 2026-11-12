@@ -234,6 +234,46 @@ Python dict 遍历顺序不保证稳定，排序 key 必须包含唯一字段（
 
 ---
 
+## 2026-11-12: 长回合流式超时根因修复 + chat 路由链 longCat 提首位
+
+**背景**: Rex 报告「任务被会话错误 ⚠️ Agent run failed (model: model-scheduling/auto) 中断，且无法恢复执行」。11-11 15:11 至 11-12 11:25 共 **8 次**失败，均发生在 360-430 秒的长回合。
+
+**根因（2 处，独立但叠加）**:
+
+1. **流式请求 `total=120` 总时长超时（系统性，影响所有 provider）** ★★★
+   - `proxy.py _forward_once` 对 stream 请求用 `aiohttp.ClientTimeout(total=120)`
+   - 长回合（247k ctx → 700KB+ SSE）流式输出超过 120s 即被 proxy 主动砍断
+   - gateway 收到半截 SSE → tool call 解析失败 → 报 `Provider returned an incomplete or malformed tool call`
+   - **时间戳精确吻合 120.0s**：
+     - 11:34:36→11:36:36（670KB）
+     - 11:36:39→11:38:39（724KB）
+     - 11:46:18→11:46:29（752KB，longCat）
+   - **所有 provider 均触发**（longCat/doubao/multimodal），非单一模型问题
+
+2. **doubao 长回合产出畸形 tool call（单一模型）**
+   - `coding-plan-2/doubao-seed-2-1-turbo` 在长上下文 + 多工具调用回合产出不完整 tool call
+   - gateway 直接判 run failed，**不触发模型 fallback**（只走 transient retry）
+   - 叠加 `coding-plan` 两个 provider 429 配额耗尽（2026-11-22 重置）
+
+**变更**:
+
+1. **`scripts/proxy.py` `_forward_once`**: 流式请求改用 `ClientTimeout(total=None, sock_connect=30, sock_read=120)` —— 总时长不设限，仅 120s 无数据才判死；非流式请求 `total=300`。
+2. **`config/routing.yaml`**: chat 链 `longCat/LongCat-2.0`（1M ctx，兜底能力强）提至首位，doubao/deepseek 降为 fallback。
+3. **新增 `tests/test_stream_timeout.py`（4 项）**: 锁定流式无 total 上限 / sock_read=120 / 非流式 total=300 / 无 finish 标志报 502。
+
+**验证**:
+- proxy 重启（pid 50126→6087），探活 2/4 healthy（coding-plan-2 + longCat）
+- 11:54 重启后 **0 次**新流式中断（修复前 11:34-11:46 共 3 次）
+- 全量测试 **48 passed**（原 44 + 新增 4）
+- 真实请求验证: chat ✅ / coding ✅，均路由 longCat
+
+**教训**:
+- **`total` 超时会精确砍断长流式输出**：SSE 流式响应是持续输出的，用「总时长」做超时会误杀正常的长回合；流式必须用 `sock_read` 空闲超时（仅 N 秒无数据才判死），总时长不设限
+- **时间戳是最直接的根因证据**：11:34:36→11:36:36 恰好 120.0s，与代码 `total=120` 精确吻合，无需猜测
+- **路由修复只能止血，超时才是系统性根因**：只把 longCat 提前仍会被 120s 超时砍断，必须同时修超时
+
+---
+
 ## 2026-11-10: 回退链结构性为空 + 429 语义混为一谈修复
 
 **背景**: Rex 报告「已新增 coding-plan-2 API key 且优先使用，余额用尽应自动切换，但仍报 `You have exceeded the monthly usage quota`」。人工切到 longcat 后恢复。

@@ -78,3 +78,22 @@
 - multimodal 360k、900k 链均含 longCat（修复前为空 → 结构性故障）
 - 探活 429 正确分类：cp1 配额耗尽 → exhausted（非 degraded）
 - proxy 重启加载新代码，`/health` 正常
+
+---
+
+## v1.3 增补（2026-11-12）
+
+**背景**: 长回合流式输出被 proxy `total=120` 超时砍断 → gateway 收到半截 tool call → 报 `Provider returned an incomplete or malformed tool call`（8 次失败，均 360-430s 长回合）。详见 CHANGELOG 2026-11-12 条目。
+
+**新增测试**: `tests/test_stream_timeout.py`（4 项）
+
+| 测试类 | 覆盖点 | 数量 |
+|---|---|---|
+| `TestStreamTimeoutConfig` | 流式无 total 上限 / sock_read=120 / 非流式 total=300 / 无 finish 报 502 | 4 |
+
+**全量测试**: 48 passed（原 44 + 新增 4）
+
+**端到端验证**:
+- proxy 重启（pid 50126→6087），探活 2/4 healthy
+- 11:54 重启后 0 次新流式中断（修复前 11:34-11:46 共 3 次）
+- 真实请求 chat ✅ / coding ✅，均路由 longCat（路由链修复后）
