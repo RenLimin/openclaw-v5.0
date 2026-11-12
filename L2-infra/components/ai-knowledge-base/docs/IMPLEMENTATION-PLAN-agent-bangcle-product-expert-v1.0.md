@@ -58,9 +58,9 @@ agents/bangcle-product-expert/
 
 ### 2.2 验收标准
 
-- [ ] SYSTEM_PROMPT.md 完整可用，包含：角色/工作流程/约束规则/来源引用格式
-- [ ] TOOLS.md 列出全部 MCP 工具及参数
-- [ ] config.json 包含实例 code、MCP 端点、top_k 等参数
+- [x] SYSTEM_PROMPT.md 完整可用，包含：角色/工作流程/约束规则/来源引用格式
+- [x] TOOLS.md 列出全部 MCP 工具及参数
+- [x] config.json 包含实例 code、MCP 端点、top_k 等参数
 - [ ] 产品知识样例 ≥ 3 篇，格式为 markdown，含结构化章节
 
 ---
@@ -77,9 +77,9 @@ agents/bangcle-product-expert/
 
 ### 3.2 验收标准
 
-- [ ] 实例创建成功，domain_id 返回
-- [ ] 文档导入成功，实体/文档/切片入库
-- [ ] 查询可返回带来源引用的结果
+- [x] 实例创建成功，domain_id 返回
+- [x] 文档导入成功，实体/文档/切片入库
+- [x] 查询可返回带来源引用的结果
 
 ---
 
@@ -96,9 +96,9 @@ agents/bangcle-product-expert/
 ### 4.2 验收标准
 
 - [ ] E2E 脚本全部通过
-- [ ] 查询结果包含来源引用
-- [ ] 反馈提交成功
-- [ ] 无未处理异常
+- [x] 查询结果包含来源引用
+- [x] 反馈提交成功
+- [x] 无未处理异常
 
 ---
 

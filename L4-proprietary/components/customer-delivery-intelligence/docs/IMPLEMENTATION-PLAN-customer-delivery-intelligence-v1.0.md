@@ -125,12 +125,12 @@
 ## 7. 验收清单（交付时逐项勾）
 
 - [ ] Phase 0 骨架：U2 集成测试全通过
-- [ ] Phase 1 取数+解析：建行合同可解析到 ContractRegister，100% 字段有 sourceUri
-- [ ] Phase 2 汇总成文：六类产物 schema 全通过，数字自洽，无源项=0
+- [x] Phase 1 取数+解析：建行合同可解析到 ContractRegister，100% 字段有 sourceUri
+- [x] Phase 2 汇总成文：六类产物 schema 全通过，数字自洽，无源项=0
 - [ ] Phase 3 渲染+HITL：docx/PPT 排版正确，两道闸可正常交互
 - [ ] E2E-01 建行全链路通过
 - [ ] E2E-02 换客户结构一致
 - [ ] E2E-03 数据来源铁律验证通过
 - [ ] 黄金基准冻结 v1.0
 - [ ] SKILL.md 可被 L4 专家入口调用
-- [ ] 文档齐全（PRD/OUTLINE/DETAIL/VERIFY/OPS/PLAN）
+- [x] 文档齐全（PRD/OUTLINE/DETAIL/VERIFY/OPS/PLAN）
