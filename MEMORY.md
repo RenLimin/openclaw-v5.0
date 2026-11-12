@@ -41,6 +41,7 @@
 ## 环境约束（实测）
 
 - **Gateway cron 环境 `python3` 解析到系统 Python 3.9（CommandLineTools，x86_64 numpy 不兼容 arm64）**；command payload 必须用绝对路径 `/opt/homebrew/opt/python@3.14/bin/python3.14`，否则 ImportError 退出码 2。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+- **OA 项目实施管理三流程（2026-11-12 侦察固化）**：POC→「PoC需求申请流程」(编号 PoC-YYYYMMDD-NNNN)；提前实施→「提前实施需求申请流程」(TqSS-…)；签约项目→「销售合同下单流程（数据审核触发）」(XD…)。SPA static4form 页 + storage_state 只读；端点 `loadForm`/`detailData`/`getRequestLogList`（JSON 藏 text/plain）。固化见 `docs/knowledge-base/oa-project-implementation-workflows.md`。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 - **OA 对账数据链（P4.4，实测打通）**：`contracts.oa_billid` → CubeClient 卡片主字段「合同审批流程→」= requestid（billid 15134 → requestid 882663）→ ApprovalLogReader 审批链。cron job `oa-reconcile-daily (P4.4)` 每日 09:30 Asia/Shanghai 只读对账，落盘 `memory/oa-reconcile-latest.json`（gitignored）。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 - **泛微 OA（oa.bangcle.com，e-cology 9）：当前仅具备普通账号登录权限，无开放平台应用凭证、无 WorkflowService/管理权限。** <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 - 含义：合同桥只能走「登录会话 cookie + 浏览器/SPA 内部接口」路线（cube.py 已是此模式，非 app token）；无法走 REST apply token / WebService。
