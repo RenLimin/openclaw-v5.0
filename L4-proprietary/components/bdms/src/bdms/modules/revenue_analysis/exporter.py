@@ -30,7 +30,8 @@ from .config import (
     SHEET_BUDGET, SHEET_DRAFT, SHEET_SUMMARY, SHEET_SUMMARY_ANALYSIS,
     SHEET_TREND, SHEET_DIFF, SHEET_RESTRUCTURE, SHEET_LEGEND,
     SHEET_MONTHLY_RECORD, SHEET_PERF_RECORD,
-    BUDGET_COLUMNS, DRAFT_COLUMNS, COMPUTED_COLUMNS, AMOUNT_UNIT_TREND,
+    BUDGET_COLUMNS, BUDGET_COLUMNS_202606, DRAFT_COLUMNS, COMPUTED_COLUMNS,
+    LEDGER_HEADERS, AMOUNT_UNIT_TREND,
 )
 
 # ─── 样式常量（§10）───
@@ -137,14 +138,24 @@ class RevenueAnalysisExporter:
         ws.freeze_panes = "D4" if sheet in (SHEET_BUDGET, SHEET_DRAFT) else "A2"
 
     def _header_map(self, sheet: str) -> dict[str, str]:
-        """列字母 → 中文表头（预算执行表/底稿专用映射）。"""
+        """列字母 → 中文表头（预算执行表/底稿专用映射）。
+
+        202606 投影行含扩展键（C_calib/Q_adj/AV..CO），用 202606 映射补中文名。
+        """
         if sheet == SHEET_BUDGET:
             m = dict(BUDGET_COLUMNS)
             for c in COMPUTED_COLUMNS:
-                m.setdefault(c, c)  # 计算列表头名与列字母一致，保留
+                m.setdefault(c, c)
+            # 扩展键 → 202606 中文表头
+            for key, src in (("C_calib", "C"), ("Q_adj", "Q")):
+                m.setdefault(key, BUDGET_COLUMNS_202606.get(src, key))
+            for c in BUDGET_COLUMNS_202606:
+                m.setdefault(c, BUDGET_COLUMNS_202606[c])
             return m
         if sheet == SHEET_DRAFT:
             return dict(DRAFT_COLUMNS)
+        if sheet in LEDGER_HEADERS:
+            return {str(i): h for i, h in enumerate(LEDGER_HEADERS[sheet])}
         return {}
 
     def _number_format(self, col: str) -> Optional[str]:
@@ -160,6 +171,18 @@ class RevenueAnalysisExporter:
             return FMT_INT
         return None
 
+    # ─── 单位转换（内部元 → 展示万；台账冻结值本就为万，不透传转换）───
+
+    @staticmethod
+    def _to_wan(v: Any) -> Any:
+        """元 → 万元（2 位小数）。None/空/非数值原样。"""
+        if v in (None, ""):
+            return v
+        try:
+            return round(float(v) / 10000, 2)
+        except (TypeError, ValueError):
+            return v
+
     # ─── 汇总 ───
 
     def _write_summary(self, wb: Workbook, period: str, conn: Any) -> None:
@@ -174,6 +197,9 @@ class RevenueAnalysisExporter:
                 if i == 1:
                     self._header_cell(ws, i, j + 1, SUMMARY_HEADERS[j] or "")
                 else:
+                    # 金额列（内部元）→ 万元展示；完成率/校验/文本列原样
+                    if i >= 4 and j in (2, 3, 4, 6, 7, 9, 10):
+                        v = self._to_wan(v)
                     fmt = FMT_RATE if j in (5, 8, 11) else FMT_AMOUNT
                     self._body_cell(ws, i, j + 1, v, fmt if isinstance(v, (int, float)) else None)
         ws.freeze_panes = "B4"
@@ -198,6 +224,8 @@ class RevenueAnalysisExporter:
         for i, r in enumerate(rows, start=2):
             for j in range(len(headers)):
                 v = r.get(str(j))
+                if j in (2, 3, 4, 6, 7, 9, 10):
+                    v = self._to_wan(v)
                 fmt = FMT_RATE if j in (5, 8, 11) else FMT_AMOUNT
                 self._body_cell(ws, i, j + 1, v,
                                 fmt if isinstance(v, (int, float)) else None)
