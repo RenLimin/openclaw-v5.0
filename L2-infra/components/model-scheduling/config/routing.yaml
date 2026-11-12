@@ -47,11 +47,11 @@ task_routing:
   chat:
     description: 日常对话、简单问答、状态查询
     fallback_chain:
+    - longCat/LongCat-2.0
     - coding-plan-2/doubao-seed-2-1-turbo
     - coding-plan-2/deepseek-v4-flash-ga-260731
     - coding-plan/doubao-seed-2-1-turbo
     - coding-plan/deepseek-v4-flash-ga-260731
-    - longCat/LongCat-2.0
     preferred_context: 100000
   coding:
     description: 代码生成、调试、重构、代码审查
