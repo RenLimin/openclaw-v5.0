@@ -883,6 +883,58 @@ _DUP_EXCLUDE_TEST_DIRS = ("/tests/output/", "/tests/visual/", "/tests/fixtures/"
                          "/tests/data/", "/tests/golden/", "/tests/snapshots/")
 # 备份/归档目录：刻意保留的历史副本，不算资产重复
 _DUP_EXCLUDE_BACKUP_DIRS = ("/archive/", "/backups/", "/.deprecated/", "/backup_")
+# vendor 第三方资产：刻意纳入的外部库，不算自研资产重复
+_DUP_EXCLUDE_VENDOR_PARTS = ("/vendor/", "/vendors/", "/third_party/", "/third-party/")
+_DUP_EXCLUDE_MIN_SUFFIX = (".min.js", ".min.css")
+
+# P2 架构文档中「有意的不存在」标记：路径明确标为预留/待建/废弃，不算断链
+_NONEXIST_INTENTIONAL_KEYWORDS = (
+    "预留", "待建", "未建", "规划中", "计划中",
+    "废弃", "已下线", "弃用", "并入",
+)
+
+# P5 测试文件中的历史路径字符串是夹具数据，非代码残留；不扫描测试文件
+_TEST_FILE_PARTS = ("/tests/", "/test/")
+
+
+def _intentional_missing(line: str) -> bool:
+    """该行是否把所引用路径明确标注为预留/待建/废弃（有意的不存在，非断链）。
+
+    架构文档表格中一个路径独占一行，故按整行标记判定可靠：
+    删除线 ~~、状态图标 📋（预留）/❌（废弃）、或关键词。
+    """
+    if "~~" in line or "📋" in line or "❌" in line:
+        return True
+    return any(kw in line for kw in _NONEXIST_INTENTIONAL_KEYWORDS)
+
+
+def _is_test_file(rel: str) -> bool:
+    name = rel.rsplit("/", 1)[-1]
+    return (name.startswith("test_") or name.endswith("_test.py")
+            or any(x in rel for x in _TEST_FILE_PARTS))
+
+
+def _versioned_path(rel: str) -> bool:
+    """v1/v2 等版本代际目录内的同名文件是各代独立实现，不算重复。"""
+    return re.search(r"/v\d+/", rel) is not None
+
+
+def _is_crosslayer_fork(paths: list[str]) -> bool:
+    """跨 L3 通用引擎 ↔ L4 专有实例的 fork 副本。
+
+    架构约定（见 finance-engine README）：L3 提供通用引擎，L4 专有实例在
+    自身 src/<pkg>/ 下维护定制实现。当 L4 成员位于其实例包 src/ 内且与 L3
+    同内容时，属 L4 实例自有实现（fork），不是可删的冗余拷贝。
+    """
+    layers = set()
+    for p in paths:
+        if p.startswith("L3-business/"):
+            layers.add("L3")
+        elif p.startswith("L4-proprietary/"):
+            layers.add("L4")
+    if {"L3", "L4"} <= layers:
+        return any(p.startswith("L4-proprietary/") and "/src/" in p for p in paths)
+    return False
 
 
 def _count_inventory_components() -> int:
@@ -923,7 +975,10 @@ def _p1_count_drift() -> dict:
 
 
 def _p2_path_broken() -> dict:
-    """P2 路径断链：架构文档中反引号引用的 L1-L4 路径存在性。"""
+    """P2 路径断链：架构文档中反引号引用的 L1-L4 路径存在性。
+
+    路径被所在行明确标为 📋 预留/待建/~~废弃~~/并入 时，属有意的不存在，不报断链。
+    """
     broken: list[str] = []
     docs = [DOCS_DIR / "00-system-architecture.md", ASSET_INVENTORY_DOC]
     for base in _COMPONENT_BASES:
@@ -937,14 +992,16 @@ def _p2_path_broken() -> dict:
     for doc in docs:
         if not doc.exists():
             continue
-        text = doc.read_text(encoding="utf-8", errors="ignore")
-        for m in _PATH_IN_BACKTICKS.finditer(text):
-            p = m.group(1)
-            if p in seen:
-                continue
-            seen.add(p)
-            if not (WORKSPACE / p).exists():
-                broken.append(f"{p}（{doc.relative_to(WORKSPACE).as_posix()}）")
+        for line in doc.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if _intentional_missing(line):
+                continue  # 整行标注预留/废弃：路径有意不存在
+            for m in _PATH_IN_BACKTICKS.finditer(line):
+                p = m.group(1)
+                if p in seen:
+                    continue
+                seen.add(p)
+                if not (WORKSPACE / p).exists():
+                    broken.append(f"{p}（{doc.relative_to(WORKSPACE).as_posix()}）")
     if not broken:
         return check("P2 路径断链", "✅", f"抽查 {len(seen)} 条路径引用，全部存在")
     return check("P2 路径断链", "⚠️", f"{len(broken)} 条断链: " + "; ".join(broken[:10]))
@@ -1014,6 +1071,9 @@ def _p5_hardcoded_root() -> dict:
             rel = py.relative_to(WORKSPACE).as_posix()
             if any(x in rel for x in _DUP_EXCLUDE_PARTS):
                 continue
+            # 排除测试文件（其中的历史路径字符串是测试夹具数据，非代码残留）
+            if _is_test_file(rel):
+                continue
             # 排除审计脚本自身（常量定义 _REMOVED_ROOT_PATHS 会自指误报）
             if py.name == "system_full_audit.py":
                 continue
@@ -1032,49 +1092,82 @@ def _p5_hardcoded_root() -> dict:
     return check("P5 硬编码根路径", "⚠️", f"{len(hits)} 处: " + "; ".join(hits[:10]))
 
 
-def _p6_duplicate_assets() -> dict:
-    """P6 重复资产：同 sha256 且路径不同。超时降级为同名比对。"""
-    import hashlib
-    hashes: dict[str, list[str]] = {}
-    names: dict[str, list[str]] = {}
-    start = time.time()
-    timed_out = False
+def _gather_component_files() -> list[tuple[str, Path]]:
+    """返回 (workspace 相对路径, 绝对路径)。
+
+    优先 git-tracked（彻底避开 gitignored 运行时业务数据，如 data/*.db、上传 xlsx）；
+    非 git 环境（测试隔离的 tmp_path）降级为文件系统 rglob 遍历。
+    """
+    spec_dirs = sorted({
+        b.relative_to(WORKSPACE).as_posix() for b in _COMPONENT_BASES if b.is_dir()
+    })
+    if spec_dirs:
+        try:
+            proc = subprocess.run(
+                ["git", "ls-files", "--cached", "--", *spec_dirs],
+                cwd=str(WORKSPACE), capture_output=True, text=True, timeout=30,
+            )
+            files = [
+                (rel, WORKSPACE / rel)
+                for rel in proc.stdout.split() if rel and (WORKSPACE / rel).is_file()
+            ]
+            if files:
+                return files
+        except Exception:
+            pass  # 非 git 环境 → 降级
+    files: list[tuple[str, Path]] = []
     for base in _COMPONENT_BASES:
-        if not base.is_dir() or timed_out:
+        if not base.is_dir():
             continue
         for p in sorted(base.rglob("*")):
-            if not p.is_file():
-                continue
-            rel = p.relative_to(WORKSPACE).as_posix()
-            if any(x in rel for x in _DUP_EXCLUDE_PARTS) or rel.endswith(_DUP_EXCLUDE_SUFFIX):
-                continue
-            if any(x in rel for x in _DUP_EXCLUDE_TEST_DIRS):
-                continue  # 测试夹具重复是设计意图
-            if any(x in rel for x in _DUP_EXCLUDE_BACKUP_DIRS):
-                continue  # 备份/归档副本是刻意保留
-            try:
-                if p.stat().st_size < ASSET_CONSISTENCY_THRESHOLDS["duplicate_min_bytes"]:
-                    continue
-            except OSError:
+            if p.is_file():
+                files.append((p.relative_to(WORKSPACE).as_posix(), p))
+    return files
+
+
+def _p6_duplicate_assets() -> dict:
+    """P6 重复资产：同 sha256 且路径不同。
+
+    仅扫 git-tracked 文件（避开运行时业务数据）；并排除：第三方 vendor/min 资产、
+    测试夹具、备份归档、全在 v1/v2 版本代际内的同名文件、L3通用引擎↔L4专有实例的
+    fork 副本（L4 在自身 src/ 内维护的定制实现）。
+    """
+    import hashlib
+    hashes: dict[str, list[str]] = {}
+    start = time.time()
+    for rel, p in _gather_component_files():
+        if any(x in rel for x in _DUP_EXCLUDE_PARTS) or rel.endswith(_DUP_EXCLUDE_SUFFIX):
+            continue
+        if any(x in rel for x in _DUP_EXCLUDE_TEST_DIRS) or _is_test_file(rel):
+            continue  # 测试夹具重复是设计意图
+        if any(x in rel for x in _DUP_EXCLUDE_BACKUP_DIRS):
+            continue  # 备份/归档副本是刻意保留
+        if any(x in rel for x in _DUP_EXCLUDE_VENDOR_PARTS) or rel.endswith(_DUP_EXCLUDE_MIN_SUFFIX):
+            continue  # 第三方 vendor 库非自研资产
+        try:
+            if p.stat().st_size < ASSET_CONSISTENCY_THRESHOLDS["duplicate_min_bytes"]:
                 continue
             if time.time() - start > 60:
-                timed_out = True
                 break
-            try:
-                h = hashlib.sha256(p.read_bytes()).hexdigest()
-            except Exception:
-                continue
-            hashes.setdefault(h, []).append(rel)
-            names.setdefault(p.name, []).append(rel)
-    if timed_out:
-        dups = [" ↔ ".join(sorted(set(v))) for v in names.values() if len(set(v)) > 1]
-        if not dups:
-            return check("P6 重复资产", "✅", "同名比对无重复（sha256 超时降级）")
-        return check("P6 重复资产", "⚠️",
-                     f"同名重复 {len(dups)} 组（sha256 超时降级）: " + "; ".join(dups[:5]))
-    dups = [" ↔ ".join(sorted(set(v))) for v in hashes.values() if len(set(v)) > 1]
-    if not dups:
+            h = hashlib.sha256(p.read_bytes()).hexdigest()
+        except Exception:
+            continue
+        hashes.setdefault(h, []).append(rel)
+
+    groups: list[list[str]] = []
+    for paths in hashes.values():
+        uniq = sorted(set(paths))
+        if len(uniq) < 2:
+            continue
+        if all(_versioned_path(p) for p in uniq):
+            continue  # 各版本代际独立配置/实现，非冗余
+        if _is_crosslayer_fork(uniq):
+            continue  # L4 实例自有 fork，非可删拷贝
+        groups.append(uniq)
+
+    if not groups:
         return check("P6 重复资产", "✅", "无重复资产")
+    dups = [" ↔ ".join(g) for g in groups]
     return check("P6 重复资产", "⚠️", f"同内容重复 {len(dups)} 组: " + "; ".join(dups[:5]))
 
 

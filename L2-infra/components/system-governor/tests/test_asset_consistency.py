@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -180,6 +181,85 @@ def test_p6_ignores_small_files_and_backup_dirs(tmp_path, monkeypatch):
     bkp.mkdir(parents=True, exist_ok=True)
     (bkp / "dup.txt").write_bytes(b"y" * 2048)
     (a_dir / "dup.txt").write_bytes(b"y" * 2048)
+    r = a._p6_duplicate_assets()
+    assert r["status"] == "✅", r["detail"]
+
+
+# ── 误报防护：预留/废弃/夹具/vendor/版本代际/fork ─────────────────────
+
+def test_p2_ignores_reserved_deprecated_lines(tmp_path, monkeypatch):
+    """路径所在行明确标 📋 预留/❌ 废弃/~~删除线~~ 时，有意不存在不报断链。"""
+    _isolate(tmp_path, monkeypatch)
+    doc = a.DOCS_DIR / "00-system-architecture.md"
+    doc.write_text(
+        "| MCP | `L2-infra/components/future-svc/` | 📋 预留（目录待建） |\n"
+        "| old | `L2-infra/components/old-svc/` | ❌ 已废弃，并入 other |\n"
+        "| strike | ~~`L2-infra/components/gone-svc/`~~ |\n",
+        encoding="utf-8")
+    assert a._p2_path_broken()["status"] == "✅"
+
+
+def test_p2_still_flags_unmarked_broken(tmp_path, monkeypatch):
+    """未标注的真实断链仍须检出（防过度豁免）。"""
+    _isolate(tmp_path, monkeypatch)
+    doc = a.DOCS_DIR / "00-system-architecture.md"
+    doc.write_text("见 `L2-infra/components/real-broken-xyz/` 详情\n", encoding="utf-8")
+    r = a._p2_path_broken()
+    assert r["status"] == "⚠️" and "real-broken-xyz" in r["detail"]
+
+
+def test_p5_ignores_test_fixture_files(tmp_path, monkeypatch):
+    """tests/ 下文件里的历史路径是夹具数据，不算代码残留。"""
+    _isolate(tmp_path, monkeypatch)
+    tdir = tmp_path / "L2-infra" / "components" / "x" / "tests"
+    tdir.mkdir(parents=True)
+    (tdir / "test_fixture.py").write_text(
+        "p = 'workspace/model-scheduling/scripts'\n", encoding="utf-8")
+    assert a._p5_hardcoded_root()["status"] == "✅"
+
+
+def test_p6_exclusions_in_git_repo(tmp_path, monkeypatch):
+    """P6 在真实 git 仓库下：vendor/min/版本/fork 排除，且 gitignored data 不被扫。"""
+    _isolate(tmp_path, monkeypatch)
+    subprocess.run(["git", "init", "-q"], cwd=str(tmp_path), check=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=str(tmp_path), check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=str(tmp_path), check=True)
+    (tmp_path / ".gitignore").write_text("data/\n", encoding="utf-8")
+
+    def put(rel: str, data: bytes) -> None:
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
+
+    V = b"v" * 2048
+    M = b"m" * 2048
+    C = b"c" * 2048
+    F = b"f" * 2048
+    D = b"d" * 2048
+
+    # vendor 目录重复（排除）
+    put("L2-infra/components/x/vendor/lib.js", V)
+    put("L3-business/components/y/vendor/lib.js", V)
+    # .min.js 重复（排除）
+    put("L2-infra/components/a/web/foo.min.js", M)
+    put("L4-proprietary/components/b/web/foo.min.js", M)
+    # v1/v2 版本代际重复（排除）
+    put("L4-proprietary/components/dc/src/dc/v1/config/a.json", C)
+    put("L4-proprietary/components/dc/src/dc/v2/config/a.json", C)
+    # L3 引擎 ↔ L4 src 内 fork 副本（排除）
+    put("L3-business/components/engine/services/cat.py", F)
+    put("L4-proprietary/components/inst/src/inst/services/cat.py", F)
+    # gitignored data 副本 vs tracked 副本：data 不应被扫
+    put("L4-proprietary/components/bdms/data/x.bin", D)
+    put("L2-infra/components/z/keep.bin", D)
+
+    subprocess.run(["git", "add", "-A"], cwd=str(tmp_path), check=True)
+    # 明确 data 文件未被跟踪
+    assert not subprocess.run(
+        ["git", "ls-files", "--error-unmatch",
+         "L4-proprietary/components/bdms/data/x.bin"],
+        cwd=str(tmp_path), capture_output=True).returncode == 0
+
     r = a._p6_duplicate_assets()
     assert r["status"] == "✅", r["detail"]
 
