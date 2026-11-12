@@ -52,11 +52,33 @@ python3 ... governor.py report
 # 或直接读 memory/governor-latest.json
 ```
 
+### 2.4 资产审计（v1.1，默认零写）
+
+```bash
+# 全盘资产审计（full_audit §12 六探针：P1 计数漂移/P2 断链/P3 空壳/P4 未提交/P5 残留/P6 重复）
+python3 ... governor.py audit
+
+# 限定探针（如只看断链与重复）
+python3 ... governor.py audit --only P2,P6
+
+# 结构化报告
+python3 ... governor.py audit --json
+
+# 执行 L1 可回滚处置（仅 git mv 归位；L2+ 即使 apply 也只记 needs-human）
+python3 ... governor.py audit --apply
+```
+
+安全保证：
+- 默认零写；L2+（改文档/改代码/提交/降级）永远 needs-human 停手。
+- L1 仅 `git mv`（保留历史、可 `git revert`），执行前校验 dest 不存在防覆盖。
+- 账本落 `memory/governor-audit-latest.json`（原子写）。
+
 ## 3. 产物位置
 
 | 文件 | 说明 |
 |---|---|
 | `memory/governor-latest.json` | 最近一次 run 账本（gitignore） |
+| `memory/governor-audit-latest.json` | 最近一次资产审计账本（v1.1，gitignore） |
 | `.archive/` | 归档根目录（dot，gitignore） |
 | `.archive/manifest.json` | 归档移动登记（源→目标、规则、sha256） |
 
@@ -67,6 +89,8 @@ python3 ... governor.py report
 | Lane A 报 `scan_latest_missing` | 先手动跑一次 `scan_errors.py` |
 | Lane B 报 `full_audit_unavailable` | 单独跑 `system_full_audit.py --json`（可能超时） |
 | Lane B 报 `guardian_state_missing` | `launchctl list \| grep guardian`，检查常驻服务 |
+| audit 报 `invalid probe(s)` | `--only` 只接受 P1-P6 |
+| audit 报超时 | 加 `--timeout` 提高预算（默认 300s） |
 | 归档后想找回 | 查 `.archive/manifest.json` 的 src/dst，手动移回 |
 | 某 lane 报 `lane_timeout` | `--only <lane>` 单独重跑，或排查底层脚本卡顿 |
 

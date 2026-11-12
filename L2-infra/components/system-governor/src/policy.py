@@ -37,6 +37,13 @@ _ITEM_TIER: dict[str, str] = {
     "archive": FILE,
     # Lane D — 只读
     "task_inventory": CONFIRM,  # 只读盘点，无写动作
+    # v1.1 — 资产一致性探针（探针只读，处置需确认；P1/P6 归 L1 可回滚）
+    "P1": CONFIRM,   # 计数漂移 → 重新登记（文档生成器，但仍需确认范围）
+    "P2": CONFIRM,   # 路径断链 → 改文档需人工核对
+    "P3": CONFIRM,   # 空壳组件 → 降级/补实现需人工拍板
+    "P4": CONFIRM,   # 未跟踪/未提交 → 提交范围需人工确认
+    "P5": CONFIRM,   # 硬编码根路径 → 改代码需人工确认
+    "P6": FILE,      # 重复资产 → git mv 归位可回滚
 }
 
 DEFAULT_TIER = CONFIRM  # 未知项默认需人工，宁可停手

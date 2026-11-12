@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from functools import partial
 
 from src import ledger, orchestrator  # noqa: E402
+from src import audit_flow  # noqa: E402
 from src.lanes import lane_a_issues, lane_b_assets, lane_c_files, lane_d_tasks  # noqa: E402
 
 
@@ -78,6 +79,40 @@ def cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_audit(args: argparse.Namespace) -> int:
+    """资产审计六环节（默认零写）。"""
+    only = None
+    if args.only:
+        only = {x.strip().upper() for x in args.only.split(",") if x.strip()}
+        bad = {x for x in only if x not in {"P1", "P2", "P3", "P4", "P5", "P6"}}
+        if bad:
+            print(f"ERROR: invalid probe(s) {bad} (expected P1-P6)", file=sys.stderr)
+            return 2
+    try:
+        payload = audit_flow.run(
+            apply=args.apply,
+            only=only,
+            timeout=args.timeout,
+        )
+    except Exception as e:  # noqa: BLE001
+        print(f"ERROR: audit failed: {e}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        s = payload["summary"]
+        print(f"=== system-governor audit (apply={args.apply}) ===")
+        print(f"total {s['total']} | pending {s['pending']} | done {s['done']} | "
+              f"needs-human {s['needs_human']} | skipped {s['skipped']}")
+        print(f"regression: {payload['regression']['remaining_count']} warning(s) remain")
+        for i in payload["items"]:
+            print(f"  [{i['tier']}/{i['status']}] {i['category']} — {i['id'][:50]}")
+            print(f"      → {i['suggestion'][:70]}")
+        print(f"ledger: {payload['ledger_path']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="governor", description="system-governor 统一治理入口")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -92,6 +127,13 @@ def main(argv: list[str] | None = None) -> int:
     p_rep = sub.add_parser("report", help="读取最近一次账本")
     p_rep.add_argument("--ledger", default=None, help="账本路径覆盖")
     p_rep.set_defaults(func=cmd_report)
+
+    p_aud = sub.add_parser("audit", help="资产审计六环节（默认零写）")
+    p_aud.add_argument("--apply", action="store_true", help="执行 L1 git mv 写动作（默认 dry-run）")
+    p_aud.add_argument("--json", action="store_true", help="stdout 输出完整 JSON 报告")
+    p_aud.add_argument("--only", default=None, help="限定探针，逗号分隔（P1-P6，默认全部）")
+    p_aud.add_argument("--timeout", type=int, default=300, help="整体 wall-clock 预算秒（默认 300）")
+    p_aud.set_defaults(func=cmd_audit)
 
     args = parser.parse_args(argv)
     return args.func(args)

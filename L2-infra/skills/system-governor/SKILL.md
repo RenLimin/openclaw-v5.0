@@ -32,6 +32,13 @@ $GOV run --apply
 
 # 5) 查看最近一次账本
 $GOV report
+
+# 6) 资产审计六环节（v1.1）——默认零写
+$GOV audit
+# 只跑指定探针（P1-P6）
+$GOV audit --only P2,P6
+# L1 项（git mv 归位）执行；L2+ 仍 needs-human
+$GOV audit --apply
 ```
 
 ## Lane 路由表（谁负责什么）
@@ -58,11 +65,24 @@ $GOV report
 - `--apply` 前先 `run` 看 planned 清单；L2/L3 项即使 apply 也只会记 needs-human，不会执行。
 - 归档产物进 `.archive/`（dot 目录 + gitignore），每笔移动登记 `manifest.json`（sha256），可回滚。
 
+## 资产审计工作流（v1.1）
+
+当需要全盘资产审计（残留/重复/空壳/口径漂移/断链）时：
+
+1. 取证：`governor.py audit`（默认零写，跑 full_audit §12 六探针）
+2. 看报告：`governor.py audit --json`（含 category/suggestion/tier）
+3. L2+ 项：按 suggestion 列出的命令人工拍板
+4. L1 项：确认 dry-run 清单后 `governor.py audit --apply`（仅 git mv 归位/合并）
+5. 回归：重跑 `governor.py audit` 确认命中项清零
+
+安全：audit 默认零写；L2+ 即使 --apply 也不执行；账本落 memory/governor-audit-latest.json。
+
 ## 产物与账本
 
 | 文件 | 说明 |
 |---|---|
 | `memory/governor-latest.json` | 最近一次 run 账本（gitignore） |
+| `memory/governor-audit-latest.json` | 最近一次资产审计账本（v1.1，gitignore） |
 | `.archive/manifest.json` | 归档移动登记（源→目标、规则、sha256） |
 
 ## 与既有技能的关系
@@ -73,6 +93,6 @@ $GOV report
 
 ## 参考
 
-- 设计文档：`docs/architecture/PRD/DESIGN-OUTLINE/DESIGN-DETAIL-system-governor-v1.0.md`
+- 设计文档：`docs/architecture/PRD/DESIGN-OUTLINE/DESIGN-DETAIL-system-governor-v1.0.md`、`DESIGN-DETAIL-system-governor-v1.1.md`（资产审计）
 - 操作手册：`L2-infra/components/system-governor/OPERATIONS-system-governor-v1.0.md`
 - 验收：`L2-infra/components/system-governor/VERIFICATION-system-governor-v1.0.md`

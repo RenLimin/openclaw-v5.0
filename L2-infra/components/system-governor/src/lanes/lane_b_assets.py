@@ -20,6 +20,8 @@ GUARDIAN_STATE = Path(
 # full_audit.py --json 的章节标题（实测）
 SECTION_ASSETS = "3. 自研资产状态检测"
 SECTION_PROVIDER = "4. 模型与 Provider 健康检测"
+# v1.1：资产一致性探针（DETAIL §2.2）
+SECTION_CONSISTENCY = "12. 资产一致性检测"
 
 
 def _run_audit_json() -> dict:
@@ -47,7 +49,13 @@ def _load_guardian() -> dict:
 def _audit_findings(audit: dict) -> list[Finding]:
     findings: list[Finding] = []
     sections = audit.get("sections") or {}
-    for title in (SECTION_ASSETS, SECTION_PROVIDER):
+    # (标题, ⚠️ 项的处置动作)
+    section_specs = [
+        (SECTION_ASSETS, "查看 full_audit --json 对应条目"),
+        (SECTION_PROVIDER, "若为 Provider 配置/key 问题：openclaw doctor --fix；服务问题由 guardian 自愈"),
+        (SECTION_CONSISTENCY, "运行 governor.py audit 进入资产审计工作流"),
+    ]
+    for title, warn_action in section_specs:
         for item in sections.get(title) or []:
             status = item.get("status", "")
             name = item.get("name", "")
@@ -61,13 +69,17 @@ def _audit_findings(audit: dict) -> list[Finding]:
                 findings.append(Finding(
                     lane="B", item=name, severity="warning", status="open",
                     evidence=f"{title}: {detail[:150]}",
-                    action="查看 full_audit --json 对应条目",
+                    action=warn_action,
                 ))
             elif status == "❌":
                 findings.append(Finding(
                     lane="B", item=name, severity="critical", status="needs-human",
                     evidence=f"{title}: {detail[:150]}",
-                    action="若为 Provider 配置/key 问题：openclaw doctor --fix；服务问题由 guardian 自愈",
+                    action=(
+                        "若为 Provider 配置/key 问题：openclaw doctor --fix；服务问题由 guardian 自愈"
+                        if title != SECTION_CONSISTENCY
+                        else "运行 governor.py audit 进入资产审计工作流"
+                    ),
                 ))
     return findings
 

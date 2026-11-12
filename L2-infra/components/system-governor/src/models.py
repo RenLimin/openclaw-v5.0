@@ -45,6 +45,24 @@ class GovernanceReport:
     ledger_path: str = ""     # 账本落盘路径
 
 
+@dataclass(frozen=True)
+class AuditItem:
+    """资产审计单项（v1.1，DETAIL §2.4）。"""
+
+    id: str                # 稳定标识，如 "P3-health-engine"
+    category: str          # 残留 | 重复 | 空壳 | 口径漂移 | 断链
+    evidence: str          # 证据（file:line / 命令输出摘要）
+    suggestion: str        # 处置建议（归位/合并/降级/删除/补实现）
+    tier: str              # L1（可回滚 git 操作）| L2（需人工）
+    status: str            # pending | approved | done | skipped | needs-human
+    detail: dict = None    # 补充字段（路径对、计数、阈值等）
+
+
+# AuditItem 状态/分类常量
+AUDIT_STATUSES = ("pending", "approved", "done", "skipped", "needs-human")
+AUDIT_CATEGORIES = ("残留", "重复", "空壳", "口径漂移", "断链")
+
+
 # 严重度/状态常量
 SEVERITIES = ("critical", "warning", "info")
 STATUSES = ("open", "auto-fixed", "needs-human", "planned", "ok")

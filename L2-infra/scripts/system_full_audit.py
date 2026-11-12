@@ -16,14 +16,17 @@ L2 基础设施层 — 标准化健康检查流程。
 修订：2026-09-11 — 新增子会话清理检测（第 8 节）。
 修订：2026-11-10 — 新增第 10 节「已归档会话检测」+ --purge-archived（留痕 manifest + 名称释放校验）
                     + --restore-help（解压 .deleted.zst 归档）。
+修订：2026-11-12 — 新增第 12 节「资产一致性检测」（v1.1，六探针纯只读）。
 """
 
 import argparse
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -60,11 +63,12 @@ assert L4_COMPONENTS.exists(), f"L4_COMPONENTS 不存在: {L4_COMPONENTS}"
 assert KB_INDEX.exists(), f"KB_INDEX 不存在: {KB_INDEX}"
 
 
-def run(cmd: str, timeout: int = 15) -> tuple[int, str, str]:
+def run(cmd: str, timeout: int = 15, cwd: Path | None = None) -> tuple[int, str, str]:
     """执行 shell 命令"""
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout
+            cmd, shell=True, capture_output=True, text=True, timeout=timeout,
+            cwd=str(cwd) if cwd else None,
         )
         return result.returncode, result.stdout.strip(), result.stderr.strip()
     except subprocess.TimeoutExpired:
@@ -844,6 +848,253 @@ def audit_asset_registration(auto_register: bool = True) -> list[dict]:
     return results
 
 
+# ═══════════════════════════════════════════════════════════════════════
+# 12. 资产一致性检测（v1.1，2026-11-12）
+# 六探针纯只读：不写文件、不 git 变更、不删除。
+# ═══════════════════════════════════════════════════════════════════════
+ASSET_CONSISTENCY_THRESHOLDS = {
+    "untracked_max": 10,         # P4 未跟踪文件告警阈值
+    "uncommitted_max": 3,        # P4 未提交变更告警阈值
+    "duplicate_min_bytes": 1024,  # P6 忽略 <1KB 的重复（如图标缓存）
+}
+
+_COMPONENT_BASES = [
+    WORKSPACE / "L2-infra" / "components",
+    WORKSPACE / "L3-business" / "components",
+    WORKSPACE / "L3-proprietary" / "components",
+    WORKSPACE / "L4-proprietary" / "components",
+]
+
+# P2 路径引用：反引号包裹的 L1-L4 路径（markdown 标准约定，避免裸词误报）
+# 允许可选尾斜杠（文档中两种写法各半，66/66）
+_PATH_IN_BACKTICKS = re.compile(r"`(L[1-4][-_a-zA-Z0-9]*(?:/[-_a-zA-Z0-9.]+)+)/?`")
+
+# P5 已移除的历史根路径（代码应引用现行 L2-infra/components/... 等路径）
+_REMOVED_ROOT_PATHS = [
+    "workspace/model-scheduling/",
+    "workspace/src/bdms/",
+    "workspace/recovered/",
+]
+
+_DUP_EXCLUDE_PARTS = (".git/", "__pycache__/", "node_modules/", ".pytest_cache/", ".mypy_cache/")
+_DUP_EXCLUDE_SUFFIX = (".pyc", ".pyo")
+# 测试夹具目录：测试用例需要多份输入样本，重复是设计意图，不算资产重复
+_DUP_EXCLUDE_TEST_DIRS = ("/tests/output/", "/tests/visual/", "/tests/fixtures/",
+                         "/tests/data/", "/tests/golden/", "/tests/snapshots/")
+# 备份/归档目录：刻意保留的历史副本，不算资产重复
+_DUP_EXCLUDE_BACKUP_DIRS = ("/archive/", "/backups/", "/.deprecated/", "/backup_")
+
+
+def _count_inventory_components() -> int:
+    """统计资产清单「已建设完成组件」区的组件路径行数；-1 表示不可解析。
+
+    只统计含组件路径（反引号包裹的 L2/L3/L4 components 路径）的行，
+    避免把同 section 内其他表格（如 BDMS 重建「部分/内容」表）误算。
+    """
+    if not ASSET_INVENTORY_DOC.exists():
+        return -1
+    count = 0
+    in_section = False
+    comp_path = re.compile(r"`L[234][-_a-zA-Z0-9]*/components/[-_a-zA-Z0-9./]+`")
+    for line in ASSET_INVENTORY_DOC.read_text(encoding="utf-8", errors="ignore").splitlines():
+        if line.startswith("## "):
+            in_section = "已建设完成组件" in line
+            continue
+        if not in_section:
+            continue
+        s = line.strip()
+        if not s.startswith("|") or "---" in s:
+            continue
+        if comp_path.search(s):
+            count += 1
+    return count
+
+
+def _p1_count_drift() -> dict:
+    """P1 计数漂移：全盘发现数 vs 资产清单文档登记数。"""
+    disc = _count_discovered_components()
+    n_disc = int(disc) if disc.isdigit() else -1
+    n_reg = _count_inventory_components()
+    if n_disc < 0 or n_reg < 0:
+        return check("P1 计数漂移", "✅", "计数不可用（发现或登记解析失败）")
+    if n_disc == n_reg:
+        return check("P1 计数漂移", "✅", f"发现 {n_disc} / 登记 {n_reg}，一致")
+    return check("P1 计数漂移", "⚠️", f"发现 {n_disc} / 登记 {n_reg}，漂移")
+
+
+def _p2_path_broken() -> dict:
+    """P2 路径断链：架构文档中反引号引用的 L1-L4 路径存在性。"""
+    broken: list[str] = []
+    docs = [DOCS_DIR / "00-system-architecture.md", ASSET_INVENTORY_DOC]
+    for base in _COMPONENT_BASES:
+        if base.is_dir():
+            for comp in base.iterdir():
+                if comp.is_dir() and not comp.name.startswith("."):
+                    readme = comp / "README.md"
+                    if readme.is_file():
+                        docs.append(readme)
+    seen: set[str] = set()
+    for doc in docs:
+        if not doc.exists():
+            continue
+        text = doc.read_text(encoding="utf-8", errors="ignore")
+        for m in _PATH_IN_BACKTICKS.finditer(text):
+            p = m.group(1)
+            if p in seen:
+                continue
+            seen.add(p)
+            if not (WORKSPACE / p).exists():
+                broken.append(f"{p}（{doc.relative_to(WORKSPACE).as_posix()}）")
+    if not broken:
+        return check("P2 路径断链", "✅", f"抽查 {len(seen)} 条路径引用，全部存在")
+    return check("P2 路径断链", "⚠️", f"{len(broken)} 条断链: " + "; ".join(broken[:10]))
+
+
+def _p3_skeleton_components() -> dict:
+    """P3 空壳组件：0 py 但完成声明文档（README/STATUS/OPERATIONS/VERIFICATION）含已上线标记。
+
+    只认完成态文档的精确标记（✅ 已上线 / ✅ 已实现），
+    不认 PRD/DESIGN 文档里的「已实现」（那是设计描述，非完成声明）。
+    """
+    skeletons: list[str] = []
+    for base in _COMPONENT_BASES:
+        if not base.is_dir():
+            continue
+        for comp in sorted(p for p in base.iterdir() if p.is_dir()):
+            if comp.name.startswith("."):
+                continue
+            py_count = len(list(comp.rglob("*.py")))
+            if py_count > 0:
+                continue
+            for md in comp.rglob("*.md"):
+                if not md.name.upper().startswith(("README", "STATUS", "OPERATIONS", "VERIFICATION")):
+                    continue  # 只看完成态文档
+                text = md.read_text(encoding="utf-8", errors="ignore")
+                if "✅ 已上线" in text or "✅ 已实现" in text:
+                    skeletons.append(f"{comp.name}（{md.relative_to(comp).as_posix()}: 0 py）")
+                    break
+    if not skeletons:
+        return check("P3 空壳组件", "✅", "无空壳组件")
+    return check("P3 空壳组件", "⚠️", f"{len(skeletons)} 个: " + "; ".join(skeletons[:10]))
+
+
+def _p4_untracked_uncommitted() -> dict:
+    """P4 未跟踪/未提交：git status 计数超阈值告警。"""
+    rc, out, _ = run("git status --porcelain", timeout=30, cwd=WORKSPACE)
+    if rc != 0:
+        return check("P4 未跟踪/未提交", "✅", "git status 不可用")
+    untracked = 0
+    uncommitted = 0
+    samples: list[str] = []
+    for line in out.splitlines():
+        if not line.strip():
+            continue
+        if line.startswith("??"):
+            untracked += 1
+        else:
+            uncommitted += 1
+        if len(samples) < 5:
+            samples.append(line.strip())
+    th = ASSET_CONSISTENCY_THRESHOLDS
+    if untracked <= th["untracked_max"] and uncommitted <= th["uncommitted_max"]:
+        return check("P4 未跟踪/未提交", "✅",
+                     f"未跟踪 {untracked} / 未提交 {uncommitted}（阈值 {th['untracked_max']}/{th['uncommitted_max']}）")
+    return check("P4 未跟踪/未提交", "⚠️",
+                 f"未跟踪 {untracked} / 未提交 {uncommitted} 超阈值: " + "; ".join(samples))
+
+
+def _p5_hardcoded_root() -> dict:
+    """P5 硬编码根路径：代码中残留已移除的历史根路径。"""
+    hits: list[str] = []
+    bases = [WORKSPACE / "L2-infra", WORKSPACE / "L3-business", WORKSPACE / "L4-proprietary"]
+    for base in bases:
+        if not base.is_dir() or len(hits) >= 10:
+            continue
+        for py in base.rglob("*.py"):
+            rel = py.relative_to(WORKSPACE).as_posix()
+            if any(x in rel for x in _DUP_EXCLUDE_PARTS):
+                continue
+            # 排除审计脚本自身（常量定义 _REMOVED_ROOT_PATHS 会自指误报）
+            if py.name == "system_full_audit.py":
+                continue
+            try:
+                text = py.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+            for i, line in enumerate(text.splitlines(), 1):
+                if any(old in line for old in _REMOVED_ROOT_PATHS):
+                    hits.append(f"{rel}:{i}")
+                    break
+            if len(hits) >= 10:
+                break
+    if not hits:
+        return check("P5 硬编码根路径", "✅", "无已移除根路径残留")
+    return check("P5 硬编码根路径", "⚠️", f"{len(hits)} 处: " + "; ".join(hits[:10]))
+
+
+def _p6_duplicate_assets() -> dict:
+    """P6 重复资产：同 sha256 且路径不同。超时降级为同名比对。"""
+    import hashlib
+    hashes: dict[str, list[str]] = {}
+    names: dict[str, list[str]] = {}
+    start = time.time()
+    timed_out = False
+    for base in _COMPONENT_BASES:
+        if not base.is_dir() or timed_out:
+            continue
+        for p in sorted(base.rglob("*")):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(WORKSPACE).as_posix()
+            if any(x in rel for x in _DUP_EXCLUDE_PARTS) or rel.endswith(_DUP_EXCLUDE_SUFFIX):
+                continue
+            if any(x in rel for x in _DUP_EXCLUDE_TEST_DIRS):
+                continue  # 测试夹具重复是设计意图
+            if any(x in rel for x in _DUP_EXCLUDE_BACKUP_DIRS):
+                continue  # 备份/归档副本是刻意保留
+            try:
+                if p.stat().st_size < ASSET_CONSISTENCY_THRESHOLDS["duplicate_min_bytes"]:
+                    continue
+            except OSError:
+                continue
+            if time.time() - start > 60:
+                timed_out = True
+                break
+            try:
+                h = hashlib.sha256(p.read_bytes()).hexdigest()
+            except Exception:
+                continue
+            hashes.setdefault(h, []).append(rel)
+            names.setdefault(p.name, []).append(rel)
+    if timed_out:
+        dups = [" ↔ ".join(sorted(set(v))) for v in names.values() if len(set(v)) > 1]
+        if not dups:
+            return check("P6 重复资产", "✅", "同名比对无重复（sha256 超时降级）")
+        return check("P6 重复资产", "⚠️",
+                     f"同名重复 {len(dups)} 组（sha256 超时降级）: " + "; ".join(dups[:5]))
+    dups = [" ↔ ".join(sorted(set(v))) for v in hashes.values() if len(set(v)) > 1]
+    if not dups:
+        return check("P6 重复资产", "✅", "无重复资产")
+    return check("P6 重复资产", "⚠️", f"同内容重复 {len(dups)} 组: " + "; ".join(dups[:5]))
+
+
+def audit_asset_consistency() -> list[dict]:
+    """12. 资产一致性检测（纯只读）。
+
+    六探针：P1 计数漂移 / P2 路径断链 / P3 空壳组件 /
+    P4 未跟踪未提交 / P5 硬编码根路径 / P6 重复资产。
+    返回 check() 格式列表，与 §1-§11 同构，供 Lane B 聚合。
+    """
+    return [
+        _p1_count_drift(),
+        _p2_path_broken(),
+        _p3_skeleton_components(),
+        _p4_untracked_uncommitted(),
+        _p5_hardcoded_root(),
+        _p6_duplicate_assets(),
+    ]
+
+
 def register_assets() -> int:
     """按架构文档约定，将全盘已建成资产重新登记进资产清单文档。"""
     if not ASSET_GENERATOR.exists():
@@ -945,6 +1196,7 @@ def main():
         ("9. 子会话状态检测", audit_subagent_sessions),
         ("10. 已归档会话检测", audit_archived_sessions),
         ("11. 已建资产登记检测", lambda: audit_asset_registration(auto_register=not args.no_auto_register)),
+        ("12. 资产一致性检测", audit_asset_consistency),
     ]
 
     if args.quick:
