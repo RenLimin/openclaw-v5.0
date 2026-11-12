@@ -91,3 +91,7 @@ recovered/
 
 # 本次审计整改的本地回滚包（不入库）
 backups/audit-remediation-*/
+
+# test/coverage artifacts
+.coverage
+.pytest_cache/
