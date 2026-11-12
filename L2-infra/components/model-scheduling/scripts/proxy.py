@@ -740,7 +740,15 @@ class ProxyHandler:
         }
 
         try:
-            timeout = aiohttp.ClientTimeout(total=120)
+            # 2026-11-12 修复: 流式请求不再用 total 总时长超时。
+            # 旧逻辑 total=120 会精确砍断长回合流式输出(247k ctx → 700KB+ SSE),
+            # gateway 收到半截 tool call → 报 "malformed tool call"。
+            # 时间戳实证: 11:34:36→11:36:36 / 11:36:39→11:38:39 均 120.0s。
+            # 改用 sock_read 空闲超时: 仅在 N 秒无数据时判死,总时长不设限。
+            if stream:
+                timeout = aiohttp.ClientTimeout(total=None, sock_connect=30, sock_read=120)
+            else:
+                timeout = aiohttp.ClientTimeout(total=300)
             if stream:
                 async with self.session.post(url, headers=headers, json=payload, timeout=timeout) as response:
                     if response.status != 200:
