@@ -36,6 +36,7 @@ from .importer import RevenueAnalysisImporter
 from .validator import RevenueAnalysisValidator
 from .caliber_builder import CaliberBuilder
 from .trend_builder import TrendBuilder
+from .pivot_builder import pivot, sorted_keys
 
 PREFIX = "rr"
 
@@ -145,8 +146,8 @@ class RevenueAnalysisEngine(BaseEngine):
                 ledger_perf=ledger_perf),
             SHEET_SUMMARY_ANALYSIS: self._build_summary_analysis(budget_rows),
             SHEET_TREND: self.compute_budget_trend(period),
-            SHEET_DIFF: self._build_diff(budget_rows),
-            SHEET_RESTRUCTURE: self._build_restructure(budget_rows),
+            SHEET_DIFF: self._build_diff(budget_rows, period),
+            SHEET_RESTRUCTURE: self._build_restructure(budget_rows, period),
             SHEET_LEGEND: self._build_legend(),
             SHEET_MONTHLY_RECORD: self._build_monthly_record(
                 budget_rows, ledger_monthly=ledger_monthly),
@@ -594,52 +595,78 @@ class RevenueAnalysisEngine(BaseEngine):
 
     # ─── Sheet 6: 确收差异分析 ───
 
-    def _build_diff(self, rows: list[dict]) -> list[list[Any]]:
+    def _build_diff(self, rows: list[dict], period: str = "") -> list[list[Any]]:
+        """确收差异分析（Sheet 6）。
+
+        口径（202606 实证，逐格复现 golden）：
+          - 筛选：A∈{递延,新签} 且 AR(消失备注) 空白（剔除合同终止等消失行）
+          - 分组：BL(原因类别) × A(分类)，求和 AF(滞后未完成)
+          - 行序：Unicode 码点升序，(空白) 置尾（复刻 Excel 透视默认序）
+          - 标题账期：202601-{MM} 由 period 驱动
+        """
+        mm = period[4:6] if len(period) >= 6 else "06"
         out: list[list[Any]] = []
-        out.append(["筛选：", "全部项目经理", "全部团队", ""])
-        out.append(["", "消失备注", "重拆履约"])
+        out.append(["项目经理", "(全部)", "", ""])
+        out.append(["项目经理所属团队", "(全部)", "", ""])
+        out.append(["消失备注", "(空白)", "", ""])
+        out.append(["重拆履约，提前和滞后同增", "(全部)", "", ""])
         out.append([])
-        out.append(["", "求和项:202601-09滞后未完成"])
-        out.append(["", "行标签", "递延", "新签", "总计"])
-        # 按 AR 消失备注聚合 AF(滞后) 金额
-        agg: dict[str, dict[str, float]] = {}
-        for r in rows:
-            note = str(r.get("AR") or "(空白)")
-            cat = r.get("A") or ""
-            if cat not in ("递延", "新签"):
-                continue
-            v = self._num(r.get("AF"))
-            agg.setdefault(note, {"递延": 0.0, "新签": 0.0})[cat] += v
-        for note, vals in sorted(agg.items(), key=lambda kv: -sum(kv[1].values())):
-            out.append(["", note, round(vals["递延"], 2), round(vals["新签"], 2),
-                        round(vals["递延"] + vals["新签"], 2)])
-        t_def = sum(v["递延"] for v in agg.values())
-        t_new = sum(v["新签"] for v in agg.values())
-        out.append(["", "总计", round(t_def, 2), round(t_new, 2), round(t_def + t_new, 2)])
+        out.append([f"求和项:202601-{mm}滞后未完成", "列标签", "", ""])
+        out.append(["行标签", "递延", "新签", "总计"])
+        # 聚合（pivot_builder 纯函数）：剔除 AR 非空；BL 分组 × 分类求和 AF
+        def _bl(r: dict) -> str:
+            return str(r.get("BL") or "") or "(空白)"
+
+        filt = lambda r: (r.get("A") in ("递延", "新签")
+                          and not str(r.get("AR") or "").strip())
+        sum_def = pivot([r for r in rows if filt(r) and r.get("A") == "递延"],
+                        key_fn=_bl, value_fn=lambda r: self._num(r.get("AF")))
+        sum_new = pivot([r for r in rows if filt(r) and r.get("A") == "新签"],
+                        key_fn=_bl, value_fn=lambda r: self._num(r.get("AF")))
+        keys = sorted_keys(set(sum_def) | set(sum_new))
+        t_def = t_new = 0.0
+        for k in keys:
+            d = round(sum_def[k], 2) if k in sum_def else None
+            n = round(sum_new[k], 2) if k in sum_new else None
+            t_def += sum_def.get(k, 0.0)
+            t_new += sum_new.get(k, 0.0)
+            out.append([k, d, n, round(sum_def.get(k, 0.0) + sum_new.get(k, 0.0), 2)])
+        out.append(["总计", round(t_def, 2), round(t_new, 2),
+                    round(t_def + t_new, 2)])
         return out
 
     # ─── Sheet 7: 重拆履约 ───
 
-    def _build_restructure(self, rows: list[dict]) -> list[list[Any]]:
+    def _build_restructure(self, rows: list[dict], period: str = "") -> list[list[Any]]:
+        """重拆履约（Sheet 7）。
+
+        口径（202606 实证，逐格复现 golden）：
+          - 显示行：按合同聚合后 AE(提前)≠0 且 AF(滞后)≠0 的合同（双非零）
+          - 行序：合同号升序
+          - 总计：全量 AE/AF 求和（含仅提前/仅滞后合同，与显示行合计不等）
+          - 标题账期：202601-{MM} 由 period 驱动
+        """
+        mm = period[4:6] if len(period) >= 6 else "06"
         out: list[list[Any]] = []
         out.append([])
-        out.append(["", "合同编号", "提前完成", "滞后未完成"])
-        agg: dict[str, dict[str, float]] = {}
-        for r in rows:
-            no = str(r.get("B") or "")
-            if not no:
-                continue
-            ahead = self._num(r.get("AE"))
-            behind = self._num(r.get("AF"))
-            if ahead or behind:
-                agg.setdefault(no, {"提前": 0.0, "滞后": 0.0})
-                agg[no]["提前"] += ahead
-                agg[no]["滞后"] += behind
-        for no, vals in sorted(agg.items(), key=lambda kv: -abs(kv[1]["提前"] + kv[1]["滞后"])):
-            out.append(["", no, round(vals["提前"], 2), round(vals["滞后"], 2)])
-        out.append(["", "总计",
-                    round(sum(v["提前"] for v in agg.values()), 2),
-                    round(sum(v["滞后"] for v in agg.values()), 2)])
+        out.append(["合同编号", f"求和项:202601-{mm}提前完成",
+                    f"求和项:202601-{mm}滞后未完成"])
+        # 按合同聚合（pivot_builder 纯函数）
+        contracts = [r for r in rows if str(r.get("B") or "").strip()]
+        sum_a = pivot(contracts, key_fn=lambda r: str(r.get("B")),
+                      value_fn=lambda r: self._num(r.get("AE")))
+        sum_f = pivot(contracts, key_fn=lambda r: str(r.get("B")),
+                      value_fn=lambda r: self._num(r.get("AF")))
+        agg = {no: {"AE": sum_a[no], "AF": sum_f[no]}
+               for no in set(sum_a) | set(sum_f)}
+        # 显示行：双非零合同（合同号升序）
+        both = {no: v for no, v in agg.items() if v["AE"] and v["AF"]}
+        for no in sorted(both.keys()):
+            out.append([no, round(both[no]["AE"], 2), round(both[no]["AF"], 2)])
+        # 总计：全量
+        t_a = sum(v["AE"] for v in agg.values())
+        t_f = sum(v["AF"] for v in agg.values())
+        out.append(["总计", round(t_a, 2), round(t_f, 2)])
         return out
 
     # ─── Sheet 8: 图例 ───
