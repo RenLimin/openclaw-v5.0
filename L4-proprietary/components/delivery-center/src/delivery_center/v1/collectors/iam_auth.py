@@ -91,6 +91,38 @@ def set_cookie(domain: str, cookie: str):
     _save_cookies(cookies)
 
 
+
+def _wait_login_form(page, timeout: int = 30000):
+    """等待 IAM 登录表单（账号/密码框）真正可见。
+
+    IAM 经 OA SSO 中转，约 5-8s 才渲染表单；过早 fill 命中
+    'element is not visible'。兼容顶层与 iframe。
+    返回 (user_locator, pass_locator)。
+    """
+    deadline = time.time() + timeout
+    last = None
+    while time.time() < deadline:
+        up = page.locator("input[type=text]").first
+        pp = page.locator("input[type=password]").first
+        try:
+            if up.count() and pp.count() and up.is_visible() and pp.is_visible():
+                return up, pp
+        except Exception as e:
+            last = e
+        for fr in page.frames:
+            if fr == page.main_frame:
+                continue
+            try:
+                fu = fr.locator("input[type=text]").first
+                fp = fr.locator("input[type=password]").first
+                if fu.count() and fp.count() and fu.is_visible() and fp.is_visible():
+                    return fu, fp
+            except Exception:
+                pass
+        time.sleep(0.5)
+    raise TimeoutError(f"IAM 登录表单 {timeout}s 内未可见（最后错误：{last}）")
+
+
 def login_iam(username: str, password: str, verify_timeout: int = 300) -> bool:
     """登录 IAM 获取 Cookie。
 
@@ -122,8 +154,9 @@ def login_iam(username: str, password: str, verify_timeout: int = 300) -> bool:
             page.wait_for_load_state("networkidle", timeout=15000)
             time.sleep(2)
 
-            page.locator("input[type=text]").first.fill(username)
-            page.locator("input[type=password]").first.fill(password)
+            user_box, pass_box = _wait_login_form(page)
+            user_box.fill(username)
+            pass_box.fill(password)
             # 按钮文案可能是「下一步」或「登录」
             nxt = page.locator("button").filter(has_text="下一步")
             if nxt.count():

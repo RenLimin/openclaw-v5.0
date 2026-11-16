@@ -113,8 +113,10 @@ def _login_iam(page, context, headless: bool, verify_timeout: int = 300) -> bool
     page.goto(f"{IAM_BASE}/#/login", timeout=30000)
     page.wait_for_load_state("networkidle", timeout=15000)
     time.sleep(2)
-    page.locator("input[type=text]").first.fill(_IAM_USERNAME)
-    page.locator("input[type=password]").first.fill(_IAM_PASSWORD)
+    from .iam_auth import _wait_login_form
+    user_box, pass_box = _wait_login_form(page)
+    user_box.fill(_IAM_USERNAME)
+    pass_box.fill(_IAM_PASSWORD)
 
     nxt = page.locator("button").filter(has_text="下一步")
     if nxt.count():
