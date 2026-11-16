@@ -96,9 +96,8 @@ def _inject_cookies(context) -> bool:
         return False
 
 
-def _login_iam(page, context, headless: bool) -> bool:
-    """登录 IAM。优先复用 Cookie，失败再走表单。"""
-    # 先访问首页，看 Cookie 是否生效
+def _login_iam(page, context, headless: bool, verify_timeout: int = 300) -> bool:
+    """登录 IAM。优先复用 Cookie，失效则走表单（已适配二步验证）。"""
     page.goto(f"{IAM_BASE}/#/home", timeout=30000)
     try:
         page.wait_for_load_state("networkidle", timeout=10000)
@@ -106,22 +105,74 @@ def _login_iam(page, context, headless: bool) -> bool:
         pass
     time.sleep(2)
 
-    # Cookie 已生效 → 不在登录页
     if "/login" not in page.url:
         print("  ✅ Cookie 复用，跳过表单登录")
         return True
 
-    # Cookie 失效 → 走表单登录
     print("  ℹ️  Cookie 失效，走表单登录")
     page.goto(f"{IAM_BASE}/#/login", timeout=30000)
     page.wait_for_load_state("networkidle", timeout=15000)
     time.sleep(2)
     page.locator("input[type=text]").first.fill(_IAM_USERNAME)
     page.locator("input[type=password]").first.fill(_IAM_PASSWORD)
-    page.locator("button").nth(1).click()  # button[1] = 登录
 
-    page.wait_for_url("**/home/**", timeout=20000)
+    nxt = page.locator("button").filter(has_text="下一步")
+    if nxt.count():
+        nxt.first.click()
+    else:
+        btn = page.locator("button").filter(has_text="登录")
+        (btn.first if btn.count() else page.locator("button").nth(1)).click()
+
+    # 二步验证检测（2026-11 起 IAM 要求邮箱 6 位验证码）
+    t0 = time.time()
+    two_fa = False
+    while time.time() - t0 < 10:
+        body = page.inner_text("body")
+        if "验证并登录" in body or "邮箱安全验证" in body:
+            two_fa = True
+            break
+        if "/home" in page.url:
+            break
+        time.sleep(1)
+
+    if two_fa:
+        print("  ⚠️ IAM 二步验证（邮箱 6 位验证码）")
+        print(f"  → 请在 {verify_timeout}s 内完成验证；headless 自动化可设 IAM_VERIFY_CODE")
+        import os
+        code = os.environ.get("IAM_VERIFY_CODE", "").strip()
+        if code:
+            try:
+                page.locator("input[type=text]").first.fill(code)
+                page.locator("button").filter(has_text="验证并登录").first.click()
+            except Exception:
+                pass
+        t1 = time.time()
+        while time.time() - t1 < verify_timeout:
+            time.sleep(3)
+            if "/login" not in page.url:
+                break
+        else:
+            print("  ❌ 二步验证超时")
+            return False
+    else:
+        try:
+            page.wait_for_url("**/home/**", timeout=20000)
+        except Exception:
+            pass
+
     time.sleep(3)
+    # 回写 cookie 池
+    from .iam_auth import set_cookie, DOMAINS
+    all_cookies = context.cookies()
+    for d in DOMAINS:
+        pairs = [f"{c['name']}={c['value']}" for c in all_cookies
+                 if d in c.get("domain", "") or c.get("domain", "").lstrip(".") == "bangcle.com"]
+        if pairs:
+            set_cookie(d, "; ".join(pairs))
+    full = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
+    for d in DOMAINS:
+        set_cookie(d, full)
+    print(f"  ✅ 登录完成，{len(all_cookies)} 个 Cookie")
     return True
 
 

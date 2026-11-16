@@ -91,12 +91,17 @@ def set_cookie(domain: str, cookie: str):
     _save_cookies(cookies)
 
 
-def login_iam(username: str, password: str) -> bool:
-    """登录 IAM 获取 Cookie
+def login_iam(username: str, password: str, verify_timeout: int = 300) -> bool:
+    """登录 IAM 获取 Cookie。
+
+    适配 2026-11 起的二步验证：账号密码 → 邮箱 6 位验证码。
+    密码提交后若进入验证码页，则等待人工完成验证（headful 下在浏览器输入，
+    或 headless 下通过 verify_code 回调/环境变量注入），最长 verify_timeout 秒。
 
     Args:
         username: IAM 用户名
         password: IAM 密码
+        verify_timeout: 等待二步验证完成的最长秒数（默认 300）
 
     Returns:
         登录成功返回 True
@@ -113,54 +118,76 @@ def login_iam(username: str, password: str) -> bool:
         page = context.new_page()
 
         try:
-            # 导航到登录页（不是首页）
             page.goto("https://iam.bangcle.com/#/login", timeout=30000)
             page.wait_for_load_state("networkidle", timeout=15000)
             time.sleep(2)
 
-            # 填写登录表单
             page.locator("input[type=text]").first.fill(username)
             page.locator("input[type=password]").first.fill(password)
-            # 点击登录按钮
-            login_btn = page.locator("button").filter(has_text="登录").first
-            if login_btn.count() == 0:
-                buttons = page.locator("button").all()
-                for btn in buttons:
-                    if "登录" in (btn.text_content() or ""):
-                        btn.click()
-                        break
+            # 按钮文案可能是「下一步」或「登录」
+            nxt = page.locator("button").filter(has_text="下一步")
+            if nxt.count():
+                nxt.first.click()
             else:
-                login_btn.click()
+                login_btn = page.locator("button").filter(has_text="登录")
+                (login_btn.first if login_btn.count() else page.locator("button").nth(1)).click()
 
-            # 等待跳转到首页（确认登录成功）
-            page.wait_for_url("**/home/**", timeout=15000)
+            # 检测是否进入二步验证
+            t0 = time.time()
+            two_fa = False
+            while time.time() - t0 < 10:
+                body = page.inner_text("body")
+                if "验证并登录" in body or "验证码" in body or "邮箱安全验证" in body:
+                    two_fa = True
+                    break
+                if "/home" in page.url:
+                    break
+                time.sleep(1)
+
+            if two_fa:
+                print("  ⚠️ IAM 已启用二步验证（邮箱 6 位验证码）")
+                print(f"  → 请在 {verify_timeout}s 内完成邮箱验证（headful 浏览器输入，"
+                      f"或通过 IAM_VERIFY_CODE 环境变量/邮件读取）")
+                # 支持环境变量一次性注入（自动化场景）
+                import os
+                code = os.environ.get("IAM_VERIFY_CODE", "").strip()
+                if code:
+                    try:
+                        page.locator("input[type=text]").first.fill(code)
+                        page.locator("button").filter(has_text="验证并登录").first.click()
+                    except Exception:
+                        pass
+                # 等待离开登录页
+                t1 = time.time()
+                while time.time() - t1 < verify_timeout:
+                    time.sleep(3)
+                    if "/login" not in page.url:
+                        break
+                    if "验证并登录" not in page.inner_text("body") and "/home" in page.url:
+                        break
+                else:
+                    print("  ❌ 二步验证超时，登录失败")
+                    return False
+            else:
+                try:
+                    page.wait_for_url("**/home/**", timeout=15000)
+                except Exception:
+                    pass
+
             page.wait_for_load_state("networkidle", timeout=15000)
             time.sleep(3)
 
-            # 获取所有 Cookie（包括所有域名）
             all_cookies = context.cookies()
             print(f"  获取到 {len(all_cookies)} 个 Cookie")
-            
-            # 按域名分组保存
             domain_cookies = {}
             for c in all_cookies:
                 d = c.get("domain", "").lstrip(".")
-                if d not in domain_cookies:
-                    domain_cookies[d] = []
-                domain_cookies[d].append(f"{c['name']}={c['value']}")
-            
-            # 保存每个域名的 Cookie
+                domain_cookies.setdefault(d, []).append(f"{c['name']}={c['value']}")
             for d, pairs in domain_cookies.items():
-                cookie_str = "; ".join(pairs)
-                set_cookie(d, cookie_str)
-                print(f"  {d}: {len(pairs)} 个 Cookie, 长度 {len(cookie_str)}")
-            
-            # 同时保存全量 Cookie 到所有目标域名
+                set_cookie(d, "; ".join(pairs))
             full_cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in all_cookies)
             for domain in DOMAINS:
                 set_cookie(domain, full_cookie_str)
-            
-            print(f"  全量 Cookie 长度: {len(full_cookie_str)}")
             print("IAM 登录成功，Cookie 已保存")
             return True
 
