@@ -55,6 +55,17 @@ python -m v2 serve --port 8000
 2. 从 ONES 系统导出土时数据 Excel，放到指定目录
 3. 配置文件中确认文件路径（参考 `v2/config/paths.toml.example`）
 
+### 3.1 OA 合同台账导出（2026-11-17 实测可用）
+
+**权威路径：真实 Chrome 导出，不要用 headless Playwright。**
+
+- headless 下 cube 台账页（customid=179）的「导出」按钮 React 事件不触发（点击无任何请求）；真实 Chrome 可正常触发，导出文件自动落 `~/Downloads/`。
+- 组件入口：`delivery_center.v1.collectors.oa_collector.collect_contract_ledger_chrome(month, export_dir=None, watch_timeout=1200)` → 落 `~/.openclaw/data/oa_exports/contract_ledger_<YYYYMM>.xlsx`。
+- 手工等价流程：真实 Chrome 打开 `https://oa.bangcle.com/spa/cube/index.html#/main/cube/search?customid=179` → 点「导出」→ 轮询进度弹窗至「正在导出文件」→ 取 `~/Downloads/*销售合同信息查询台账*.xlsx`。
+- 依赖：真实 Chrome 已登录 IAM/OA（`iam_auth` 自动取码可打通二步验证，IMAP 取 6 位邮箱验证码，注意 60s 重发限流）。
+- 不要用 `/api/ec/dev/table/datas` 分页拉全量：`page` 参数无效（固定返回 300 行），会漏早期合同。
+- 校验：`openpyxl` 读 `max_row-1` 应 ≈11500+，年份覆盖 2017–2026。
+
 ## 4. 常见问题排查
 
 ### 问题 1：`ImportError: attempted relative import with no known parent package`
