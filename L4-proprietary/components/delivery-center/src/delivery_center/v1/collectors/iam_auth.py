@@ -92,6 +92,102 @@ def set_cookie(domain: str, cookie: str):
 
 
 
+
+def _fetch_email_captcha(timeout: int = 90, since_ts: Optional[float] = None) -> Optional[str]:
+    """IMAP 直读网易企业邮箱，获取 IAM 二步验证 6 位验证码。
+
+    优先复用 bdms 的 email_captcha 适配器（config.json 驱动）；
+    失败则回退到 secrets 直读（iam.email_username/iam.email_password）。
+    取码失败返回 None（调用方按超时处理，不假报成功）。
+    """
+    import ssl
+    import imaplib
+    import re
+    from email import message_from_bytes
+    from email.header import decode_header
+
+    host, port = "hwhzimap.qiye.163.com", 993
+    sender, keyword = "imb@bangcle.com", "登录验证码"
+    username = password = ""
+    try:
+        sys_path_hack = None  # noqa: F841
+        from bdms.core import config  # type: ignore
+        cfg = (config.get("integrations.iam.email", {}) or {})
+        imap = cfg.get("imap", {}) or {}
+        cred = cfg.get("credentials", {}) or {}
+        host = imap.get("host", host)
+        port = int(imap.get("port", port))
+        sender = imap.get("sender", sender)
+        keyword = imap.get("subject_keyword", keyword)
+        uf = Path(cred.get("username_file", "")).expanduser()
+        pf = Path(cred.get("password_file", "")).expanduser()
+        if uf.exists():
+            username = uf.read_text(encoding="utf-8").strip()
+        if pf.exists():
+            password = pf.read_text(encoding="utf-8").strip()
+    except Exception:
+        uf = SECRETS_DIR / "iam.email_username"
+        pf = SECRETS_DIR / "iam.email_password"
+        if uf.exists():
+            username = uf.read_text(encoding="utf-8").strip()
+        if pf.exists():
+            password = pf.read_text(encoding="utf-8").strip()
+    if not username or not password:
+        print("  ⚠️ 邮箱凭据缺失，无法自动取码")
+        return None
+
+    def _dec(v) -> str:
+        if not v:
+            return ""
+        out = ""
+        for part, enc in decode_header(v):
+            out += part.decode(enc or "utf-8", "replace") if isinstance(part, bytes) else part
+        return out
+
+    def _body(msg) -> str:
+        if msg.is_multipart():
+            for part in msg.walk():
+                if part.get_content_type() == "text/plain":
+                    payload = part.get_payload(decode=True)
+                    return payload.decode(part.get_content_charset() or "utf-8", "replace")
+        payload = msg.get_payload(decode=True)
+        return payload.decode(msg.get_content_charset() or "utf-8", "replace") if payload else ""
+
+    try:
+        ctx = ssl.create_default_context()
+        mail = imaplib.IMAP4_SSL(host=host, port=port, ssl_context=ctx)
+        mail.login(username, password)
+        mail.select("INBOX")
+        status, data = mail.search(None, "ALL")
+        ids = data[0].split() if status == "OK" else []
+        # 最近 10 封里找验证码邮件
+        for mid in ids[-10:]:
+            st, raw = mail.fetch(mid, "(RFC822)")
+            if st != "OK" or not raw or not raw[0]:
+                continue
+            msg = message_from_bytes(raw[0][1])
+            subj = _dec(msg.get("Subject", ""))
+            frm = _dec(msg.get("From", ""))
+            if sender not in frm or keyword not in subj:
+                continue
+            if since_ts is not None:
+                try:
+                    from email.utils import parsedate_to_datetime
+                    if parsedate_to_datetime(msg.get("Date")).timestamp() <= since_ts:
+                        continue
+                except Exception:
+                    pass
+            text = _body(msg)
+            m = re.search(r"(?:验证码|code)[^0-9]{0,20}(\d{6,8})", text, re.I) or re.search(r"(?<!\d)(\d{6})(?!\d)", text)
+            if m:
+                mail.logout()
+                return m.group(1)
+        mail.logout()
+    except Exception as e:
+        print(f"  ⚠️ IMAP 取码失败: {e}")
+    return None
+
+
 def _wait_login_form(page, timeout: int = 30000):
     """等待 IAM 登录表单（账号/密码框）真正可见。
 
@@ -184,12 +280,22 @@ def login_iam(username: str, password: str, verify_timeout: int = 300) -> bool:
                 # 支持环境变量一次性注入（自动化场景）
                 import os
                 code = os.environ.get("IAM_VERIFY_CODE", "").strip()
+                if not code:
+                    print("  → 自动从邮箱获取验证码（IMAP）...")
+                    code = _fetch_email_captcha(timeout=75, since_ts=t0) or ""
                 if code:
                     try:
-                        page.locator("input[type=text]").first.fill(code)
-                        page.locator("button").filter(has_text="验证并登录").first.click()
-                    except Exception:
-                        pass
+                        box = page.locator(
+                            "input[placeholder*='6 位邮箱验证码']"
+                        )
+                        if box.count() == 0:
+                            box = page.locator("input[type=text]").first
+                        box.first.fill(code)
+                        btn = page.locator("button").filter(has_text="验证并登录")
+                        (btn.first if btn.count() else page.locator("button").nth(1)).click()
+                        print(f"  ✅ 已注入验证码（{code[:2]}****）")
+                    except Exception as e:
+                        print(f"  ⚠️ 验证码注入失败: {e}")
                 # 等待离开登录页
                 t1 = time.time()
                 while time.time() - t1 < verify_timeout:

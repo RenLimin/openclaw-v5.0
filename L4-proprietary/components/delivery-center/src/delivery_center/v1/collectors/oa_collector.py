@@ -725,3 +725,116 @@ if __name__ == "__main__":
             print(f"条数: {result['count']}")
     else:
         print("\n=== 采集失败 ===")
+
+
+
+
+def collect_contract_ledger_chrome(
+    month: str,
+    export_dir: Optional[str] = None,
+    watch_timeout: int = 1200,
+) -> Optional[dict]:
+    """采集销售合同台账 — 真实 Chrome 导出（2026-11-17 验证可用）。
+
+    headless Playwright 的导出按钮 React 事件不触发（OA cube 页面在 headless
+    下点击无请求），真实 Chrome（用户已登录 IAM/OA 会话）可正常触发导出并自动
+    下载到 ~/Downloads。本函数用 osascript 驱动真实 Chrome：
+      1. 在现有 OA 标签导航到 cube 台账页（customid=179）
+      2. 点击「导出」按钮
+      3. 轮询导出进度弹窗，到 100%/「正在导出文件」后浏览器自动下载
+      4. 在 ~/Downloads 轮询新生成的 xlsx 并复制到 export_dir
+
+    Args:
+        month: 报告月份 YYYYMM
+        export_dir: 导出目录（默认 ~/.openclaw/data/oa_exports）
+        watch_timeout: 导出等待超时秒数（11500 行约 5-8 分钟）
+
+    Returns:
+        {"file": path, "size": N, "month": month, "source": "oa_export_chrome"} 或 None
+    """
+    import subprocess, shutil
+    output_dir = Path(export_dir) if export_dir else DOWNLOAD_DIR
+    output_dir.mkdir(parents=True, exist_ok=True)
+    download_dir = Path.home() / "Downloads"
+    target = output_dir / f"contract_ledger_{month}.xlsx"
+
+    def run_js(spec: str, js: str) -> str:
+        esc = js.replace("\\", "\\\\").replace('"', '\\"')
+        src = f'tell application "Google Chrome" to execute {spec} javascript "{esc}"'
+        r = subprocess.run(["osascript", "-e", src], capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            raise RuntimeError("osascript fail: " + r.stderr.strip()[:200])
+        return r.stdout.strip()
+
+    def find_tab(sub: str) -> Optional[str]:
+        for w in range(1, 20):
+            for t in range(1, 50):
+                try:
+                    u = subprocess.run(["osascript", "-e",
+                        f'tell application "Google Chrome" to get URL of tab {t} of window {w}'],
+                        capture_output=True, text=True, timeout=15).stdout.strip()
+                    if sub in u:
+                        return f"tab {t} of window {w}"
+                except Exception:
+                    break
+        return None
+
+    # 1. 找 OA 标签并导航到 cube 台账页
+    spec = find_tab("oa.bangcle.com")
+    if not spec:
+        subprocess.run(["osascript", "-e",
+            'tell application "Google Chrome" to make new tab at end of tabs of window 1 '
+            'with properties {URL:"https://oa.bangcle.com/spa/cube/index.html#/main/cube/search?customid=179&_key=live"}'],
+            capture_output=True, text=True, timeout=30)
+        time.sleep(12)
+        spec = find_tab("cube/search")
+    if not spec:
+        print("ERROR: 找不到 OA/cube 标签")
+        return None
+    if "cube/search" not in (run_js(spec, "location.href") or ""):
+        run_js(spec, 'location.href="https://oa.bangcle.com/spa/cube/index.html#/main/cube/search?customid=179&_key=live";"go"')
+        time.sleep(12)
+    print(f"  Cube tab: {run_js(spec, 'location.href')[:90]}")
+
+    # 2. 点导出
+    r = run_js(spec, "(function(){var b=[].slice.call(document.querySelectorAll('button')).find(function(x){return (x.textContent||'').replace(/\\s/g,'')==='导出'});if(b){b.click();return 'clicked'}return 'nf'})()")
+    print(f"  导出点击: {r}")
+    if r != "clicked":
+        return None
+
+    # 3. 轮询进度弹窗
+    t0 = time.time()
+    done = False
+    while time.time() - t0 < watch_timeout:
+        time.sleep(10)
+        try:
+            m = run_js(spec, "(function(){var mods=document.querySelectorAll('.ant-modal-body');var out=[];mods.forEach(function(md){out.push(md.innerText.slice(0,300))});return JSON.stringify(out)})()")
+            if "100%" in m or "正在导出文件" in m:
+                done = True
+                break
+        except Exception:
+            pass
+    if not done:
+        print("  导出进度超时")
+        return None
+    print(f"  导出完成（耗时 {time.time()-t0:.0f}s）")
+
+    # 4. 等待下载文件出现在 ~/Downloads
+    t1 = time.time()
+    found = None
+    while time.time() - t1 < 120:
+        candidates = sorted(download_dir.glob("*销售合同信息查询台账*.xlsx"),
+                            key=lambda p: p.stat().st_mtime, reverse=True)
+        for c in candidates:
+            if c.stat().st_mtime > t0 - 5:
+                found = c
+                break
+        if found:
+            break
+        time.sleep(5)
+    if not found:
+        print("  未在 ~/Downloads 找到导出文件")
+        return None
+    shutil.copy(found, target)
+    print(f"  已保存: {target} ({target.stat().st_size} bytes)")
+    return {"file": str(target), "size": target.stat().st_size, "month": month, "source": "oa_export_chrome"}
