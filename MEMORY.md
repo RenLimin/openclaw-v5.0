@@ -27,6 +27,10 @@
 - 已完成：BDMS · Bangcle PPT · 合同审批 SCA-001 · FIN-L4 M1-M4 · DMS · OCR · Office 生成 · 模型调度
 - 阻塞：WeCom 每日观测摘要（缺 Agent mode 凭据）
 
+## 待外部输入（阻塞项）
+
+- **Palantir P4.2 OA 真实写回**：冻结中。2026-11-08 Rex 拍板合并至人工验收测试环境执行。解锁条件（全在 Rex）：① 指定**测试流程单据**（非真实在审合同）② 写接口抓包契约（端点/CSRF/body，详设 §4.3 留空待补）③ 单据级二次授权。增量文档 `…-p4-write-v1.1`。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+
 ## 核心经验
 
 | 类别 | 教训 |
@@ -46,11 +50,12 @@
 - **泛微 OA（oa.bangcle.com，e-cology 9）：当前仅具备普通账号登录权限，无开放平台应用凭证、无 WorkflowService/管理权限。** <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 - 含义：合同桥只能走「登录会话 cookie + 浏览器/SPA 内部接口」路线（cube.py 已是此模式，非 app token）；无法走 REST apply token / WebService。
 - ~~已证鸿沟~~ **2026-11-04 已解**：销售合同卡片主字段 `合同审批流程→` 即审批 **requestid**（billid 15134 → 882663），另有 `流程编号`/`概算申请流程`/`存档流程`。普通账号带会话即可读完整审批链。
-- 只读端点（**纯 HTTP 重放已验证**，2026-11-04）：POST `/api/workflow/reqform/getRequestLogList` 带 cookie+SPA 头+构造 body（requestid/workflowid/nodeid/signatureAttributesStr）→ 完整 loglist（节点/处理人/动作/意见/接收人）；`getRequestLogBaseInfo` 返回 txStatus/creatorNodeId。**无需开放平台凭证、无需 playwright**；写回（同意/驳回）仍须人决策。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
-- 现存 ecology 会话 2026-11-04 已超时；重建需消耗一次真实 IMAP 验证码（oa-login）。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+- ~~只读端点纯 HTTP 重放已验证（2026-11-04）~~ **2026-11-06 实测否决**：`getRequestLogList` 需表单页签发的 4 个签名令牌（`loadForm`→signatureSecretKey/signatureAttributesStr，`detailData`→authStr/authSignatureStr，后者返 500），裸 POST 被 `LoadRequestLogDataCmd` 拦截或返空。**读路径定为真实浏览器驱动**（`ApprovalLogReader`，点「流转意见」懒加载后拦 XHR）。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
+- ecology 会话可无人值守重建：`contractctl oa-login`（IAM headless + BDMS IMAP 取码）→ SSO 换票 → state 落盘 → 探针 billid 15134 校验；失败返 `{ok:false, stage, error}` 信封，不抛裸异常。 <!-- project: github.com/RenLimin/openclaw-v5.0 -->
 
 ## 变更历史
 
+- 2026-11-17：Palantir 主任务收口（P1–P7 全 completed，P4.2 冻结待外部输入挂账）；纠正 OA 只读端点记录（纯 HTTP 已否决 → 浏览器驱动）
 - 2026-10-04：全量资产文档补齐(66份) · AGENTS.md 瘦身 24k→11k · USER.md 瘦身 8k→2.6k · 系统升级 2026.9.1→2026.9.8
 - 2026-09-16：model-scheduling 注册为 OpenClaw provider
 - 2026-09-15：BDMS v2.1 全量交付 · 验收 7 步法
