@@ -114,9 +114,27 @@ def run_scan_items(items, *, budget=SCAN_ITEM_BUDGET_SEC, max_workers=3):
     return errors, item_errors
 
 def run_cmd(cmd, timeout=15):
+    """执行 shell 命令。
+
+    2026-11-17 修复：launchd 启动的环境 PATH 只有 /usr/gnu/bin:/usr/local/bin:/bin:/usr/bin
+    （无 /opt/homebrew/bin），且 WorkingDirectory 是 error_handler/ 而非 workspace 根，
+    导致 `openclaw` 找不到、`python3 L2-infra/...` 相对路径全部落空 —— 报告里
+    出现 7 条纯环境性假异常（asset_missing / provider_error / context_scan_failed）。
+    这里统一注入 PATH 并固定 cwd=WORKSPACE，使脚本在任何调用环境（launchd/cron/交互）
+    行为一致，不再依赖调用者的 shell 配置。
+    """
+    env = dict(os.environ)
+    extra = ["/opt/homebrew/bin", "/opt/homebrew/sbin"]
+    cur = env.get("PATH", "")
+    parts = cur.split(":") if cur else []
+    for p in reversed(extra):
+        if p not in parts:
+            parts.insert(0, p)
+    env["PATH"] = ":".join(parts)
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout
+            cmd, shell=True, capture_output=True, text=True, timeout=timeout,
+            cwd=WORKSPACE, env=env,
         )
         return result.stdout.strip(), result.returncode
     except subprocess.TimeoutExpired:
@@ -125,58 +143,37 @@ def run_cmd(cmd, timeout=15):
         return str(e), -1
 
 
-def _parse_cron_list_table(output):
-    """解析 `openclaw cron list --all` 的表格输出，返回 [{job_id, name, status, ...}]
-    注意：表头可能有重名列（如 Agent ID 会拆成 Agent 和 ID 两列），所以用列索引去重。"""
+def _parse_cron_list(output):
+    """解析 `openclaw cron list --all --json`，返回 [{id, name, status, enabled, ...}]
+
+    2026-11-17 修复：旧实现按表头固定列宽切片解析人读表格，遇到含 CJK 的 job 名
+    （终端显示宽度 2、Python 按字符数切）会整体错位，Status 列取到 "(10x) isolated"
+    之类的碎片，导致已禁用 job 的连续失败计数被误判为活跃故障。改用 JSON，字段精确。
+    """
+    try:
+        data = json.loads(output)
+    except (json.JSONDecodeError, AttributeError):
+        return []
+    jobs = data.get("jobs", []) if isinstance(data, dict) else data
     rows = []
-    lines = output.strip().split("\n")
-    if len(lines) < 2:
-        return rows
-
-    # 从表头确定各列位置
-    header = lines[0]
-    col_names = []
-    col_positions = []  # (start_idx, end_idx_exclusive)
-    seen_names = set()
-    for m in re.finditer(r'\S+', header):
-        name = m.group(0)
-        # 重名处理：Agent ID 拆成的第二个 "ID" 会跟第一个 "ID" 冲突，加后缀
-        if name in seen_names:
-            name = f"{name}_dup"
-        seen_names.add(name)
-        col_names.append(name)
-        col_positions.append([m.start(), None])
-    # 每列的结束位置 = 下一列的起始位置；最后一列到行尾
-    for idx in range(len(col_positions) - 1):
-        col_positions[idx][1] = col_positions[idx + 1][0]
-    if col_positions:
-        col_positions[-1][1] = 999
-
-    # 跳过分隔线行（含 --- 或全是空格+横线）
-    data_start = 1
-    if data_start < len(lines) and re.match(r'^[\s\-]+$', lines[data_start]):
-        data_start += 1
-
-    for line in lines[data_start:]:
-        if not line.strip():
-            continue
-        row = {}
-        for name, (start, end) in zip(col_names, col_positions):
-            val = line[start:min(end, len(line))].strip()
-            row[name] = val
-        # 第一列就是 job ID（UUID 格式）
-        first_col = row.get(col_names[0], "")
-        if re.match(r'^[0-9a-f]{8}-', first_col):
-            # 确保 "ID" 键指向正确的 job_id（防重名覆盖）
-            row["ID"] = first_col
-            rows.append(row)
+    for j in jobs:
+        state = j.get("state") or {}
+        rows.append({
+            "id": j.get("id", ""),
+            "name": j.get("name", ""),
+            "enabled": j.get("enabled", True),
+            "status": j.get("status", ""),
+            "last_status": state.get("lastRunStatus", ""),
+            "consecutive_errors": state.get("consecutiveErrors") or 0,
+            "last_error": state.get("lastError"),
+        })
     return rows
 
 
 def scan_cron_errors():
-    """扫描 cron job 错误（基于 cron list 的 status 列 + runs 详情）"""
-    output, rc = run_cmd("openclaw cron list --all 2>/dev/null")
-    if rc != 0:
+    """扫描 cron job 错误（基于 `openclaw cron list --all --json` 的 state 字段）"""
+    output, rc = run_cmd("openclaw cron list --all --json 2>/dev/null")
+    if rc != 0 or not output.strip():
         return [{"error": f"cron list failed: {output}"}]
 
     errors = []
@@ -191,38 +188,48 @@ def scan_cron_errors():
         "9fe434a8-9edf-49c0-8ab6-03525b1b4184",  # heartbeat:ms-coding
     }
 
-    rows = _parse_cron_list_table(output)
-    for row in rows:
-        job_id = row.get("ID", "")
+    for row in _parse_cron_list(output):
+        job_id = row.get("id", "")
         if not job_id or job_id == self_job_id or job_id in known_resolved_ids or job_id in heartbeat_ids:
             continue
+        # 已禁用的 job 不参与健康判定（disabled 的 error-scan-v2 带 "disabled (10x)"
+        # 历史，曾被误判为活跃故障）
+        if not row.get("enabled", True):
+            continue
 
-        name = row.get("Name", job_id)
-        status = row.get("Status", "")
+        name = row.get("name") or job_id
+        status = row.get("status") or row.get("last_status") or ""
+        consecutive = int(row.get("consecutive_errors") or 0)
+        last_error = row.get("last_error")
 
         # 规则 1: status 含 error / failed / timeout → 直接报异常
         is_error_status = bool(re.search(r'error|fail|timeout', status, re.IGNORECASE))
+        if is_error_status and not consecutive and last_error:
+            consecutive = 1
+            status = last_error
 
-        # 规则 2: status 为 ok 但含连续失败计数（如 "error (3x)"）也报
-        consecutive = 0
-        m = re.search(r'\((\d+)x\)', status)
-        if m:
-            consecutive = int(m.group(1))
+        # 规则 2: 兜底 —— status 文本正常但 state.consecutiveErrors 已计数
+        # （status 列可能只显示 "ok"，真实失败在 state 里）
+        if not is_error_status and consecutive >= 1 and last_error:
+            is_error_status = True
+            status = last_error
 
-        # 规则 3: status 为 ok/running 也查 runs 历史，确认最近是否有连续失败
+        # 规则 3: JSON 未给出任何失败信号时查 runs 历史
         if not is_error_status:
-            fail_count, last_error = _count_recent_failures(job_id, limit=5)
+            fail_count, fail_err = _count_recent_failures(job_id, limit=5)
             if fail_count >= 2:
                 is_error_status = True
                 consecutive = fail_count
-                status = last_error or status
+                status = fail_err or status
 
+        # detail 带上 last_error，否则定位不到根因
+        detail_base = last_error or status
         if is_error_status and consecutive >= 2:
             errors.append({
                 "job_id": job_id,
                 "name": name,
                 "type": "cron_error",
-                "detail": f"status: {status} (连续 {consecutive} 次失败)",
+                "detail": f"status: {detail_base} (连续 {consecutive} 次失败)",
                 "consecutive_failures": consecutive
             })
         elif is_error_status:
@@ -231,7 +238,7 @@ def scan_cron_errors():
                 "job_id": job_id,
                 "name": name,
                 "type": "cron_warning",
-                "detail": f"status: {status} (单次失败，可能为瞬态)",
+                "detail": f"status: {detail_base} (单次失败，可能为瞬态)",
                 "consecutive_failures": consecutive
             })
 
@@ -646,7 +653,10 @@ def scan_asset_consistency():
     ]
     
     for asset_path, description in key_assets:
-        expanded_path = os.path.expanduser(asset_path)
+        # 相对路径必须以 WORKSPACE 为基准解析：否则会随调用者 CWD 变化而误报
+        # （launchd 的 WorkingDirectory 是 error_handler/，曾导致 3 条假 asset_missing）
+        expanded_path = asset_path if os.path.isabs(asset_path) else os.path.join(WORKSPACE, asset_path)
+        expanded_path = os.path.expanduser(expanded_path)
         if not os.path.exists(expanded_path):
             errors.append({
                 "type": "asset_missing",
@@ -911,9 +921,19 @@ def scan_provider_health():
         errors.append({"type": "provider_error", "detail": f"status check failed: {output[:200]}"})
         return errors
 
-    # 检查是否有 provider 报错
+    # 检查是否有 provider 报错（排除 launchctl 环境性探测噪声：
+    # "inspection failed" / "could not be verified" 是 launchd 无 bootstrap 上下文导致的
+    # 探测失败，不是真实 provider 故障）
     for line in output.split("\n"):
-        if any(kw in line.lower() for kw in ["error", "failed", "down", "unreachable", "401", "unauthorized", "api.*key"]):
+        low = line.lower()
+        if "inspection failed" in low or "could not be verified" in low:
+            continue
+        if any(kw in low for kw in ["unreachable", "unauthorized", "401", "api key", "api_key"]):
+            errors.append({
+                "type": "provider_error",
+                "detail": line.strip()[:200]
+            })
+        elif "provider" in low and any(kw in low for kw in ["error", "failed", "down"]):
             errors.append({
                 "type": "provider_error",
                 "detail": line.strip()[:200]
