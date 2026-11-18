@@ -4,8 +4,7 @@
 两种入口：
   A. OA 待办桥（按 OA requestid）：
        oa_workflow_ones.py --capture 886291            # Playwright 抓 OA 表单到 raw/
-       oa_workflow_ones.py 885576 885673               # 读 raw/ → ONES 输出
-       oa_workflow_ones.py --from-raw 886291           # 同上（显式）
+       oa_workflow_ones.py 885576 885673               # 读 raw/ → ONES 输出（默认即从 raw/）
   B. ONES 签约项目直查（按项目编号 SSXM，输出 Rex 确认的签约项目块）：
        oa_workflow_ones.py --code SSXM-2026-0611-1491 SSXM-2026-0603-1405
 
@@ -216,14 +215,20 @@ def run_oa(rids: list[str], raw: Path, pm: str, final_customer: str) -> int:
             p = project_by_code(mcode.group(1))
             if p:
                 print(build_block(1, mcode.group(1), p, project_tasks(p["uuid"]), pm, final_customer or cust)); print(); continue
-        # 无项目编号：列客户名下项目，提示待建
-        r = gql(f'query {{ tasks(filter:{{name_match:"{cust}"}}) {{ project{{uuid name}} }} }}')
+        # 无项目编号：只在「项目名」里精确包含客户名，禁止用任务名宽泛匹配历史项目
         projs = {}
-        for t in (r.get("data") or {}).get("tasks") or []:
-            pp = t.get("project") or {}
-            if pp.get("uuid"): projs[pp["uuid"]] = pp["name"]
+        if cust:
+            r = gql(f'query {{ projects(filter:{{name_match:"{cust}"}}) {{ uuid name }} }}')
+            for pp in (r.get("data") or {}).get("projects") or []:
+                if cust in (pp.get("name") or "") and pp.get("uuid"):
+                    projs[pp["uuid"]] = pp["name"]
         print(f"1. 客户：{cust or '【缺失】'} | OA 项目编号：{'【缺失】' if not mcode else mcode.group(1)}")
-        print(f"   状态：未做精确项目匹配（客户名下 {len(projs)} 个历史项目）；无本期新项目则为待建。")
+        if projs:
+            print(f"   候选项目（项目名含客户名，共 {len(projs)} 个，需人工确认是否本期新项目）：")
+            for nm in list(projs.values())[:10]:
+                print(f"     - {nm}")
+        else:
+            print("   状态：ONES 项目名未匹配到该客户 → 本期项目可能待建（勿用任务名反推）。")
         print()
     return 0
 
@@ -231,7 +236,6 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("rids", nargs="*", help="OA requestid")
     ap.add_argument("--capture", nargs="+", metavar="RID", help="仅捕获 OA 单到 raw/")
-    ap.add_argument("--from-raw", dest="from_raw", action="store_true", help="从 raw/ 读取（默认行为）")
     ap.add_argument("--code", nargs="+", metavar="SSXM", help="ONES 签约项目编号直查")
     ap.add_argument("--raw-dir", default=str(RAW_DEFAULT))
     ap.add_argument("--pm", default="", help="项目经理（ONES 无字段时显式提供）")

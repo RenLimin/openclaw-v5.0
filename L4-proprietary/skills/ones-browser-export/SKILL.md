@@ -171,9 +171,22 @@ python3 scripts/oa_workflow_ones.py --code SSXM-2026-0611-1491 SSXM-2026-0603-14
 # B) OA 待办桥（requestid）
 python3 scripts/oa_workflow_ones.py --capture 886291      # Playwright 抓 OA 表单
 python3 scripts/oa_workflow_ones.py 886291               # 读 raw/ → ONES 输出
+
+# C) 待办全量分布（双口径对比，回答「某流程有几条待办」）
+python3 scripts/oa_todo_dist.py --save                   # 落盘 tmp/oa-pif/full_todo_items.json
 ```
 
 前置：OA `storage_state`（过期先 `refresh_oa_session()`）+ Chrome 已登录 ONES。
+
+### 待办统计口径（重要）
+
+OA 待办有**两个口径**，数字对不上是**正常**的：
+- **树/计数口径**（`doingBaseInfo.treedata` / `doingCountInfo.treecount`）= 当前启用的流程节点；
+- **列表口径**（`/api/ec/dev/table/datas` 全量分页）= 全部待办单据，**含历史流程定义的遗留单据**。
+
+实证（2026-11-18）：树里只有 `wf_840 / wf_757 / wf_923`；列表另有 `wf_778=9`、`wf_752=2`
+（均为旧版「销售合同验收文件归档流程」，被 840 取代但单据未销）。
+→ **报数必须注明口径**；Never 用树节点缺失推断「某流程无待办」。详见 `references/oa-workflow-fields.md` 第七节。
 
 ### 签约项目块输出样式（固定，经 Rex 2026-11-18 确认）
 
@@ -199,7 +212,9 @@ N. 项目编号：SSXM-…
 1. **编号在项目名里**：SSXM 编号只在 `projects.name`，任务名不含 → 用 `projects(filter:{name_match})`。
 2. **授权/维保/PM 字段空**：ONES 自定义字段 `2jEz2XG9`/`ArYbG1Hf`/`6ehQSmch`/`THZBUbgx`/`QP2aBu2T`/`DECCCa8Z`/`2yD1cAR4` 对目标项目**实测全空**；只能从任务描述提取授权区间，PM 靠人工口径。
 3. **枚举/标量选择集**：GraphQL 枚举字段加 `{value}`、标量不加，混用会报 Malformed.GraphQL。
-4. **OA 会话**：过期跳 `iam.bangcle.com/#/login`，`--capture` 会显式报错，不静默。
+4. **OA 会话**：过期跳 `iam.bangcle.com/#/login`，`--capture` / `oa_todo_dist.py` 会显式报错（exit 2），不静默。
+5. **客户名不可反推项目**：`--final-customer` 只用于**最终客户字段**；禁止用任务名 `name_match` 反推项目
+   （会命中历史项目）。无 SSXM 编号时只在 `projects.name` 里精确包含匹配，且结果标「需人工确认」。
 
 ### 镜像与根因（重要，防再犯）
 

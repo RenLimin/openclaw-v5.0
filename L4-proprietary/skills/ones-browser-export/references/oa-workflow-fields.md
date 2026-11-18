@@ -75,3 +75,41 @@ python3 scripts/oa_workflow_ones.py --code SSXM-2026-0611-1491 SSXM-2026-0603-14
 python3 scripts/oa_workflow_ones.py --capture 886291
 python3 scripts/oa_workflow_ones.py 886291
 ```
+
+## 七、待办两个口径的差异（2026-11-18 实证，解释 wf_778/752 消失之谜）
+
+**现象**：`doingBaseInfo.treedata` / `doingCountInfo.treecount` 只出现部分流程，
+而 `/api/ec/dev/table/datas` 全量列表里能看到更多 workflowid。
+
+**根因（实证）**：两个口径取数不同源。
+
+| 口径 | 端点 | 含义 | 2026-11-18 实测 |
+|---|---|---|---|
+| 树/计数 | `workflow/reqlist/doingBaseInfo` + `doingCountInfo` | **当前启用的流程节点**（左侧导航树） | `type_40 梆梆_项目实施管理` → `wf_840 / wf_757 / wf_923` |
+| 列表 | `/api/ec/dev/table/datas`（全量分页，dataKey 当次捕获） | **全部待办单据**，含历史流程定义 | 286 条：840=272、**778=9、752=2**、757=2、923=1 |
+
+**wf_778 / wf_752 是什么**：均为「销售合同验收文件归档流程」的**旧 workflowid 定义**
+（单据创建人多为崔硕，日期 2023-01 ~ 2024-08）。该流程定义已被 `wf_840` 取代，
+但**遗留单据仍挂在待办列表**，因此：
+- 树节点里查不到（旧定义不在当前导航树）；
+- 列表口径能查到（单据本身未销）。
+
+**纪律（Always）：**
+- Always 报「某流程有几条待办」时**注明口径**；两者数字对不上是正常，不是数据错。
+- Never 用树节点缺失推断「某流程无待办」——旧定义流程的单据不进树。
+- Always 全量分页用当次 POST 捕获的 `dataKey`，禁止硬编码旧值。
+- 目标流程清单里 `wf_820/815/916` 当前既不在树、列表也为 0（820 的 886291 已由人工处理）。
+
+## 八、脚本清单（权威源）
+
+| 脚本 | 用途 | 处置 |
+|---|---|---|
+| `scripts/oa_workflow_ones.py` | OA 单 → ONES 桥（`--code` 签约块 / `--capture` / requestid） | ✅ 权威 |
+| `scripts/oa_todo_dist.py` | 待办全量分布统计（双口径对比，`--save` 落盘） | ✅ 权威（2026-11-18 新增） |
+
+**已吸收/无需固化**（原 `tmp/oa-pif/` 临时脚本，结论已进本文件，脚本不入库）：
+- `refresh_now.py`（5 行）→ 薄包装 `refresh_oa_session()`，SKILL 已说明，无需重复；
+- `capture_one.py`（34 行）→ 与 `oa_workflow_ones.py --capture` 等价，已被吸收；
+- `todo_dist.py`（58 行）→ 由 `oa_todo_dist.py` 取代（新增双口径 + 树计数 + flag 修复）。
+- `probe*.py` / `dump*.py` / `proj_*.py` / `fields_of.py` 等 → 一次性侦察，
+  结论已固化在本文件第三/四节，脚本本身不入库（避免沉没成本资产化）。
