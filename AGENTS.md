@@ -454,3 +454,31 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - `diagnostics.stuckSessionAbortMs` / `stuckSessionWarnMs` 调大阈值（治标）。
 - 接电源 + `disablesleep` 消除睡眠冻结（治本环境项）。
 <!-- observed: 2026-11-18 | status: active -->
+
+## skill-sync 镜像红线（事故 2026-11-18，FB：sandbox skills 被同步删除）
+
+**现象**：sandbox `skills/ones-browser-export/` 下 `scripts/oa_workflow_ones.py`、
+`references/oa-workflow-fields.md` 变成 `D`（工作树删除），但 HEAD `425599f` 里仍在。
+
+**根因（实证）**：sandbox 的 `skills/` 是 OpenClaw `workspace-skill-sync` **单向镜像**，
+**不是** git 工作树：
+- 源 = `L2-infra/skills` + `L3-business/skills` + `L4-proprietary/skills`（`openclaw.json` → `skills.load.extraDirs`）
+- 目标 = `<sandbox>/skills`，`dist/workspace-skill-sync.runtime-*.mjs` → `syncWorkspaceSkills()`
+- 逻辑：比对 `skills/.openclaw-sync.json` 的 `skillsVersion`/`skillRootsFingerprint` → 不符即
+  **先删目标目录**（`fsp.rm(childPath,{recursive:true})`）**再 `fsp.cp` 权威源**；
+  `shouldSyncSkillPath` 只排除 `.git`/`node_modules`，**放行 scripts/references**。
+- 触发点：任意 agent 会话启动/同步时（日志 `[skills] Skipping invalid skill` 同一时刻可见）。
+
+**结论**：只提交/只落在 sandbox 的 skill 文件 = **必然丢失**；权威源没有 = 下次同步就删。
+`git log`/`reflog` 查不到删除（删除不产生 git 提交），只能靠源-目标比对与同步源码定位。
+
+**纪律（Always）：**
+- Always 新增/修改 skill 内容，**先写权威源**（`L4-proprietary/skills/<name>/…`），再同步/使用；
+  sandbox `skills/` 只读，**禁止**当作编辑目标。
+- Always 提交前确认主仓（`/Users/bangcle/.openclaw/workspace`）权威源已含该文件；
+  提交后核对 `git show --stat HEAD` 实际清单。
+- 镜像已回拷权威源后，sandbox 里同名文件是**副本**；发现 `D`/`M` 不要 `git checkout` 乱还原，
+  先比对权威源与 sandbox 内容，再以权威源为准。
+- 主仓 hook（`pre-commit`）会 auto-add，**严格只提交本任务内容仍须用隔离临时 index**
+  （`GIT_INDEX_FILE=$TMPIDX git read-tree/write-tree/commit-tree` + `update-ref` 守卫）。
+<!-- observed: 2026-11-18 | status: active -->
