@@ -45,11 +45,20 @@ id: EXP-20261118-001
 |---|---|
 | 流程名 | **销售合同审核流程** |
 | 流程编号前缀 | **`XSHTSH`** + `YYYYMMDD` + `-NNNNN`（例：`XSHTSH2026072700771`） |
+| **OA workflowid** | **757**（已验证） |
 | 单据主键 | OA `requestid`（本文 872777）；可由销售合同卡片「合同审批流程→」字段反查 |
 | 业务定位 | 合同签署前的**商务 / 财务 / 法务联合评审**（核价格、核分项一致性、核法律条款、核回款条件） |
 | 与「销售合同下单流程」的区别 | 下单流程（`XD…`，见 `oa-project-implementation-workflows.md`）= 签约后**触发实施/建项**；本流程 = 签约前**评审并放行**。二者以合同生命周期前后相接，不是替代关系 |
 | 输入 | 合同正文（doc/docx/pdf）+ 销售合同概算（另一流程）+ 价格审批文件（条件触发） |
 | 输出 | 审批结论（同意 / 退回）+ 商务登记 + 合同版本状态（有效 / 废弃） |
+
+> 【已验证 2026-11-18｜代码与夹具】workflowid=757 的两处独立证据：
+> ① `L4-proprietary/skills/ones-browser-export/scripts/oa_todo_dist.py` 的 `TARGETS`
+> 明确登记 `("757", "销售合同审核流程")`；
+> ② `L4-proprietary/components/bangcle-contract/tests/fixtures/oa_log_882663.json`
+> 头部字段 `{"requestid": "882663", "workflowid": "757"}`——即 882663 这张单**就是** 757 流程的单据，
+> 含 10 条真实审批链 + 2 处 AI 小助手意见（`AI_WORKFLOW_OPINION_CALLBACK`）。
+> 离线重放 `normalize_approval_chain` 得 10 条，节点序列与本文 872777 一致。
 
 > 命名口径提示：`XSHTSH` = 销售合同审核；`XSZS` = 销售合同（签约）；`XD` = 下单；
 > `XSHTSH`/`XD` 均为 OA 流程编号前缀，与 ONES 项目编号 `SSXM-…` 是**不同命名体系**，勿混用。
@@ -180,21 +189,29 @@ id: EXP-20261118-001
 
 | 能力 | 归属 | 关系 |
 |---|---|---|
-| OA 销售合同审核流程读取（单据 / 审批链 / AI 意见） | `contract-manager-expert`（CME-001）→ `bangcle-contract/services/oa`（`CubeClient` / `ApprovalLogReader`） | **已具备**；本流程的数据获取直接复用，不新建 |
-| OA 合同卡片 ↔ 审批 requestid 对账 | `bangcle-contract/scripts/reconcile_oa.py`（P4.4，cron 每日 09:30） | **已具备**；`oa_billid → requestid → 审批链` 链路已实测 |
+| **OA workflowid 登记** | `ones-browser-export/scripts/oa_todo_dist.py`（`TARGETS`） | **已具备**：`757 = 销售合同审核流程`（双口径统计已覆盖） |
+| OA 销售合同审核流程读取（单据 / 审批链 / AI 意见） | `contract-manager-expert`（CME-001）→ `bangcle-contract/services/oa`（`CubeClient` / `ApprovalLogReader`） | **已具备**；`ApprovalLogReader` 与 workflowid 解耦，757 单据实测通过（882663） |
+| OA 审批人节点 → L3 角色映射 | `bangcle-contract/services/oa/approval_identity.py` | **已具备**：部门经理/分管总监/合同评审小组/商务 4 节点已映射（含 757 夹具的 7 人工号/5 节点） |
+| OA 合同卡片 ↔ 审批 requestid 对账 | `bangcle-contract/scripts/reconcile_oa.py`（P4.4，cron 每日 09:30） | **已具备**；`oa_billid → requestid → 审批链` 链路已实测，**无 workflowid 过滤**（757 与其他流程同链路） |
 | 合同正文风险审查（22 条受控规则 + product-kb 标的参照） | `contractctl review`（CME-001 核心职责） | **已具备**；与 OA 本流程的 AI 小助手意见互补（AI 小助手在 OA 侧，22 条规则在本地侧） |
 | 销售合同审批工作流（状态机 / 分级审批 / 合同生成） | `contract-approval`（SCA-001，L3 通用框架） | **已具备**；是**本地**审批框架，与 OA 的「销售合同审核流程」不是同一对象，不要互相替代 |
-| OA 流程字段 → ONES 桥 | `ones-browser-export`（`oa_workflow_ones.py`，项目实施三流程） | **已具备**；本流程如需可同一模式扩展（见 §七） |
+| OA 流程字段 → ONES 桥 | `ones-browser-export`（`oa_workflow_ones.py`） | **已具备**，但**仅覆盖项目实施三流程**（820/815/916）；757 若需回写 ONES 才需扩展 |
 
-> 结论：**「销售合同审核流程」不需要新建系统能力**，需要的是把它纳入 CME 路由与知识库（本次固化），并在需要时按 `oa_workflow_ones.py` 模式扩展一个只读入口。
+> 结论：**「销售合同审核流程」不需要新建系统能力**。workflowid=757 已有：
+> ① OA 侧标识登记（`oa_todo_dist.py`）；② 真实单据 882663 的审批链夹具（含 AI 意见）；
+> ③ 通用读取器（`ApprovalLogReader`，与 workflowid 解耦）；④ 身份映射（`approval_identity.py`）；
+> ⑤ 对账链路（`reconcile_oa.py`，无流程过滤）。缺的只是**知识库固化 + 路由登记**（本次已补）。
 
 ## 七、后续固化建议
 
 1. **纳入 CME 路由**：在 `contract-manager-expert` SKILL.md 路由表中增加一行「OA 销售合同审核流程读取 / 审批链查询 → bangcle-contract/services/oa（复用 P4.4 链路）」，并引用本文。✅ 已于 2026-11-18 落地。
-2. **只读入口扩展（按需）**：若需按 requestid 批量拉「销售合同审核流程」单据与审批链，可在 `ones-browser-export/scripts/` 新增 `oa_contract_review.py`（复用 `storage_state` + Playwright + `ApprovalLogReader` 风格），**只读**、写操作留人工闸。
-3. **枚举字典补全**：在审单据的「当前节点 / 流程状态」枚举需实时读取补充（历史台账只有终态）。
-4. **AI 小助手意见结构化**：其输出（价格与合同范围 / 风险与建议 / 共性复核要求）可作 `contractctl review` 的输入源之一，需在详设中定契约。
-5. **验收口径**：新增能力验收须用真实 OA 单据（如 872777 只读跑通），禁止 mock；会话失效显式 skip 留证。
+2. **workflowid 登记补全**（本次已补）：`references/oa-workflow-fields.md` §一 原列「三类流程」，
+   实际 `oa_todo_dist.py` 已登记 757/923 → 该参考文件应改为「已验证流程清单」，补 757。
+3. **757 → ONES 桥（仅在需要时）**：若后续要把 757 单据字段回写 ONES（如合同→项目关联），
+   再按 `oa_workflow_ones.py` 模式扩展；**当前无此需求，不新建**。
+4. **枚举字典补全**：在审单据的「当前节点 / 流程状态」枚举需实时读取补充（历史台账只有终态）。
+5. **AI 小助手意见结构化**：其输出（价格与合同范围 / 风险与建议 / 共性复核要求）可作 `contractctl review` 的输入源之一，需在详设中定契约。
+6. **验收口径**：新增能力验收须用真实 OA 单据（如 872777 只读跑通），禁止 mock；会话失效显式 skip 留证。
 
 ## 八、证据与溯源
 
@@ -218,3 +235,5 @@ id: EXP-20261118-001
 ## 十、变更历史
 
 - 2026-11-18：创建（Jerry）。依据 872777 单据导出件 + 2022 历史台账，固化销售合同审核流程结构，并接入 CME 路由表。
+- 2026-11-18（复核修正）：补 workflowid=757 及证据链（`oa_todo_dist.py` TARGETS + 夹具 882663）；
+  修正 §六/§七——确认**无需新建**（原建议的 `oa_contract_review.py` 属重复建设，已删）。
