@@ -28,6 +28,7 @@ metadata:
 | 合同运营对象 / Proposal Gate（登记→submit→approve→reject，写回+审计） | **本技能**（`contract_review/ontology_bridge` + `contractctl ontology` 子命令） | L4→L2 | Contract Ontology Bridge：合同先登记为 L2 运营对象，经提案门禁执行生命周期动作，真写回 L4 表 + 全程审计（v1.1 新增） |
 | 合同标的 → 产品知识库参照（满足/部分/不满足 + 红线） | **本技能** 调 `product-kb`（contract 匹配模块） | L4→L4 | bangcle-contract 内部已集成；含近似名 partial、停售 SKU 红线 |
 | 泛微 OA Cube 拉合同（billid 拉取/附件下载/浏览器兜底） | **本技能**（`bangcle-contract/services/oa`） | L4 | API→浏览器自动兜底；`contractctl oa-login` 建会话 |
+| OA 销售合同审核流程（requestid 单据 / 审批链 / AI 小助手意见，只读） | **本技能**（复用 `bangcle-contract/services/oa` 的 `CubeClient`/`ApprovalLogReader`，与 P4.4 对账同链路） | L4 | 流程结构固化见 `docs/knowledge-base/oa-contract-review-workflow.md`；写操作一律人工闸 |
 | 销售合同审批工作流（OCR 识别/条款拆解/分级审批/Excel·Word 生成） | `contract-approval`（SCA-001） | L3 | 通用审批框架能力 |
 | 通用合同纯逻辑（状态机/风险规则库/分级审批/金额工具/OA 连接器抽象） | `contract-management`（CLM-GEN-001） | L3 | 框架/代码层能力，L4 合同审查的规则与法条来源（CHECK_RULES） |
 | 企业 Office 销售合同审批全流程（起草→审批→归档） | `office-contract`（OFC-001） | L4 | Office 场景的合同审批专有实例 |

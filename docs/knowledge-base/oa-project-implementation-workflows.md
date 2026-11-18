@@ -1,3 +1,11 @@
+---
+title: Bangcle OA 项目实施管理流程 —— 三类流程结构固化
+layers: [L4]
+stage: manage
+tags: [oa, project-management, workflow, approval, poc, implementation, sales, bangcle]
+id: EXP-20261112-001
+---
+
 # Bangcle OA 项目实施管理流程 —— 三类流程结构固化（2026-11-12）
 
 > 依据：OA 泛微 e-cology 9 实际单据（只读打开，SPA `static4form` 页）：
