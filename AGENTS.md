@@ -426,3 +426,31 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - OpenClaw 无官方 undelete：恢复 = 从删除前快照把 `session_nodes` + transcript 等 10 张
   实体表精确合并回活库（不整库还原），新行 `entry_valid=0` 需经 canonical 校验后置 1。
 <!-- observed: 2026-11-11 | status: active -->
+
+## stale 误杀根因与长任务纪律（事故 2026-11-17，FB-20261118-01）
+
+**事故**：11-17 两次 reply run 被判 `Reply operation expired as stale` 强杀，最长一次空转 2h10m53s。
+
+**根因链（实证，非推测）：**
+1. `recordActivity()` 只在**工具开始/工具结果/事件**触发，**工具执行期间不记进度**；
+   `RUN_STALE_TAKEOVER_MS=6e5`(10min)、`BLOCKED_TOOL_CALL_ABORT_FLOOR_MS=9e5`(15min)。
+   → 一个长命令跑 2h，`lastActivityAtMs` 停在 2h 前 → 必判 stale。
+2. 叠加会话**上下文溢出**（242572 vs 预算 242144），且恢复链全断
+   （`compactionAttempts=0`、`toolResultReducibleChars=0`）→ 模型回合 precheck 必败，
+   **不可能推进** = 空转本质。
+3. 环境共犯（独立隐患）：macOS Clamshell Sleep 全天 55 次
+   `host timing gap detected: process was frozen ~Xms`，冻结期同样不更新活动时间 → 人为制造 stale 误判。
+
+**纪律（Always）：**
+- Never 在**已溢出或压力 critical** 的会话里起任何长任务。先 `/reset`/拆会话，再干活。
+- Always 长 pytest/构建：**分块**（每块 < 6min）+ 落盘 `/tmp/*.log` + 每块有明确结论；
+  禁止单块整跑（11-17 整跑被回收 5 次，全是无用重跑）。
+- Always 长任务先 `task_tracker start` + 每块后 `update`（phase/step-index/progress），
+  **让用户随时能看到状态**；禁止"凭空跑而不自知"。
+- Always 判活以 `ps`/落盘日志为准；上下文里的 "Active exec sessions: none" 快照**不可信**（11-18 四次误报）。
+- 收到「继续」时先 `process(action=list)` + `ps` + 读落盘日志核对，**不盲目重跑非幂等命令**。
+
+**可选缓解（需 Rex 拍板）：**
+- `diagnostics.stuckSessionAbortMs` / `stuckSessionWarnMs` 调大阈值（治标）。
+- 接电源 + `disablesleep` 消除睡眠冻结（治本环境项）。
+<!-- observed: 2026-11-18 | status: active -->
