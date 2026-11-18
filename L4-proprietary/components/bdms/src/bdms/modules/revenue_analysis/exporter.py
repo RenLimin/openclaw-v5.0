@@ -45,15 +45,20 @@ FMT_RATE = "0.0000"
 FMT_INT = "#,##0"
 
 # 预算趋势分析 17 列表头（§5.2）
+# 预算趋势分析 16 列表头（golden R1/R2/R3 三层，§5.2）
 TREND_HEADERS = [
-    "期间", "类型",
-    "期初-合同数量", "期初-涉及金额(万)",
-    "本年正常交付-合同数量", "本年正常交付-涉及金额(万)",
-    "异常中-合同数量", "异常中-涉及金额(万)",
-    "合同消失-合同数量", "合同消失-涉及金额(万)",
-    "未来交付-合同数量", "未来交付-涉及金额(万)",
-    "校验-数量", "校验-金额(万)",
-    "异常说明-未立项", "异常说明-已立项", "",
+    "期间", "类型", "期初数据", "", "1-12月累计数据", "", "", "", "", "",
+    "", "", "校验", "", "异常说明", "",
+]
+TREND_HEADERS_R2 = [
+    "", "", "", "", "本年正常交付", "", "异常中", "", "合同消失", "",
+    "未来交付", "", "", "", "未立项", "已立项",
+]
+TREND_HEADERS_R3 = [
+    "", "", "合同数量（个）", "涉及金额（万）",
+    "合同数量（个）", "涉及金额（万）", "合同数量（个）", "涉及金额（万）",
+    "合同数量（个）", "涉及金额（万）", "合同数量（个）", "涉及金额（万）",
+    "数量", "金额", "未立项", "已立项",
 ]
 
 # 汇总 13 列（§4.3）
@@ -236,9 +241,16 @@ class RevenueAnalysisExporter:
     def _write_trend(self, wb: Workbook, period: str, conn: Any) -> None:
         ws = wb.create_sheet(SHEET_TREND[:31])
 
-        # 表头三层（R1-R3）
+        # 表头三层（R1-R3，复刻 golden）
         for j, h in enumerate(TREND_HEADERS, start=1):
-            self._header_cell(ws, 1, j, h)
+            if h:
+                self._header_cell(ws, 1, j, h)
+        for j, h in enumerate(TREND_HEADERS_R2, start=1):
+            if h:
+                self._header_cell(ws, 2, j, h)
+        for j, h in enumerate(TREND_HEADERS_R3, start=1):
+            if h:
+                self._header_cell(ws, 3, j, h)
         # 读 ra_trend_row
         row_map: dict[int, dict] = {}
         for r in conn.execute(
@@ -253,8 +265,14 @@ class RevenueAnalysisExporter:
         ):
             cell_map[(c["row_index"], c["col_index"])] = c["value"]
 
+        # R11：新签表头（复刻 golden）
+        for j, h in enumerate(("期间", "类型", "当期数据（2026.6.1）", "",
+                               "本年正常交付", "", "异常中", "", "合同消失", "",
+                               "未来交付", "", "", "", "", ""), start=1):
+            if h:
+                self._header_cell(ws, 11, j, h)
+
         # R4-R18：递延 6 行 + 合计 + 新签 5 行 + 合计 + 共计
-        # 每行 17 列；金额列（4/6/8/10/12/14/16）红线置空
         for row_index in (4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18):
             r = row_map.get(row_index)
             if not r:
@@ -269,9 +287,23 @@ class RevenueAnalysisExporter:
                                  (7, "exception_count"), (9, "disappear_count"),
                                  (11, "future_count"), (13, "check_count")):
                 self._body_cell(ws, excel_row, col_idx, r.get(key), FMT_INT)
-            # 金额列：红线置空，但样式保留
-            for col_idx in (4, 6, 8, 10, 12, 14, 16):
-                self._body_cell(ws, excel_row, col_idx, None, FMT_AMOUNT)
+            # 金额列：202606 有权威值则写；202609 红线（None）保持空 + 样式
+            for col_idx, key in ((4, "init_amount_wan"), (6, "normal_amount_wan"),
+                                 (8, "exception_amount_wan"),
+                                 (10, "disappear_amount_wan"),
+                                 (12, "future_amount_wan"), (14, "check_amount")):
+                self._body_cell(ws, excel_row, col_idx, r.get(key), FMT_AMOUNT)
+            # C15/C16 未立项/已立项（golden R4 实证：6/0；合计行 6/60）
+            audit = {}
+            if r.get("routing_audit"):
+                try:
+                    audit = json.loads(r["routing_audit"])
+                except (json.JSONDecodeError, TypeError):
+                    audit = {}
+            self._body_cell(ws, excel_row, 15,
+                            audit.get("unplanned_count", 0), FMT_INT)
+            self._body_cell(ws, excel_row, 16,
+                            audit.get("planned_count", 0), FMT_INT)
             # 样式应用到 C-N
             for j in range(3, 15):
                 cell = ws.cell(row=excel_row, column=j)
@@ -283,22 +315,17 @@ class RevenueAnalysisExporter:
                         start_color=SUBHEADER_FILL, end_color=SUBHEADER_FILL,
                         fill_type="solid")
 
-        # R19 新签预计确收率（数值在 ra_trend_cell）
+        # R19 新签预计确收率（golden：E19 标签 + F19 率值，其余列空）
         r19 = row_map.get(19)
         if r19:
             excel_row = self._trend_excel_row(19)
             ws.cell(row=excel_row, column=1, value="新签")
             ws.cell(row=excel_row, column=2, value="新签预计确收率")
-            # 数量列复用 R19 的 init/check 计数
-            for col_idx, key in ((3, "init_count"), (5, "normal_count"),
-                                 (7, "exception_count"), (9, "disappear_count"),
-                                 (11, "future_count"), (13, "check_count")):
-                self._body_cell(ws, excel_row, col_idx, r19.get(key), FMT_INT)
-            rate_cell = cell_map.get((19, 0))
+            rate_cell = cell_map.get((19, 1))  # col_index=1 → 金额口径（golden F19）
             if rate_cell:
                 try:
                     val = json.loads(rate_cell).get("value")
-                    self._body_cell(ws, excel_row, 13, val, FMT_RATE)
+                    self._body_cell(ws, excel_row, 6, val, FMT_RATE)
                 except (json.JSONDecodeError, TypeError):
                     pass
             for j in range(1, 18):
@@ -312,9 +339,7 @@ class RevenueAnalysisExporter:
 
     @staticmethod
     def _trend_excel_row(row_index: int) -> int:
-        """ra_trend_row 行号 → Excel 行号（R4 起，跳过 R11 新签表头）。"""
-        if row_index >= 12:
-            return row_index + 1  # R12→R13（R11 表头占一行）
+        """ra_trend_row 行号 → Excel 行号（golden 行位 = row_index，R11 为新签表头）。"""
         return row_index
 
     # ─── 样式辅助 ───

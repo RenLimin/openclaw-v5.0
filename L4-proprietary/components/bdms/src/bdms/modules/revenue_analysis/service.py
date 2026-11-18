@@ -160,6 +160,54 @@ class RevenueAnalysisService(BaseService):
         finally:
             conn.close()
 
+    # ─── Q1 归因 / Q4 预警 ───
+
+    def attribution(self, period: str) -> dict:
+        """Q1 偏差归因结果（ra_attribution）+ 待人工清单。"""
+        conn = _db.get_connection(self.engine.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT * FROM ra_attribution WHERE period = ? ORDER BY id",
+                (period,),
+            ).fetchall()
+            if not rows:
+                raise ValueError(f"{period} 无归因数据，请先 generate")
+            out_rows = []
+            for r in rows:
+                d = dict(r)
+                d.pop("id", None)
+                d["context"] = json.loads(d["context"]) if d.get("context") else {}
+                out_rows.append(d)
+            auto = sum(1 for r in out_rows if r.get("auto_filled"))
+            return {
+                "period": period,
+                "triggered": len(out_rows),
+                "auto_filled": auto,
+                "pending": len(out_rows) - auto,
+                "rows": out_rows,
+                "pending_rows": [r for r in out_rows if not r.get("auto_filled")],
+            }
+        finally:
+            conn.close()
+
+    def alerts(self, period: str) -> list[dict]:
+        """Q4 预警清单（ra_alert）。"""
+        conn = _db.get_connection(self.engine.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT * FROM ra_alert WHERE period = ? ORDER BY id",
+                (period,),
+            ).fetchall()
+            out = []
+            for r in rows:
+                d = dict(r)
+                d.pop("id", None)
+                d["context"] = json.loads(d["context"]) if d.get("context") else {}
+                out.append(d)
+            return out
+        finally:
+            conn.close()
+
     # ─── 导出 ───
 
     def export(self, period: str, out_path: Optional[Path] = None) -> Path:

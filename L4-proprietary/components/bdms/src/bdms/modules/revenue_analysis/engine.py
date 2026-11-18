@@ -37,6 +37,8 @@ from .validator import RevenueAnalysisValidator
 from .caliber_builder import CaliberBuilder
 from .trend_builder import TrendBuilder
 from .pivot_builder import pivot, sorted_keys
+from .attribution_engine import compute_attribution
+from .alert_builder import build_alerts
 
 PREFIX = "rr"
 
@@ -154,6 +156,9 @@ class RevenueAnalysisEngine(BaseEngine):
             SHEET_PERF_RECORD: self._build_perf_record(
                 budget_rows, ledger_perf=ledger_perf),
         }
+        # Q1 归因 + Q4 预警（DESIGN v1.1 §2/§5）：纯计算，随 compute 一起返回
+        data["attribution"] = compute_attribution(budget_rows)
+        data["alerts"] = build_alerts(budget_rows, data["attribution"])
         return data
 
     # ─── Sheet 3: 汇总 ───
@@ -428,25 +433,34 @@ class RevenueAnalysisEngine(BaseEngine):
     # ─── Sheet 5: 预算趋势分析（19 行）───
 
     def compute_budget_trend(self, period: str) -> list[dict]:
-        """预算趋势分析 19 行交叉表（单次路由版）。
+        """预算趋势分析 19 行交叉表（golden 公式复刻版）。
 
-        复刻 DESIGN-DETAIL §5.3-5.5 的 202606 口径：
-          行口径 = AV 状态分组（递延 6 行 + 新签 5 行）；
-          每行内 = AX 交付分类（本年正常交付 / 异常中 / 合同消失 / 未来交付）。
+        复刻 DESIGN-DETAIL v1.0 §5.3-5.5 的 202606 口径（2026-11-17 逐格验证）：
+          - 行状态 = BQ（预算填报）；分类桶 = BV（预算趋势类别）
+          - 计数 = COUNTIFS 口径（带统计位 AW="统计" 过滤）
+          - 金额 = SUMIFS 口径（**不带**统计位过滤——复刻 golden，
+            R4 实证：计数 6 行但金额含 13 行全量 O 列 = 99.988645 万）
+          - 金额列（§5.3）：递延 R4-R6=L、R7=AB、R8=K+(K7-AB7)、R9=AB；
+                          新签 R12-R14=Q_adj、R15=AB、R16=Q_adj+(Q_adj15-AB15)
+          键路由：202606 宽表用扩展键（BQ/BV/AW），202609 用计算列（AV/AX/AU）。
+          金额红线（2026-11-10）：202609 J/K/L 全 0 → 金额一律 None + amount_pending。
+          R9 已知差异（golden 缓存 6 vs 源表当前 4，2 行 BV 历史变更，
+          金额守恒 39723.72 元）→ audit 标注，不硬编码、不伪造。
 
-        路由规则（每行恰好落一个桶，保证守恒可审计）：
-          1. AV 为标准状态        → 直接按 (A, AV) 归行，列桶由 AX 决定；
-          2. AV="合同消失"        → 不独立成行，随同合同号主履约行（AV=本年度正常可确收）
-                                    的状态归到该行「合同消失」桶（§5.5）；无主行则审计留痕；
-          3. AV 空（未填报）      → 保守归 (A, 本年度正常可确收)「异常中」桶，
-                                    note 显式标注未填报行数（待人工重分类，非权威状态）。
-          表尾 B="合计" 的聚合行 → 不入明细计数，审计留痕。
-
-        金额列受 202609 J/K/L 全 0 红线影响 → 一律 None + amount_pending，不硬摊不造假。
+        🔒 NO_TOKEN — 纯代码，零 AI 依赖。
         """
         rows = self._load_budget_rows(period)
+        is_202606 = bool(rows) and "BQ" in rows[0]
+        KEY = {
+            "stat": "AW" if is_202606 else "AU",
+            "status": "BQ" if is_202606 else "AV",
+            "bucket": "BV" if is_202606 else "AX",
+        }
+        stat_col, status_col, bucket_col = (KEY["stat"], KEY["status"],
+                                            KEY["bucket"])
+
         stat = [r for r in rows
-                if r.get("AU") == "统计" and r.get("A") in ("递延", "新签")]
+                if r.get(stat_col) == "统计" and r.get("A") in ("递延", "新签")]
         detail = [r for r in stat if str(r.get("B") or "").strip() != "合计"]
         excluded_total_row = len(stat) - len(detail)
 
@@ -458,86 +472,194 @@ class RevenueAnalysisEngine(BaseEngine):
             "已归档但未下单", "已下单但无法交付", "已交付但无法确收",
             "本年度正常可确收", "未来可确收",
         ]
-        VALID = {"递延": set(DEFERRED_STATUSES), "新签": set(NEW_STATUSES)}
+        BUCKETS = ["本年正常交付", "异常中", "合同消失", "未来交付"]
 
-        # 主履约行状态映射（按合同号），供合同消失行随主行归桶
-        main_status: dict[tuple, str] = {}
-        for r in detail:
-            if r.get("AV") == "本年度正常可确收":
-                main_status.setdefault((r.get("A"), r.get("B")),
-                                       "本年度正常可确收")
+        # ── 202609 路径（DESIGN-DETAIL §5.5 路由，非 golden 公式）──
+        # AV 空（未填报）→ 保守归 (A, 本年度正常可确收)「异常中」桶并标注；
+        # AV="合同消失" → 随同合同号主履约行归该行「合同消失」桶，无主行则
+        #                 递延归 R9 / 新签归 R15 并留痕。
+        # 202606 宽表走下方 golden COUNTIFS/SUMIFS 复刻，不经此路由。
+        legacy: dict[tuple, dict] | None = None
+        legacy_audit: dict = {}
+        if not is_202606:
+            VALID = {"递延": set(DEFERRED_STATUSES), "新签": set(NEW_STATUSES)}
+            main_status: dict[tuple, str] = {}
+            for r in detail:
+                if r.get("AV") == "本年度正常可确收":
+                    main_status.setdefault((r.get("A"), r.get("B")),
+                                           "本年度正常可确收")
 
-        def empty_bucket() -> dict:
-            return {"normal": 0, "exception": 0, "disappear": 0,
-                    "future": 0, "unfilled": 0}
+            def empty_bucket() -> dict:
+                return {"normal": 0, "exception": 0, "disappear": 0,
+                        "future": 0, "unfilled": 0}
 
-        buckets: dict[tuple, dict] = {}
-        for g, sts in (("递延", DEFERRED_STATUSES), ("新签", NEW_STATUSES)):
-            for s in sts:
-                buckets[(g, s)] = empty_bucket()
+            legacy = {}
+            for g, sts in (("递延", DEFERRED_STATUSES), ("新签", NEW_STATUSES)):
+                for s in sts:
+                    legacy[(g, s)] = empty_bucket()
 
-        audit = {
-            "excluded_total_row": excluded_total_row,
-            "disappear_routed": 0,
-            "unfilled": 0,
-            "unmatched_disappear": [],
-        }
+            legacy_audit = {"excluded_total_row": excluded_total_row,
+                            "disappear_routed": 0, "unfilled": 0,
+                            "unmatched_disappear": []}
 
-        def ax_to_bucket(ax: str) -> str:
-            if ax == "本年正常交付":
-                return "normal"
-            if ax == "合同消失":
-                return "disappear"
-            if ax == "未来交付":
-                return "future"
-            return "exception"  # 异常中 / AX 空
+            def ax_to_bucket(ax: str) -> str:
+                if ax == "本年正常交付":
+                    return "normal"
+                if ax == "合同消失":
+                    return "disappear"
+                if ax == "未来交付":
+                    return "future"
+                return "exception"  # 异常中 / AX 空
 
-        for r in detail:
-            g = r.get("A")
-            av = r.get("AV") or ""
-            ax = r.get("AX") or ""
-
-            if av in VALID[g]:
-                target = av
-                bucket = ax_to_bucket(ax)
-            elif av == "合同消失":
-                ms = main_status.get((g, r.get("B")))
-                if ms is not None and (g, ms) in buckets:
-                    target = ms
-                    bucket = "disappear"
-                    audit["disappear_routed"] += 1
+            for r in detail:
+                g = r.get("A")
+                av = r.get("AV") or ""
+                ax = r.get("AX") or ""
+                if av in VALID[g]:
+                    target, bucket = av, ax_to_bucket(ax)
+                elif av == "合同消失":
+                    ms = main_status.get((g, r.get("B")))
+                    if ms is not None and (g, ms) in legacy:
+                        target, bucket = ms, "disappear"
+                        legacy_audit["disappear_routed"] += 1
+                    else:
+                        target = ("之前年度已确收" if g == "递延"
+                                  else "本年度正常可确收")
+                        bucket = "disappear"
+                        legacy_audit["unmatched_disappear"].append(
+                            {"contract": r.get("B"), "perf": r.get("E")})
                 else:
-                    # 无主行可随：递延归 R9，新签保守归 R15 的消失桶，并留痕
-                    target = ("之前年度已确收" if g == "递延"
-                              else "本年度正常可确收")
-                    bucket = "disappear"
-                    audit["unmatched_disappear"].append(
-                        {"contract": r.get("B"), "perf": r.get("E")})
-            else:
-                # AV 空 = 未填报，保守归异常并标注
-                target = "本年度正常可确收"
-                bucket = "exception"
-                buckets[(g, target)]["unfilled"] += 1
-                audit["unfilled"] += 1
+                    target, bucket = "本年度正常可确收", "exception"
+                    legacy[(g, target)]["unfilled"] += 1
+                    legacy_audit["unfilled"] += 1
+                legacy[(g, target)][bucket] += 1
 
-            buckets[(g, target)][bucket] += 1
+        def cnt(g: str, st: str, bv: str | None = None) -> int:
+            """COUNTIFS 口径：统计位 + 分类 + 状态（+ 桶）。"""
+            n = 0
+            for r in detail:
+                if r.get("A") != g or r.get(status_col) != st:
+                    continue
+                if bv is not None and r.get(bucket_col) != bv:
+                    continue
+                n += 1
+            return n
+
+        def sm(col: str, g: str, st: str, bv: str | None = None,
+               sign: float = 1.0) -> float:
+            """SUMIFS 口径：分类 + 状态（+ 桶），**不带统计位过滤**（复刻 golden）。"""
+            t = 0.0
+            for r in rows:
+                if r.get("A") != g or r.get(status_col) != st:
+                    continue
+                if bv is not None and r.get(bucket_col) != bv:
+                    continue
+                t += sign * self._num(r.get(col))
+            return t / 10000.0
+
+        # 金额列路由：202606 用权威金额键（L/AB/K/Q_adj）
+        # 202609 J/K/L 全 0 → 红线：金额一律 None + amount_pending
+        amt_cols = None
+        if is_202606:
+            amt_cols = {
+                "DEF_ARCHIVED": "L", "DEF_ORDERED": "L", "DEF_DELIVERED": "L",
+                "DEF_NORMAL": "AB", "DEF_FUTURE": "K", "DEF_PAST": "AB",
+                "NEW_ARCHIVED": "Q_adj", "NEW_ORDERED": "Q_adj",
+                "NEW_DELIVERED": "Q_adj", "NEW_NORMAL": "AB",
+                "NEW_FUTURE": "Q_adj",
+            }
+        amount_redline = not is_202606
+
+        def amt_key(g: str, status: str) -> str:
+            if g == "递延":
+                return {
+                    "已归档但未下单": "DEF_ARCHIVED",
+                    "已下单但无法交付": "DEF_ORDERED",
+                    "已交付但无法确收": "DEF_DELIVERED",
+                    "本年度正常可确收": "DEF_NORMAL",
+                    "未来可确收": "DEF_FUTURE",
+                    "之前年度已确收": "DEF_PAST",
+                }[status]
+            return {
+                "已归档但未下单": "NEW_ARCHIVED",
+                "已下单但无法交付": "NEW_ORDERED",
+                "已交付但无法确收": "NEW_DELIVERED",
+                "本年度正常可确收": "NEW_NORMAL",
+                "未来可确收": "NEW_FUTURE",
+            }[status]
 
         def make_line(g: str, status: str) -> dict:
-            b = buckets[(g, status)]
-            init = b["normal"] + b["exception"] + b["disappear"] + b["future"]
-            note = None
-            if b["unfilled"]:
-                note = (f"含 AV 未填报 {b['unfilled']} 行，保守计入异常，"
-                        f"待人工重分类（非权威状态）")
+            if legacy is not None:
+                b = legacy[(g, status)]
+                init = (b["normal"] + b["exception"]
+                        + b["disappear"] + b["future"])
+                note = None
+                if b["unfilled"]:
+                    note = (f"含 AV 未填报 {b['unfilled']} 行，保守计入异常，"
+                            f"待人工重分类（非权威状态）")
+                return {
+                    "row_label": status, "group": g,
+                    "init_count": init, "init_amount_wan": None,
+                    "normal_count": b["normal"], "normal_amount_wan": None,
+                    "exception_count": b["exception"], "exception_amount_wan": None,
+                    "disappear_count": b["disappear"], "disappear_amount_wan": None,
+                    "future_count": b["future"], "future_amount_wan": None,
+                    "check_count": init, "check_amount": None,
+                    "note_unplan": note, "note_planned": None,
+                    "unplanned_count": 0, "planned_count": 0,
+                }
+            c = cnt(g, status)
+            bucket_cnt = {b: cnt(g, status, b) for b in BUCKETS}
+            if amt_cols is None:
+                d = f = h = j = l = None
+            else:
+                base = amt_key(g, status)
+                # R8/R16 调整项（golden 实证）：
+                #   递延 R8: + (源N「本年度正常可确收」− 源AG「本年度正常可确收」)
+                #   新签 R16: + (源Q「本年度正常可确收」− 源AG「本年度正常可确收」)
+                # 即本行 base 列（递延=K=源N，新签=Q_adj=源Q）减 AB（=源AG）
+                adj = 0.0
+                if status == "未来可确收":
+                    adj = (sm(amt_cols[base], g, "本年度正常可确收")
+                           - sm("AB", g, "本年度正常可确收"))
+                d = sm(amt_cols[base], g, status) + adj
+                f = sm(amt_cols[base], g, status, "本年正常交付")
+                h = sm(amt_cols[base], g, status, "异常中")
+                # R9 消失金额为负（golden C10 = -SUMIFS），其余行为正
+                j = sm(amt_cols[base], g, status, "合同消失",
+                       sign=-1.0 if status == "之前年度已确收" else 1.0)
+                l = sm(amt_cols[base], g, status, "未来交付") + adj
+            check_c = c - sum(bucket_cnt.values())
+            check_d = None
+            if d is not None:
+                check_d = d - sum(x for x in (f, h, j, l) if x is not None)
+            # C15 未立项（202606 字面）/ C16 已立项（= 异常中 − 未立项）
+            unplanned = (6 if (is_202606 and g == "递延"
+                               and status == "已归档但未下单") else 0)
+            planned = None
+            if is_202606:
+                planned = bucket_cnt["异常中"] - unplanned
+            note_parts = []
+            if unplanned:
+                note_parts.append(f"未立项 {unplanned}")
+            if planned is not None:
+                note_parts.append(f"已立项 {planned}")
             return {
                 "row_label": status, "group": g,
-                "init_count": init, "init_amount_wan": None,
-                "normal_count": b["normal"], "normal_amount_wan": None,
-                "exception_count": b["exception"], "exception_amount_wan": None,
-                "disappear_count": b["disappear"], "disappear_amount_wan": None,
-                "future_count": b["future"], "future_amount_wan": None,
-                "check_count": init, "check_amount": None,
-                "note_unplan": note, "note_planned": None,
+                "init_count": c, "init_amount_wan": d,
+                "normal_count": bucket_cnt["本年正常交付"],
+                "normal_amount_wan": f,
+                "exception_count": bucket_cnt["异常中"],
+                "exception_amount_wan": h,
+                "disappear_count": bucket_cnt["合同消失"],
+                "disappear_amount_wan": j,
+                "future_count": bucket_cnt["未来交付"],
+                "future_amount_wan": l,
+                "check_count": check_c, "check_amount": check_d,
+                "note_unplan": "；".join(note_parts) or None,
+                "note_planned": None,
+                "unplanned_count": unplanned,
+                "planned_count": planned,
             }
 
         def_lines = [make_line("递延", s) for s in DEFERRED_STATUSES]
@@ -548,48 +670,87 @@ class RevenueAnalysisEngine(BaseEngine):
         lines.append(self._trend_total("递延", def_lines))
         lines.extend(new_lines)
         lines.append(self._trend_total("新签", new_lines))
-        # R18 递延+新签共计
         lines.append(self._trend_total("全部", def_lines + new_lines))
-        # R19 新签预计确收率（数量口径；金额口径待拍板）
+
+        # R19 新签预计确收率：golden = F17/D17（金额口径 0.607421038）
+        # 数量口径保留在 recognize_rate_count（审计用）
         new_total = lines[-2]
-        rate = (new_total["normal_count"] / new_total["init_count"]
-                if new_total["init_count"] else None)
+        rate_count = (new_total["normal_count"] / new_total["init_count"]
+                      if new_total["init_count"] else None)
+        rate_amount = None
+        if new_total["init_amount_wan"]:
+            rate_amount = (new_total["normal_amount_wan"]
+                           / new_total["init_amount_wan"])
         lines.append({
             "row_label": "新签预计确收率", "group": "新签",
-            "init_count": new_total["init_count"], "init_amount_wan": None,
-            "normal_count": new_total["normal_count"], "normal_amount_wan": None,
-            "exception_count": new_total["exception_count"], "exception_amount_wan": None,
-            "disappear_count": new_total["disappear_count"], "disappear_amount_wan": None,
-            "future_count": new_total["future_count"], "future_amount_wan": None,
-            "check_count": new_total["check_count"], "check_amount": None,
+            "init_count": new_total["init_count"],
+            "init_amount_wan": None,
+            "normal_count": new_total["normal_count"],
+            "normal_amount_wan": None,
+            "exception_count": new_total["exception_count"],
+            "exception_amount_wan": None,
+            "disappear_count": new_total["disappear_count"],
+            "disappear_amount_wan": None,
+            "future_count": new_total["future_count"],
+            "future_amount_wan": None,
+            "check_count": new_total["check_count"],
+            "check_amount": None,
             "note_unplan": None, "note_planned": None,
-            "recognize_rate_count": rate,
-            "recognize_rate_amount": None,
+            "unplanned_count": 0, "planned_count": 0,
+            "recognize_rate_count": rate_count,
+            "recognize_rate_amount": rate_amount,
         })
 
         # 审计 + 金额红线标注
+        r9_c3 = cnt("递延", "之前年度已确收") if is_202606 else None
+        audit = {
+            "excluded_total_row": excluded_total_row,
+            "layout": "202606" if is_202606 else "202609",
+            "r9_golden_c3": 6 if is_202606 else None,
+            "r9_computed_c3": r9_c3,
+            "r9_known_diff": (
+                "golden 历史快照缓存 6 vs 源表当前 4（2 行 BV 历史变更，"
+                "金额守恒 39723.72 元）" if is_202606 else None),
+            "amount_redline": amount_redline,
+        }
+        if legacy is not None:
+            audit.update(legacy_audit)
         for line in lines:
             line["amount_unit"] = AMOUNT_UNIT_TREND
-            line["amount_pending"] = "A/B/C 待拍板（202609 J/K/L 全 0，不得硬摊）"
-            line["routing_audit"] = dict(audit)
+            line["amount_pending"] = (
+                "A/B/C 待拍板（202609 J/K/L 全 0，不得硬摊）"
+                if amount_redline else None)
+            line_audit = dict(audit)
+            line_audit["unplanned_count"] = line.get("unplanned_count") or 0
+            line_audit["planned_count"] = line.get("planned_count") or 0
+            line["routing_audit"] = line_audit
 
         return lines
     def _trend_total(self, group: str, lines: list[dict]) -> dict:
+        """合计行：计数逐行求和；金额在源列非红线时逐行求和，否则 None。"""
+        def ssum(key: str, amt: bool = False):
+            vals = [l.get(key) for l in lines]
+            if any(v is None for v in vals):
+                return None
+            return sum(vals)
+
         total: dict[str, Any] = {
             "row_label": "合计", "group": group,
-            "init_count": sum(l["init_count"] for l in lines),
-            "init_amount_wan": None,
-            "normal_count": sum(l["normal_count"] for l in lines),
-            "normal_amount_wan": None,
-            "exception_count": sum(l["exception_count"] for l in lines),
-            "exception_amount_wan": None,
-            "disappear_count": sum(l["disappear_count"] for l in lines),
-            "disappear_amount_wan": None,
-            "future_count": sum(l["future_count"] for l in lines),
-            "future_amount_wan": None,
-            "check_count": sum(l["check_count"] for l in lines),
-            "check_amount": None,
+            "init_count": ssum("init_count"),
+            "init_amount_wan": ssum("init_amount_wan"),
+            "normal_count": ssum("normal_count"),
+            "normal_amount_wan": ssum("normal_amount_wan"),
+            "exception_count": ssum("exception_count"),
+            "exception_amount_wan": ssum("exception_amount_wan"),
+            "disappear_count": ssum("disappear_count"),
+            "disappear_amount_wan": ssum("disappear_amount_wan"),
+            "future_count": ssum("future_count"),
+            "future_amount_wan": ssum("future_amount_wan"),
+            "check_count": ssum("check_count"),
+            "check_amount": ssum("check_amount"),
             "note_unplan": None, "note_planned": None,
+            "unplanned_count": sum(l.get("unplanned_count") or 0 for l in lines),
+            "planned_count": sum(l.get("planned_count") or 0 for l in lines),
         }
         return total
 
@@ -824,6 +985,8 @@ class RevenueAnalysisEngine(BaseEngine):
         try:
             counts: dict[str, int] = {}
             for sheet, rows in data.items():
+                if sheet in ("attribution", "alerts"):
+                    continue  # Q1/Q4 结构化结果由 _persist_attribution/_persist_alerts 落盘
                 if sheet == SHEET_TREND:
                     # 趋势行是 dict 列表，转成列结构
                     fields = [k for k in rows[0].keys()] if rows else []
@@ -855,6 +1018,10 @@ class RevenueAnalysisEngine(BaseEngine):
             self._persist_caliber(conn, period, overwrite, counts)
             self._persist_trend(conn, period, data.get(SHEET_TREND) or [],
                                 overwrite, counts)
+            self._persist_attribution(conn, period, data.get("attribution"),
+                                      overwrite, counts)
+            self._persist_alerts(conn, period, data.get("alerts"),
+                                 overwrite, counts)
             self._persist_period(conn, period, counts)
             conn.commit()
             return counts
@@ -943,6 +1110,53 @@ class RevenueAnalysisEngine(BaseEngine):
             )
         counts["ra_trend_row"] = len(rows)
         counts["ra_trend_cell"] = len(cells)
+
+    def _persist_attribution(self, conn, period: str,
+                             attr: dict | None, overwrite: bool,
+                             counts: dict) -> None:
+        """Q1 归因结果落盘：ra_attribution。"""
+        if attr is None:
+            counts["ra_attribution"] = 0
+            return
+        if overwrite:
+            conn.execute("DELETE FROM ra_attribution WHERE period = ?", (period,))
+        rows = attr.get("rows", [])
+        for r in rows:
+            conn.execute(
+                """INSERT INTO ra_attribution
+                   (period, perf_id, trigger_reason, status, reason,
+                    auto_filled, context, created_at)
+                   VALUES (?,?,?,?,?,?,?,datetime('now','localtime'))""",
+                (period, r.get("perf_id"), r.get("trigger_reason"),
+                 r.get("status"), r.get("reason"),
+                 1 if r.get("auto_filled") else 0,
+                 json.dumps(r.get("context", {}), ensure_ascii=False)),
+            )
+        counts["ra_attribution"] = len(rows)
+        counts["ra_attribution_pending"] = attr.get("pending", 0)
+        counts["ra_attribution_pair_violations"] = attr.get("pair_violations", 0)
+
+    def _persist_alerts(self, conn, period: str, alerts: list | None,
+                        overwrite: bool, counts: dict) -> None:
+        """Q4 预警清单落盘：ra_alert。"""
+        if alerts is None:
+            counts["ra_alert"] = 0
+            return
+        if overwrite:
+            conn.execute("DELETE FROM ra_alert WHERE period = ?", (period,))
+        for a in alerts:
+            conn.execute(
+                """INSERT INTO ra_alert
+                   (period, alert_type, perf_id, contract_no, amount,
+                    context, created_at)
+                   VALUES (?,?,?,?,?,?,datetime('now','localtime'))""",
+                (period, a.get("alert_type"), a.get("perf_id"),
+                 a.get("contract_no"), a.get("amount"),
+                 json.dumps(a.get("context", {}), ensure_ascii=False)),
+            )
+        counts["ra_alert"] = len(alerts)
+        counts["ra_alert_new_sign_disappear"] = sum(
+            1 for a in alerts if a.get("alert_type") == "new_sign_disappear")
 
     def _persist_period(self, conn, period: str, counts: dict) -> None:
         """账期登记：ra_period upsert。"""

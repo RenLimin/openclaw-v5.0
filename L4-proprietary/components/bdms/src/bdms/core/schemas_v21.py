@@ -994,6 +994,72 @@ CREATE TABLE IF NOT EXISTS ra_trend_cell (
     value TEXT,
     UNIQUE(period, row_index, col_index)
 );
+
+-- ===== 确收分析 v1.1 增量表（DESIGN-DETAIL-REVENUE-ANALYSIS-v1.1 §10.1）=====
+
+-- 偏差归因结果（Q1）
+CREATE TABLE IF NOT EXISTS ra_attribution (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    perf_id TEXT NOT NULL,
+    trigger_reason TEXT,
+    status TEXT,
+    reason TEXT,
+    auto_filled INTEGER DEFAULT 0,
+    context TEXT,
+    created_at TEXT,
+    UNIQUE(period, perf_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ra_attr_period ON ra_attribution(period);
+
+-- 分桶结果（Q2/Q3）
+CREATE TABLE IF NOT EXISTS ra_bucket (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    perf_id TEXT NOT NULL,
+    budget_fill TEXT,
+    budget_trend TEXT,
+    bucket_source TEXT,
+    matched_oa INTEGER DEFAULT 0,
+    matched_ones INTEGER DEFAULT 0,
+    week_status TEXT,
+    created_at TEXT,
+    UNIQUE(period, perf_id)
+);
+CREATE INDEX IF NOT EXISTS idx_ra_bucket_period ON ra_bucket(period);
+
+-- 预警清单（Q4 新签消失等）
+CREATE TABLE IF NOT EXISTS ra_alert (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    alert_type TEXT,
+    perf_id TEXT,
+    contract_no TEXT,
+    amount REAL,
+    context TEXT,
+    resolved INTEGER DEFAULT 0,
+    created_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ra_alert_period ON ra_alert(period);
+
+-- 台账快照（Q6/Q7）
+CREATE TABLE IF NOT EXISTS ra_snapshot (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    period TEXT NOT NULL,
+    snapshot_type TEXT,
+    data TEXT NOT NULL,
+    created_at TEXT,
+    UNIQUE(period, snapshot_type)
+);
+
+-- 年度目标（Q8）
+CREATE TABLE IF NOT EXISTS ra_annual_target (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    year INTEGER NOT NULL,
+    amount_wan REAL NOT NULL,
+    updated_at TEXT,
+    UNIQUE(year)
+);
 """
 
 # ===== 知识库模块 =====
