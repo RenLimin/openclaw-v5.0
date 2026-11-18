@@ -454,7 +454,10 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - 收到「继续」时先 `process(action=list)` + `ps` + 读落盘日志核对，**不盲目重跑非幂等命令**。
 
 **可选缓解（需 Rex 拍板）：**
-- `diagnostics.stuckSessionAbortMs` / `stuckSessionWarnMs` 调大阈值（治标）。
+- ~~`diagnostics.stuckSessionAbortMs` / `stuckSessionWarnMs` 调大阈值~~ ❌ **2026-11-18 查证作废**：该配置键不存在。
+  - `RUN_STALE_TAKEOVER_MS=6e5` 是 `dist/diagnostic-run-activity-*.mjs` 的**硬编码常量**，无 env/配置覆盖。
+  - `stuckSessionAbortMs` 仅存在于 QA 诊断模块（env `QA_DIAGNOSTIC_STUCK_SESSION_ABORT_MS`，且需 `OPENCLAW_QA_PARENT_PID` 存在才生效），**非生产可用**。
+  - → **阈值不可调**；唯一可靠缓解 = 本节「纪律」+ 下方电源项。
 - 接电源 + `disablesleep` 消除睡眠冻结（治本环境项）。
 <!-- observed: 2026-11-18 | status: active -->
 
