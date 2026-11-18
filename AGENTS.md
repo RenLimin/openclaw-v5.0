@@ -413,6 +413,9 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Never 因 hook 是「系统托管文件」就默认把它 auto-add 的内容当本任务内容——提交后必用
   `git show --stat HEAD` 核对实际文件清单（`diff --cached` 在临时 index 口径下可能误导）。
 <!-- observed: 2026-11-10 | status: active -->
+- Always 隔离 index 提交时**逐条显式列出路径**，禁止 `git add -- $FILES` 变量展开：**zsh 不做变量分词**，会把整串当成单个 pathspec → 静默 `git add` 失败、`commit-tree` 产出**空提交**（事故 2026-11-18：`b0c3512` 空提交，幸未推送）。提交后必查 `git show --stat HEAD` 非空。
+- Always `git read-tree "$NEW"` 同步共享 index 前**必须先 `unset GIT_INDEX_FILE`**，否则只更新临时 index，共享 index 落后一个提交 → 工作区显示假 `D`/`MM`（磁盘文件完好，勿 `checkout` 还原）。
+<!-- observed: 2026-11-18 | status: active -->
 
 ## 会话清理红线（事故 2026-11-11，FB：未归档空闲会话被批量剪枝）
 - **手动归档的唯一权威信号 = `archivedAt` 非空**（通常伴 `archiveReason=manual`/`stale-dashboard`）。
