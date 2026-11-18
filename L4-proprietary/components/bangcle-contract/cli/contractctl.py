@@ -193,6 +193,37 @@ def cmd_oa_login(args) -> int:
     return 0 if ok else 1
 
 
+def cmd_oa_enhance(args) -> int:
+    """OA 销售合同审查增强（只读：履约义务 ONES 实时 + 概算一致性）。"""
+    from services.oa.enhance.runner import run_enhance
+    from services.oa.enhance.oa_form import OrderFormError
+    from pathlib import Path as _Path
+
+    _progress("增强核查 requestid=%s（只读）" % args.requestid)
+    try:
+        result = run_enhance(
+            request_id=args.requestid,
+            raw_dir=_Path(args.raw_dir),
+            storage_state=_Path(args.storage_state) if args.storage_state else None,
+            project_codes=args.project_codes,
+        )
+    except OrderFormError as e:
+        print("❌", e)
+        return 2
+
+    out_md = os.path.join(args.out_dir, "oa-enhance-%s.md" % args.requestid)
+    with open(out_md, "w", encoding="utf-8") as fh:
+        fh.write(result["markdown"])
+    r1 = result["r1"]
+    r2 = result["r2"]
+    print("✅ 增强核查完成")
+    print("  R1 履约义务 :", r1.get("verdict"))
+    print("  R2 概算一致 :", r2.get("verdict"), ("(skipped: %s)" % r2.get("skipped")) if r2.get("skipped") else "")
+    print("  降级项      :", result["degraded"] or "无")
+    print("  报告        :", out_md)
+    return 0
+
+
 # =============================================================
 # ontology 子命令（Contract Ontology Bridge，P1-P3）
 # =============================================================
@@ -319,6 +350,13 @@ def main(argv=None) -> int:
     p_fetch.add_argument("--heal", action="store_true",
                          help="会话失效时自动重建（耗一次 IMAP 验证码）")
     p_fetch.set_defaults(func=cmd_oa_fetch)
+
+    p_enh = sub.add_parser("oa-enhance", help="OA 销售合同审查增强（只读：履约义务+概算）")
+    p_enh.add_argument("--requestid", required=True, help="OA requestid（如 886377）")
+    p_enh.add_argument("--raw-dir", required=True, help="oa_workflow_ones.py --capture 的 raw 根")
+    p_enh.add_argument("--storage-state", default=None, help="Playwright storage_state（可空）")
+    p_enh.add_argument("--project-codes", nargs="*", default=None, help="SSXM 编码（可空，空则 BDMS 定位）")
+    p_enh.set_defaults(func=cmd_oa_enhance)
 
     # --- ontology 子命令（Contract Ontology Bridge） ---
     p_ont = sub.add_parser("ontology", help="合同运营对象（Proposal Gate）")

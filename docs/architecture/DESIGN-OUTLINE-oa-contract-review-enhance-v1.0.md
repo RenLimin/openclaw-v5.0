@@ -82,7 +82,7 @@ oa-contract-review-enhance/            ← 新增（只读增强层）
 |---|---|---|
 | P1 | `obligation_check` + 单测（真实 886377 数据跑通） | 可复现报告 |
 | P2 | `estimate_check` + 单测（真实 9955 跑通） | 可复现比对表 |
-| P3 | `runner` 编排 + 嵌入 `contractctl review` 报告 | 端到端 |
+| P3 | `runner` 编排 + `contractctl oa-enhance` 子命令（CME 路由触发） | 端到端 |
 | P4 | 验收（A1~A5）+ 文档固化 | 验收回执 |
 
 ## 7. 红线
@@ -103,8 +103,9 @@ oa-contract-review-enhance/            ← 新增（只读增强层）
 
 1. **落点**：**L4**（Bangcle 专有业务资产）。具体目录 `L4-proprietary/components/bangcle-contract/services/oa/enhance/`
    —— 与既有 `services/oa`（`CubeClient`/`ApprovalLogReader`/`browser_fallback`/OA 会话）同域，最大化复用。
-2. **触发方式**：**涉及 Bangcle OA 合同审批流程时触发**，输出**审批建议**（并入 757 流程审查报告，
-   与「读单据 / 审批链 / 22 条规则 / 分项↔正文比对」同链路）；另提供独立 CLI 便于按需单跑。
+2. **触发方式**：**涉及 Bangcle OA 合同审批流程时触发**，输出**审批建议**（CME 路由调用
+   `contractctl oa-enhance --requestid`，与「读单据 / 审批链 / 22 条规则」同链路）；
+   独立 CLI 便于按需单跑。⚠️ **不嵌入 `review --oa-billid`**（那是 billid 合同卡片语义，与 757 requestid 不同）。
 3. **CME 路由**：757 已在 `contract-manager-expert` 路由表内（§一 第 31 行，只读）。
    **已拍板纳入**（Rex 2026-11-18）：R1/R2 作为该行**固定核查项**，已落地到
    `L4-proprietary/skills/contract-manager-expert/SKILL.md`（§一第 31 行 + §典型串联编排，见 §8b）。

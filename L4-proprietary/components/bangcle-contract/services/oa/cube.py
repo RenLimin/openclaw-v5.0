@@ -129,6 +129,9 @@ class CubeClient:
         base: str = OA_BASE,
         timeout: float = 20.0,
         layoutid: str = "535",
+        mode_id: str = H.MODE_ID,
+        form_id: str = H.FORM_ID,
+        customid: str = H.CUSTOMID,
     ) -> None:
         self.storage_state_path = Path(
             storage_state if storage_state is not None else DEFAULT_STORAGE_STATE
@@ -136,6 +139,10 @@ class CubeClient:
         self.base = base.rstrip("/")
         self.timeout = float(timeout)
         self.layoutid = str(layoutid)
+        # 卡片建模参数（默认 = 合同卡片；概算等其它卡片可覆盖）
+        self.mode_id = str(mode_id)
+        self.form_id = str(form_id)
+        self.customid = str(customid)
         self._http = None
         self._state_mtime: Optional[float] = None
 
@@ -214,6 +221,20 @@ class CubeClient:
         uuid = "".join(random.choice("0123456789ABCDEF") for _ in range(32))
         return {"_key": key, "uuid": uuid}
 
+    def _card_query(self, billid_s: str, nonces: Dict[str, str]) -> Dict[str, str]:
+        """构造卡片 query（按实例建模参数覆盖，默认 = 合同卡片 112/-249）。"""
+        return H.build_card_query(
+            billid_s,
+            key=nonces["_key"],
+            uuid=nonces["uuid"],
+            layoutid=self.layoutid,
+            extra={
+                "modeId": self.mode_id,
+                "formId": self.form_id,
+                "customid": self.customid,
+            },
+        )
+
     def _get_json(self, path: str, query: Dict[str, Any]) -> Dict[str, Any]:
         session = self._ensure_http()
         url = self.base + path
@@ -275,12 +296,7 @@ class CubeClient:
         """
         billid_s = H._require_billid(billid)
         nonces = self._new_nonces()
-        base_query = H.build_card_query(
-            billid_s,
-            key=nonces["_key"],
-            uuid=nonces["uuid"],
-            layoutid=self.layoutid,
-        )
+        base_query = self._card_query(billid_s, nonces)
 
         # 1) initDetail：明细表结构
         init_detail = self._get_json(P_INIT_DETAIL, dict(base_query))

@@ -166,16 +166,19 @@ def run(request_id: str, out_dir: Path, *, storage_state=None) -> EnhanceResult:
 
 ## 5. CLI 集成
 
-**新增子命令** `contractctl oa-enhance`（独立按需跑）+ **嵌入** `contractctl review --oa-billid` 报告尾部（涉 OA 合同审批时自动触发）：
+**触发方式（实现修正）**：CME 路由在「涉 Bangcle OA 合同审批流程」时调用 **`contractctl oa-enhance`**（输入 = **requestid**）。
+
+> ⚠️ 修正：原设计曾写「嵌入 `review --oa-billid`」，但 `review` 输入是 **billid（合同卡片）**、
+> 757 是 **requestid（审批流程单据）**，语义不同；且硬嵌会动既有 22 条管线。
+> 故改为**独立子命令 + CME 路由触发**，不改 `review`。
 
 ```bash
-# 独立
-python3 cli/contractctl.py --out-dir <dir> oa-enhance --requestid 886377
-# 嵌入（review 报告追加「增强核查」章节）
-python3 cli/contractctl.py --out-dir <dir> review --oa-billid <billid>
+# 独立（CME 路由 / 人工按需）
+python3 cli/contractctl.py --out-dir <dir> oa-enhance --requestid 886377 \
+  --raw-dir <capture raw 根> [--project-codes SSXM-...]
 ```
 
-**报告结构**（`report.py` 增量，不改既有 22 条）：
+**输出**：`oa-enhance-<requestid>.md`，结构：
 
 ```
 ## 增强核查（履约义务 / 概算一致性）
