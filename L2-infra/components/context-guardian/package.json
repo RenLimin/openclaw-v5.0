@@ -1,0 +1,32 @@
+{
+  "name": "openclaw-context-guardian-fix",
+  "version": "6.0.0",
+  "description": "智能上下文保护插件（修复版）：微压缩迁移到 tool_result_persist，修复 after_tool_call 改写被 host 丢弃的缺陷",
+  "keywords": [
+    "openclaw",
+    "plugin",
+    "context",
+    "guardian",
+    "compaction",
+    "token",
+    "micro-compact"
+  ],
+  "type": "module",
+  "main": "./index.js",
+  "openclaw": {
+    "extensions": ["./index.js"],
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2",
+      "minGatewayVersion": "2026.3.24-beta.2"
+    }
+  },
+  "files": [
+    "index.js",
+    "core.js",
+    "README.md",
+    "openclaw.plugin.json",
+    "package.json",
+    "tests/"
+  ],
+  "license": "MIT"
+}

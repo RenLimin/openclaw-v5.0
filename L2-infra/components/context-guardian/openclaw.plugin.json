@@ -1,0 +1,29 @@
+{
+  "id": "context-guardian",
+  "name": "Context Guardian",
+  "description": "智能上下文保护插件（修复版）：微压缩作用于 tool_result_persist，结果真正进入 transcript",
+  "description_zh": "v6 修复 v5 把结果改写写在 observe-only 的 after_tool_call 导致永远被 host 丢弃的缺陷；改写迁至 host 唯一回读的 tool_result_persist。",
+  "version": "6.0.0",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "maxToolResultChars": { "type": "number", "default": 8000 },
+      "compactionThreshold": { "type": "number", "default": 0.45 },
+      "warnThreshold": { "type": "number", "default": 0.3 },
+      "autoLimitExecOutput": { "type": "boolean", "default": true },
+      "execMaxLines": { "type": "number", "default": 200 },
+      "pressureMonitorEnabled": { "type": "boolean", "default": true },
+      "effectiveContextWindow": { "type": "number", "default": 0 },
+      "baseOverheadTokens": { "type": "number", "default": 15000 },
+      "perTurnOverheadTokens": { "type": "number", "default": 1200 },
+      "compactionCooldownMs": { "type": "number", "default": 60000 },
+      "microCompactEnabled": { "type": "boolean", "default": true },
+      "microCompactMaxChars": { "type": "number", "default": 3000 },
+      "microCompactPreserveEditTools": { "type": "boolean", "default": true },
+      "debug": { "type": "boolean", "default": false }
+    }
+  }
+}
