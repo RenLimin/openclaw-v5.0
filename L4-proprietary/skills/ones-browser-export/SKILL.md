@@ -154,3 +154,56 @@ curl -X POST "https://ones.bangcle.com/project/api/project/auth/login" \
 
 ## 知识库引用
 - 工作前先搜知识库：`python3 L2-infra/components/knowledge-base/kb_index.py --query ...`
+
+---
+
+## OA 项目实施流程 → ONES 桥（只读，2026-11-18 固化）
+
+**权威脚本**：`scripts/oa_workflow_ones.py`（v2）｜**字段映射**：`references/oa-workflow-fields.md`
+
+### 用法
+
+```bash
+# A) 签约项目块（按 SSXM 编号直查 ONES，输出 Rex 确认样式）
+python3 scripts/oa_workflow_ones.py --code SSXM-2026-0611-1491 SSXM-2026-0603-1405 \
+    --pm 邓旭兵 --final-customer 中移动金融科技有限公司
+
+# B) OA 待办桥（requestid）
+python3 scripts/oa_workflow_ones.py --capture 886291      # Playwright 抓 OA 表单
+python3 scripts/oa_workflow_ones.py 886291               # 读 raw/ → ONES 输出
+```
+
+前置：OA `storage_state`（过期先 `refresh_oa_session()`）+ Chrome 已登录 ONES。
+
+### 签约项目块输出样式（固定，经 Rex 2026-11-18 确认）
+
+每个项目一块，字段与顺序固定：
+```
+N. 项目编号：SSXM-…
+   所属项目：【SSXM-…】…
+   客户：<最终客户>（签约客户：<签约主体>）
+   状态：已交付已验收（项目状态：验收完成，履约义务：验收文件已归档…）
+   授权/维保期限：YYYY-MM-DD ~ YYYY-MM-DD（证据任务 NNNNNN）
+   项目经理：<姓名>
+   履约项人：<姓名>（<角色>） | …
+   异常/变更：无
+```
+- 字段标签一律用全角冒号 `：`，值与标签间无空格；块内缩进 4 空格。
+- 授权/维保期限取自【云端】license 任务 `descriptionText` 的「授权时间/授权期限 a-b」，**取区间结束日**。
+- 项目经理 ONES 无字段（`_2jEz2XG9` 实测全空）→ 由 `--pm` 显式传入；未传标【缺失】，禁止编造。
+- 客户 = 最终客户（`--final-customer` 或 OA `_CuG2EPnC`）+ 签约客户（确收/验收任务 `_RnWqUALs`）。
+- 证据三档：字段缺失/无来源一律标【缺失】，不得用历史项目或推测填充。
+
+### 已知坑
+
+1. **编号在项目名里**：SSXM 编号只在 `projects.name`，任务名不含 → 用 `projects(filter:{name_match})`。
+2. **授权/维保/PM 字段空**：ONES 自定义字段 `2jEz2XG9`/`ArYbG1Hf`/`6ehQSmch`/`THZBUbgx`/`QP2aBu2T`/`DECCCa8Z`/`2yD1cAR4` 对目标项目**实测全空**；只能从任务描述提取授权区间，PM 靠人工口径。
+3. **枚举/标量选择集**：GraphQL 枚举字段加 `{value}`、标量不加，混用会报 Malformed.GraphQL。
+4. **OA 会话**：过期跳 `iam.bangcle.com/#/login`，`--capture` 会显式报错，不静默。
+
+### 镜像与根因（重要，防再犯）
+
+sandbox 的 `skills/` 是 OpenClaw `workspace-skill-sync` 从权威源**单向镜像**：
+`source = L2/L3/L4 各层 skills 目录` → `target = <sandbox>/skills`（拷贝，`shouldSyncSkillPath` 只排 `.git`/`node_modules`，**会放行 scripts/references**）。
+因此**新增/修改 skill 文件必须落到权威源**（`L4-proprietary/skills/…`），否则下次同步会按权威源回拷、sandbox 本地改动丢失。
+2026-11-18 事故：脚本/字段文档只提交在 sandbox，权威源无 → 同步后 sandbox 内文件被「权威源无此文件」清理，表现为 `D`。
