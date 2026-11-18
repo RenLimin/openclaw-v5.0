@@ -24,6 +24,15 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 STATE = Path.home() / ".openclaw/data/clm-oa-recon/state.json"
+
+
+def _ws_root() -> Path:
+    """workspace 根（含 AGENTS.md），兼容权威源与 sandbox 副本两种层级。"""
+    here = Path(__file__).resolve()
+    for base in here.parents:
+        if (base / "AGENTS.md").exists():
+            return base
+    return here.parents[2]
 URL = "https://oa.bangcle.com/spa/workflow/index_mobx.jsp#/main/workflow/listDoing"
 API = "/api/ec/dev/table/datas"
 
@@ -43,7 +52,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--save", action="store_true", help="落盘 tmp/oa-pif/full_todo_items.json")
     ap.add_argument("--max-pages", type=int, default=20)
-    ap.add_argument("--out", default="tmp/oa-pif/full_todo_items.json")
+    ap.add_argument("--out", default=str(_ws_root() / "tmp/oa-pif/full_todo_items.json"))
     a = ap.parse_args()
 
     items: list[dict] = []

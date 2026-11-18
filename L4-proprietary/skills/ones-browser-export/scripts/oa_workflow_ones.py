@@ -23,7 +23,18 @@ from pathlib import Path
 
 TEAM = "RZxvwUZ8"
 OBLIGATION_TYPE = "WEpkPvew"          # 项目履约义务 issueType
-RAW_DEFAULT = Path("tmp/oa-pif/raw")
+def _default_raw_dir() -> Path:
+    """默认 raw 目录 = 所在 workspace 根的 tmp/oa-pif/raw。
+    权威源（workspace/L4-proprietary/skills/...）与 sandbox 副本（<沙箱>/skills/...）
+    层级深度不同，故用 AGENTS.md 作锚点向上找 workspace 根，避免写死 parents[N]。
+    """
+    here = Path(__file__).resolve()
+    for base in here.parents:
+        if (base / "AGENTS.md").exists():
+            return base / "tmp/oa-pif/raw"
+    return here.parents[2] / "tmp/oa-pif/raw"
+
+RAW_DEFAULT = _default_raw_dir()
 OA_STATE = Path.home() / ".openclaw/data/clm-oa-recon/state.json"
 
 # ---------- Chrome 页面上下文 XHR（绕开直连 token 过期）----------
@@ -237,7 +248,8 @@ def main() -> int:
     ap.add_argument("rids", nargs="*", help="OA requestid")
     ap.add_argument("--capture", nargs="+", metavar="RID", help="仅捕获 OA 单到 raw/")
     ap.add_argument("--code", nargs="+", metavar="SSXM", help="ONES 签约项目编号直查")
-    ap.add_argument("--raw-dir", default=str(RAW_DEFAULT))
+    ap.add_argument("--raw-dir", default=str(RAW_DEFAULT),
+                    help=f"raw 目录（默认 {RAW_DEFAULT}）")
     ap.add_argument("--pm", default="", help="项目经理（ONES 无字段时显式提供）")
     ap.add_argument("--final-customer", default="", help="最终客户名（OA 无该字段时提供）")
     a = ap.parse_args()
