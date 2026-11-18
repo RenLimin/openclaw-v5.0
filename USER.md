@@ -89,3 +89,8 @@ SOUL.md · AGENTS.md · MEMORY.md · docs/knowledge-base/
 ## session-recovery task_tracker 改造约束（2026-11-10）
 - Always task_tracker 的状态存储（SQLite）必须放在 workspace 的 memory/ 下（用户资产），OpenClaw 升级不得影响；禁止依赖或改写 Gateway 内部库/内部数据库。 <!-- observed: 2026-11-10 | status: active -->
 - Always 仅用 Python stdlib（sqlite3）实现，CLI 命令语义（start/update/current/complete）向后兼容。 <!-- observed: 2026-11-10 | status: active -->
+
+## OA 销售合同审查流程约束（2026-11-18 Rex 拍板）
+- Always OA「销售合同审核流程」（workflowid 757）审查**只提供审批建议**，暂不做任何 OA 操作（不提交/不审批/不退回/不转发）。 <!-- observed: 2026-11-18 | status: active -->
+- Always 审查固定增加两项核查：① 最终用户/客户对应项目**履约义务**查询（是否存在异常、相同产品的履约义务及状态）；② **概算名称**明细/单价与本流程一致性（本单金额须 ≤ 概算，超出即提示）。 <!-- observed: 2026-11-18 | status: active -->
+- Never 以「甲方指定授权邮箱」名义填入乙方域名邮箱作为验收邮箱（主体错配=退回项）。 <!-- observed: 2026-11-18 | status: active -->
