@@ -99,10 +99,35 @@ oa-contract-review-enhance/            ← 新增（只读增强层）
 - 本设计基于 **886377 在审单据**实测，字段随后续退回可能变化。
 - 「概算流程」单据（requestid 885969）当前账号无权限 → R2 只读卡片，显式 skip 留证。
 
-## 8. 待 Rex 拍板
+## 8. Rex 拍板（2026-11-18）
 
-1. **落点**：新建 `services/oa/enhance/` vs `scripts/` 平铺？
-2. **触发方式**：作为 `contractctl review` 子步骤自动跑，还是独立 CLI（`contractctl oa-enhance`）按需跑？
-3. **是否纳入 CME 路由**（`contract-manager-expert` SKILL.md）作为固定审查项？
+1. **落点**：**L4**（Bangcle 专有业务资产）。具体目录 `L4-proprietary/components/bangcle-contract/services/oa/enhance/`
+   —— 与既有 `services/oa`（`CubeClient`/`ApprovalLogReader`/`browser_fallback`/OA 会话）同域，最大化复用。
+2. **触发方式**：**涉及 Bangcle OA 合同审批流程时触发**，输出**审批建议**（并入 757 流程审查报告，
+   与「读单据 / 审批链 / 22 条规则 / 分项↔正文比对」同链路）；另提供独立 CLI 便于按需单跑。
+3. **CME 路由**：757 已在 `contract-manager-expert` 路由表内（§一 第 31 行，只读）。
+   **建议纳入**：把 R1/R2 作为该行**固定核查项**（见 §8b）。
+
+### 8b. CME 路由说明（供 Rex 确认）
+
+**CME = `contract-manager-expert`（component_id `CME-001`，L4 层）**，是 Bangcle「合同管理相关」需求的
+**统一入口 skill**。核心机制是 §一「合同管理统一入口路由表（强制）」：
+
+| 用途 | 说明 |
+|---|---|
+| 意图识别 | 任何 Bangcle 合同管理相关需求，先查路由表定位归属 |
+| 核心直处理 | 命中审查/风险/标的参照/OA 拉取/757 流程 → 本技能直接产出结论 |
+| 跨资产路由 | 命中审批框架/通用逻辑/Office 流程 → 路由 `contract-approval`(L3)/`contract-management`(L3)/`office-contract`(L4) |
+| 边界外分流 | 产品/PPT/项目/收入 → 按 §边界外 提示转对应能力，不越界代办 |
+
+**757 现状**：路由表第 31 行已登记「OA 销售合同审核流程（requestid 单据/审批链/AI 小助手意见，**只读**）」，
+但**未含** R1（履约义务核查）/ R2（概算一致性）。
+
+**建议改法**（一行增强，不新增行）：
+- 第 31 行「说明」列补：`固定核查：履约义务（ONES 实时）+ 概算一致性（允许超，仅提醒）`
+- §典型串联编排表补一行：`OA 销售合同审批（757）审查 → 读单据 → 履约义务(ONES实时) + 概算一致性 → 输出审批建议（只读，写操作人工闸）`
+
+**收益**：CME 作为合同域统一入口，用户在 OA 合同审批场景提需求即自动带上两项核查，无需记忆新命令。
+**风险**：无（纯文档增强，不改 CME 代码与其既有边界）。
 
 【已验证 2026-11-18｜OA 单据 886377 + 概算卡片 9955 只读 + ONES 实时 GraphQL（3440/3068/0328）】架构决策依据。

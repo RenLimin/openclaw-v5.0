@@ -35,6 +35,10 @@ OA「销售合同审核流程」（workflowid **757**）当前已具备：读单
 
 ## 2. 需求清单
 
+> **落点与触发（Rex 2026-11-18 拍板）**：落点 **L4**（Bangcle 专有业务资产）→
+> `L4-proprietary/components/bangcle-contract/services/oa/enhance/`；
+> **触发**：涉及 **Bangcle OA 合同审批流程**时触发，输出**审批建议**（并入 757 流程审查报告）。
+
 ### R1 履约义务核查（最终用户/客户维度）
 
 | 项 | 内容 |
