@@ -80,3 +80,21 @@ def raw_dir() -> Path:
 def load_error() -> Optional[str]:
     """最近一次加载失败原因（用于显式留证）。"""
     return _load_error
+
+
+def license_period(tasks: list[dict]) -> tuple[str, str]:
+    """从【云端】license/授权/维保任务描述取授权区间（复用权威源脚本，含中文日期）。
+
+    返回 (规范化区间, 证据任务号)；无记录返回 ("", "")，不伪造。
+    """
+    return _load().license_period(tasks)
+
+
+def search_projects(name_match: str) -> list[dict]:
+    """按项目名模糊搜索（复用权威源脚本 gql）。
+
+    仅作候选定位；调用方须自行做精确包含校验，禁止用宽泛匹配下结论。
+    """
+    mod = _load()
+    r = mod.gql('query { projects(filter:{name_match:"%s"}) { uuid name } }' % name_match)
+    return (r.get("data") or {}).get("projects") or []

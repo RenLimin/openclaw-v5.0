@@ -36,6 +36,8 @@ class FieldMap:
     service_start: str = ""
     service_end: str = ""
     amount: str = ""
+    archive_time: str = ""            # 合同归档时间（916）
+    expect_sign_date: str = ""        # 预计合同签约日期（815/820）
     item_table: str = "detail_1"
     item_category: str = ""           # 产品服务类别
     item_type: str = ""               # 类别
@@ -60,7 +62,7 @@ _MAPS: Dict[str, FieldMap] = {
         approval_flow=APPROVAL_FLOW_FIELD,
         contract_name="field13643", contract_no="field13652",
         estimate_name="field31030", service_start="field20270", service_end="field20271",
-        amount="field13648",
+        amount="field13648", archive_time="field13653",
         item_category="field29773", item_type="field29774", item_name="field29775",
         item_code="field13675", item_qty="field13665", item_unit="field13657",
         item_amount="field13667", item_std_price="field26783", item_discount="field26780",
@@ -71,7 +73,7 @@ _MAPS: Dict[str, FieldMap] = {
         applicant="field12968", apply_time="field12971", urgency="field29630",
         project_code="field29560", customer="field12978", final_user="field29609",
         final_user_text="field32754", pm="field13220", region_manager="field13219",
-        estimate_name="field26674",
+        estimate_name="field26674", expect_sign_date="field12977",
         item_category="field29770", item_type="field29771", item_name="field29953",
         item_code="field13255", item_qty="field12984", item_unit="field26903",
         item_sow="field26905", item_custom="field26904",
@@ -81,7 +83,7 @@ _MAPS: Dict[str, FieldMap] = {
         applicant="field13057", apply_time="field13060", urgency="field29629",
         project_code="field29562", customer="field13062", final_user="field29608",
         final_user_text="field32752", pm="field13102", region_manager="field13101",
-        amount="field13086",
+        amount="field13086", expect_sign_date="field13085",
         item_category="field29767", item_type="field29768", item_name="field29954",
         item_code="field13136", item_qty="field13098", item_unit="field26932",
         item_sow="field26934", item_custom="field26933",

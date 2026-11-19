@@ -98,6 +98,8 @@ class ProjectOrder:
     service_start: str = ""
     service_end: str = ""
     amount: str = ""
+    archive_time: str = ""
+    expect_sign_date: str = ""
     pm: str = ""
     region_manager: str = ""
     items: List[OrderItem] = field(default_factory=list)
@@ -209,6 +211,10 @@ def parse(raw_dir: Path, request_id: str, workflow_id: str,
         o.service_end = _value(md.get(fm.service_end))
     if fm.amount:
         o.amount = _dec(_value(md.get(fm.amount)))
+    if fm.archive_time:
+        o.archive_time = _value(md.get(fm.archive_time))
+    if fm.expect_sign_date:
+        o.expect_sign_date = _value(md.get(fm.expect_sign_date))
 
     rows = _detail(detail_raw, fm.item_table)
     for key in sorted(rows.keys()):
