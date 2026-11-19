@@ -29,6 +29,8 @@ class FieldMap:
     final_user_text: str
     pm: str
     region_manager: str = ""          # 项目管理部区域经理（815/820）
+    region_owner: str = ""            # 区域负责人 qyfzr（v1.1 C1：PM 措辞口径）
+    contract_category: str = ""       # 合同分类（916；v1.1 C3 框架合同）
     approval_flow: str = ""           # 916 独有
     contract_name: str = ""
     contract_no: str = ""
@@ -59,6 +61,7 @@ _MAPS: Dict[str, FieldMap] = {
         applicant="field13637", apply_time="field13638", urgency="field29631",
         project_code="field29561", customer="field13668", final_user="field29612",
         final_user_text="field13678", pm="field13673",
+        region_owner="field29750", contract_category="field13644",
         approval_flow=APPROVAL_FLOW_FIELD,
         contract_name="field13643", contract_no="field13652",
         estimate_name="field31030", service_start="field20270", service_end="field20271",
@@ -73,6 +76,7 @@ _MAPS: Dict[str, FieldMap] = {
         applicant="field12968", apply_time="field12971", urgency="field29630",
         project_code="field29560", customer="field12978", final_user="field29609",
         final_user_text="field32754", pm="field13220", region_manager="field13219",
+        region_owner="field29754",
         estimate_name="field26674", expect_sign_date="field12977",
         item_category="field29770", item_type="field29771", item_name="field29953",
         item_code="field13255", item_qty="field12984", item_unit="field26903",
@@ -83,6 +87,7 @@ _MAPS: Dict[str, FieldMap] = {
         applicant="field13057", apply_time="field13060", urgency="field29629",
         project_code="field29562", customer="field13062", final_user="field29608",
         final_user_text="field32752", pm="field13102", region_manager="field13101",
+        region_owner="field29753",
         amount="field13086", expect_sign_date="field13085",
         item_category="field29767", item_type="field29768", item_name="field29954",
         item_code="field13136", item_qty="field13098", item_unit="field26932",

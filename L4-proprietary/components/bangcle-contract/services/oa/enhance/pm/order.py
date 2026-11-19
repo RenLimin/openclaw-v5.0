@@ -102,6 +102,8 @@ class ProjectOrder:
     expect_sign_date: str = ""
     pm: str = ""
     region_manager: str = ""
+    region_owner: str = ""        # 区域负责人 qyfzr（v1.1 C1：PM 措辞口径）
+    contract_category: str = ""   # 合同分类（916；v1.1 C3 框架合同：0/4/6/2/7/5）
     items: List[OrderItem] = field(default_factory=list)
     field_semantics: Dict[str, str] = field(default_factory=dict)
 
@@ -166,6 +168,37 @@ def _approval_rid(node: Any) -> str:
     return ""
 
 
+def _category_label(node: Any, field_meta: Optional[Dict[str, Any]] = None) -> str:
+    """合同分类（选择型）→ 名称（v1.1 C3）。
+
+    取值优先级：
+      ① ``specialobj[0].name``（浏览型已带名称）
+      ② 节点自身 ``selectattr.selectitemlist`` 按 ``value`` 匹配
+      ③ ``fieldinfomap`` 权威元数据（选择型字段真实标签在此，maindata 节点内无）
+    """
+    if not isinstance(node, dict):
+        return ""
+    objs = node.get("specialobj") or []
+    if objs and isinstance(objs[0], dict) and objs[0].get("name"):
+        return str(objs[0]["name"]).strip()
+    val = str(node.get("value") or "").strip()
+    for meta in (node.get("selectattr") or {}, (field_meta or {}).get("selectattr") or {}):
+        for it in (meta.get("selectitemlist") or []):
+            if str(it.get("selectvalue")) == val and it.get("selectname"):
+                return str(it["selectname"]).strip()
+    return val
+
+
+def _field_meta(main_raw: Optional[dict], field_id: str) -> Dict[str, Any]:
+    """从 loadForm 的 tableInfo.main.fieldinfomap 取字段元数据（key 为裸 fieldid）。"""
+    if not isinstance(main_raw, dict):
+        return {}
+    key = str(field_id).replace("field", "")
+    fim = ((main_raw.get("tableInfo") or {}).get("main") or {}).get("fieldinfomap") or {}
+    meta = fim.get(key) or fim.get(field_id) or {}
+    return meta if isinstance(meta, dict) else {}
+
+
 def parse(raw_dir: Path, request_id: str, workflow_id: str,
           title: str = "") -> ProjectOrder:
     """解析已捕获的 OA 单据 XHR 原始目录。
@@ -204,6 +237,11 @@ def parse(raw_dir: Path, request_id: str, workflow_id: str,
     o.final_user = _value(md.get(fm.final_user)) or _value(md.get(fm.final_user_text))
     o.pm = _value(md.get(fm.pm))
     o.region_manager = _value(md.get(fm.region_manager)) if fm.region_manager else ""
+    o.region_owner = _value(md.get(fm.region_owner)) if fm.region_owner else ""
+    # 合同分类是选择型字段（value=selectvalue 数字），名称在 fieldinfomap 权威元数据
+    o.contract_category = (_category_label(md.get(fm.contract_category),
+                                            _field_meta(main_raw, fm.contract_category))
+                           if fm.contract_category else "")
     if fm.contract_name:
         o.contract_name = _value(md.get(fm.contract_name))
     if fm.contract_no:

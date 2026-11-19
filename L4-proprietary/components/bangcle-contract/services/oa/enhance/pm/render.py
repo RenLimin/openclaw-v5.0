@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -22,10 +23,12 @@ from .risk import Risk
 def _short_end(period: str) -> str:
     """授权区间结束日 → Rex 批注口径的短日期。
 
-    实测口径（PRD §0.1）：
-      2026-08-11 ~ 2027-08-14（约 1 年）→ `27.08`
-      2026-11-18 ~ 2026-11-30（12 天）  → `26.11.30`
-    规则：区间跨度 ≥ 300 天 → YY.MM；否则 YY.MM.DD（短区间保留日，避免歧义）。
+    实测口径（PRD §0.1，4 样本校准）：
+      2026-08-11 ~ 2027-08-14（368 天，满一年）→ `27.08`
+      2025-12-12 ~ 2026-12-11（364 天，差 1 天）→ `26.12.11`
+      2026-10-14 ~ 2026-11-14（31 天）          → `26.11.14`
+      2026-11-18 ~ 2026-11-30（12 天）          → `26.11.30`
+    规则：区间跨度 ≥ 365 天 → YY.MM；否则 YY.MM.DD（不足一年保留日）。
     """
     if not period:
         return ""
@@ -43,7 +46,7 @@ def _short_end(period: str) -> str:
             from datetime import date
             d0 = date(*map(int, segs[0].split("-")))
             d1 = date(*map(int, [y, m, d]))
-            if (d1 - d0).days >= 300:
+            if (d1 - d0).days >= 365:
                 return f"{yy}.{m}"
         except (ValueError, TypeError):
             pass
@@ -61,6 +64,39 @@ def _period_text(ref: RefProject, order: ProjectOrder) -> str:
     if ref.status_label == "已交付未关联签约合同" and "提前实施" in (ref.name or ""):
         return "产品授权至%s" % _short_end(ref.license_period)
     return "授权/维保至%s" % _short_end(ref.license_period)
+
+
+_FENG_GANG = "冯刚"
+_FRAMEWORK_CATEGORIES = {"框架合同", "框架合同订单/结算单"}
+
+
+def _pm_lead(order: ProjectOrder, pm: str = "") -> str:
+    """首段指派措辞（v1.1 C1，Rex 2026-11-19 拍板）。
+
+    ① 区域负责人（OA 字段 qyfzr）= 冯刚 → 「请冯刚安排项目经理」
+    ② 否则 PM 字段非空 → 「请<PM>负责」
+    ③ 否则 → 「请冯刚安排项目经理」（区域项目统一由冯刚分配）
+
+    实证 8/8：885576/885673/885755（区域负责人=冯刚）→ 冯刚；
+    886404（PM 空）→ 冯刚；886314/886362/886368/886448（PM 非空且区域负责人≠冯刚）→ PM 本人。
+    """
+    if (order.region_owner or "").strip() == _FENG_GANG:
+        return "请冯刚安排项目经理"
+    name = (pm or order.pm or "").strip()
+    if name:
+        return "请%s负责" % name
+    return "请冯刚安排项目经理"
+
+
+def _framework_no(order: ProjectOrder) -> str:
+    """框架合同主号（去掉尾部 -N 订单号）；非框架合同返回 ""（v1.1 C3）。
+
+    `XSZS2512020984-6` → `XSZS2512020984`；合同分类 ∈ {框架合同(4), 框架合同订单/结算单(6)}。
+    """
+    if (order.contract_category or "").strip() not in _FRAMEWORK_CATEGORIES:
+        return ""
+    no = (order.contract_no or "").strip()
+    return re.sub(r"-\d+$", "", no)
 
 
 def _scope_word(order: ProjectOrder, refs: Sequence[RefProject]) -> str:
@@ -97,18 +133,25 @@ def render_remark(
     Args:
         date_text: 注入日期（纯函数可测；空则不使用）。
     """
-    pm_txt = (pm or order.pm or "").strip() or "待分配"
+    lead = _pm_lead(order, pm)
     lines: List[str] = []
 
     # 首段：指派（范围词来自被参考项目类型；混合类型留空 → 只写「参考：」）
-    scope = _scope_word(order, refs)
-    if scope:
-        lines.append("请%s负责，参考%s：" % (pm_txt, scope))
+    fw_no = _framework_no(order)
+    if fw_no:
+        # v1.1 C3：框架合同通常多订单 → 按框架合同编号描述，不逐一列 SSXM 订单项目
+        lines.append("%s，参考框架合同%s订单对应签约项目。" % (lead, fw_no))
     else:
-        lines.append("请%s负责，参考：" % pm_txt)
+        scope = _scope_word(order, refs)
+        if scope:
+            lines.append("%s，参考%s：" % (lead, scope))
+        else:
+            lines.append("%s，参考：" % lead)
 
     # 参考项目：单行式 / 列表式（混合类型时各项自带类型词，与 Rex 886404 一致）
-    if not refs:
+    if fw_no:
+        pass
+    elif not refs:
         lines.append("ONES 未匹配到最终客户「%s」相关项目，请人工确认本期项目编号。"
                      % (order.final_user or "—"))
     else:

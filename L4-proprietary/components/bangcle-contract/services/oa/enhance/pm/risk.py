@@ -49,11 +49,12 @@ def assess(
     """评估风险注。notes 为 ApprovalNotes（P4 接入；可为 None）。"""
     risks: List[Risk] = []
 
-    # 1) 待分配 PM
-    if not (order.pm or "").strip():
+    # 1) 待分配 PM（v1.1 C1：区域负责人=冯刚 或 PM 非空 时首段已指派，不重复提示；
+    #    仅当 PM 空 **且** 区域负责人也空（无法落到统一分配口径）才提示人工指派）
+    if not (order.pm or "").strip() and not (order.region_owner or "").strip():
         risks.append(Risk(
             "pm_unassigned", "必注",
-            "待分配项目经理（OA 项目经理字段为空，需项目管理部指派）",
+            "待分配项目经理（OA 项目经理与区域负责人字段均为空，需项目管理部指派）",
         ))
 
     # 2) 多项目隔离（同最终用户 + 同产品/服务 ≥2 项目）

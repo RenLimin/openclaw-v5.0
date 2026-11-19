@@ -70,6 +70,7 @@ class RefProject:
     license_period: str = ""      # 授权/维保区间（无则【缺失】由渲染层处理）
     license_task: str = ""
     obligation_states: List[str] = field(default_factory=list)
+    obligation_project_states: List[str] = field(default_factory=list)  # 义务「项目状态」(v1.1 C2)
     obligation_names: List[str] = field(default_factory=list)
     matched_products: List[str] = field(default_factory=list)
     source: str = ""              # direct（OA 项目编号）/ candidate（名称候选）
@@ -84,9 +85,17 @@ class RefsError(RuntimeError):
 
 
 def _status_label(project_name: str, project_status: str,
-                  ob_states: Sequence[str]) -> tuple[str, str]:
-    """状态推断规则表（DESIGN-DETAIL §5.1）。返回 (label, basis)。"""
+                  ob_states: Sequence[str],
+                  ob_project_states: Sequence[str] = ()) -> tuple[str, str]:
+    """状态推断规则表（DESIGN-DETAIL §5.1 + v1.1 C2）。返回 (label, basis)。
+
+    v1.1 C2（Rex 2026-11-19）：**「已结项」来自履约义务的「项目状态」字段**
+    （ONES 任务自定义字段 ``_Gvi8gt9w``，值 ``已归档``），优先于其他判定；
+    其余状态词来自履约义务的「状态」（status.name）。
+    """
     states = [s for s in ob_states if s]
+    if "已归档" in [x for x in ob_project_states if x]:
+        return "已结项", "履约义务「项目状态」=已归档（ONES 字段 _Gvi8gt9w）"
     has_archive = "验收文件已归档" in states
     has_delivery = "交付邮件已归档" in states
     has_handover = "验收文件交接中" in states
@@ -140,15 +149,19 @@ def _build(code: str, uuid: str, name: str, final_user: str,
         raise RefsError("ONES 查询失败 %s: %s" % (code, exc)) from exc
 
     ob_states: List[str] = []
+    ob_project_states: List[str] = []
     ob_items: List[str] = []
     for t in tasks:
         if (t.get("issueType") or {}).get("name") != OBLIGATION_ISSUE_TYPE:
             continue
         ob_states.append(str((t.get("status") or {}).get("name") or ""))
+        ps = t.get("_Gvi8gt9w")
+        if isinstance(ps, dict) and ps.get("value"):
+            ob_project_states.append(str(ps["value"]).strip())
         ob_items.append(str(t.get("name") or ""))
 
     period, evid = ones_client.license_period(tasks)
-    label, basis = _status_label(name, status, ob_states)
+    label, basis = _status_label(name, status, ob_states, ob_project_states)
     # 匹配键 = 产品编码 + 产品名 + 产品服务类别
     # （ONES 义务名按「类别-形态-产品名」书写，如「渠道监测-服务-APP渠道监测服务」；
     #   仅按产品名匹配会漏掉结算/综合服务类项目，如 886404 的 SSXM-2026-0924-2598）
@@ -159,6 +172,7 @@ def _build(code: str, uuid: str, name: str, final_user: str,
         status_label=label, status_basis=basis,
         license_period=period, license_task=evid,
         obligation_states=ob_states,
+        obligation_project_states=ob_project_states,
         obligation_names=ob_items,
         matched_products=_matched(ob_items, keys),
         source=source,
@@ -249,8 +263,11 @@ def find_reference_projects(
                     % (len(refs), len(filtered)))
             refs = filtered
 
+    # 过滤后候选（兜底「已结项」只用同产品候选，v1.1 C2）
+    all_refs = list(refs)
+
     # 统一选取口径（OA 直给编号与名称候选**同一条路径**，不得绕过）
-    refs = _select(refs, apply_date, notes)
+    refs = _select(refs, apply_date, notes, refs_all=all_refs)
 
     if not refs:
         notes.append("ONES 未匹配到最终客户「%s」相关项目（需人工确认本期项目编号）"
@@ -258,7 +275,14 @@ def find_reference_projects(
     return refs, notes
 
 
+# 「已结项」**不作常规终态**，仅作**兜底**——实证校准（v1.1 C2，8 单全拟合）：
+#   - 885576：v1.0 终态候选空（3082 可结项被同期排除）→ Rex 引已结项 2476；
+#   - 885673：v1.0 终态候选空（3083 被同期排除）→ Rex 引已结项 4149；
+#   - 886362：有 2066（已交付未验收）→ Rex **只引 2066**，未引已结项的 0449；
+#   - 886448：有 3925（已交付已验收）→ Rex **只引 3925**，未引已结项的 3835。
+#   ⇒ 语义：已结项项目已关闭、参考意义最低；仅当**无任何其他终态候选**时才兜底引用。
 _TERMINAL = {"已交付未验收", "已交付未关联签约合同", "可结项", "已交付已验收"}
+_FALLBACK = {"已结项"}
 _RANK = {
     "已交付未验收": 0, "已交付未关联签约合同": 0,
     "可结项": 1, "已交付已验收": 2,
@@ -266,11 +290,16 @@ _RANK = {
 
 
 def _select(
-    refs: List[RefProject], apply_date: str, notes: List[str]
+    refs: List[RefProject], apply_date: str, notes: List[str],
+    refs_all: Optional[List[RefProject]] = None,
 ) -> List[RefProject]:
     """选取口径（校准自 Rex 4 条批注，PRD §0.1）。
 
-    a) 只引**终态**项目（已交付未验收/已交付未关联签约合同/可结项/已交付已验收）；
+    Args:
+        refs_all: 产品过滤后的候选全集（兜底「已结项」用；缺省取 refs）。
+
+    a) 只引**常规终态**项目（已交付未验收/已交付未关联签约合同/可结项/已交付已验收）；
+       「已结项」仅作兜底（见 _TERMINAL 上方说明，v1.1 C2 校准）；
        「进行中/待实施」不引（886362 未引进行中的 0449，886368 未引待实施的 3139）。
        注意：**不能回退**——候选全是非终态时结果为空，由渲染层提示人工确认，
        而不是硬引一个「待实施」项目（实测 885755 曾直引 SSXM-2026-1116-3099）。
@@ -279,6 +308,10 @@ def _select(
     """
     if not refs:
         return refs
+
+    orig = list(refs)                      # 过滤前候选（兜底数据源）
+    if refs_all is None:
+        refs_all = orig
 
     keep = [r for r in refs if r.status_label in _TERMINAL]
     if len(keep) < len(refs):
@@ -292,6 +325,15 @@ def _select(
             notes.append("排除同期新建项目 %d 个（编号日期 ≥ 申请日 %s）"
                          % (len(refs) - len(keep), apply_date))
             refs = keep
+
+    # 兜底（v1.1 C2）：**常规终态候选被过滤/同期排除干净后**，才回退引「已结项」
+    # （兜底同样遵守同期排除，避免引到本单同期新建项目）
+    if not refs:
+        fb = [r for r in refs_all if r.status_label in _FALLBACK
+              and not (apply_date and _code_date(r.code) >= apply_date)]
+        if fb:
+            notes.append("无常规终态候选，回退引已结项项目（%d 个）" % len(fb))
+            refs = fb
 
     if not refs:
         return refs

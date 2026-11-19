@@ -61,11 +61,20 @@ def test_short_end_short_span():
     assert _short_end("2026-10-14 ~ 2026-11-14") == "26.11.14"
 
 
+def test_short_end_boundary_365():
+    """阈值 365（非 300）：886448 差 1 天满一年 → 保留日。"""
+    assert _short_end("2025-12-12 ~ 2026-12-11") == "26.12.11"   # 364 天
+    assert _short_end("2025-12-12 ~ 2026-12-12") == "26.12"       # 365 天
+
+
 # ---------------- 渲染：三段式同构 Rex 批注 ----------------
-def _order(wf="wf_815", pm="", final="招商银行股份有限公司"):
+def _order(wf="wf_815", pm="", final="招商银行股份有限公司", region_owner="",
+           contract_category="", contract_no=""):
     return ProjectOrder(
         request_id="886362", workflow_id=wf, title="", applicant="曾铭",
         final_user=final, customer=final, pm=pm,
+        region_owner=region_owner, contract_category=contract_category,
+        contract_no=contract_no,
         items=[OrderItem(line_category="Android应用加固", product_code="SP-AAP-7.0-SAPLV-PLUS")],
     )
 
@@ -97,7 +106,8 @@ def test_render_list_refs_matches_rex_886404():
     ]
     risks = assess(o, refs, None)
     txt = render_remark(o, refs, risks, pm="")
-    assert "请待分配负责" in txt
+    # v1.1 C1：PM 空且区域负责人空 → 「请冯刚安排项目经理」
+    assert "请冯刚安排项目经理，参考：" in txt
     assert "1. 提前实施项目 SSXM-2026-0624-1641（已交付未关联签约合同，产品授权至26.11.30）。" in txt
     assert "2. 签约项目 SSXM-2026-0924-2598（已交付未验收）。" in txt
     assert "不允许同最终用户同产品/服务存在多个未关联签约合同的提前实施项目" in txt
@@ -216,3 +226,107 @@ def test_code_date_parses_mmdd_merged():
     assert _code_date("SSXM-2026-0810-2066") == "2026-08-10"
     assert _code_date("SSXM-2025-0403-0858") == "2025-04-03"
     assert _code_date("bad") == ""
+
+
+# ---------------- v1.1 口径变更（Rex 2026-11-19 拍板） ----------------
+def test_c1_region_owner_feng_gang():
+    """C1：区域负责人=冯刚 → 「请冯刚安排项目经理」（即使 PM 非空也优先区域负责人）。"""
+    o = _order(pm="林慧娟", region_owner="冯刚")
+    txt = render_remark(o, [], [], pm="林慧娟")
+    assert txt.startswith("请冯刚安排项目经理")
+
+
+def test_c1_pm_nonempty_non_feng_gang():
+    """C1：区域负责人≠冯刚且 PM 非空 → 「请<PM>负责」（886314/886362/886368/886448）。"""
+    o = _order(pm="程涛", region_owner="任立民")
+    txt = render_remark(o, [], [], pm="程涛")
+    assert txt.startswith("请程涛负责")
+
+
+def test_c1_both_empty_fallback_feng_gang():
+    """C1：PM 空且区域负责人空 → 首段「请冯刚安排项目经理」（规则③）；
+    同时两字段皆空属数据缺失，pm_unassigned 必注（DESIGN-DETAIL §7）。"""
+    o = _order(pm="", region_owner="")
+    txt = render_remark(o, [], [], pm="")
+    assert txt.startswith("请冯刚安排项目经理")
+    risks = assess(o, [], None)
+    assert any(r.code == "pm_unassigned" for r in risks)
+
+
+def test_c1_pm_empty_region_owner_set_no_unassigned_note():
+    """C1：PM 空但区域负责人=任立民（886404）→ 首段冯刚，且不再出 pm_unassigned。"""
+    o = _order(pm="", region_owner="任立民")
+    txt = render_remark(o, [], [], pm="")
+    assert txt.startswith("请冯刚安排项目经理")
+    assert not any(r.code == "pm_unassigned" for r in assess(o, [], None))
+
+
+def test_c2_status_closed_by_project_state():
+    """C2：「已结项」来自履约义务「项目状态」=已归档（2476/4149）。"""
+    label, basis = _status_label("绿城POC2025", "已完成", ["已完成", "实施未开始"], ["已归档"])
+    assert label == "已结项" and "_Gvi8gt9w" in basis
+
+
+def test_c2_status_closed_priority_over_accepted():
+    """C2：同时有已归档与验收文件已归档 → 已结项优先。"""
+    label, _ = _status_label("某项目", "已完成", ["验收文件已归档"], ["已归档"])
+    assert label == "已结项"
+
+
+def test_c2_status_without_project_state_not_closed():
+    """C2：无项目状态=已归档时不得判已结项（3925 → 已交付已验收）。"""
+    label, _ = _status_label("某项目", "已完成", ["验收文件已归档"], [])
+    assert label == "已交付已验收"
+
+
+def test_c3_framework_contract_no_orders_listed():
+    """C3：框架合同订单/结算单 → 首段按框架合同编号描述，不列 SSXM 订单项目。"""
+    o = _order(wf="wf_916", pm="", region_owner="冯刚",
+               contract_category="框架合同订单/结算单", contract_no="XSZS2512020984-6")
+    txt = render_remark(o, [], [], pm="")
+    assert "请冯刚安排项目经理，参考框架合同XSZS2512020984订单对应签约项目。" in txt
+    assert "SSXM" not in txt
+
+
+def test_c3_formal_contract_keeps_normal_render():
+    """C3：正式合同（分类=0）不受框架口径影响。"""
+    o = _order(wf="wf_916", pm="张梨", region_owner="任立民",
+               contract_category="正式合同", contract_no="XSZS2611120890")
+    txt = render_remark(o, [], [], pm="张梨")
+    assert txt.startswith("请张梨负责，参考")
+    assert "框架合同" not in txt
+
+
+# ---------------- v1.1 C2 选取口径：已结项仅兜底 ----------------
+from pm.ones_refs import _select  # noqa: E402
+
+
+def _ref_closed(code, label, matched=()):
+    """v1.1 C2 用例专用构造（与既有 _ref(code, name, label) 签名不同）。"""
+    return RefProject(code=code, name="【%s】某项目" % code, project_status="已完成",
+                      status_label=label, status_basis="x",
+                      obligation_project_states=["已归档"] if label == "已结项" else [],
+                      matched_products=list(matched), source="candidate")
+
+
+def test_c2_closed_is_fallback_only_when_no_terminal():
+    """无常规终态候选 → 兜底引已结项（885576/885673）。"""
+    refs = [_ref_closed("SSXM-2025-0825-2476", "已结项", matched=["iOS应用加固"])]
+    out = _select(list(refs), "", [])
+    assert [r.code for r in out] == ["SSXM-2025-0825-2476"]
+
+
+def test_c2_closed_not_used_when_terminal_exists():
+    """有常规终态候选 → 不引已结项（886362 只引 2066）。"""
+    refs = [_ref_closed("SSXM-2024-0301-0449", "已结项", matched=["Android应用加固"]),
+            _ref_closed("SSXM-2026-0810-2066", "已交付未验收", matched=["Android应用加固"])]
+    out = _select(list(refs), "", [])
+    assert [r.code for r in out] == ["SSXM-2026-0810-2066"]
+
+
+def test_c2_closed_fallback_respects_type_dedup():
+    """兜底后仍按类型去重取 1（已结项 rank 最低，同类型只取 1）。"""
+    refs = [_ref_closed("SSXM-2025-0825-2476", "已结项", matched=["A"]),
+            _ref_closed("SSXM-2025-0827-2503", "已结项", matched=["A"])]
+    out = _select(list(refs), "", [])
+    assert len(out) == 1
