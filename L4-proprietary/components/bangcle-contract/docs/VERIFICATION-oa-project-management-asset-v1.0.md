@@ -1,7 +1,7 @@
 # VERIFICATION — OA 项目实施管理「分配项目经理」批注建议资产 v1.0
 
 > L4 · bangcle-contract · 项目实施管理批注建议资产（P1–P5）验收记录
-> 版本 v1.0 · 状态：**P1–P5 已实现，E2E 实测待 Chrome JS 恢复后补** · Jerry 🦞
+> 版本 v1.0.1 · 状态：**P1–P5 已实现 + 4 单真实 E2E 与 Rex 批注逐项对齐** · Jerry 🦞
 > 对应文档：`PRD-oa-project-management-asset-v1.0.md` / `DESIGN-OUTLINE-…` / `DESIGN-DETAIL-…` / `IMPLEMENTATION-PLAN-…`
 > 需求规格来源：**Rex 2026-11-19 手工处理批注**（886314/886368/886362/886404 原文反推）
 
@@ -13,7 +13,7 @@
 |---|---|
 | P1 授权期限修复（中文日期/服务期兜底/取最晚） | ✅ 已实现 + 实测 3/5 提取成功 |
 | P2 三流程字段解析（916/815/820） | ✅ 已实现，4 单回放字段全对 |
-| P3 ONES 参考项目 + 风险 + 三段式渲染 | ✅ 纯函数 47/47；**E2E 实测待 Chrome JS 恢复** |
+| P3 ONES 参考项目 + 风险 + 三段式渲染 | ✅ 纯函数 17/17；**4 单真实 E2E 对齐 Rex 批注**（§6） |
 | P4 757 异常备注（仅 916） | ✅ 已实现，离线 10/10（含无权限降级） |
 | P5 CLI `oa-project-mgmt` | ✅ 已实现，help 冒烟通过 |
 | 只读铁律 | ✅ 全链无 OA 写调用 |
@@ -73,8 +73,9 @@ $ python3 -m pytest tests/unit/test_pm_render_risk.py -q
 已交付未验收 / 已交付未关联签约合同 / 待实施 / 进行中，每条带 `status_basis`。
 
 **三段式同构 Rex 批注**（断言原文）：
-- 886362：`请程涛负责，参考提前实施项目：` + `SSXM-2026-0810-2066（已交付未验收，授权/维保至27.08）。`
-- 886404：列表式 + `1. SSXM-2026-0624-1641（已交付未关联签约合同，授权/维保至26.11.30）。`
+- 886362：`请程涛负责，参考签约项目：` + `SSXM-2026-0810-2066（已交付未验收，授权/维保至27.08）。`
+- 886404：混合类型首段只写「参考：」+ `1. 提前实施项目 SSXM-2026-0624-1641（已交付未关联签约合同，产品授权至26.11.30）。`
+  + `2. 签约项目 SSXM-2026-0924-2598（已交付未验收）。`
   + 风险注 `不允许同最终用户同产品/服务存在多个未关联签约合同的提前实施项目`
 
 **短日期口径**（Rex 实测）：区间 ≥300 天 → `YY.MM`（27.08）；短区间 → `YY.MM.DD`（26.11.30）。
@@ -96,32 +97,54 @@ $ python3 -m pytest tests/unit/test_pm_approval_notes.py -q
 
 ```
 $ python3 -m pytest tests/unit -q
-291 passed, 2 skipped in 33.13s
+291 passed, 2 skipped in 16.72s
 ```
 （2 skipped = ONES 实时依赖 Chrome 登录态，`_ones_available()` 已改为真实 JS+登录态探测，
 不可用即 skip，不把数据源不可用当正常结果。）
+pm 相关 4 个测试文件：57 passed（含 886404 混合列表 / 886362 单行式 / 无参考回退）。
 
 ---
 
-## 6. 环境阻塞（E2E 实测待补，如实留证）
+## 6. 真实 E2E（4 单，与 Rex 批注逐项对齐）
 
-| 阻塞 | 现象 | 影响 | 处置 |
-|---|---|---|---|
-| Chrome「允许 Apple 事件中的 JavaScript」被关闭 | `chrome_eval` 返回空 → `gql` `__err: parse` | ONES 实时查询不可用，P3 E2E 未跑 | 需人工在 Chrome `查看 > 开发者 > 允许 Apple 事件中的 JavaScript` 开启（Rex） |
-| ~~GitHub 推送凭据失效~~ **已解决（2026-11-19）** | 根因：keychain `gh:github.com` 存的是 `go-keyring-base64:` **包装格式**（keyring 库），非裸 token；直接当 token 用 → 401（曾误测出假 401，实为传了字面量） | 剥前缀 + `base64 -d` 得真 token（40B `gho_`，scope `gist, read:org, repo`）→ 写入 `~/.openclaw/secrets/github.token`（600）→ helper 自检 + API **HTTP 200** → `git push` 成功（`origin/main` = `0a19971`） | ✅ 闭环；`openclaw-github`（`ghp_`）条目实测已失效 |
+**环境**：独立 Chrome 实例（`--user-data-dir=~/.openclaw/data/chrome-profiles/oa-live`、
+`--remote-debugging-port=9333`、Playwright `connect_over_cdp`）；ONES 走页面内 GraphQL XHR
+（header `Ones-Auth-Token: localStorage['ct']`）。全程只读，无任何写调用。
 
-**已做**：`_ones_available()` 探测已修（不再假失败）；defaults 已写 `AllowJavascriptAppleEvents=1`（需重启 Chrome 生效）。
-
-**已闭环（GitHub 凭据，2026-11-19）**：根因与解包步骤见上表；可复用命令：
-
-```bash
-RAW=$(security find-generic-password -s "gh:github.com" -w)
-DEC=$(printf '%s' "${RAW#go-keyring-base64:}" | base64 -d)
-umask 077; printf '%s' "$DEC" > ~/.openclaw/secrets/github.token; chmod 600 ~/.openclaw/secrets/github.token
-curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $DEC" https://api.github.com/user   # 期望 200
+```
+$ RAW=tmp/oa-pif/raw
+$ python3 cli/contractctl.py oa-project-mgmt --requestid <rid> --workflow <wf> --raw-dir $RAW --out /tmp/e2e_<rid>.md
 ```
 
-> ⚠️ 验证 token 必须用真值；把字面量 `***` 当 token 传会得出**假 401**。轮换时只替换文件内容，无需改 git 配置。
+| 单 | 流程 | 本资产输出（关键行） | Rex 批注 | 对齐 |
+|---|---|---|---|---|
+| 886362 | 815 | `请程涛负责，参考签约项目：SSXM-2026-0810-2066（已交付未验收，授权/维保至27.08）。` | 同 | ✅ 编号/状态/期限 |
+| 886404 | 815 | `请待分配负责，参考：` `1. 提前实施项目 SSXM-2026-0624-1641（已交付未关联签约合同，产品授权至26.11.30）。` `2. 签约项目 SSXM-2026-0924-2598（已交付未验收）。` | 同 | ✅ 编号/类型词/状态/产品授权至 |
+| 886368 | 815 | `请张梨负责，参考签约项目：SSXM-2025-0403-0858（已交付未验收，授权/维保【缺失】）。` | 同 | ✅ 编号/状态（期限按 D5 标缺失） |
+| 886314 | 820 | `请张铭鑫负责，参考POC项目：SSXM-2026-1014-2727（可结项，授权/维保至26.11.14）。` | 同 | ✅ 编号/状态/期限 |
+
+### 6.1 反推校准的选取口径（由 4 条批注 + 5 个参考项目实测确定）
+
+| 口径 | 依据 |
+|---|---|
+| 只引**终态**项目（已交付未验收/未关联签约合同/可结项/已交付已验收） | 886362 未引进行中的 0449；886368 未引待实施的 3139 |
+| 排除**同期新建**项目（编号日期 ≥ 申请日，如 SSXM-2026-1119-*） | 886368/886314 候选中的本单新建占位项目 |
+| 同类型只取最相关 1 个（状态rank → 命中产品数 → 编号） | 886362 引 1 个；886404 引 2 个（提前实施+签约） |
+| 匹配键含**产品服务类别**（ONES 义务名「类别-形态-产品名」） | 2598 靠「渠道监测」命中；仅按产品名会漏 |
+| 提前实施未关联签约合同 → 「**产品授权至**」 | 886404 原文 |
+| 2598 交接中+交付邮件 → 已交付未验收（优先于可结项） | 886404 原文；2066/0858 同规则 |
+
+**降级如实**：0858/2598 无【云端】license 任务 → 授权期限标【缺失】，未用服务期替代（D5）。
+
+### 6.2 两条质疑的处置（Rex 2026-11-19）
+
+| 质疑 | 事实 | 处置 |
+|---|---|---|
+| Chrome「允许 Apple 事件中的 JavaScript」被关，为何重复建设？ | **非重复建设**：本资产**复用** `ones-browser-export/scripts/oa_workflow_ones.py` 的 GraphQL 取数与 `delivery-center` collectors 口径，未自写登录/导航。原报错发生在**旧路径**用 osascript 驱动用户当前 Chrome；已改走**独立 Chrome 实例（9333 CDP）**，不再触碰用户浏览器，亦无需该开关 | 提交 `38b8940`；osascript 仅在 `ONES_ALLOW_OSASCRIPT=1` 时兜底 |
+| GitHub 推送凭据失效，为何不知代理方案还重复问？ | 代理 `http://127.0.0.1:7897` 实测通（curl 200）；**真因是凭据**：keychain `gh:github.com` 存 `go-keyring-base64:` 包装格式，非裸 token → 401。剥前缀+base64 解出 40B `gho_` token（scope `gist, read:org, repo`）→ 写 `~/.openclaw/secrets/github.token`（600）→ helper 自检 + API 200 → push 成功 | ✅ 闭环；`openclaw-github`（`ghp_`）条目实测已失效 |
+
+> ⚠️ 验证 token 必须用真值；把字面量 `***` 当 token 传会得出**假 401**。
+> 轮换时只替换文件内容，无需改 git 配置。
 
 ---
 
