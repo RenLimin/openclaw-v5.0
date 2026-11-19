@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-11 15:37 UTC+08:00
+最后生成：2026-11-19 14:11 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -36,13 +36,13 @@
 
 ## L2 — 插件资产 (Plugins)
 
-**总计** 72 个（启用 9） · bundled 64 · config 1 · global 7
+**总计** 72 个（启用 9） · bundled 64 · config 2 · global 6
 
 > 内置（bundled）插件随 OpenClaw 版本提供，多为按需激活的模型 provider。下表只列**主动安装**或**实际提供工具**的插件。
 
 | ID | 来源 | 提供的工具 | 提供的能力 |
 |---|---|---|---|
-| `context-guardian` | global | — | — |
+| `context-guardian` | config | — | — |
 | `deepseek` | global | — | model-provider: deepseek |
 | `llama-cpp` | global | — | model-provider: llama-cpp |
 | `longcat` | global | — | model-provider: longcat |
@@ -166,7 +166,6 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
 | session-auto-retry | ✅ | 每 1800s | `isolated` | wecom/1313 |
 | workspace-temp-cleanup (INFRA-CLN-001) | ✅ | cron `30 3 * * *` | `isolated` | wecom/1313 |
-| 系统错误扫描（含上下文溢出自动恢复） | ✅ | 每 900s | `isolated` | wecom/1313 |
 
 ## L2 — 重启安全与压缩守护
 
@@ -293,8 +292,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `979d91f` |
-| Commit 数 | 660 |
+| HEAD | `cf30fd1` |
+| Commit 数 | 714 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -310,7 +309,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | `ai-knowledge-base` | 93 | 29 | 13 | `L2-infra/components/ai-knowledge-base` |
 | `backup` | 0 | 0 | 0 | `L2-infra/components/backup` |
 | `browser-automation` | 0 | 0 | 0 | `L2-infra/components/browser-automation` |
-| `config` | 6 | 0 | 2 | `L2-infra/components/config` |
+| `config` | 7 | 0 | 3 | `L2-infra/components/config` |
+| `context-guardian` | 0 | 0 | 0 | `L2-infra/components/context-guardian` |
 | `context-management` | 5 | 0 | 1 | `L2-infra/components/context-management` |
 | `credentials` | 3 | 0 | 1 | `L2-infra/components/credentials` |
 | `delivery-quality` | 2 | 0 | 0 | `L2-infra/components/delivery-quality` |
@@ -319,8 +319,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | `logs` | 3 | 0 | 0 | `L2-infra/components/logs` |
 | `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
 | `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |
-| `model-scheduling` | 18 | 0 | 4 | `L2-infra/components/model-scheduling` |
-| `observability` | 9 | 0 | 1 | `L2-infra/components/observability` |
+| `model-scheduling` | 19 | 0 | 5 | `L2-infra/components/model-scheduling` |
+| `observability` | 12 | 0 | 3 | `L2-infra/components/observability` |
 | `ocr-digitalization` | 24 | 0 | 7 | `L2-infra/components/ocr-digitalization` |
 | `office-generation` | 16 | 0 | 6 | `L2-infra/components/office-generation` |
 | `persistence` | 8 | 0 | 1 | `L2-infra/components/persistence` |
@@ -329,7 +329,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | `session-boundary-guard` | 0 | 0 | 0 | `L2-infra/components/session-boundary-guard` |
 | `session-isolation` | 17 | 0 | 6 | `L2-infra/components/session-isolation` |
 | `session-recovery` | 13 | 0 | 5 | `L2-infra/components/session-recovery` |
-| `system-governor` | 12 | 0 | 1 | `L2-infra/components/system-governor` |
+| `system-governor` | 20 | 0 | 6 | `L2-infra/components/system-governor` |
 | `tool-policy` | 0 | 0 | 0 | `L2-infra/components/tool-policy` |
 | `web-common` | 13 | 4 | 2 | `L2-infra/components/web-common` |
 | `workspace-temp-cleanup` | 5 | 0 | 1 | `L2-infra/components/workspace-temp-cleanup` |
@@ -352,9 +352,9 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
-| `bangcle-contract` | 84 | 12 | 3 | `L4-proprietary/components/bangcle-contract` |
+| `bangcle-contract` | 99 | 16 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 210 | 9 | 26 | `L4-proprietary/components/bdms` |
+| `bdms` | 216 | 11 | 29 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |
@@ -368,7 +368,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 ## L2 / L3 / L4 已建设完成组件（自动登记）
 
 > 由 `gen_asset_inventory.discover_completed_components()` 全盘扫描，
-> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 41 个。
+> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 42 个。
 
 ### L2 基础设施
 
@@ -377,6 +377,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | AI Knowledge Base (ai-knowledge-base) | — | `L2-infra/components/ai-knowledge-base` | `VERIFICATION-P2-kinetic-v1.0.md`, `VERIFICATION-P1-identity-v1.0.md`, `OPERATIONS-v1.0.md` |
 | backup | — | `L2-infra/components/backup` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | config | — | `L2-infra/components/config` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| context-guardian（修复版） | 文档：PRD-v1.0 / DESIGN-OUTLINE-v1.0 / DESIGN-DETAIL-v1.0 / ... | `L2-infra/components/context-guardian` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | context-management | — | `L2-infra/components/context-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | credentials | — | `L2-infra/components/credentials` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | delivery-quality：交付质量反馈闭环 | 把 Rex 对交付结果的**问题反馈/纠正**默认沉淀为结构化记录，定期聚类 review，把复发/高危问题反哺到... | `L2-infra/components/delivery-quality` | README+code |
