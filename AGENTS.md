@@ -29,7 +29,21 @@ This folder is home. Treat it that way.
 - Always commit 前先 `git diff --cached --name-only` 核对 staged 列表，只应有自己的文件。
 - Always 若 index 里有外来 staged 文件：用 `git commit -- <自己的路径列表>`（只提交指定路径），**绝不裸 commit**；不擅自 unstage/改别人的文件。
 - 已推送的混合 commit 不自动 rewrite（force-push 需 Rex 批准）；发现即汇报，记录而非掩盖。
-<!-- observed: 2026-11-10 | status: active -->
+
+## 共享 index 过期：`git status` 假删除（事故 2026-11-19）
+- 现象：`git status` 把**已提交且工作树完好**的文件显示为 staged `D`（删除），`git diff --cached` 满屏 deletions。
+- 根因：并行会话用**隔离临时 index**（`GIT_INDEX_FILE=…`）提交后**不回写共享 `.git/index`**；共享 index mtime 停在旧时刻（如 `b534f65` 16:15），而 HEAD 已前进数次。index 缺条目 → `git status` 把「HEAD 有、index 无」判为 staged 删除。
+- Always 判定：先 `stat .git/index` 看 mtime 是否早于 `git log -1 --format=%ci`；再用**临时 index** 取真实状态（不碰共享 index）：
+  ```bash
+  TMPIDX=$(mktemp -u /tmp/idxprobe.XXXXXX)
+  GIT_INDEX_FILE=$TMPIDX git read-tree HEAD
+  GIT_INDEX_FILE=$TMPIDX git status --porcelain   # 这才是真实改动
+  rm -f "$TMPIDX"
+  ```
+- Never 凭失真 `git status` 就去 `git reset --mixed`/`checkout`「修复」——那会动到并行会话的在途暂存。
+- Always 真实改动以 `git diff HEAD --name-only` + 逐文件 `git show HEAD:<path> | diff - <path>` 为准。
+- 修复（仅当确认无并行会话在途）：`git reset -q --mixed HEAD`（只重写 index，不动工作树）；否则等对方提交完。
+<!-- observed: 2026-11-19 | status: active -->
 
 ## First Run
 
