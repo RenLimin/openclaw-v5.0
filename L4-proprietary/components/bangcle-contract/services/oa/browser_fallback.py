@@ -116,16 +116,21 @@ def refresh_oa_session(timeout: float = 60.0) -> bool:
                 if not _wait_for(lambda: _iam_home_dom(page), timeout=timeout):
                     return False
 
-                page.wait_for_timeout(6000)
-                # 点「OA协同办公平台」应用卡片换票（JS handler 需 dispatchEvent）
-                clicked = _click_oa_app_card(page)
-                if not clicked:
+                # 2026-11-19 实证：登录落地路由不触发「应用入口」列表加载，
+                # 首页出现「暂无应用」→ 点不到 OA 卡片。必须显式跳 #/home/index。
+                page.goto(iam_base + "/#/home/index", timeout=30000)
+                if not _wait_for(lambda: _app_card_visible(page), timeout=30):
                     return False
-                page.wait_for_timeout(12000)
 
-                # 等 ecology cookie 出现
-                if not _wait_for(lambda: _has_ecology_cookie(context), timeout=25):
+                # 点「OA协同办公平台」应用卡片换票（JS handler 需 dispatchEvent）
+                if not _click_oa_app_card(page):
                     return False
+
+                # 等 ecology cookie 出现（换票为异步，重试一次再判失败）
+                if not _wait_for(lambda: _has_ecology_cookie(context), timeout=25):
+                    page.wait_for_timeout(8000)
+                    if not _has_ecology_cookie(context):
+                        return False
 
                 # 落盘 storage_state
                 OA_STORAGE_STATE.parent.mkdir(parents=True, exist_ok=True)
@@ -190,6 +195,16 @@ def _click_oa_app_card(page) -> bool:
           }
           return true;
         }"""))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _app_card_visible(page) -> bool:
+    """IAM 首页「应用入口」是否已渲染出 OA 卡片（避免「暂无应用」空态误判）。"""
+    try:
+        text = page.evaluate(
+            "function(){return document.body?document.body.innerText:''}")
+        return "OA协同" in text
     except Exception:  # noqa: BLE001
         return False
 
