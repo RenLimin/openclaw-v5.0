@@ -39,6 +39,15 @@ class ApprovalLogUnavailable(RuntimeError):
     """
 
 
+class ApprovalLogNoPermission(ApprovalLogUnavailable):
+    """OA 返回无权限页（ReqNoRight）。
+
+    实测 885637：ViewRequest.jsp 重定向到
+    ``#/main/workflow/ReqNoRight?isSecNoRight=0``，正文「对不起，您暂时没有权限！」。
+    与「会话失效」区分：无权限**不触发**会话重建（重建也拿不到权限）。
+    """
+
+
 class _SessionExpired(RuntimeError):
     """内部信号：浏览器被重定向到登录页（会话失效）。"""
 
@@ -247,7 +256,15 @@ class ApprovalLogReader:
         page.goto(VIEW_URL.format(rid=requestid), wait_until="networkidle",
                   timeout=self.timeout_ms)
         current_url = str(getattr(page, "url", ""))
-        if "login" in current_url.lower() or "Login" in current_url:
+        low_url = current_url.lower()
+        # 无权限优先判定：OA 实测重定向到 .../ReqNoRight?isSecNoRight=0
+        # （正文「对不起，您暂时没有权限！」）。不识别会落到 60s 点击超时，
+        # 把 Playwright 原始报错泄漏进降级文案。
+        if "reqnoright" in low_url or "noright" in low_url:
+            raise ApprovalLogNoPermission(
+                f"requestid={requestid}: OA 返回无权限页（ReqNoRight）"
+            )
+        if "login" in low_url:
             raise _SessionExpired(f"requestid={requestid}: 被重定向到登录页")
 
         # 审批日志懒加载：不点「流转意见」实测只拿得到 base
@@ -276,25 +293,31 @@ class ApprovalLogReader:
         return {"base": base_holder["data"], "loglist": list_holder["loglist"]}
 
     def _capture(self, requestid: str) -> Dict[str, Any]:
-        """启动 Playwright 真实浏览器执行捕获（headless 默认 True）。"""
-        from playwright.sync_api import sync_playwright
+        """启动 Playwright 真实浏览器执行捕获（headless 默认 True）。
+
+        复用进程内共享的 Playwright sync 驱动（``browser_fallback._shared_playwright``）：
+        与 ONES 复用脚本 ``oa_workflow_ones.py`` 共用同一驱动。二次
+        ``sync_playwright().start()`` 会抛
+        "Playwright Sync API inside the asyncio loop"（CLI 全链实测必现）。
+        """
+        from services.oa.browser_fallback import _shared_playwright
 
         if not os.path.exists(self.state_path):
             raise _SessionExpired(
                 f"storage_state 不存在: {self.state_path}"
             )
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
+        p = _shared_playwright()
+        browser = p.chromium.launch(headless=self.headless)
+        try:
+            context = browser.new_context(storage_state=self.state_path)
+            page = context.new_page()
             try:
-                context = browser.new_context(storage_state=self.state_path)
-                page = context.new_page()
-                try:
-                    return self._collect_from_page(page, requestid)
-                finally:
-                    context.close()
+                return self._collect_from_page(page, requestid)
             finally:
-                browser.close()
+                context.close()
+        finally:
+            browser.close()
 
     def read_approval_chain(self, requestid: Any) -> ApprovalChain:
         """读取并归一化审批链；会话失效自动重建一次、重试一次。
@@ -334,6 +357,7 @@ __all__ = [
     "ApprovalChain",
     "ApprovalLogReader",
     "ApprovalLogUnavailable",
+    "ApprovalLogNoPermission",
     "build_approval_chain",
     "normalize_approval_chain",
     "normalize_opinion",

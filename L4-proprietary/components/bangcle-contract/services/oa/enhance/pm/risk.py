@@ -77,11 +77,20 @@ def assess(
     if notes is not None:
         degraded = getattr(notes, "degraded", None)
         if degraded:
-            risks.append(Risk(
-                "approval_no_permission", "提示",
-                "合同审批流程（%s）无权限读取：%s，需人工查看" % (
-                    order.approval_flow or order.approval_flow_rid, degraded),
-            ))
+            # 无权限用固定口径文案（DESIGN-DETAIL §7），不拼接底层异常原文；
+            # 其余读取失败（会话/签名拦截等）保留原因便于人工定位。
+            if "无权限" in degraded:
+                risks.append(Risk(
+                    "approval_no_permission", "提示",
+                    "合同审批流程（%s）无权限读取，需人工查看（链接见单据）"
+                    % (order.approval_flow or order.approval_flow_rid),
+                ))
+            else:
+                risks.append(Risk(
+                    "approval_no_permission", "提示",
+                    "合同审批流程（%s）无法读取：%s，需人工查看" % (
+                        order.approval_flow or order.approval_flow_rid, degraded),
+                ))
         else:
             levels = getattr(notes, "risk_levels", None) or []
             hint = getattr(notes, "verdict_hint", "") or ""

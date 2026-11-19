@@ -157,3 +157,62 @@ def test_render_risks_text():
     txt = render_risks(assess(o, [], None))
     assert txt.startswith("必注：")
     print("\n--- 风险文本 ---\n" + txt)
+
+
+# ---------------- 选取口径：OA 直给编号也不得绕过终态过滤 ----------------
+from pm.ones_refs import _select  # noqa: E402
+
+
+def _ref(code, name, label, matched=None):
+    return RefProject(code=code, name=name, project_status="进行中",
+                      status_label=label, status_basis="测试",
+                      matched_products=matched or [])
+
+
+def test_select_keeps_only_terminal():
+    """885755 实测：OA 直给编号指向「待实施」项目 → 必须剔除，不回退硬引。"""
+    refs = [_ref("SSXM-2026-1116-3099", "4700007283", "待实施")]
+    notes = []
+    out = _select(refs, "", notes)
+    assert out == []
+    assert any("终态" in n for n in notes)
+
+
+def test_select_drops_same_period_new_project():
+    """排除编号日期 ≥ 本单申请日的同期新建项目。"""
+    refs = [
+        _ref("SSXM-2026-1119-3139", "某签约项目A", "已交付未验收"),
+        _ref("SSXM-2025-0403-0858", "某签约项目B", "已交付未验收"),
+    ]
+    notes = []
+    out = _select(refs, "2026-11-18", notes)
+    assert [r.code for r in out] == ["SSXM-2025-0403-0858"]
+    assert any("同期" in n for n in notes)
+
+
+def test_select_one_per_type():
+    """同类型只取最相关 1 个（状态 rank → 命中产品数 → 编号）。"""
+    refs = [
+        _ref("SSXM-2026-0924-2598", "上半年结算-浙江农信", "已交付未验收", ["SP-A"]),
+        _ref("SSXM-2026-0810-2066", "浙江农信签约项目", "已交付未验收", ["SP-A", "SP-B"]),
+    ]
+    out = _select(refs, "", [])
+    assert len(out) == 1 and out[0].code == "SSXM-2026-0810-2066"
+
+
+def test_select_keeps_both_when_types_differ():
+    refs = [
+        _ref("SSXM-2026-0624-1641", "浙江农信提前实施", "已交付未关联签约合同"),
+        _ref("SSXM-2026-0924-2598", "上半年结算-浙江农信", "已交付未验收"),
+    ]
+    out = _select(refs, "", [])
+    assert {r.code for r in out} == {"SSXM-2026-0624-1641", "SSXM-2026-0924-2598"}
+
+
+def test_code_date_parses_mmdd_merged():
+    """实测编号格式 SSXM-YYYY-MMDD-NNNN（MMDD 合并），旧正则按 YYYY-MM-DD- 永不匹配。"""
+    from pm.ones_refs import _code_date
+    assert _code_date("SSXM-2026-1119-3139") == "2026-11-19"
+    assert _code_date("SSXM-2026-0810-2066") == "2026-08-10"
+    assert _code_date("SSXM-2025-0403-0858") == "2025-04-03"
+    assert _code_date("bad") == ""

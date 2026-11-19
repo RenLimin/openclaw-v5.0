@@ -45,6 +45,24 @@ CDP_URL = os.environ.get("ONES_CDP_URL", "http://127.0.0.1:9333")
 # （ones_client / 测试探测 / 其他复用方）各自 load 成不同模块实例，若各自建连会
 # 互相挤掉 → 表现为「第一个可用、第二个 __err parse」。故连接注册进 sys.modules 共享。
 _CDP_KEY = "_ones_cdp_shared_v1"
+# Playwright sync API 一个进程只能 start 一次：重复 start 抛
+# "Playwright Sync API inside the asyncio loop"。OA 侧读取器
+# （bangcle-contract services/oa/approval_log）与本脚本共用同一驱动单例。
+_PW_KEY = "_oa_playwright_shared_v1"
+
+
+def _shared_playwright():
+    """进程内 Playwright 驱动单例（不 stop，随进程退出清理）。
+
+    跨模块共享：approval_log 读取 757 审批链时也复用此驱动，
+    否则同一进程二次 sync_playwright().start() 直接抛错。
+    """
+    st = sys.modules.get(_PW_KEY)
+    if st is None or st.get("pw") is None:
+        from playwright.sync_api import sync_playwright
+        st = {"pw": sync_playwright().start()}
+        sys.modules[_PW_KEY] = st
+    return st["pw"]
 
 
 def _shared_cdp() -> dict:
@@ -66,8 +84,7 @@ def _cdp_eval(js: str, timeout: int = 120) -> str:
         raise RuntimeError(st["err"])
     try:
         if st["browser"] is None:
-            from playwright.sync_api import sync_playwright
-            pw = sync_playwright().start()
+            pw = _shared_playwright()
             b = pw.chromium.connect_over_cdp(CDP_URL, timeout=min(timeout, 30) * 1000)
             st["pw"], st["browser"] = pw, b
         for ctx in st["browser"].contexts:

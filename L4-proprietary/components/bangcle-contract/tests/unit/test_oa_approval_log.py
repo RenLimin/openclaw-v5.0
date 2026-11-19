@@ -357,3 +357,47 @@ def test_reconcile_is_read_only():
     diffs = reconcile(["9"], local_states={"9": "review"}, reader=reader)
     assert diffs[0].kind == "in_sync"
     assert reader.read_calls == ["9"]  # 只发生读
+
+
+# ---------------------------------------------------------------
+# 无权限识别（实测 885637 → OA 重定向 ReqNoRight）
+# ---------------------------------------------------------------
+def test_collect_detects_reqnoright_as_no_permission(golden):
+    """OA 无权限页（ReqNoRight）应识别为 ApprovalLogNoPermission，
+    而不是落到 60s 点击超时、把 Playwright 原始报错抛给上层。"""
+    from services.oa.approval_log import ApprovalLogNoPermission
+    reader = ApprovalLogReader(state_path="/tmp/fake-state.json", timeout_ms=50)
+    page = FakePage(
+        golden["base_info"], golden["loglist_raw"],
+        current_url="https://oa.bangcle.com/spa/workflow/static4form/index.html#/main/workflow/ReqNoRight?isSecNoRight=0",
+    )
+    with pytest.raises(ApprovalLogNoPermission):
+        reader._collect_from_page(page, "885637")
+
+
+def test_no_permission_is_unavailable_subclass():
+    """无权限属于「不可得」大类：上层统一降级，但类型可区分（不触发会话重建）。"""
+    from services.oa.approval_log import ApprovalLogNoPermission
+    assert issubclass(ApprovalLogNoPermission, ApprovalLogUnavailable)
+
+
+def test_read_approval_chain_no_permission_no_refresh(monkeypatch, golden):
+    """无权限**不触发**会话重建（重建也拿不到权限）：只读一次即降级。"""
+    from services.oa.approval_log import ApprovalLogNoPermission
+    reader = ApprovalLogReader(state_path="/tmp/fake-state.json")
+    calls = {"capture": 0, "refresh": 0}
+
+    def fake_capture(rid):
+        calls["capture"] += 1
+        page = FakePage(
+            golden["base_info"], golden["loglist_raw"],
+            current_url="https://oa.bangcle.com/spa/workflow/index.html#/main/workflow/ReqNoRight?isSecNoRight=0",
+        )
+        return reader._collect_from_page(page, rid)
+
+    monkeypatch.setattr(reader, "_capture", fake_capture)
+    monkeypatch.setattr(reader, "_refresh_session", lambda: calls.__setitem__("refresh", calls["refresh"] + 1) or True)
+    with pytest.raises(ApprovalLogUnavailable):
+        reader.read_approval_chain("885637")
+    assert calls["capture"] == 1
+    assert calls["refresh"] == 0

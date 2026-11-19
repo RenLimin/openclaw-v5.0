@@ -184,7 +184,11 @@ def find_reference_projects(
     notes: List[str] = []
     refs: List[RefProject] = []
 
-    # 1) OA 已给项目编号 → 直查
+    # 1) OA 项目编号 → 作为**候选**直查（不当作参考结论）
+    #    实证（Rex 手工批注 2026-11-19）：885576/885673 的 OA「项目编号」填的是
+    #    **本期新建项目**（SSXM-2026-1112-3082/3083，与申请日同期），Rex 批注
+    #    引用的却是更早的终态项目（2476/4149）。故该字段仅作候选，
+    #    与名称候选同池，由统一选取口径（终态/同期排除/每类型取1）裁决。
     if project_code and str(project_code).startswith("SSXM-"):
         p = ones_client.project_by_code(project_code)
         if p:
@@ -192,11 +196,12 @@ def find_reference_projects(
                        product_codes, "direct", product_names, product_categories)
             if r:
                 refs.append(r)
-            return refs, notes
-        notes.append("OA 项目编号 %s 在 ONES 未找到" % project_code)
+        else:
+            notes.append("OA 项目编号 %s 在 ONES 未找到" % project_code)
 
     # 2) 名称候选：**遍历全部检索词并合并**（项目名常省略「股份有限公司」等后缀，
     #    只在第一个词命中就 break 会漏掉关键项目，如 886362 的 SSXM-2026-0810-2066）
+    #    始终执行：OA 项目编号只是候选，参考项目须由客户名检索得出（实证见上）。
     allowed_types = _TYPE_SCOPE.get(workflow_id, ())
     seen_codes: set = set()
     probes = [x for x in (final_user, customer, _core_name(final_user),
@@ -244,18 +249,42 @@ def find_reference_projects(
                     % (len(refs), len(filtered)))
             refs = filtered
 
-    # 口径校准自 Rex 4 条批注（PRD §0.1）：
-    #   a) 只引**终态**项目（已交付未验收/已交付未关联签约合同/可结项/已交付已验收）；
-    #      「进行中/待实施」不引（886362 未引进行中的 0449，886368 未引待实施的 3139）
-    #   b) 排除**同期新建**项目（编号日期 ≥ 本单申请日，如 SSXM-2026-1119-*）
-    #   c) 同类型只取 1 个（按 状态rank → 命中产品数 → 编号 排序）
-    if refs:
-        _TERMINAL = {"已交付未验收", "已交付未关联签约合同", "可结项", "已交付已验收"}
-        keep = [r for r in refs if r.status_label in _TERMINAL]
-        if len(keep) < len(refs):
-            notes.append("仅保留终态项目：%d 个候选 → %d 个（剔除进行中/待实施）"
-                         % (len(refs), len(keep)))
-            refs = keep
+    # 统一选取口径（OA 直给编号与名称候选**同一条路径**，不得绕过）
+    refs = _select(refs, apply_date, notes)
+
+    if not refs:
+        notes.append("ONES 未匹配到最终客户「%s」相关项目（需人工确认本期项目编号）"
+                     % (final_user or "—"))
+    return refs, notes
+
+
+_TERMINAL = {"已交付未验收", "已交付未关联签约合同", "可结项", "已交付已验收"}
+_RANK = {
+    "已交付未验收": 0, "已交付未关联签约合同": 0,
+    "可结项": 1, "已交付已验收": 2,
+}
+
+
+def _select(
+    refs: List[RefProject], apply_date: str, notes: List[str]
+) -> List[RefProject]:
+    """选取口径（校准自 Rex 4 条批注，PRD §0.1）。
+
+    a) 只引**终态**项目（已交付未验收/已交付未关联签约合同/可结项/已交付已验收）；
+       「进行中/待实施」不引（886362 未引进行中的 0449，886368 未引待实施的 3139）。
+       注意：**不能回退**——候选全是非终态时结果为空，由渲染层提示人工确认，
+       而不是硬引一个「待实施」项目（实测 885755 曾直引 SSXM-2026-1116-3099）。
+    b) 排除**同期新建**项目（编号日期 ≥ 本单申请日，如 SSXM-2026-1119-*）。
+    c) 同类型只取 1 个（按 状态rank → 命中产品数 → 编号 排序）。
+    """
+    if not refs:
+        return refs
+
+    keep = [r for r in refs if r.status_label in _TERMINAL]
+    if len(keep) < len(refs):
+        notes.append("仅保留终态项目：%d 个候选 → %d 个（剔除进行中/待实施）"
+                     % (len(refs), len(keep)))
+        refs = keep
 
     if refs and apply_date:
         keep = [r for r in refs if not (_code_date(r.code) >= apply_date)]
@@ -264,37 +293,39 @@ def find_reference_projects(
                          % (len(refs) - len(keep), apply_date))
             refs = keep
 
-    if refs:
-        _rank = {
-            "已交付未验收": 0, "已交付未关联签约合同": 0,
-            "可结项": 1, "已交付已验收": 2,
-        }
-        refs.sort(key=lambda r: (_rank.get(r.status_label, 9),
-                                 -len(r.matched_products), r.code))
-        picked: List[RefProject] = []
-        seen_types: set = set()
-        for r in refs:
-            t = project_type(r.name)
-            if t in seen_types:
-                continue
-            seen_types.add(t)
-            picked.append(r)
-        if len(picked) < len(refs):
-            notes.append("同类型仅取最相关 1 个：%d 个候选 → %d 个（类型：%s）"
-                         % (len(refs), len(picked), "、".join(sorted(seen_types))))
-        refs = picked
-
     if not refs:
-        notes.append("ONES 未匹配到最终客户「%s」相关项目（需人工确认本期项目编号）"
-                     % (final_user or "—"))
-    return refs, notes
+        return refs
+
+    refs.sort(key=lambda r: (_RANK.get(r.status_label, 9),
+                             -len(r.matched_products), r.code))
+    picked: List[RefProject] = []
+    seen_types: set = set()
+    for r in refs:
+        t = project_type(r.name)
+        if t in seen_types:
+            continue
+        seen_types.add(t)
+        picked.append(r)
+    if len(picked) < len(refs):
+        notes.append("同类型仅取最相关 1 个：%d 个候选 → %d 个（类型：%s）"
+                     % (len(refs), len(picked), "、".join(sorted(seen_types))))
+    return picked
 
 
 def _code_date(code: str) -> str:
-    """从 SSXM-YYYY-MM-DD-NNNN 提取日期（用于排除本单同期新建项目）。"""
+    """从 SSXM-YYYY-MMDD-NNNN 提取日期（用于排除本单同期新建项目）。
+
+    实测编号格式：SSXM-2026-1119-3139 → 2026-11-19（**MMDD 合并**，
+    不是 YYYY-MM-DD）。旧正则按 YYYY-MM-DD- 匹配，永远落空返回 ""，
+    使「同期新建排除」成为死代码（2026-11-19 实测发现）。
+    解析不出时返回 ""（视为不晚于申请日，保守保留）。
+    """
     import re as _re
-    m = _re.search(r"SSXM-(\d{4})-(\d{2})-(\d{2})-", code or "")
-    return "%s-%s-%s" % m.groups() if m else ""
+    m = _re.search(r"SSXM-(\d{4})-(\d{2})(\d{2})-", code or "")
+    if not m:
+        return ""
+    y, mm, dd = m.groups()
+    return "%s-%s-%s" % (y, mm, dd)
 
 
 def _code_of(name: str) -> str:

@@ -13,12 +13,29 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
 class BrowserFallbackError(RuntimeError):
     """浏览器兜底失败（含账号权限、无凭据、无 CDP 等）。"""
+
+
+# Playwright sync API 一个进程只能 start 一次：重复 start 抛
+# "Playwright Sync API inside the asyncio loop"（CLI 全链实测必现）。
+# 故驱动按进程缓存，跨模块（approval_log / refresh_oa_session / ONES 复用脚本）共享。
+_PW_KEY = "_oa_playwright_shared_v1"
+
+
+def _shared_playwright():
+    """返回进程内共享的 Playwright sync 驱动（不 stop，随进程退出清理）。"""
+    st = sys.modules.get(_PW_KEY)
+    if st is None or st.get("pw") is None:
+        from playwright.sync_api import sync_playwright
+        st = {"pw": sync_playwright().start()}
+        sys.modules[_PW_KEY] = st
+    return st["pw"]
 
 
 def _bdms_adapter_module():
@@ -83,7 +100,7 @@ def refresh_oa_session(timeout: float = 60.0) -> bool:
             raise BrowserFallbackError("IAM 凭据缺失（secrets 未配置）")
 
         try:
-            from playwright.sync_api import sync_playwright
+            pw = _shared_playwright()
         except ImportError:
             raise BrowserFallbackError(
                 "Playwright 不可用（pip install playwright && playwright install chromium）")
@@ -91,7 +108,8 @@ def refresh_oa_session(timeout: float = 60.0) -> bool:
         env = {**os.environ, "NO_PROXY": "*", "no_proxy": "*"}
         iam_base = getattr(ba, "IAM_BASE", "https://iam.bangcle.com")
 
-        with sync_playwright() as pw:
+        from contextlib import nullcontext
+        with nullcontext():  # 共享驱动：进程级复用，不能在此 stop
             browser = pw.chromium.launch(headless=True, env=env)
             try:
                 context = browser.new_context()

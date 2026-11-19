@@ -14,12 +14,20 @@ from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 try:                       # 正常包结构：services.oa.enhance.pm
-    from ..approval_log import ApprovalLogReader, ApprovalLogUnavailable
+    from ..approval_log import (
+        ApprovalLogNoPermission,
+        ApprovalLogReader,
+        ApprovalLogUnavailable,
+    )
 except ImportError:        # 直接以 pm 为顶层包加载
     import sys as _sys
     from pathlib import Path as _Path
     _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
-    from services.oa.approval_log import ApprovalLogReader, ApprovalLogUnavailable
+    from services.oa.approval_log import (
+        ApprovalLogNoPermission,
+        ApprovalLogReader,
+        ApprovalLogUnavailable,
+    )
 
 # AI 小助手（信息管理部）写入的「销售合同审核意见」
 _AI_MARKERS = ("AI小助手", "AI 小助手", "信息管理部")
@@ -80,6 +88,10 @@ def collect(
     rd = reader or ApprovalLogReader()
     try:
         chain = rd.read_approval_chain(approval_rid)
+    except ApprovalLogNoPermission:
+        # 设计口径（DESIGN-DETAIL §6）：无权限 → 固定文案，不泄漏原始异常
+        n.degraded = "无权限，需人工查看"
+        return n
     except ApprovalLogUnavailable as exc:
         n.degraded = "无权限/不可得：%s" % exc
         return n

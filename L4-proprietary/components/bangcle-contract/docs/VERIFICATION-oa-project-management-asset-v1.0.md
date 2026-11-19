@@ -1,9 +1,10 @@
 # VERIFICATION — OA 项目实施管理「分配项目经理」批注建议资产 v1.0
 
 > L4 · bangcle-contract · 项目实施管理批注建议资产（P1–P5）验收记录
-> 版本 v1.0.1 · 状态：**P1–P5 已实现 + 4 单真实 E2E 与 Rex 批注逐项对齐** · Jerry 🦞
+> 版本 v1.0.2 · 状态：**P1–P5 已实现 + 7 单真实 E2E；757 读取真实闭环（双路径）** · Jerry 🦞
 > 对应文档：`PRD-oa-project-management-asset-v1.0.md` / `DESIGN-OUTLINE-…` / `DESIGN-DETAIL-…` / `IMPLEMENTATION-PLAN-…`
 > 需求规格来源：**Rex 2026-11-19 手工处理批注**（886314/886368/886362/886404 原文反推）
+> v1.0.2 追加：**885576/885673/885755 正文内 Rex 批注原文**（另 3 条实证）+ 757 读取真实闭环
 
 ---
 
@@ -13,9 +14,9 @@
 |---|---|
 | P1 授权期限修复（中文日期/服务期兜底/取最晚） | ✅ 已实现 + 实测 3/5 提取成功 |
 | P2 三流程字段解析（916/815/820） | ✅ 已实现，4 单回放字段全对 |
-| P3 ONES 参考项目 + 风险 + 三段式渲染 | ✅ 纯函数 17/17；**4 单真实 E2E 对齐 Rex 批注**（§6） |
-| P4 757 异常备注（仅 916） | ✅ 已实现，离线 10/10（含无权限降级） |
-| P5 CLI `oa-project-mgmt` | ✅ 已实现，help 冒烟通过 |
+| P3 ONES 参考项目 + 风险 + 三段式渲染 | ✅ 纯函数 21/21；**7 单真实 E2E**，4 单与 Rex 批注逐项对齐（§6） |
+| P4 757 异常备注（仅 916） | ✅ 已实现，离线 14/14；**真实读取双路径闭环**（§6.3） |
+| P5 CLI `oa-project-mgmt` | ✅ 已实现；7 单真实 E2E 全链跑通 |
 | 只读铁律 | ✅ 全链无 OA 写调用 |
 
 ---
@@ -97,15 +98,16 @@ $ python3 -m pytest tests/unit/test_pm_approval_notes.py -q
 
 ```
 $ python3 -m pytest tests/unit -q
-291 passed, 2 skipped in 16.72s
+298 passed, 3 skipped in 16.08s
 ```
-（2 skipped = ONES 实时依赖 Chrome 登录态，`_ones_available()` 已改为真实 JS+登录态探测，
+（3 skipped = ONES 实时依赖 Chrome 登录态，`_ones_available()` 已改为真实 JS+登录态探测，
 不可用即 skip，不把数据源不可用当正常结果。）
-pm 相关 4 个测试文件：57 passed（含 886404 混合列表 / 886362 单行式 / 无参考回退）。
+pm 相关测试：`test_pm_render_risk` 21 passed、`test_pm_approval_notes` 14 passed、
+`test_oa_approval_log` 22 passed（含 ReqNoRight 无权限识别 3 例）。
 
 ---
 
-## 6. 真实 E2E（4 单，与 Rex 批注逐项对齐）
+## 6. 真实 E2E（7 单；其中 4 单与 Rex 批注逐项对齐）
 
 **环境**：独立 Chrome 实例（`--user-data-dir=~/.openclaw/data/chrome-profiles/oa-live`、
 `--remote-debugging-port=9333`、Playwright `connect_over_cdp`）；ONES 走页面内 GraphQL XHR
@@ -136,6 +138,26 @@ $ python3 cli/contractctl.py oa-project-mgmt --requestid <rid> --workflow <wf> -
 
 **降级如实**：0858/2598 无【云端】license 任务 → 授权期限标【缺失】，未用服务期替代（D5）。
 
+### 6.1b 追加实证（885576 / 885673 / 885755 正文内 Rex 批注原文）
+
+从这三单 OA 正文「流转意见」里提取的 Rex 原文（与 §0.1 同规格，属第二批语料）：
+
+| 单 | 流程 | Rex 批注原文 | OA「项目编号」字段 |
+|---|---|---|---|
+| 885576 | 820 | `请冯刚安排项目经理，参考POC项目SSXM-2025-0825-2476（已结项）。` | SSXM-2026-1112-3082（本期新建，**未被引用**） |
+| 885673 | 815 | `请冯刚安排项目经理，参考签约项目SSXM-2025-1231-4149（已结项）。` | SSXM-2026-1112-3083（本期新建，**未被引用**） |
+| 885755 | 916 | `请冯刚安排项目经理，参考框架合同XSZS2512020984订单对应签约项目。` | SSXM-2026-1116-3099（本期新建，**未被引用**） |
+
+**由此确立的口径修正**：OA「项目编号」字段填的是**本期立项新建项目**，
+**不是**参考项目来源。参考项目须由**客户名检索 ONES** + 终态/同期排除得出。
+（v1.0.1 曾把该字段当直查来源，导致 885576/885673 输出错误项目；已修正。）
+
+| 单 | 本资产输出 | Rex 批注 | 对齐 |
+|---|---|---|---|
+| 885576 | `请林慧娟负责，参考POC项目：SSXM-2025-0825-2476（可结项，授权/维保【缺失】）。` | `请冯刚安排项目经理，参考POC项目SSXM-2025-0825-2476（已结项）。` | ✅ 编号；⚠️ PM 措辞/状态词见 §6.5 |
+| 885673 | `请林慧娟负责，参考签约项目：SSXM-2025-1231-4149（已交付已验收，授权/维保【缺失】）。` | `请冯刚安排项目经理，参考签约项目SSXM-2025-1231-4149（已结项）。` | ✅ 编号；⚠️ 状态词见 §6.5 |
+| 885755 | `请张燕兰负责，参考签约项目：SSXM-2025-0623-1713（已交付已验收，授权/维保【缺失】）。` | `请冯刚安排项目经理，参考框架合同XSZS2512020984订单对应签约项目。` | ⚠️ 见 §6.5 |
+
 ### 6.2 两条质疑的处置（Rex 2026-11-19）
 
 | 质疑 | 事实 | 处置 |
@@ -145,6 +167,56 @@ $ python3 cli/contractctl.py oa-project-mgmt --requestid <rid> --workflow <wf> -
 
 > ⚠️ 验证 token 必须用真值；把字面量 `***` 当 token 传会得出**假 401**。
 > 轮换时只替换文件内容，无需改 git 配置。
+
+---
+
+### 6.3 P4 真实闭环：757 读取双路径（v1.0.2 修复）
+
+**此前状态**：757 从未真正读到过审批链——886453 输出的是降级，且降级文案泄漏
+Playwright 原始报错（`It looks like you are using Playwright Sync API inside the
+asyncio loop.` / `Locator.click: Timeout 60000ms exceeded`）。
+
+**两个真因（实测定位）**：
+
+| # | 真因 | 证据 | 修复 |
+|---|---|---|---|
+| B1 | `approval_log._capture` **二次** `sync_playwright().start()`，与 ONES 复用脚本已起的驱动冲突 → CLI 全链必炸 | 同一进程内先 `ones_available()` 再 `collect()` → 必抛该错 | 抽 `_shared_playwright()` 进程级单例，`approval_log` / `browser_fallback` / ONES 脚本共用；新增单测 |
+| B2 | OA **无权限**重定向（`#/main/workflow/ReqNoRight?isSecNoRight=0`，正文「对不起，您暂时没有权限！」）**未被识别** → 落到 60s 点击超时 | 885637 实测 URL/正文 | 新增 `ApprovalLogNoPermission`，URL 含 `ReqNoRight` 即判定；**不触发**会话重建（重建也拿不到权限）；降级文案按设计固定为「无权限，需人工查看」 |
+
+**双路径实测（独立实例 9333，真实 OA）**：
+
+| 757 rid | 归属单 | 结果 | 输出 |
+|---|---|---|---|
+| 885637 | 886453 | 无权限（真） | `提示：合同审批流程（销售合同审核流程-曾铭-2026-11-11）无权限读取，需人工查看（链接见单据）` |
+| 885688 | 885755 | 无权限（真） | 同上格式 |
+| 885641 | 886448 | **可读** | `必注：合同审批流程存在异常备注（重点复核/验收方式/需补充/可接受；…建议谨慎签署…），请立项前复核` |
+| 885784 | 886457 | **可读** | 同上格式（含人工退回意见） |
+
+**顺带修复的会话缺陷**：`_capture` 仅在 `state.json` **不存在**时判过期，
+旧文件存在但已失效时从不触发 `refresh_oa_session`。实测旧 state 直接跳 IAM 登录页；
+重建（IAM 登录 → 应用卡片换票 → `ecology_JSessionid`）后 `refresh_oa_session() -> True`，
+757 即可读。
+
+### 6.4 本轮代码修复清单（v1.0.2）
+
+| 文件 | 修复 |
+|---|---|
+| `services/oa/approval_log.py` | `ApprovalLogNoPermission`（ReqNoRight 识别，不触发重建）；`_capture` 改用共享 Playwright 驱动 |
+| `services/oa/browser_fallback.py` | 新增 `_shared_playwright()` 进程级单例；`refresh_oa_session` 复用，不再二次 start |
+| `skills/ones-browser-export/scripts/oa_workflow_ones.py` | 新增 `_shared_playwright()`（与 OA 侧同一 `sys.modules` 键），`_cdp_eval` 复用 |
+| `services/oa/enhance/pm/approval_notes.py` | 无权限 → 固定文案「无权限，需人工查看」，不泄漏异常原文 |
+| `services/oa/enhance/pm/risk.py` | `approval_no_permission` 文本不再拼接底层异常 |
+| `services/oa/enhance/pm/ones_refs.py` | ① OA 项目编号降级为**候选**（名称检索始终执行）；② 抽 `_select()` 统一选取口径，直查路径不再绕过终态过滤；③ 修 `_code_date` 正则（真实格式 `SSXM-YYYY-MMDD-NNNN`，旧正则永不匹配 → 同期排除成死代码） |
+| `tests/unit/test_oa_approval_log.py` | +3（ReqNoRight 识别 / 类型继承 / 无权限不重建） |
+| `tests/unit/test_pm_render_risk.py` | +5（终态过滤 / 同期排除 / 每类型取1 / 混合类型 / `_code_date`） |
+
+### 6.5 已知偏差（如实，未强行对齐）
+
+| 偏差 | 说明 |
+|---|---|
+| PM 措辞 | Rex 885576/885673/885755 写「请**冯刚**安排项目经理」（字段为空时指定接收人）；本资产 v1.0.2 输出「请林慧娟负责」（PM 取自 OA 字段）。两者语义等价（都是「待指派」），但**措辞不同** —— 需 Rex 拍板统一 |
+| 状态词 | Rex 写「（已结项）」；本资产按规则表给「可结项」/「已交付已验收」。886314 的「可结项」与 886368 的「已交付未验收」均与 Rex 一致，说明**规则表本身对**，但「已完成」项目的措辞存在 Rex 混用（已结项 vs 已交付已验收） |
+| 885755 参考项目 | Rex 指向「框架合同 XSZS2512020984 对应签约项目」（**合同号**口径）；本资产按客户名检索给 `SSXM-2025-0623-1713`。合同号→项目号的映射未建，暂按客户名近似 |
 
 ---
 
