@@ -1,0 +1,169 @@
+{
+ "request_id": "886314",
+ "workflow_id": "wf_820",
+ "title": "",
+ "maindata": {
+  "field13057": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "1823",
+     "name": "陈龙"
+    }
+   ],
+   "value": "1823"
+  },
+  "field13060": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "2026-11-18",
+     "name": "2026-11-18"
+    }
+   ],
+   "value": "2026-11-18"
+  },
+  "field29629": {
+   "value": "1"
+  },
+  "field29562": {
+   "value": ""
+  },
+  "field13062": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "933851",
+     "name": "亳州药都农村商业银行股份有限公司",
+     "tips": "亳州药都农村商业银行股份有限公司"
+    }
+   ],
+   "value": "933851"
+  },
+  "field29608": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "933851",
+     "name": "亳州药都农村商业银行股份有限公司",
+     "tips": "亳州药都农村商业银行股份有限公司"
+    }
+   ],
+   "value": "933851"
+  },
+  "field13102": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "1900",
+     "name": "张铭鑫"
+    }
+   ],
+   "value": "1900"
+  },
+  "field13101": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "1313",
+     "name": "任立民"
+    }
+   ],
+   "value": "1313"
+  },
+  "field13086": {
+   "value": "12,000.0"
+  }
+ },
+ "items": [],
+ "detail_rows": {
+  "row_0": {
+   "field13136": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "SP-MPP-3.3-PC",
+      "name": "SP-MPP-3.3-PC",
+      "tips": "SP-MPP-3.3-PC"
+     }
+    ],
+    "value": "SP-MPP-3.3-PC"
+   },
+   "field26084": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "1823",
+      "name": "陈龙"
+     }
+    ],
+    "value": "1823"
+   },
+   "field13098": {
+    "value": "1"
+   },
+   "field30435": {
+    "value": "0"
+   },
+   "keyid": 24299,
+   "field37115": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "152",
+      "name": "赵猛"
+     }
+    ],
+    "value": "152"
+   },
+   "field26932": {
+    "value": "/账号/年"
+   },
+   "field26933": {
+    "value": "1"
+   },
+   "field29768": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "2",
+      "name": "公有云软件",
+      "tips": "公有云软件"
+     }
+    ],
+    "value": "2"
+   },
+   "field29769": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "16",
+      "name": "梆梆安全小程序加固软件V3.3",
+      "tips": "梆梆安全小程序加固软件V3.3"
+     }
+    ],
+    "value": "16"
+   },
+   "field26934": {
+    "value": "1、提供小程序加固软件公有云版使用账号1个，1年期使用授权；含1个小程序加固使用授权；支持自动化标准加固策略、自定义加固策略功能；\n2、提供1年期加固专家服务：含策略分析及破解应急响应支持；"
+   },
+   "field26703": {
+    "value": "0"
+   },
+   "field29767": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "4",
+      "name": "小程序加固",
+      "tips": "小程序加固"
+     }
+    ],
+    "value": "4"
+   },
+   "field29954": {
+    "value": "梆梆安全小程序加固软件V3.3"
+   }
+  }
+ }
+}

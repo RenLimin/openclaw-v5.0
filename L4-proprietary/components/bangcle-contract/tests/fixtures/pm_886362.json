@@ -1,0 +1,180 @@
+{
+ "request_id": "886362",
+ "workflow_id": "wf_815",
+ "title": "",
+ "maindata": {
+  "field12968": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "1523",
+     "name": "曾铭"
+    }
+   ],
+   "value": "1523"
+  },
+  "field12971": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "2026-11-18",
+     "name": "2026-11-18"
+    }
+   ],
+   "value": "2026-11-18"
+  },
+  "field29630": {
+   "value": "0"
+  },
+  "field29560": {
+   "value": ""
+  },
+  "field12978": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "931627",
+     "name": "招商银行股份有限公司",
+     "tips": "招商银行股份有限公司"
+    }
+   ],
+   "value": "931627"
+  },
+  "field29609": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "931627",
+     "name": "招商银行股份有限公司",
+     "tips": "招商银行股份有限公司"
+    }
+   ],
+   "value": "931627"
+  },
+  "field13220": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "1538",
+     "name": "程涛"
+    }
+   ],
+   "value": "1538"
+  },
+  "field13219": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "1313",
+     "name": "任立民"
+    }
+   ],
+   "value": "1313"
+  },
+  "field26674": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "9849",
+     "name": "招商银行-手机银行加固-2026",
+     "tips": "招商银行-手机银行加固-2026"
+    }
+   ],
+   "value": "9849"
+  }
+ },
+ "items": [],
+ "detail_rows": {
+  "row_0": {
+   "field12984": {
+    "value": "2"
+   },
+   "field29770": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "1",
+      "name": "Android应用加固",
+      "tips": "Android应用加固"
+     }
+    ],
+    "value": "1"
+   },
+   "field26085": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "1523",
+      "name": "曾铭"
+     }
+    ],
+    "value": "1523"
+   },
+   "field32833": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "9849",
+      "name": "9849"
+     }
+    ],
+    "value": "9849"
+   },
+   "keyid": 12037,
+   "field26905": {
+    "value": "1、提供Android应用加固软件年付费许可增强版一套，1年期使用授权；含1个Android应用加固使用授权；支持自动化标准加固策略、自定义加固策略功能；\n2、提供1次本地安装部署服务；\n3、提供1年期维保服务：包括策略分析、破解应急响应支持、加固兼容性测试服务、梆梆软件缺陷修正、软件漏洞修复、Android系统新版本适配标准维保服务，不含产品大版本功能升级，提供电话、企业微信、邮件形式的7×24小时售后技术支持；"
+   },
+   "field13189": {
+    "value": "10.00"
+   },
+   "field13255": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "SP-AAP-7.0-SAPLV-PLUS",
+      "name": "SP-AAP-7.0-SAPLV-PLUS",
+      "tips": "SP-AAP-7.0-SAPLV-PLUS"
+     }
+    ],
+    "value": "SP-AAP-7.0-SAPLV-PLUS"
+   },
+   "field26826": {
+    "value": "0"
+   },
+   "field26903": {
+    "value": "/套/年"
+   },
+   "field26904": {
+    "value": "1"
+   },
+   "field30436": {
+    "value": "1"
+   },
+   "field29953": {
+    "value": "Android应用加固软件V7.0"
+   },
+   "field29771": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "3",
+      "name": "私有化软件",
+      "tips": "私有化软件"
+     }
+    ],
+    "value": "3"
+   },
+   "field29772": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "2",
+      "name": "Android应用加固软件V7.0",
+      "tips": "Android应用加固软件V7.0"
+     }
+    ],
+    "value": "2"
+   }
+  }
+ }
+}

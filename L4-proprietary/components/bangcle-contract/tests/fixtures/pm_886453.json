@@ -1,0 +1,342 @@
+{
+ "request_id": "886453",
+ "workflow_id": "wf_916",
+ "title": "",
+ "maindata": {
+  "field13637": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "1523",
+     "name": "曾铭"
+    }
+   ],
+   "value": "1523"
+  },
+  "field13638": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "2026-11-11",
+     "name": "2026-11-11"
+    }
+   ],
+   "value": "2026-11-11"
+  },
+  "field29631": {
+   "value": ""
+  },
+  "field29561": {
+   "value": ""
+  },
+  "field13668": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "935455",
+     "name": "深圳市艾锐迪科技有限公司",
+     "tips": "深圳市艾锐迪科技有限公司"
+    }
+   ],
+   "value": "935455"
+  },
+  "field29612": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "932308",
+     "name": "招商永隆银行有限公司",
+     "tips": "招商永隆银行有限公司"
+    }
+   ],
+   "value": "932308"
+  },
+  "field13673": {
+   "value": ""
+  },
+  "field13643": {
+   "value": "永隆香港总行2026-2027年加固项目"
+  },
+  "field13652": {
+   "value": "XSZS2611120892"
+  },
+  "field13682": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "885637",
+     "name": "销售合同审核流程-曾铭-2026-11-11"
+    }
+   ],
+   "value": "885637"
+  },
+  "field31030": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "9916",
+     "name": "永隆银行-香港总行加固项目-2026",
+     "tips": "永隆银行-香港总行加固项目-2026"
+    }
+   ],
+   "value": "9916"
+  },
+  "field20270": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "2027-01-01",
+     "name": "2027-01-01"
+    }
+   ],
+   "value": "2027-01-01"
+  },
+  "field20271": {
+   "specialobj": [
+    {
+     "count": 0,
+     "id": "2027-12-31",
+     "name": "2027-12-31"
+    }
+   ],
+   "value": "2027-12-31"
+  },
+  "field13648": {
+   "value": "100000.00"
+  }
+ },
+ "items": [],
+ "detail_rows": {
+  "row_0": {
+   "field13667": {
+    "value": "35000.00"
+   },
+   "field13666": {
+    "value": "1"
+   },
+   "field13665": {
+    "value": "1"
+   },
+   "field13675": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "SP-AAP-7.0-SAPLV-PLUS",
+      "name": "SP-AAP-7.0-SAPLV-PLUS",
+      "tips": "SP-AAP-7.0-SAPLV-PLUS"
+     }
+    ],
+    "value": "SP-AAP-7.0-SAPLV-PLUS"
+   },
+   "field13657": {
+    "value": "/套/年"
+   },
+   "keyid": 25067,
+   "field26779": {
+    "value": "0"
+   },
+   "field26781": {
+    "value": "1、提供Android应用加固软件年付费许可增强版一套，1年期使用授权；含1个Android应用加固使用授权；支持自动化标准加固策略、自定义加固策略功能；\n2、提供1次本地安装部署服务；\n3、提供1年期维保服务：包括策略分析、破解应急响应支持、加固兼容性测试服务、梆梆软件缺陷修正、软件漏洞修复、Android系统新版本适配标准维保服务，不含产品大版本功能升级，提供电话、企业微信、邮件形式的7×24小时售后技术支持；"
+   },
+   "field29775": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "2",
+      "name": "Android应用加固软件V7.0",
+      "tips": "Android应用加固软件V7.0"
+     }
+    ],
+    "value": "2"
+   },
+   "field26782": {
+    "value": "无"
+   },
+   "field26780": {
+    "value": "26.92"
+   },
+   "field26783": {
+    "value": "130000.00"
+   },
+   "field29773": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "1",
+      "name": "Android应用加固",
+      "tips": "Android应用加固"
+     }
+    ],
+    "value": "1"
+   },
+   "field26784": {
+    "value": "/套/年"
+   },
+   "field29774": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "3",
+      "name": "私有化软件",
+      "tips": "私有化软件"
+     }
+    ],
+    "value": "3"
+   }
+  },
+  "row_1": {
+   "field13667": {
+    "value": "30000.00"
+   },
+   "field13666": {
+    "value": "1"
+   },
+   "field13665": {
+    "value": "1"
+   },
+   "field13675": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "SP-AAP-7.0-EA-AEA021",
+      "name": "SP-AAP-7.0-EA-AEA021",
+      "tips": "SP-AAP-7.0-EA-AEA021"
+     }
+    ],
+    "value": "SP-AAP-7.0-EA-AEA021"
+   },
+   "field13657": {
+    "value": "/APP/年"
+   },
+   "keyid": 25068,
+   "field26779": {
+    "value": "0"
+   },
+   "field26781": {
+    "value": "扩展1个Android应用加固使用授权，含策略分析、加固兼容性测试、破解应急响应支持服务，授权使用时间及服务内容与基础包一致；"
+   },
+   "field29775": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "2",
+      "name": "Android应用加固软件V7.0",
+      "tips": "Android应用加固软件V7.0"
+     }
+    ],
+    "value": "2"
+   },
+   "field26782": {
+    "value": "无"
+   },
+   "field26780": {
+    "value": "47.62"
+   },
+   "field26783": {
+    "value": "63000.00"
+   },
+   "field29773": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "1",
+      "name": "Android应用加固",
+      "tips": "Android应用加固"
+     }
+    ],
+    "value": "1"
+   },
+   "field26784": {
+    "value": "/APP/年"
+   },
+   "field29774": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "7",
+      "name": "扩展授权",
+      "tips": "扩展授权"
+     }
+    ],
+    "value": "7"
+   }
+  },
+  "row_2": {
+   "field13667": {
+    "value": "35000.00"
+   },
+   "field13666": {
+    "value": "1"
+   },
+   "field13665": {
+    "value": "1"
+   },
+   "field13675": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "SP-IAP-4.0-SAPLV",
+      "name": "SP-IAP-4.0-SAPLV",
+      "tips": "SP-IAP-4.0-SAPLV"
+     }
+    ],
+    "value": "SP-IAP-4.0-SAPLV"
+   },
+   "field13657": {
+    "value": "/套/年"
+   },
+   "keyid": 25069,
+   "field26779": {
+    "value": "0"
+   },
+   "field26781": {
+    "value": "1、提供iOS应用加固软件年付费许可版一套，1年期使用授权；含1个iOS应用加固使用授权；支持ObjC/ObjC++、C/C++、Swift语言；支持自定义加固策略功能；\n2、提供1次本地安装部署服务；\n3、提供1年期维保服务：包括梆梆软件缺陷修正、软件漏洞修复、iOS系统及XCODE的新版本适配标准维保服务，含软件功能升级服务，提供电话、企业微信、邮件形式的7×24小时售后技术支持；"
+   },
+   "field29775": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "24",
+      "name": "iOS应用加固软件V4.0",
+      "tips": "iOS应用加固软件V4.0"
+     }
+    ],
+    "value": "24"
+   },
+   "field26782": {
+    "value": "无"
+   },
+   "field26780": {
+    "value": "26.92"
+   },
+   "field26783": {
+    "value": "130000.00"
+   },
+   "field29773": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "6",
+      "name": "iOS应用加固",
+      "tips": "iOS应用加固"
+     }
+    ],
+    "value": "6"
+   },
+   "field26784": {
+    "value": "/套/年"
+   },
+   "field29774": {
+    "specialobj": [
+     {
+      "count": 0,
+      "id": "3",
+      "name": "私有化软件",
+      "tips": "私有化软件"
+     }
+    ],
+    "value": "3"
+   }
+  }
+ }
+}
