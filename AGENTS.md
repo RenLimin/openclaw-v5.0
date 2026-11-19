@@ -17,6 +17,14 @@ This folder is home. Treat it that way.
 - Never 对同一命令无确认地重复执行（防并行重复）；先 `process(action=list)` 或 `ps` 确认无残留。
 <!-- observed: 2026-11-10 | status: active -->
 
+## 定时任务环境降级红线（事故 2026-11-19）
+- 现象：launchd `ai.openclaw.system-audit`（PATH 仅 `/usr/bin:/bin`）跑 `gen_asset_inventory.py`，8 处 `openclaw`/`node` 命令全部找不到 → 生成器**静默降级**成「⚠️ 数据源不可用」写入 `01-asset-inventory.md`；而 `--check` 比对的是**降级稿 vs 降级稿**，于是审计日志报「漂移归零」把降级内容当权威固化。
+- 根因：生成器用 `subprocess.run(["openclaw", ...])` 裸命令名，依赖 PATH；定时任务环境 PATH 与交互 shell 不同。
+- Always 定时任务/子进程调外部 CLI 时用**绝对路径兜底**（`shutil.which` + 候选绝对路径），禁止裸命令名依赖 PATH。
+- Always 「数据源不可用」出现即视为**缺陷**，不得当作正常输出提交/登记；`--check` 的「无漂移」结论只在数据源全可用时才有证明力。
+- 修复：`gen_asset_inventory.py` 加 `_resolve_bin()`/`_resolve_cmd()` 兜底（含 `.mjs` 用 node 显式执行）；回归测试 `L2-infra/components/config/tests/test_gen_asset_inventory.py`（最小 PATH 下 0 降级）。
+<!-- observed: 2026-11-19 | status: active -->
+
 ## task_tracker 并发竞态红线（事故 2026-11-10）
 - task_tracker 用**单一全局** `memory/current-task.md`，多会话并行时会互相覆盖；`complete`/`update` **不校验 task_id**。
 - Always 调 `complete` 前先读 `current-task.md` 的 `task_id`，确认是自己的任务；不一致（被并行线占用）→ **绝不 complete/update**，改用独立记录或等 Rex。

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -38,6 +39,41 @@ CST = timezone(timedelta(hours=8))
 
 UNAVAILABLE = "⚠️ 数据源不可用"
 
+# launchd/cron 调度的环境 PATH 可能只有 /usr/bin:/bin，openclaw/node 不在其中。
+# 不兜底时这些命令全部失败 → 生成器静默降级成「数据源不可用」，而 --check 比对的是
+# 降级稿 vs 降级稿，会把降级内容当权威写入并登记「漂移归零」（事故 2026-11-19）。
+_FALLBACK_BIN: dict[str, tuple[Path, ...]] = {
+    "openclaw": (
+        Path.home() / ".openclaw" / "tmp" / "agent-cli" / "openclaw",
+        Path("/opt/homebrew/bin/openclaw"),
+        Path("/opt/homebrew/lib/node_modules/openclaw/openclaw.mjs"),
+    ),
+    "node": (
+        Path("/opt/homebrew/bin/node"),
+        Path("/opt/homebrew/Cellar/node/26.7.0/bin/node"),
+    ),
+    "git": (Path("/usr/bin/git"),),
+}
+
+
+def _resolve_bin(name: str) -> str:
+    """把命令名解析成可执行绝对路径（PATH 缺失时兜底）。"""
+    found = shutil.which(name)
+    if found:
+        return found
+    for cand in _FALLBACK_BIN.get(name, ()):
+        if cand.exists():
+            return str(cand)
+    return name
+
+
+def _resolve_cmd(cmd: list[str]) -> list[str]:
+    """解析命令首个 token；.mjs 入口（无 shebang 解析）改用 node 显式执行。"""
+    exe = _resolve_bin(cmd[0])
+    if exe.endswith(".mjs"):
+        return [_resolve_bin("node"), exe, *cmd[1:]]
+    return [exe, *cmd[1:]]
+
 
 # --------------------------------------------------------------------------
 # 数据采集
@@ -48,7 +84,7 @@ def run(cmd: list[str], *, timeout: int = 30) -> str | None:
     """执行命令，失败返回 None（不抛异常，让清单标记不可用）。"""
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout, cwd=REPO_ROOT
+            _resolve_cmd(cmd), capture_output=True, text=True, timeout=timeout, cwd=REPO_ROOT
         )
     except (subprocess.SubprocessError, OSError):
         return None
