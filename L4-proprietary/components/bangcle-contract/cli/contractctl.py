@@ -287,7 +287,11 @@ def cmd_oa_project_mgmt(args) -> int:
             final_user=order.final_user,
             customer=order.customer,
             product_codes=order.product_codes,
+            product_names=order.product_names,
+            product_categories=order.product_categories,
             project_code=order.project_code,
+            workflow_id=order.workflow_id,
+            apply_date=order.apply_time,
         )
     except RefsError as e:
         print("❌ ONES 核查失败:", e)

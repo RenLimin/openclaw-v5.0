@@ -22,7 +22,9 @@ def test_status_delivered_accepted():
 
 
 def test_status_poc_can_close():
-    assert _status_label("亳州药都农商行POC2026", "已完成", ["交付邮件已归档"])[0] == "可结项"
+    # 2727 实测：项目状态=未开始；义务=实施未开始 + 已完成（授权/配置类）→ 可结项
+    assert _status_label("亳州药都农村商业银行股份有限公司POC2026", "未开始",
+                         ["实施未开始", "已完成"])[0] == "可结项"
 
 
 def test_status_advance_no_contract():
@@ -76,7 +78,7 @@ def test_render_single_ref_matches_rex():
                        status_basis="x", license_period="2026-08-11 ~ 2027-08-14",
                        license_task="385446", source="direct")]
     txt = render_remark(o, refs, [], pm="程涛")
-    assert txt.startswith("请程涛负责，参考提前实施项目：")
+    assert txt.startswith("请程涛负责，参考签约项目：")
     assert "SSXM-2026-0810-2066（已交付未验收，授权/维保至27.08）。" in txt
     print("\n--- 886362 渲染 ---\n" + txt)
 
@@ -96,8 +98,8 @@ def test_render_list_refs_matches_rex_886404():
     risks = assess(o, refs, None)
     txt = render_remark(o, refs, risks, pm="")
     assert "请待分配负责" in txt
-    assert "1. SSXM-2026-0624-1641（已交付未关联签约合同，授权/维保至26.11.30）。" in txt
-    assert "2. SSXM-2026-0924-2598（已交付未验收）。" in txt
+    assert "1. 提前实施项目 SSXM-2026-0624-1641（已交付未关联签约合同，产品授权至26.11.30）。" in txt
+    assert "2. 签约项目 SSXM-2026-0924-2598（已交付未验收）。" in txt
     assert "不允许同最终用户同产品/服务存在多个未关联签约合同的提前实施项目" in txt
     print("\n--- 886404 渲染 ---\n" + txt)
 

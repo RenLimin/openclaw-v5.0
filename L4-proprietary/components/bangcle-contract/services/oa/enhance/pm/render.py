@@ -15,15 +15,8 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Sequence
 
 from .order import ProjectOrder
-from .ones_refs import RefProject
+from .ones_refs import RefProject, project_type
 from .risk import Risk
-
-# OA 流程 → 批注口径的项目类型词
-_SCOPE = {
-    "wf_916": "签约项目",
-    "wf_815": "提前实施项目",
-    "wf_820": "POC项目",
-}
 
 
 def _short_end(period: str) -> str:
@@ -58,14 +51,37 @@ def _short_end(period: str) -> str:
 
 
 def _period_text(ref: RefProject, order: ProjectOrder) -> str:
-    """授权/维保说明文本。"""
+    """授权/维保说明文本（Rex 批注口径）。
+
+    886404 原文对「提前实施 + 已交付未关联签约合同」写「产品授权至26.11.30」，
+    其余写「授权/维保至27.08」。
+    """
     if not ref.license_period:
         return "授权/维保【缺失】"
+    if ref.status_label == "已交付未关联签约合同" and "提前实施" in (ref.name or ""):
+        return "产品授权至%s" % _short_end(ref.license_period)
     return "授权/维保至%s" % _short_end(ref.license_period)
 
 
-def _scope_word(order: ProjectOrder) -> str:
-    return _SCOPE.get(order.workflow_id, "项目")
+def _scope_word(order: ProjectOrder, refs: Sequence[RefProject]) -> str:
+    """范围词取自**被参考项目的类型**（Rex 批注反推）。
+
+    886362 是 815（提前实施）单，但引用的 SSXM-2026-0810-2066 是签约项目，
+    批注写「参考签约项目」——故不可用本单流程名。
+    混合类型（886404：提前实施 + 签约）→ 首段只写「参考：」，类型词下沉到各项。
+    """
+    types = []
+    for r in refs:
+        t = project_type(r.name)
+        if t not in types:
+            types.append(t)
+    if len(types) == 1:
+        return types[0]
+    if not types:
+        # 无参考项目时回退本单流程类型词（Rex 口径：886314 无候选仍写「参考POC项目」）
+        return {"wf_820": "POC项目", "wf_815": "提前实施项目",
+                "wf_916": "签约项目"}.get(order.workflow_id, "项目")
+    return ""
 
 
 def render_remark(
@@ -84,22 +100,28 @@ def render_remark(
     pm_txt = (pm or order.pm or "").strip() or "待分配"
     lines: List[str] = []
 
-    # 首段：指派
-    lines.append("请%s负责，参考%s：" % (pm_txt, _scope_word(order)))
+    # 首段：指派（范围词来自被参考项目类型；混合类型留空 → 只写「参考：」）
+    scope = _scope_word(order, refs)
+    if scope:
+        lines.append("请%s负责，参考%s：" % (pm_txt, scope))
+    else:
+        lines.append("请%s负责，参考：" % pm_txt)
 
-    # 参考项目：单行式 / 列表式
+    # 参考项目：单行式 / 列表式（混合类型时各项自带类型词，与 Rex 886404 一致）
     if not refs:
         lines.append("ONES 未匹配到最终客户「%s」相关项目，请人工确认本期项目编号。"
                      % (order.final_user or "—"))
-    elif len(refs) == 1:
-        r = refs[0]
-        lines.append("%s（%s，%s）。" % (r.code, r.status_label, _period_text(r, order)))
     else:
-        for i, r in enumerate(refs, 1):
-            if i == 1:
-                lines.append("1. %s（%s，%s）。" % (r.code, r.status_label, _period_text(r, order)))
-            else:
-                lines.append("%d. %s（%s）。" % (i, r.code, r.status_label))
+        mixed = len({project_type(r.name) for r in refs}) > 1
+        if len(refs) == 1 and not mixed:
+            r = refs[0]
+            lines.append("%s（%s，%s）。" % (r.code, r.status_label, _period_text(r, order)))
+        else:
+            for i, r in enumerate(refs, 1):
+                tw = ("%s " % project_type(r.name)) if mixed else ""
+                period = _period_text(r, order) if (i == 1 or r.license_period) else ""
+                tail = "，%s" % period if period else ""
+                lines.append("%d. %s%s（%s%s）。" % (i, tw, r.code, r.status_label, tail))
 
     # 注：风险
     risk_txt = "\n".join("%s：%s" % (r.level, r.text) for r in risks if r.text)

@@ -109,6 +109,15 @@ class ProjectOrder:
     def product_codes(self) -> List[str]:
         return [i.product_code for i in self.items if i.product_code]
 
+    @property
+    def product_names(self) -> List[str]:
+        return [i.product_name for i in self.items if i.product_name]
+
+    @property
+    def product_categories(self) -> List[str]:
+        """产品服务类别（ONES 义务名按「类别-形态-产品名」书写，用作匹配键）。"""
+        return [i.line_category for i in self.items if i.line_category]
+
     def to_dict(self) -> Dict[str, Any]:
         d = dict(self.__dict__)
         d["items"] = [i.to_dict() for i in self.items]
