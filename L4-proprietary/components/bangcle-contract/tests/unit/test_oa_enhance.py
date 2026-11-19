@@ -65,15 +65,23 @@ def test_r1_locate_project_codes_real():
 # R1：ONES 实时（依赖 Chrome ONES 登录态；不可用则 skip）
 # ---------------------------------------------------------------
 def _ones_available() -> bool:
+    """ONES 数据源可用性探测（真正的端到端检查）。
+
+    2026-11-19 事故：原实现只数 ONES tab 数量，Chrome「允许 Apple 事件中的
+    JavaScript」被关闭时仍返回 True → gql 全空 → R1 断言假失败。
+    现改为**实际执行一次 JS 并验证 localStorage 登录态**，数据源不可用即 skip
+    （「数据源不可用」不得当作正常测试结果）。
+    """
     try:
         import subprocess
         out = subprocess.run(
             ["osascript", "-e",
-             'tell application "Google Chrome" to return count of '
-             '(tabs of windows whose URL contains "ones.bangcle.com")'],
-            capture_output=True, text=True, timeout=15,
+             'tell application "Google Chrome" to execute '
+             '(first tab of first window whose URL contains "ones.bangcle.com") '
+             'javascript "(localStorage.getItem(\'ct\')||\'\')\'OK\'"'],
+            capture_output=True, text=True, timeout=20,
         )
-        return out.stdout.strip() not in ("", "0")
+        return "OK" in (out.stdout or "")
     except Exception:
         return False
 
