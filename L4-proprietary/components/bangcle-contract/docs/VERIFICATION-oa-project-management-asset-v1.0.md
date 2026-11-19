@@ -108,9 +108,20 @@ $ python3 -m pytest tests/unit -q
 | 阻塞 | 现象 | 影响 | 处置 |
 |---|---|---|---|
 | Chrome「允许 Apple 事件中的 JavaScript」被关闭 | `chrome_eval` 返回空 → `gql` `__err: parse` | ONES 实时查询不可用，P3 E2E 未跑 | 需人工在 Chrome `查看 > 开发者 > 允许 Apple 事件中的 JavaScript` 开启（Rex） |
-| GitHub 推送凭据失效 | `github.token` 内容非有效 token（401）；keychain 两个 token 亦 401 | P2–P5 提交未推送 | 需 Rex 恢复凭据（见汇报） |
+| ~~GitHub 推送凭据失效~~ **已解决（2026-11-19）** | 根因：keychain `gh:github.com` 存的是 `go-keyring-base64:` **包装格式**（keyring 库），非裸 token；直接当 token 用 → 401（曾误测出假 401，实为传了字面量） | 剥前缀 + `base64 -d` 得真 token（40B `gho_`，scope `gist, read:org, repo`）→ 写入 `~/.openclaw/secrets/github.token`（600）→ helper 自检 + API **HTTP 200** → `git push` 成功（`origin/main` = `0a19971`） | ✅ 闭环；`openclaw-github`（`ghp_`）条目实测已失效 |
 
 **已做**：`_ones_available()` 探测已修（不再假失败）；defaults 已写 `AllowJavascriptAppleEvents=1`（需重启 Chrome 生效）。
+
+**已闭环（GitHub 凭据，2026-11-19）**：根因与解包步骤见上表；可复用命令：
+
+```bash
+RAW=$(security find-generic-password -s "gh:github.com" -w)
+DEC=$(printf '%s' "${RAW#go-keyring-base64:}" | base64 -d)
+umask 077; printf '%s' "$DEC" > ~/.openclaw/secrets/github.token; chmod 600 ~/.openclaw/secrets/github.token
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $DEC" https://api.github.com/user   # 期望 200
+```
+
+> ⚠️ 验证 token 必须用真值；把字面量 `***` 当 token 传会得出**假 401**。轮换时只替换文件内容，无需改 git 配置。
 
 ---
 
