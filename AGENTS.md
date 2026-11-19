@@ -23,6 +23,7 @@ This folder is home. Treat it that way.
 - Always 定时任务/子进程调外部 CLI 时用**绝对路径兜底**（`shutil.which` + 候选绝对路径），禁止裸命令名依赖 PATH。
 - Always 「数据源不可用」出现即视为**缺陷**，不得当作正常输出提交/登记；`--check` 的「无漂移」结论只在数据源全可用时才有证明力。
 - 修复：`gen_asset_inventory.py` 加 `_resolve_bin()`/`_resolve_cmd()` 兜底（含 `.mjs` 用 node 显式执行）；回归测试 `L2-infra/components/config/tests/test_gen_asset_inventory.py`（最小 PATH 下 0 降级）。
+- Always 会话任务收尾若新增/变更组件或资产，必须**显式**重生成资产清单并确认新能力入册（`python3 L2-infra/components/config/gen_asset_inventory.py`），不依赖 pre-commit 是否触发；`--check` 报「无漂移」前须先确认输出无「数据源不可用」降级行，否则该结论无效。
 <!-- observed: 2026-11-19 | status: active -->
 
 ## task_tracker 并发竞态红线（事故 2026-11-10）
