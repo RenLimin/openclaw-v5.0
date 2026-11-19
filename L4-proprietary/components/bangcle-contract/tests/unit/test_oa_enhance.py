@@ -65,25 +65,31 @@ def test_r1_locate_project_codes_real():
 # R1：ONES 实时（依赖 Chrome ONES 登录态；不可用则 skip）
 # ---------------------------------------------------------------
 def _ones_available() -> bool:
-    """ONES 数据源可用性探测（真正的端到端检查）。
+    """ONES 数据源可用性探测（复用权威源脚本的 CDP 探测）。
 
-    2026-11-19 事故：原实现只数 ONES tab 数量，Chrome「允许 Apple 事件中的
-    JavaScript」被关闭时仍返回 True → gql 全空 → R1 断言假失败。
-    现改为**实际执行一次 JS 并验证 localStorage 登录态**，数据源不可用即 skip
-    （「数据源不可用」不得当作正常测试结果）。
+    红线（USER.md 2026-11-19）：禁止 osascript 驱动用户当前 Chrome。
+    现统一走专用实例 CDP 9333 + localStorage 登录态；不可用即 skip
+    （「数据源不可用」不得当作正常测试结果，AGENTS.md 降级红线）。
     """
-    try:
-        import subprocess
-        out = subprocess.run(
-            ["osascript", "-e",
-             'tell application "Google Chrome" to execute '
-             '(first tab of first window whose URL contains "ones.bangcle.com") '
-             'javascript "(localStorage.getItem(\'ct\')||\'\')\'OK\'"'],
-            capture_output=True, text=True, timeout=20,
-        )
-        return "OK" in (out.stdout or "")
-    except Exception:
+    import importlib.util, sys
+    from pathlib import Path as _P
+
+    script = (
+        _P(__file__).resolve().parents[2]          # bangcle-contract/
+        / ".."
+        / ".."
+        / "skills"
+        / "ones-browser-export"
+        / "scripts"
+        / "oa_workflow_ones.py"
+    ).resolve()
+    if not script.exists():
         return False
+    spec = importlib.util.spec_from_file_location("_ones_reuse_probe", script)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["_ones_reuse_probe"] = mod
+    spec.loader.exec_module(mod)
+    return bool(mod.ones_available())
 
 
 @pytest.mark.skipif(not _ones_available(), reason="ONES 实时依赖 Chrome 登录态，不可用则 skip")

@@ -38,7 +38,70 @@ RAW_DEFAULT = _default_raw_dir()
 OA_STATE = Path.home() / ".openclaw/data/clm-oa-recon/state.json"
 
 # ---------- Chrome 页面上下文 XHR（绕开直连 token 过期）----------
+# 专用 Chrome 实例（CDP）——USER.md 2026-11-19 红线：禁止 osascript 驱动用户当前 Chrome。
+# 专用 profile/端口：~/.openclaw/data/chrome-profiles/oa-live + 9333
+CDP_URL = os.environ.get("ONES_CDP_URL", "http://127.0.0.1:9333")
+# 共享单例：Chrome CDP 对同一浏览器只允许一个客户端连接；本脚本可能被多处
+# （ones_client / 测试探测 / 其他复用方）各自 load 成不同模块实例，若各自建连会
+# 互相挤掉 → 表现为「第一个可用、第二个 __err parse」。故连接注册进 sys.modules 共享。
+_CDP_KEY = "_ones_cdp_shared_v1"
+
+
+def _shared_cdp() -> dict:
+    st = sys.modules.get(_CDP_KEY)
+    if st is None:
+        st = {"pw": None, "browser": None, "err": None}
+        sys.modules[_CDP_KEY] = st
+    return st
+
+
+def _cdp_eval(js: str, timeout: int = 120) -> str:
+    """经专用实例（CDP 9333）的 ONES 标签执行 JS。
+
+    连接复用：进程内缓存 Playwright + Browser，避免每次重连。
+    失败显式抛错（不静默返回空），由 chrome_eval 决定降级。
+    """
+    st = _shared_cdp()
+    if st["err"]:
+        raise RuntimeError(st["err"])
+    try:
+        if st["browser"] is None:
+            from playwright.sync_api import sync_playwright
+            pw = sync_playwright().start()
+            b = pw.chromium.connect_over_cdp(CDP_URL, timeout=min(timeout, 30) * 1000)
+            st["pw"], st["browser"] = pw, b
+        for ctx in st["browser"].contexts:
+            for pg in ctx.pages:
+                if "ones.bangcle.com" in pg.url:
+                    return str(pg.evaluate(js))
+        raise RuntimeError(f"专用实例 {CDP_URL} 中未找到 ONES 标签页")
+    except Exception as exc:  # noqa: BLE001 - 显式转译并缓存，避免每次重试
+        st["err"] = f"CDP {CDP_URL} 不可用: {exc}"
+        raise RuntimeError(st["err"]) from exc
+
+
+def ones_available() -> bool:
+    """数据源可用性探测：CDP 专用实例 + ONES 标签 + localStorage 登录态。
+
+    用于测试 skip 判定——数据源不可用即 skip，不得当作正常结果（AGENTS.md 降级红线）。
+    """
+    try:
+        return "HAS_CT" in _cdp_eval("(localStorage.getItem('ct')||'')?'HAS_CT':'NO_CT'", timeout=20)
+    except Exception:
+        return False
+
+
 def chrome_eval(js: str, timeout: int = 120) -> str:
+    """在 ONES 页面上下文执行 JS（优先 CDP 专用实例）。
+
+    红线（USER.md 2026-11-19）：禁止 osascript 驱动用户当前 Chrome。
+    osascript 仅作**显式开启**的兜底（ONES_ALLOW_OSASCRIPT=1），默认关闭。
+    """
+    try:
+        return _cdp_eval(js, timeout)
+    except Exception:
+        if os.environ.get("ONES_ALLOW_OSASCRIPT") != "1":
+            return ""
     fd, p = tempfile.mkstemp(suffix=".js", dir="/tmp")
     with os.fdopen(fd, "w") as f:
         f.write(js)
