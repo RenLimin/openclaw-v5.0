@@ -87,10 +87,14 @@ def test_r1_real_886377_verdict():
     )
     assert r.missing == []
     by_code = {p.project_code: p for p in r.projects}
+    # 断言稳定契约（verdict），不断言具体状态串——ONES 实时状态会推进漂移
+    # （2026-11-19 实测：3440 验收态由「客户确认版验收单」→「验收文件交接中」，verdict 仍=正常）
     assert by_code["SSXM-2025-1111-3440"].verdict == "正常"
     assert by_code["SSXM-2025-1015-3068"].verdict == "提示"
-    assert "客户确认版验收单" in by_code["SSXM-2025-1111-3440"].statuses
-    assert "实施未开始" in by_code["SSXM-2025-1015-3068"].statuses
+    sts3440 = set(by_code["SSXM-2025-1111-3440"].statuses)
+    sts3068 = set(by_code["SSXM-2025-1015-3068"].statuses)
+    assert sts3440 & set(ones_obigation._NORMAL), "正常判定须锚定至少一个正常状态"
+    assert sts3068 & set(ones_obigation._HINT), "提示判定须锚定至少一个提示状态"
     assert r.verdict == "提示"
 
 

@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 F_END_USER = "field10433"          # 最终用户名称（文本）
 F_END_USER_OBJ = "field10873"      # 最终用户（浏览框）
 F_CONTRACT_PARTY_A = "field10430"  # 合同甲方
+F_CONTRACT_NAME = "field10431"     # 合同名称
 F_ESTIMATE_NAME = "field26675"     # 销售合同概算名称（billid）
 F_ESTIMATE_FLOW = "field29422"     # 概算流程（requestid）
 
@@ -137,6 +138,7 @@ class OrderForm:
     request_id: str = ""
     end_user: str = ""
     contract_party_a: str = ""
+    contract_name: str = ""
     estimate_billid: str = ""
     estimate_flow_requestid: str = ""
     items: List[OrderItem] = field(default_factory=list)
@@ -151,6 +153,7 @@ class OrderForm:
             "request_id": self.request_id,
             "end_user": self.end_user,
             "contract_party_a": self.contract_party_a,
+            "contract_name": self.contract_name,
             "estimate_billid": self.estimate_billid,
             "estimate_flow_requestid": self.estimate_flow_requestid,
             "items": [i.to_dict() for i in self.items],
@@ -163,6 +166,7 @@ def _parse_main_fields(obj: Any) -> Dict[str, str]:
     return {
         "end_user": _value(main.get(F_END_USER)) or _value(main.get(F_END_USER_OBJ)),
         "contract_party_a": _value(main.get(F_CONTRACT_PARTY_A)),
+        "contract_name": _value(main.get(F_CONTRACT_NAME)),
         "estimate_billid": _billid(main.get(F_ESTIMATE_NAME)),
         "estimate_flow_requestid": _billid(main.get(F_ESTIMATE_FLOW)),
     }

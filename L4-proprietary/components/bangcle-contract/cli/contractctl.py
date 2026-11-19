@@ -224,6 +224,41 @@ def cmd_oa_enhance(args) -> int:
     return 0
 
 
+def cmd_oa_approval(args) -> int:
+    """OA 销售合同审批：触发词「处理OA销售合同审批」的一条链编排（只读）。"""
+    from services.oa.enhance.orchestrator import run_approval
+    from services.oa.enhance.todo import OaSessionExpired
+    from pathlib import Path as _Path
+
+    _progress("OA 销售合同审批编排（workflowid=757，只读）")
+    try:
+        payload = run_approval(
+            raw_dir=_Path(args.raw_dir),
+            out_dir=_Path(args.out_dir) if args.out_dir else None,
+            request_ids=args.requestid,
+            contract_file=_Path(args.contract_file) if args.contract_file else None,
+            storage_state=_Path(args.storage_state) if args.storage_state else None,
+            discover=not args.no_discover,
+        )
+    except OaSessionExpired as e:
+        print("❌", e)
+        return 2
+
+    s = payload["summary"]
+    print("✅ 编排完成")
+    print("  待办      :", len(payload["todos"]))
+    print("  处理      :", s["total"], "｜退回项:", s["block"], "｜提示:", s["warn"],
+          "｜转人工:", s["manual"], "｜失败:", s["error"])
+    print("  输出目录  :", payload["out_dir"])
+    for r in payload["results"]:
+        if r.get("error"):
+            print("  ⚠️  %s: %s" % (r["request_id"], r["error"]))
+        else:
+            verdict = [l for l in r["remark"].splitlines() if l.startswith("【审批建议】")]
+            print("  • %s %s" % (r["request_id"], verdict[0] if verdict else ""))
+    return 0
+
+
 # =============================================================
 # ontology 子命令（Contract Ontology Bridge，P1-P3）
 # =============================================================
@@ -357,6 +392,21 @@ def main(argv=None) -> int:
     p_enh.add_argument("--storage-state", default=None, help="Playwright storage_state（可空）")
     p_enh.add_argument("--project-codes", nargs="*", default=None, help="SSXM 编码（可空，空则 BDMS 定位）")
     p_enh.set_defaults(func=cmd_oa_enhance)
+
+    p_appr = sub.add_parser(
+        "oa-approval",
+        help="OA 销售合同审批：触发词「处理OA销售合同审批」（发现757待办→核查→标准审批备注，只读）",
+    )
+    p_appr.add_argument("--raw-dir", default="tmp/oa-pif/raw",
+                        help="oa_workflow_ones.py --capture 的 raw 根（默认 tmp/oa-pif/raw）")
+    p_appr.add_argument("--out-dir", default=None, help="备注输出目录（默认 raw 根同级 oa-approval）")
+    p_appr.add_argument("--requestid", nargs="*", default=None,
+                        help="显式指定 requestid（给定则 --no-discover）")
+    p_appr.add_argument("--contract-file", default=None,
+                        help="合同原文（docx/pdf/txt，可选；缺失则 L2 核查转人工）")
+    p_appr.add_argument("--storage-state", default=None, help="Playwright storage_state（可空）")
+    p_appr.add_argument("--no-discover", action="store_true", help="跳过待办发现，仅处理 --requestid")
+    p_appr.set_defaults(func=cmd_oa_approval)
 
     # --- ontology 子命令（Contract Ontology Bridge） ---
     p_ont = sub.add_parser("ontology", help="合同运营对象（Proposal Gate）")
