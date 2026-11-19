@@ -30,6 +30,7 @@
 - Always 长任务先列计划+一次确认
 - Always 完成且验证通过后 `commit`+`push`（2026-08-22 授权）
   - 例外先问：`push --force`、改已推送历史、删 provider/plugin/模型、改 `tools.*`
+- Always **产出文档（汇报/汇总/纪要类 md）无须提交 git**；仅提交**资产相关文档**（组件、skill、模板、配置、脚本、规范）。 <!-- observed: 2026-11-19 | status: active -->
 
 ## 5. 决策风格
 
@@ -94,3 +95,10 @@ SOUL.md · AGENTS.md · MEMORY.md · docs/knowledge-base/
 - Always OA「销售合同审核流程」（workflowid 757）审查**只提供审批建议**，暂不做任何 OA 操作（不提交/不审批/不退回/不转发）。 <!-- observed: 2026-11-18 | status: active -->
 - Always 审查固定增加两项核查：① 最终用户/客户对应项目**履约义务**查询（**以 ONES 实时状态为准**，BDMS 仅作项目编码线索；判异常/提示/正常）；② **概算名称**明细/单价与本流程一致性（**允许销售额超概算，超出仅提醒**）。 <!-- observed: 2026-11-18 | status: active -->
 - Always 验收邮箱须明确**甲方官方邮箱**（合同 4.2「甲方指定授权___邮箱」留空=未明确，退回项）；乙方邮箱（如 `huijuan.lin@bangcle.com`/`delivery@`）作为收件/抄送邮箱属正常，不判主体错配。 <!-- observed: 2026-11-18 | status: active -->
+
+## 浏览器自动化隔离红线（2026-11-19 Rex 拍板）
+- Never 用 `osascript`/Playwright 驱动或导航**用户当前 Chrome**（含其中已打开的 OA/ONES/邮箱/webchat 标签）——会影响用户正在用的浏览器。 <!-- observed: 2026-11-19 | status: active -->
+- Always 浏览器自动化在**新开的独立 Chrome 实例**执行：`--user-data-dir=<专用 profile>` + `--remote-debugging-port=<专用端口>`，Playwright `connect_over_cdp` 连接。 <!-- observed: 2026-11-19 | status: active -->
+- Always 专用 profile 与端口固定：OA/ONES 取数 `~/.openclaw/data/chrome-profiles/oa-live` + `9333`；不得复用 `~/.chrome-cdp-profile`/`~/.chrome-ones-profile` 之外的现有 Chrome。 <!-- observed: 2026-11-19 | status: active -->
+- Prefer 独立实例自带登录态（profile 持久化）；无登录态时用 secrets 凭据 + `iam_auth` 二步验证自动取码（IMAP `imb@bangcle.com`，60s 有效期，需「重新发送」后即时取）。 <!-- observed: 2026-11-19 | status: active -->
+- Always 独立 Chrome 实例**用后自动关闭**（任务收尾即 kill 主进程并确认端口释放），不长期驻留。 <!-- observed: 2026-11-19 | status: active -->
