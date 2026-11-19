@@ -6,6 +6,7 @@
   report <review_id> [--format md|xlsx]
   init-db
   oa-login
+  oa-project-mgmt --requestid <rid> --workflow wf_916|wf_815|wf_820  （项目实施管理批注建议，只读）
   ontology register/submit/approve/reject/status/proposals  （Contract Ontology Bridge）
 
 分步进度：>10s 操作打印当前步骤（进度条铁律）。
@@ -259,6 +260,65 @@ def cmd_oa_approval(args) -> int:
     return 0
 
 
+def cmd_oa_project_mgmt(args) -> int:
+    """OA 项目实施管理「分配项目经理」批注建议（只读：916/815/820）。
+
+    链路：OA 单（raw）→ 三流程解析 → ONES 参考项目 → 风险注 → 三段式批注。
+    916 额外：合同审批流程→（757）异常备注核查。
+    全程只读：不提交/不审批/不退回/不转发/不代派 PM。
+    """
+    from services.oa.enhance.pm.order import parse, PmAssetError
+    from services.oa.enhance.pm.ones_refs import find_reference_projects, RefsError
+    from services.oa.enhance.pm.risk import assess
+    from services.oa.enhance.pm.render import render_remark, render_markdown
+    from services.oa.enhance.pm.approval_notes import collect
+    from pathlib import Path as _Path
+
+    raw_dir = _Path(args.raw_dir)
+    try:
+        order = parse(raw_dir, args.requestid, args.workflow, args.title)
+    except PmAssetError as e:
+        print("❌", e)
+        return 2
+
+    _progress("ONES 参考项目核查（只读，最终客户=%s）" % order.final_user)
+    try:
+        refs, notes = find_reference_projects(
+            final_user=order.final_user,
+            customer=order.customer,
+            product_codes=order.product_codes,
+            project_code=order.project_code,
+        )
+    except RefsError as e:
+        print("❌ ONES 核查失败:", e)
+        return 2
+
+    # 916：合同审批流程 → 757 异常备注（无链接则跳过；无权限自动降级）
+    appr = None
+    if order.workflow_id == "wf_916" and order.approval_flow_rid:
+        _progress("757 合同审批流程核查（requestid=%s，只读）" % order.approval_flow_rid)
+        try:
+            appr = collect(order.approval_flow_rid)
+        except Exception as e:  # noqa: BLE001 - 单链降级不阻断
+            appr = None
+            print("  ⚠️ 757 核查失败（已降级）:", e)
+
+    risks = assess(order, refs, appr)
+    remark = render_remark(order, refs, risks, args.pm or "")
+    print()
+    print(remark)
+    print()
+    print("参考项目:", len(refs), "｜风险:", len(risks),
+          "｜757:", (appr.degraded if appr and appr.degraded else ("已核查" if appr else "不适用/无链接")))
+
+    if args.out:
+        out_md = render_markdown(order, refs, risks, appr, args.pm or "", missing=notes)
+        with open(args.out, "w", encoding="utf-8") as fh:
+            fh.write(out_md)
+        print("报告:", args.out)
+    return 0
+
+
 # =============================================================
 # ontology 子命令（Contract Ontology Bridge，P1-P3）
 # =============================================================
@@ -407,6 +467,20 @@ def main(argv=None) -> int:
     p_appr.add_argument("--storage-state", default=None, help="Playwright storage_state（可空）")
     p_appr.add_argument("--no-discover", action="store_true", help="跳过待办发现，仅处理 --requestid")
     p_appr.set_defaults(func=cmd_oa_approval)
+
+    p_pm = sub.add_parser(
+        "oa-project-mgmt",
+        help="OA 项目实施管理「分配项目经理」批注建议（只读：916/815/820 → ONES 参考项目 + 三段式批注）",
+    )
+    p_pm.add_argument("--requestid", required=True, help="OA requestid（如 886453）")
+    p_pm.add_argument("--workflow", required=True, choices=["wf_916", "wf_815", "wf_820"],
+                      help="流程（916 销售合同下单 / 815 提前实施 / 820 PoC）")
+    p_pm.add_argument("--title", default="", help="OA 单据标题（可空，用于语义标注）")
+    p_pm.add_argument("--raw-dir", default="tmp/oa-pif/raw",
+                      help="oa_workflow_ones.py --capture 的 raw 根（默认 tmp/oa-pif/raw）")
+    p_pm.add_argument("--pm", default="", help="指定 PM 姓名（可空，空则用 OA 字段/待分配）")
+    p_pm.add_argument("--out", default=None, help="Markdown 报告输出路径（可空）")
+    p_pm.set_defaults(func=cmd_oa_project_mgmt)
 
     # --- ontology 子命令（Contract Ontology Bridge） ---
     p_ont = sub.add_parser("ontology", help="合同运营对象（Proposal Gate）")
