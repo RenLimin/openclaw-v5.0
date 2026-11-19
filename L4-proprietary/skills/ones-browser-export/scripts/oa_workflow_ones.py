@@ -67,8 +67,19 @@ def gql(q: str, timeout: int = 120) -> dict:
 def _enum(v):
     return v.get("value") if isinstance(v, dict) else v
 
+# 中文日期（2026年8月11日 / 2026年11月18号）→ ISO；幂等，ISO 输入原样返回
+_CN_DATE = re.compile(r"(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*[日号]?")
+
+def _to_iso(text: str) -> str:
+    """把文本中的中文日期统一成 ISO（YYYY-MM-DD），便于单一正则解析。"""
+    if not text:
+        return ""
+    def _sub(m: re.Match) -> str:
+        return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    return _CN_DATE.sub(_sub, str(text))
+
 def norm_date(s: str) -> str:
-    m = re.match(r"(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})", s.strip())
+    m = re.match(r"(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})", _to_iso(s).strip())
     return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}" if m else s.strip()
 
 def code_of(name: str) -> str:
@@ -90,17 +101,53 @@ def project_tasks(uuid: str) -> list[dict]:
     r = gql(q)
     return (r.get("data") or {}).get("tasks") or []
 
-LICENSE_RANGE = re.compile(r"授权(?:时间|期限)\s*[:：]\s*(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})\s*[-~至到]\s*(\d{4}[.\-/]\d{1,2}[.\-]\d{1,2})")
+# 区间：起 ~ 止（ISO；中文日期经 _to_iso 预归一）。分隔符 至/到/~/-/—/–
+# 前缀优先级：授权 > 维保 > 服务期（POC/云端项目常只写「服务期」）
+_DATE_SPAN = r"(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})\s*(?:至|到|~|—|–|-)\s*(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})"
+_RANGE_BY_PREFIX = {
+    "授权": re.compile(r"授权(?:时间|期限|周期|区间)?\s*[:：]?\s*" + _DATE_SPAN),
+    "维保": re.compile(r"维保(?:时间|期限|周期|区间)?\s*[:：]?\s*" + _DATE_SPAN),
+    "服务期": re.compile(r"服务期\s*[:：]?\s*" + _DATE_SPAN),
+}
+# 授权类任务名判定（含维保/云端；批注口径「授权/维保至」）
+_LICENSE_NAME = ("license", "授权", "续期", "维保", "云端")
+
+def _spans(text: str) -> list[tuple[str, str, str]]:
+    """按前缀优先级取区间：授权 > 维保 > 服务期，只取最高优先级命中。"""
+    for kind in ("授权", "维保", "服务期"):
+        hits = [(norm_date(m.group(1)), norm_date(m.group(2)), kind)
+                for m in _RANGE_BY_PREFIX[kind].finditer(text)]
+        if hits:
+            return hits
+    return []
 
 def license_period(tasks: list[dict]) -> tuple[str, str]:
-    """从【云端】license 任务描述取授权区间；返回(规范化区间, 证据号)。"""
+    """从【云端】license/授权/维保任务描述取授权区间；返回(规范化区间, 证据号)。
+
+    跨任务聚合（口径=全局最早起始 ~ 全局最晚结束）：
+    同一项目存在多个授权任务（续期/验收调整/多产品）时，覆盖区间取并集，
+    证据号取贡献最晚结束日的任务。批注用途「授权/维保至」只依赖结束日。
+    中文日期（2026年8月11日 / 2026年11月18号）与 ISO 均支持。
+    无授权/维保记录时（安全服务、结算类项目）返回 ("", "")，**不伪造**。
+    """
+    starts: list[str] = []
+    ends: list[str] = []
+    evid = ""
+    best_end = ""
     for t in tasks:
         nm = t.get("name") or ""
-        if "license" in nm.lower() or "授权" in nm or "续期" in nm:
-            m = LICENSE_RANGE.search(t.get("descriptionText") or "")
-            if m:
-                return f"{norm_date(m.group(1))} ~ {norm_date(m.group(2))}", str(t.get("number"))
-    return "", ""
+        if not any(k in nm.lower() if k == "license" else k in nm for k in _LICENSE_NAME):
+            continue
+        for start_d, end_d, _kind in _spans(_to_iso(t.get("descriptionText") or "")):
+            starts.append(start_d)
+            ends.append(end_d)
+            # 证据号 = 贡献「最晚结束日」的任务（授权调整/续期场景以此为准）
+            if end_d > best_end:
+                best_end = end_d
+                evid = str(t.get("number"))
+    if not starts:
+        return "", ""
+    return f"{min(starts)} ~ {max(ends)}", evid
 
 def role_of(name: str) -> str:
     if "续期" in name: return "授权续期"
