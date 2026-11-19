@@ -72,8 +72,14 @@ def _kb_table_md(kb: KbReview) -> str:
 def build_markdown(*, contract_ref: str, source: str,
                    risk: Dict[str, Any], kb: KbReview,
                    ocr_method: Optional[str] = None,
-                   ocr_confidence: Optional[float] = None) -> str:
-    """构建 Markdown 报告全文（纯函数，返回字符串）。"""
+                   ocr_confidence: Optional[float] = None,
+                   enhance_section: Optional[str] = None) -> str:
+    """构建 Markdown 报告全文（纯函数，返回字符串）。
+
+    Args:
+        enhance_section: 可选的「增强核查」章节（`services/oa/enhance` 产出），
+            插入在「产品/服务参照」与「免责声明」之间；None 时报告结构与旧版一致。
+    """
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     md = [
         "# 合同智能审查报告",
@@ -97,6 +103,8 @@ def build_markdown(*, contract_ref: str, source: str,
             md += ["OCR 置信度：%.2f" % ocr_confidence, ""]
     md += [_risk_table_md(risk.get("findings", [])), ""]
     md += ["## 二、产品/服务参照", "", _kb_table_md(kb), ""]
+    if enhance_section:
+        md += [enhance_section, ""]
     md += ["## 三、免责声明", "", DISCLAIMER, ""]
     return "\n".join(md)
 
@@ -160,11 +168,13 @@ def build_excel(*, contract_ref: str, source: str,
 def write_markdown(*, contract_ref: str, source: str,
                    risk: Dict[str, Any], kb: KbReview, out_path: str,
                    ocr_method: Optional[str] = None,
-                   ocr_confidence: Optional[float] = None) -> str:
+                   ocr_confidence: Optional[float] = None,
+                   enhance_section: Optional[str] = None) -> str:
     """写 Markdown 报告到文件，返回落盘路径。"""
     md = build_markdown(contract_ref=contract_ref, source=source,
                         risk=risk, kb=kb, ocr_method=ocr_method,
-                        ocr_confidence=ocr_confidence)
+                        ocr_confidence=ocr_confidence,
+                        enhance_section=enhance_section)
     out_path = os.path.abspath(out_path)
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:

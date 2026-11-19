@@ -42,7 +42,7 @@ metadata:
 | 从 OA 拉一份销售合同并出审查报告 | `contractctl oa-login`（建会话）→ review `--oa-billid`（OA 拉取→数字化→风险→标的参照→报告） |
 | 本地合同（含扫描页）审查 | review `--file <合同>`（OCR 数字化→22 条风险规则→product-kb 标的参照→md/xlsx 报告） |
 | 合同审查 + 走正式审批归档 | bangcle-contract（审查结论）→ contract-approval / office-contract（审批流与归档） |
-| OA 销售合同审批（757）出审批建议 | 读单据（`oa_workflow_ones.py --capture`）→ 履约义务（**ONES 实时**）+ 概算一致性（允许超，仅提醒）→ 输出审批建议；**只读**，写操作人工闸 |
+| OA 销售合同审批（757）出审批建议 | `oa_workflow_ones.py --capture <requestid>`（读单据）→ `contractctl oa-enhance --requestid <requestid> --raw-dir <raw根>`（履约义务 ONES 实时 + 概算一致性，允许超仅提醒）→ 输出审批建议；**只读**，写操作人工闸 |
 
 ## 二、合同智能审查流程（核心职责）
 
@@ -61,6 +61,12 @@ python3 cli/contractctl.py review --oa-billid <billid>
 
 # 4) 取审查记录
 python3 cli/contractctl.py report <review_id>
+
+# 5) OA 销售合同审批（757）增强核查（只读：履约义务 ONES 实时 + 概算一致性）
+python3 L4-proprietary/skills/ones-browser-export/scripts/oa_workflow_ones.py --capture <requestid>
+python3 cli/contractctl.py --out-dir <dir> oa-enhance \
+  --requestid <requestid> --raw-dir tmp/oa-pif/raw \
+  [--project-codes SSXM-...]
 ```
 
 审查五步：**ingest（取证）→ digitize（OCR 数字化）→ risk（22 条受控规则）→ kb_match（product-kb 标的参照）→ report（md/xlsx）**。
