@@ -64,6 +64,20 @@ def test_r1_locate_project_codes_real():
 # ---------------------------------------------------------------
 # R1：ONES 实时（依赖 Chrome ONES 登录态；不可用则 skip）
 # ---------------------------------------------------------------
+# ---------------------------------------------------------------
+# R1 降级门禁（fail-closed：verdict=未知 必须标 degraded）
+# ---------------------------------------------------------------
+def test_r1_unknown_is_degraded():
+    """2026-11-19 实测缺陷回归：ONES 查询层失效时 R1 静默变「未知」且无降级标记。"""
+    from services.oa.enhance.ones_obigation import R1Result
+    from services.oa.enhance.runner import _r1_degraded
+
+    assert _r1_degraded(R1Result(verdict="未知")) is True
+    assert _r1_degraded(R1Result(verdict="正常")) is False
+    assert _r1_degraded(R1Result(verdict="提示")) is False
+    assert _r1_degraded(R1Result(verdict="异常")) is False
+
+
 def _ones_available() -> bool:
     """ONES 数据源可用性探测（复用权威源脚本的 CDP 探测）。
 

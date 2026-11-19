@@ -14,6 +14,17 @@ from .estimate import R2Result, check_estimate
 from .verdict import render_enhance
 
 
+def _r1_degraded(r1: R1Result) -> bool:
+    """R1 未给出有效结论（verdict=未知）即视为数据源降级（fail-closed）。
+
+    2026-11-19 实测缺陷：ONES 查询层整体失效（Chrome 关闭「允许 Apple 事件中的
+    JavaScript」）时 ``project_by_code`` 全返回 None → R1 静默变「未知」，
+    但 ``degraded`` 为空 → 备注无 ⚠️ 降级警告，违反「数据源不可用不得当作
+    正常结果」红线。故：verdict=未知 必须显式降级，不得当作正常结论提交。
+    """
+    return r1.verdict == "未知"
+
+
 def run_enhance(
     *,
     request_id: str,
@@ -41,6 +52,7 @@ def run_enhance(
         r1 = R1Result()
         r1.missing.append("r1_error: %s" % exc)
         r1.verdict = "未知"
+    if _r1_degraded(r1):
         degraded.append("R1")
 
     # R2：概算一致性
