@@ -139,3 +139,86 @@ def test_no_duplicate_capability_ids(reg):
     ids = [c.id for c in reg.capabilities]
     dupes = {i for i in ids if ids.count(i) > 1}
     assert not dupes, f"重复能力 id: {dupes}"
+
+
+# ── 注册表自校验（--validate）──
+
+def test_validate_all_entries_exist(reg):
+    """硬指标：所有 entry 路径必须真实存在（无孤儿 entry）。"""
+    rc = cr.cmd_validate(type("A", (), {"json": False})(), reg)
+    assert rc == 0
+
+
+def test_validate_detects_broken_path(reg, monkeypatch):
+    """构造一个不存在的 entry，校验必须报错。"""
+    original = reg.capabilities[0].entry
+    reg.capabilities[0].entry = ["python3 L4-proprietary/components/does_not_exist_xyz.py"]
+    try:
+        rc = cr.cmd_validate(type("A", (), {"json": False})(), reg)
+        assert rc == 1
+    finally:
+        reg.capabilities[0].entry = original
+
+
+def test_validate_detects_unexecutable_pointer(reg):
+    """entry 禁止「见文档」类不可执行指针。"""
+    original = reg.capabilities[0].entry
+    reg.capabilities[0].entry = ["见 DESIGN.md"]
+    try:
+        rc = cr.cmd_validate(type("A", (), {"json": False})(), reg)
+        assert rc == 1
+    finally:
+        reg.capabilities[0].entry = original
+
+
+# ── 生命周期闭环（--lifecycle）──
+
+def test_lifecycle_new_only_reports_nothing_when_clean(reg, monkeypatch):
+    """暂存区无新增资产目录时，报告 0 个且退出 0（hermetic：屏蔽真实 git 状态）。"""
+    monkeypatch.setattr(cr, "_new_asset_dirs", lambda: set())
+    rc = cr.cmd_lifecycle(type("A", (), {"new_only": True, "require_design": True})(), reg)
+    assert rc == 0
+
+
+def test_lifecycle_detects_missing_design(reg, tmp_path):
+    """新增资产缺设计文档 → require_design 时阻断。"""
+    fake_root = tmp_path / "ws"
+    (fake_root / "L2-infra" / "components" / "new-asset").mkdir(parents=True)
+    (fake_root / "L2-infra" / "components" / "new-asset" / "main.py").write_text("x")
+    monkey_dir = cr.REPO_ROOT
+    cr.REPO_ROOT = fake_root
+    try:
+        rc = cr.cmd_lifecycle(type("A", (), {"new_only": False, "require_design": True})(), reg)
+        assert rc == 1
+    finally:
+        cr.REPO_ROOT = monkey_dir
+
+
+def test_lifecycle_new_only_flags_new_asset_missing_design(reg, monkeypatch, tmp_path):
+    """--new-only 只对真正新增且缺设计文档的资产生效。"""
+    fake = tmp_path / "ws"
+    (fake / "L2-infra" / "components" / "brand-new-asset").mkdir(parents=True)
+    (fake / "L2-infra" / "components" / "brand-new-asset" / "main.py").write_text("x")
+    old_root = cr.REPO_ROOT
+    cr.REPO_ROOT = fake
+    monkeypatch.setattr(cr, "_new_asset_dirs", lambda: {"L2-infra/components/brand-new-asset"})
+    try:
+        rc = cr.cmd_lifecycle(type("A", (), {"new_only": True, "require_design": True})(), reg)
+        assert rc == 1
+    finally:
+        cr.REPO_ROOT = old_root
+
+
+def test_lifecycle_existing_asset_not_flagged(reg, monkeypatch, tmp_path):
+    """存量资产（new_dirs 不含）在 --new-only 下不报缺设计。"""
+    fake = tmp_path / "ws"
+    (fake / "L2-infra" / "components" / "old-asset").mkdir(parents=True)
+    (fake / "L2-infra" / "components" / "old-asset" / "main.py").write_text("x")
+    old_root = cr.REPO_ROOT
+    cr.REPO_ROOT = fake
+    monkeypatch.setattr(cr, "_new_asset_dirs", lambda: set())
+    try:
+        rc = cr.cmd_lifecycle(type("A", (), {"new_only": True, "require_design": True})(), reg)
+        assert rc == 0
+    finally:
+        cr.REPO_ROOT = old_root

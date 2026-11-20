@@ -326,6 +326,159 @@ def cmd_coverage(args, reg: Registry) -> int:
     return 0
 
 
+# ── 注册表自校验：entry 可执行性 + 文档闭环（业界 fitness function）──
+
+_ENTRY_PATH_RE = re.compile(r"(L[234]-[a-z-]+/[A-Za-z0-9_./-]+)")
+
+
+def _entry_paths(entry: str) -> list[str]:
+    """从一条 entry 描述里抽出仓库相对路径（去掉占位符/参数）。"""
+    out = []
+    for m in _ENTRY_PATH_RE.finditer(entry):
+        p = m.group(1).rstrip(".")
+        if ".." in p:
+            continue
+        out.append(p)
+    return out
+
+
+def cmd_validate(args, reg: Registry) -> int:
+    """校验注册表自身质量（防止「声称可调用但路径不存在」的孤儿 entry）。
+
+    对应业界实践：
+      - Backstage catalog validation（实体字段必填 + 引用完整性）
+      - Archgate fitness function（决策文档 + 可执行规则双表达）
+    """
+    problems: list[str] = []
+    checked = 0
+
+    for c in reg.capabilities:
+        if not c.entry:
+            problems.append(f"{c.id}: 缺 entry")
+            continue
+        for e in c.entry:
+            if "见文档" in e or re.search(r"见 [A-Za-z]", e):
+                problems.append(f"{c.id}: entry 不可执行 → {e}")
+                continue
+            paths = _entry_paths(e)
+            for p in paths:
+                checked += 1
+                if not (REPO_ROOT / p).exists():
+                    problems.append(f"{c.id}: 路径不存在 → {p}\n      (原 entry: {e})")
+
+    print(f"注册表自校验: 检查 {checked} 条 entry 路径")
+    if problems:
+        print()
+        print(f"❌ 发现 {len(problems)} 个问题（孤儿 entry 会让后续会话调用失败）:")
+        for p in problems:
+            print(f"  • {p}")
+        print()
+        print("处理: 修正 registry.yaml 中对应 entry 为真实路径；")
+        print("      路径确已废弃 → 更新 entry 或移除该能力条目。")
+        return 1
+
+    print("✅ 全部 entry 路径真实存在，注册表自校验通过。")
+    return 0
+
+
+# ── 资产生命周期闭环：设计 → 验收 文档门禁（业界 DoD / ADR Guard / OWASP shift-left）──
+
+def _asset_docs(asset_dir: Path) -> dict:
+    """检查单个资产目录的设计/验收文档。"""
+    names = [p.name for p in asset_dir.iterdir() if p.is_file()] if asset_dir.is_dir() else []
+    design = [n for n in names if re.match(r"^(DESIGN|PRD|SKILL)", n, re.I)]
+    verify = [n for n in names if re.match(r"^VERIFICATION", n, re.I)]
+    return {"design": design, "verify": verify}
+
+
+def _iter_asset_dirs() -> list[tuple[str, str, Path]]:
+    out = []
+    for layer in ("L2-infra", "L3-business", "L4-proprietary"):
+        for kind in ("components", "skills"):
+            base = REPO_ROOT / layer / kind
+            if not base.is_dir():
+                continue
+            for d in sorted(base.iterdir()):
+                if d.is_dir() and not d.name.startswith((".", "__")):
+                    out.append((layer, kind, d))
+    return out
+
+
+def _new_asset_dirs() -> set[str]:
+    """从暂存区推断**真正新增**的资产目录（layer/kind/name）。
+
+    判定：路径前缀在 HEAD 中不存在。已存在于 HEAD 的资产（哪怕本次改了很多文件）
+    不算新资产，避免误伤并行会话对存量资产的正常改动。
+    """
+    dirs = set()
+    for f in _git_changed_files(staged=True):
+        m = re.match(r"^(L[234]-[a-z-]+)/(components|skills)/([^/]+)/", f)
+        if not m:
+            continue
+        key = f"{m.group(1)}/{m.group(2)}/{m.group(3)}"
+        probe = subprocess.run(
+            ["git", "cat-file", "-e", f"HEAD:{key}"],
+            cwd=REPO_ROOT, capture_output=True,
+        )
+        if probe.returncode == 0:
+            continue  # 已存在于 HEAD → 存量资产，不是新增
+        dirs.add(key)
+    return dirs
+
+
+def cmd_lifecycle(args, reg: Registry) -> int:
+    """资产生命周期闭环报告：调研/设计文档 + 验收文档。
+
+    对应业界实践：
+      - Definition of Done（DoD）：每个交付物统一质量门槛，文档闭环是其中一项
+      - ADR Guard：被监视路径变更时若无决策记录则 fail（此处=新增资产无设计文档）
+      - OWASP shift-left：最早的门禁在提交时，而非数天后的评审
+    """
+    new_only = bool(getattr(args, "new_only", False))
+    new_dirs = _new_asset_dirs() if new_only else set()
+
+    rows = []
+    for layer, kind, d in _iter_asset_dirs():
+        key = f"{layer}/{kind}/{d.name}"
+        if new_only and key not in new_dirs:
+            continue
+        info = _asset_docs(d)
+        rows.append({"key": key, "name": d.name, "kind": kind, **info})
+
+    if not rows:
+        print("✅ 本次无新增资产目录（无需文档闭环检查）")
+        return 0
+
+    no_design = [r for r in rows if not r["design"]]
+    no_verify = [r for r in rows if r["design"] and not r["verify"]]
+
+    print(f"资产生命周期检查（{len(rows)} 个资产，模式={'新增' if new_only else '全量'}）")
+    print(f"  设计/调研文档: {len(rows) - len(no_design)}/{len(rows)}")
+    print(f"  验收文档: {len(rows) - len(no_verify)}/{len(rows)}")
+
+    if no_design:
+        print()
+        print("❌ 缺设计/调研文档（违反「禁止跳过设计文档直接写代码」红线）:")
+        for r in no_design:
+            print(f"  • {r['key']}")
+    if no_verify:
+        print()
+        print("⚠️  缺验收文档（VERIFICATION*.md；建议补，不阻断）:")
+        for r in no_verify:
+            print(f"  • {r['key']}")
+
+    if no_design and getattr(args, "require_design", False):
+        print()
+        print("处理: 先补 DESIGN.md/PRD.md/SKILL.md（含调研来源与业界最佳实践引用），")
+        print("      再提交；或确属废弃资产 → 从目录移除。")
+        return 1
+
+    if no_design:
+        print()
+        print("⚠️  存在缺设计文档的资产（提醒，不阻断本次提交）")
+    return 0
+
+
 def cmd_check(args, reg: Registry) -> int:
     if args.staged:
         files = _git_changed_files(staged=True)
@@ -372,6 +525,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--explain", dest="id", help="查看单个能力详情")
     ap.add_argument("--check", action="store_true", help="防重复建设检查")
     ap.add_argument("--coverage", action="store_true", help="覆盖率校验：所有组件/skill 是否已登记")
+    ap.add_argument("--validate", action="store_true", help="注册表自校验：entry 路径存在性 + 可执行性")
+    ap.add_argument("--lifecycle", action="store_true", help="资产生命周期：设计/验收文档闭环")
+    ap.add_argument("--new-only", action="store_true", help="配合 --lifecycle：只查本次新增资产")
+    ap.add_argument("--require-design", action="store_true", help="配合 --lifecycle：缺设计文档即阻断")
     ap.add_argument("--staged", action="store_true", help="只扫暂存区（配 pre-commit）")
     ap.add_argument("--all", action="store_true", help="扫全部高危目录")
     ap.add_argument("--verbose", "-v", action="store_true", help="显示说明/入口细节")
@@ -397,6 +554,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_check(args, reg)
     if args.coverage:
         return cmd_coverage(args, reg)
+    if args.validate:
+        return cmd_validate(args, reg)
+    if args.lifecycle:
+        return cmd_lifecycle(args, reg)
 
     ap.print_help()
     return 1

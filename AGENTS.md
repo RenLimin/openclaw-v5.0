@@ -11,6 +11,24 @@ This folder is home. Treat it that way.
 查找业界最佳实践必须覆盖：AI Agent官方文档、AI Agent对应社区的方案、GitHub/Clawhub等相关开源网站的方案，不能只找本地已有或用户提供的个别案例。
 <!-- observed: 2026-10-10 | status: active -->
 
+### 资产生命周期闭环铁律（调研-设计-测试/验收标准-建设-测试-验收）
+
+所有系统资产（组件/skill）建设必须走完闭环，**且每一段都有机器门禁**：
+
+| 阶段 | 要求 | 机器门禁 |
+|---|---|---|
+| 1. 调研 | 动手前先 `--query` 查能力注册表（避免重复建设），再基于 PRD 做业界最佳实践调研（AI Agent 官方文档/社区、GitHub、Clawhub） | pre-commit step 8（新增资产无设计文档即阻断） |
+| 2. 设计 | PRD/DESIGN 必须包含：业界最佳实践引用、调研来源、方案取舍 | 同上 |
+| 3. 测试/验收标准 | 先定验收标准（怎么算「做成」），再写测试 | — |
+| 4. 建设 | 禁止跳过设计直接写代码 | — |
+| 5. 测试 | 真实运行验证（非仅读代码） | pre-commit step 0/3 等 |
+| 6. 验收 | 产出 `VERIFICATION*.md`（验收结论 + 证据）；完成 #1 闭环后登记入册 | `--lifecycle` 报告 |
+
+- Always 新增组件/skill 目录 → 先写 DESIGN/PRD/SKILL.md，再写代码；否则 pre-commit step 8 阻断。
+- Always 完成闭环后当日登记：registry.yaml 补条目（entry 可直接调用）→ `--coverage` 必须 100%。
+- Never 把「规则只在 AGENTS.md」当达标——规则必须转为 pre-commit 门禁（可发现 + 前置门禁，而非靠自觉）。
+<!-- observed: 2026-11-20 | status: active -->
+
 ## 子进程执行规范（防静默失控）
 - Always 执行预计 >8s 的 exec 命令时设 `yieldMs>=60000`，让命令在前台跑完直接拿输出，避免超过默认 10s 被自动转后台、回执静默导致状态断层。
 - 若命令已被转后台（session id 但无输出），立即用 `process(action=log)` 拉取该 session 日志确认，不盲猜、不重复跑。

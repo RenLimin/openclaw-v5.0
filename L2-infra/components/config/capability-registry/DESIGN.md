@@ -37,14 +37,18 @@ capabilities:
 allow: [{path, reason}]          # 合法一次性脚本白名单
 ```
 
-### 3.2 三条链路
+### 3.2 五条防线（业界对标）
 
-| 链路 | 实现 | 作用 |
-|---|---|---|
-| 可发现性 | `capability_registry.py --query/--list/--explain` | agent 动手前查 |
-| 覆盖率 | `capability_registry.py --coverage` ← pre-commit step 6 | 未登记资产即阻断（硬指标 100%） |
-| 门禁 | `capability_registry.py --check --staged` ← pre-commit step 5 | 拦新建重复脚本，指出权威入口 |
-| 渲染 | `gen_asset_inventory.py` §能力注册表 | 人看 / agent 读资产清单时可见 |
+| 防线 | 命令 | 业界对标 | 作用 |
+|---|---|---|---|
+| 可发现性 | `--query/--list/--explain` | Backstage Software Catalog（统一资产索引，防重复） | agent 动手前查 |
+| 覆盖率 | `--coverage` ← pre-commit step 6 | Backstage catalog completeness（无孤儿） | 未登记资产即阻断 |
+| 自校验 | `--validate` ← pre-commit step 7 | Archgate fitness function / catalog validation | 孤儿 entry 即阻断 |
+| 生命周期 | `--lifecycle --new-only --require-design` ← pre-commit step 8 | DoD / ADR Guard / OWASP shift-left | 新增资产无设计文档即阻断 |
+| 门禁 | `--check --staged` ← pre-commit step 5 | OWASP shift-left（最早门禁） | 拦新建重复脚本，指出权威入口 |
+| 渲染 | `gen_asset_inventory.py` §能力注册表 | TechDocs docs-like-code | 人看 / agent 读资产清单时可见 |
+
+> 核心逻辑与解决「重复建设」同源：**可发现 + 前置门禁**，而非依赖 agent 自觉。
 
 ### 3.3 判定规则
 
@@ -62,6 +66,8 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 python3 L2-infra/components/config/capability-registry/capability_registry.py --check --staged
 python3 L2-infra/components/config/capability-registry/capability_registry.py --check --all
 python3 L2-infra/components/config/capability-registry/capability_registry.py --coverage
+python3 L2-infra/components/config/capability-registry/capability_registry.py --validate
+python3 L2-infra/components/config/capability-registry/capability_registry.py --lifecycle --new-only --require-design
 ```
 
 ## 5. 依赖
@@ -81,8 +87,10 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 
 ## 7. 测试
 
-`L2-infra/components/config/tests/test_capability_registry.py`（18 用例）：
-加载 / 精确查询 / 别名查询 / 全能力 entry 可执行性 / 三类重复脚本识别与建议准确性 / 白名单 / 非 py 忽略 / supersedes 登记 / **覆盖率 100%** / 无重复 id。
+`L2-infra/components/config/tests/test_capability_registry.py`（25 用例）：
+加载 / 精确查询 / 别名查询 / 全能力 entry 可执行性 / 三类重复脚本识别与建议准确性 /
+白名单 / 非 py 忽略 / supersedes 登记 / 覆盖率 100% / 无重复 id /
+`--validate` 孤儿检测（构造坏路径 + 不可执行指针）/ `--lifecycle` 新增资产判定与阻断。
 
 ## 8. 演进
 
@@ -90,7 +98,9 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 |---|---|
 | 能力依赖图（调用链） | 多能力串联编排需求 |
 | 与 system-governor P6 打通（自动归位） | P6 成熟后 |
-| entry 健康探测（入口存在性校验） | 入口漂移问题出现时 |
+| 验收文档补齐（存量 27 个资产） | Rex 拍板排期 |
+
+> entry 健康探测已实现（`--validate`，2026-11-20）。
 
 ## 9. 变更记录
 
@@ -98,3 +108,4 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 |---|---|
 | 2026-11-20 | 首版：registry.yaml（10 能力）+ 引擎 + 测试 + pre-commit 门禁 + 资产清单渲染 |
 | 2026-11-20 | 全量覆盖：81 条目（45 组件 + 26 skill + 10 能力族）；新增 `--coverage` 覆盖率硬指标 + pre-commit step 6 |
+| 2026-11-20 | 工程化补齐：14 个孤儿 entry 修正（99 条路径全部真实）；新增 `--validate`（fitness function）+ `--lifecycle`（DoD/ADR Guard 闭环门禁）+ pre-commit step 7/8 |

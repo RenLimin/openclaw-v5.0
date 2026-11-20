@@ -148,8 +148,9 @@ capabilities:
     layer: L2
     interfaces: [maintenance, memory, repo, health]
     entry:
-      - "bash L2-infra/components/maintenance/memory_maintenance.sh"
-      - "bash L2-infra/components/maintenance/repo_health.sh"
+      - "bash L2-infra/scripts/maintenance/memory_maintenance.sh"
+      - "bash L2-infra/scripts/maintenance/repo_health.sh"
+      - "bash L2-infra/scripts/error_handler/scan_errors.sh"
     supersedes: []
 
   - id: memory-embedding
@@ -183,8 +184,8 @@ capabilities:
     layer: L2
     interfaces: [ocr, digitize, scan, contract, signature]
     entry:
-      - "python3 L2-infra/components/ocr-digitalization/ocr_digitize.py <img>"
-      - "python3 L2-infra/components/ocr-digitalization/contract_ocr.py contract.pdf"
+      - "python3 L2-infra/components/ocr-digitalization/scripts/ocr_main.py --help"
+      - "python3 L2-infra/components/ocr-digitalization/scripts/ocr_engine/cli.py --help"
     supersedes: []
 
   - id: office-generation
@@ -192,9 +193,9 @@ capabilities:
     layer: L2
     interfaces: [office, excel, ppt, word, generate]
     entry:
-      - "python3 L2-infra/components/office-generation/office_generate.py excel --data data.json"
-      - "python3 L2-infra/components/office-generation/office_generate.py ppt --data data.json"
-      - "python3 L2-infra/components/office-generation/office_generate.py word --data data.json"
+      - "python3 -c \"from office_engine import OfficeDocument; print('OK')\"  # 库接口，工作目录需含 L2-infra/components/office-generation/src"
+      - "python3 -c \"from office_engine import OfficeConverter; print('OK')\"  # 格式转换（LibreOffice headless）"
+    notes: "库形态（无独立 CLI）；ExcelDocument/WordDocument/PptDocument + OfficeConverter；入口按场景走 skill"
     supersedes: []
 
   - id: persistence
@@ -202,7 +203,8 @@ capabilities:
     layer: L2
     interfaces: [persistence, sqlite, migration, schema]
     entry:
-      - "python3 L2-infra/components/persistence/migrations/001_initial_schema.sql"
+      - "python3 -c \"import L2-infra.components.persistence.migration as m; print('OK')\"  # 或 python3 L2-infra/components/persistence/migration.py"
+      - "L2-infra/components/persistence/schemas/v001_init.py"
     notes: "数据落 ~/.openclaw/data/platform.db"
     supersedes: []
 
@@ -211,9 +213,8 @@ capabilities:
     layer: L2
     interfaces: [sandbox, exec, health, isolate]
     entry:
-      - "python3 L2-infra/components/sandbox/sandbox.py --start"
-      - "python3 L2-infra/components/sandbox/sandbox.py --health"
-      - "python3 L2-infra/components/sandbox/sandbox.py --exec <cmd>"
+      - "python3 L2-infra/components/sandbox/scripts/cli.py --help"
+      - "python3 L2-infra/components/sandbox/scripts/sandbox.py --help"
     supersedes: []
 
   - id: scheduler-guard
@@ -239,9 +240,9 @@ capabilities:
     layer: L2
     interfaces: [session, isolation, task, state, event]
     entry:
-      - "python3 L2-infra/components/session-isolation/cli.py --health"
-      - "python3 L2-infra/components/session-isolation/cli.py task-init --id <id>"
-      - "python3 L2-infra/components/session-isolation/cli.py state-write --scope <s> --data <json>"
+      - "python3 L2-infra/components/session-isolation/scripts/cli.py --health"
+      - "python3 L2-infra/components/session-isolation/scripts/cli.py task-init --id <id>"
+      - "python3 L2-infra/components/session-isolation/scripts/cli.py state-write --scope <s> --data <json>"
     supersedes: []
 
   - id: session-recovery

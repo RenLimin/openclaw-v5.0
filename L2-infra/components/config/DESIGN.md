@@ -120,12 +120,16 @@ pre-commit
   ├─ 3. 知识库 schema 校验 → 阻塞性错误拒绝提交
   ├─ 4. 应答契约黄金基准 → 仅 prompts/ 改动时触发
   ├─ 5. 防重复建设门禁（capability_registry --check --staged）→ 拦新建重复家族脚本
-  └─ 6. 覆盖率校验（capability_registry --coverage）→ 未登记的组件/skill 即阻断
+  ├─ 6. 覆盖率校验（capability_registry --coverage）→ 未登记的组件/skill 即阻断
+  ├─ 7. 注册表自校验（capability_registry --validate）→ 孤儿 entry 即阻断
+  └─ 8. 生命周期闭环（capability_registry --lifecycle --new-only --require-design）→ 新增资产缺设计文档即阻断
 ```
 
 > 步 5 于 2026-11-20 新增：能力注册表拦截重复建设（OA/ONES 导出、登录、诊断类），
 > 设计见 `capability-registry/DESIGN.md`。
 > 步 6 于 2026-11-20 新增：全量覆盖率硬指标（45 组件 + 26 skill 均已登记）。
+> 步 7 于 2026-11-20 新增：entry 路径存在性自校验（fitness function，防孤儿 entry）。
+> 步 8 于 2026-11-20 新增：新增资产必须带设计/调研文档（业界 DoD / ADR Guard / OWASP shift-left）。
 
 ## 4. 接口与用法
 

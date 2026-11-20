@@ -10,7 +10,9 @@
 #   4. 应答契约黄金基准 —— 仅当 prompts/ 下 spec/校验器/测试被改动时触发 (ADR-035 P1 §10)
 #   5. 防重复建设门禁 —— 新建脚本命中重复家族即阻断, 并指出能力注册表中的权威入口
 #   6. 覆盖率校验 —— 所有组件/skill 必须已在 registry.yaml 登记 (未登记=会被重复建设)
-#   1/2 不阻塞; 0/3/4/5/6 命中阻塞性错误时阻塞提交
+#   7. 注册表自校验 —— entry 路径存在性 + 可执行性 (fitness function)
+#   8. 资产生命周期 —— 新增资产必须带设计/调研文档 (闭环门禁, 仅对真正新增目录)
+#   1/2 不阻塞; 0/3/4/5/6/7/8 命中阻塞性错误时阻塞提交
 
 set -euo pipefail
 
@@ -124,6 +126,31 @@ if [ -f "$REGISTRY" ]; then
         echo "❌ pre-commit 拦截: 存在未登记的系统资产"
         echo "    未登记 = 后续会话查不到 = 会被重复建设。"
         echo "    处理: 在 registry.yaml 补条目 (entry 必须可直接调用), 或移除废弃目录。"
+        exit 1
+    fi
+
+    # --- 7. 注册表自校验 (业界 fitness function) ---
+    # 目的: 防止「声称可直接调用但路径不存在」的孤儿 entry —— 它会让后续会话
+    #       调用失败却以为能力已建成。对应 Backstage catalog validation /
+    #       Archgate fitness function（文档 + 可执行规则双表达）。
+    if ! python3 "$REGISTRY" --validate; then
+        echo ""
+        echo "❌ pre-commit 拦截: 注册表 entry 校验失败"
+        echo "    孤儿 entry = 能力不可调用。修正为真实路径后再提交。"
+        exit 1
+    fi
+
+    # --- 8. 资产生命周期闭环 (业界 DoD / ADR Guard / OWASP shift-left) ---
+    # 目的: 新增资产必须带设计/调研文档（调研来源 + 业界最佳实践引用），
+    #       避免「跳过设计直接写代码」。仅对**真正新增**的资产目录生效
+    #       (HEAD 中不存在), 存量资产的文档欠账不阻断本次提交。
+    if python3 "$REGISTRY" --lifecycle --new-only --require-design; then
+        echo "✅ 资产生命周期检查通过（无新增资产或已含设计文档）"
+    else
+        echo ""
+        echo "❌ pre-commit 拦截: 新增资产缺设计/调研文档"
+        echo "    闭环要求: 调研(先查能力注册表 + 业界最佳实践) → 设计(PRD/DESIGN) → 建设 → 测试 → 验收(VERIFICATION)。"
+        echo "    动手前先查: python3 $REGISTRY --query <关键词>；调研渠道: AI Agent 官方文档 / 社区 / GitHub / Clawhub。"
         exit 1
     fi
 fi
