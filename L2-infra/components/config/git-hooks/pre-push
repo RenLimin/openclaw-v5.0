@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# git pre-push hook: push 前 GitHub 凭据链路自检
+#
+# 背景: 2026-11-19 起反复出现「push 时才发现 gh 未登录 / token 失效」, 浪费整轮。
+# 单一事实来源 (SSOT): ~/.openclaw/secrets/github.token → 派生 ~/.config/gh/hosts.yml
+# 修复: python3 L2-infra/components/credentials/github_credential_sync.py
+#
+# 行为:
+#   - 自检 gh CLI 登录态 (本地, 不依赖网络) → 失败即阻断 push
+#   - 联网校验 token (gh api user) 仅告警, 不阻断 (网络问题不代表 token 失效)
+#   - 通过则放行, 输出一行确认
+#
+# 安装: L2-infra/components/config/install-hooks.sh
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+
+SYNC="L2-infra/components/credentials/github_credential_sync.py"
+if [ ! -f "$SYNC" ]; then
+    echo "⚠️  未找到凭据自检脚本，跳过 pre-push 凭据检查: $SYNC"
+    exit 0
+fi
+
+OUT="$(python3 "$SYNC" --check 2>&1)" && RC=0 || RC=$?
+
+if [ "$RC" -ne 0 ]; then
+    echo ""
+    echo "❌ pre-push 拦截: GitHub 凭据链路异常"
+    echo "$OUT"
+    echo ""
+    echo "   修复: python3 $SYNC    (幂等同步 SSOT → gh 配置)"
+    echo "   然后重新 push。不要用 gh auth login (交互, 定时/隔离环境必卡)。"
+    exit 1
+fi
+
+echo "✅ GitHub 凭据自检通过（$(echo "$OUT" | grep -c '✅') 项）"
+exit 0
