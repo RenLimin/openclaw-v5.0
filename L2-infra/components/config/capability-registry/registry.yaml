@@ -786,6 +786,16 @@ capabilities:
     notes: "权威能力=ones-export/ones-auth/oa-workflow-ones；禁止另写 ONES 导出/登录脚本"
     supersedes: []
 
+  - id: skill-wecomcli-contact
+    name: 企业微信通讯录查询（skill）
+    layer: L4
+    interfaces: [wecom, contact, 通讯录, department, org, skill]
+    entry:
+      - "python3 L4-proprietary/skills/wecomcli-contact/scripts/wecom_contact.py --name <姓名>"
+      - "python3 L4-proprietary/skills/wecomcli-contact/scripts/wecom_contact.py --check"
+    notes: "wecom-cli contact users search；机器人需开通「通讯录」权限（850002=未开通，显式降级不编造）；PM 指派分流（任立民/冯刚）数据源"
+    supersedes: []
+
   - id: skill-product-kb
     name: 产品知识库（skill）
     layer: L4

@@ -42,7 +42,41 @@ def test_status_in_progress():
 
 def test_status_basis_present():
     label, basis = _status_label("某项目", "验收完成", ["验收文件已归档"])
-    assert "验收文件已归档" in basis and "验收完成" in basis
+    assert "验收文件已归档" in basis and label == "已交付已验收"
+
+
+def test_q4_obligation_priority_over_project_status():
+    """Rex 2026-11-20 第4点：反馈项目信息优先取履约义务，无则回退项目状态。
+
+    项目状态=验收完成 但义务无验收特征 → 不得判「已交付已验收」，
+    应回退项目状态口径（basis 明示回退，可审计）。
+    """
+    label, basis = _status_label("某项目", "验收完成", ["实施中"])
+    assert label == "已交付已验收"
+    assert "回退项目状态" in basis
+
+
+def test_q4_obligation_no_conclusion_falls_back():
+    label, basis = _status_label("某项目", "进行中", [])
+    assert label == "进行中" and "回退项目状态" in basis
+
+
+def test_admin_prefix_short_token_excluded():
+    """887401 实证：「广州市宏视」前三字「广州市」是纯行政区划 → 不得作匹配词。"""
+    from pm.ones_refs import _is_admin_prefix, _search_tokens
+    assert _is_admin_prefix("广州市") and _is_admin_prefix("深圳市")
+    assert not _is_admin_prefix("浙江农")      # 保留：覆盖「浙江农信」简称
+    toks = _search_tokens("广州市宏视信息技术有限公司", "广州市宏视信息技术有限公司")
+    assert "广州市" not in toks
+    assert any("宏视" in t for t in toks)
+
+
+def test_admin_prefix_never_blocks_core_name():
+    """全名/去后缀词不受行政区划短词影响（仍须能命中项目名）。"""
+    from pm.ones_refs import _search_tokens
+    toks = _search_tokens("广州市宏视信息技术有限公司", "")
+    assert "广州市宏视信息技术有限公司" in toks
+    assert "宏视信息技术有限公司" in toks
 
 
 # ---------------- 匹配 ----------------
@@ -88,7 +122,8 @@ def test_render_single_ref_matches_rex():
                        license_task="385446", source="direct")]
     txt = render_remark(o, refs, [], pm="程涛")
     assert txt.startswith("请程涛负责，参考签约项目：")
-    assert "SSXM-2026-0810-2066（已交付未验收，授权/维保至27.08）。" in txt
+    # 第2点（Rex 2026-11-20）：参考项目须带「项目经理」；缺失显式标注，不伪造
+    assert "SSXM-2026-0810-2066（已交付未验收，授权/维保至27.08，项目经理【缺失】）。" in txt
     print("\n--- 886362 渲染 ---\n" + txt)
 
 
@@ -108,8 +143,8 @@ def test_render_list_refs_matches_rex_886404():
     txt = render_remark(o, refs, risks, pm="")
     # v1.1 C1：PM 空且区域负责人空 → 「请冯刚安排项目经理」
     assert "请冯刚安排项目经理，参考：" in txt
-    assert "1. 提前实施项目 SSXM-2026-0624-1641（已交付未关联签约合同，产品授权至26.11.30）。" in txt
-    assert "2. 签约项目 SSXM-2026-0924-2598（已交付未验收）。" in txt
+    assert "1. 提前实施项目 SSXM-2026-0624-1641（已交付未关联签约合同，产品授权至26.11.30，项目经理【缺失】）。" in txt
+    assert "2. 签约项目 SSXM-2026-0924-2598（已交付未验收，项目经理【缺失】）。" in txt
     assert "不允许同最终用户同产品/服务存在多个未关联签约合同的提前实施项目" in txt
     print("\n--- 886404 渲染 ---\n" + txt)
 
@@ -295,6 +330,45 @@ def test_c3_formal_contract_keeps_normal_render():
     txt = render_remark(o, [], [], pm="张梨")
     assert txt.startswith("请张梨负责，参考")
     assert "框架合同" not in txt
+
+
+# ---------------- v1.2 C5：按 PM 部门分流指派 ----------------
+def test_c5_assigner_override():
+    """C5：assigner 注入 → 首段用「请<指派人>安排项目经理」，优先于 C1。"""
+    o = _order(pm="程涛", region_owner="冯刚")
+    txt = render_remark(o, [], [], pm="程涛", assigner="任立民")
+    assert txt.startswith("请任立民安排项目经理")
+
+
+def test_c5_empty_assigner_falls_back_to_c1():
+    """C5：assigner 空（企微不可用）→ 回退 C1（区域负责人=冯刚）。"""
+    o = _order(pm="程涛", region_owner="冯刚")
+    txt = render_remark(o, [], [], pm="程涛")
+    assert txt.startswith("请冯刚安排项目经理")
+
+
+def test_c5_assigner_module_degrades():
+    """C5 降级：企微不可用时 assigner_for 返回 None（不伪造）。"""
+    from pm.assigner import assigner_for, AssignerUnavailable, departments_of
+    try:
+        departments_of("任立民")
+        raise AssertionError("预期企微不可用/无结果")
+    except AssignerUnavailable:
+        pass
+    assert assigner_for("任立民") in (None, "任立民", "冯刚")  # 可用与否都不应伪造未知值
+    assert assigner_for("") is None
+
+
+def test_q2_ref_pm_in_remark():
+    """Rex 2026-11-20 第2点：批注须含参考项目对应项目经理（履约义务/项目记录负责人）。"""
+    o = _order(pm="程涛")
+    refs = [RefProject(code="SSXM-2026-0810-2066", name="招商银行2026年大前端框架项目",
+                       project_status="进行中", status_label="已交付未验收",
+                       status_basis="x", license_period="2026-08-11 ~ 2027-08-14",
+                       license_task="385446", source="direct",
+                       pm="程涛", pm_basis="履约义务任务负责人")]
+    txt = render_remark(o, refs, [], pm="程涛")
+    assert "项目经理：程涛" in txt
 
 
 # ---------------- v1.1 C2 选取口径：已结项仅兜底 ----------------

@@ -308,15 +308,45 @@ def cmd_oa_project_mgmt(args) -> int:
             print("  ⚠️ 757 核查失败（已降级）:", e)
 
     risks = assess(order, refs, appr)
-    remark = render_remark(order, refs, risks, args.pm or "")
+
+    # v1.2 C5：按参考项目 PM 所属部门判定指派人（任立民/冯刚）。
+    # 企微通讯录不可用（850002/二进制缺失）→ assigner 为空 → 渲染层回退 C1，不伪造。
+    assigner = ""
+    assigner_note = ""
+    pm_names = []
+    for r in refs:
+        if (r.pm or "").strip() and r.pm not in pm_names:
+            pm_names.append(r.pm)
+    if pm_names:
+        try:
+            from services.oa.enhance.pm.assigner import assigner_for
+            decided = []
+            for nm in pm_names:
+                who = assigner_for(nm)
+                if who and who not in decided:
+                    decided.append(who)
+            if len(decided) == 1:
+                assigner = decided[0]
+            elif decided:
+                assigner = decided[0]
+                assigner_note = "（参考项目 PM 分属多部门：%s，暂取首个；请人工确认）" % "、".join(decided)
+        except Exception as e:  # noqa: BLE001 - 分流失败不阻断，回退 C1
+            assigner = ""
+            assigner_note = "（部门分流不可用，已回退 C1：%s）" % e
+
+    remark = render_remark(order, refs, risks, args.pm or "", assigner=assigner)
+    if assigner_note:
+        print("  ⚠️", assigner_note)
     print()
     print(remark)
     print()
     print("参考项目:", len(refs), "｜风险:", len(risks),
+          "｜指派人:", assigner or "（C1 口径）",
           "｜757:", (appr.degraded if appr and appr.degraded else ("已核查" if appr else "不适用/无链接")))
 
     if args.out:
-        out_md = render_markdown(order, refs, risks, appr, args.pm or "", missing=notes)
+        out_md = render_markdown(order, refs, risks, appr, args.pm or "",
+                                 missing=notes, assigner=assigner)
         with open(args.out, "w", encoding="utf-8") as fh:
             fh.write(out_md)
         print("报告:", args.out)

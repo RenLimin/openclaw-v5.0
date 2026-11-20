@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -45,18 +46,82 @@ _TYPE_SCOPE = {
 def _core_name(name: str) -> str:
     """客户名归一：去公司后缀，便于匹配项目名中的简称。"""
     import re as _re
-    return _re.sub(r"(股份有限公司|有限责任公司|有限公司|农村商业银行|村镇银行)", "", name or "")
+    return _re.sub(r"(%s)" % "|".join(_COMPANY_SUFFIX), "", name or "")
+
+
+_ADMIN_PREFIX_RE = re.compile(
+    r"^(?:[^省市县区]{0,6}?(?:自治区|自治州|省|市|区|县|旗|地区))+"
+)
+
+
+def _strip_admin_prefix(name: str) -> str:
+    """去行政区划前缀（如「广州市」「深圳市」）。
+
+    仅当前缀剥离后剩余 ≥ 4 字才剥离（避免把短客户名掏空）。
+    实证：887401「广州市宏视信息技术有限公司」→「宏视信息技术有限公司」。
+    """
+    t = name or ""
+    m = _ADMIN_PREFIX_RE.match(t)
+    if not m:
+        return t
+    rest = t[m.end():]
+    return rest if len(rest) >= 4 else t
+
+
+_ADMIN_SUFFIX = ("省", "市", "区", "县", "自治区", "自治州", "旗", "地区")
+
+# 公司后缀全集（_core_name 归一用；缺「集团」会破坏全称匹配：
+# 「中国人寿保险（集团）公司」去掉「公司」剩「中国人寿保险（集团）」，
+# 项目名「中国人寿保险（集团）公司…」反而不被自身命中 —— 2026-11-20 实测）
+_COMPANY_SUFFIX = (
+    "股份有限公司", "有限责任公司", "有限公司", "农村商业银行", "村镇银行",
+    "集团", "公司",
+)
+
+
+def _is_admin_prefix(tok: str) -> bool:
+    """是否为纯行政区划前缀（如「广州市」「深圳市」「北京市」）。
+
+    实证（2026-11-20，887401）：客户「广州市宏视信息技术有限公司」的
+    前三字「广州市」是纯行政区划，用它匹配会把「广州市潜宇信息科技…」
+    误当候选（张冠李戴）。故纯行政区划短词**不得**作匹配词。
+    反例保留：「浙江农」不是纯行政区划（「浙江」才是），仍需保留以覆盖
+    「浙江农信」类简称（886404 实证）。
+    """
+    t = (tok or "").strip()
+    if len(t) < 2 or len(t) > 5:
+        return False
+    return any(t.endswith(x) for x in _ADMIN_SUFFIX)
 
 
 def _search_tokens(final_user: str, customer: str) -> List[str]:
-    """检索词：全名 / 去后缀 / 前三字（覆盖「浙江农商」vs「浙江农信」类简称差异）。"""
+    """检索词（长词优先，短词仅作辅助）：
+
+    ① 全名（final_user / customer）—— 项目名常含全称，最强
+    ② 去后缀名（_core_name）—— 项目名常省略「股份有限公司」等
+    ③ 非行政区划前三字 —— 覆盖「浙江农商」vs「浙江农信」类简称差异，
+       但**排除纯行政区划**（「广州市」），否则会把同城别家客户误配
+       （887401 实证：宏视 ← 误配 潜宇）
+
+    ⚠️ 顺序即优先级：长词必须先于短词，否则「广州市宏视信息技术」
+    （短词截断）会先命中，反而盖过去后缀的「宏视信息技术有限公司」。
+    """
     toks: List[str] = []
-    for nm in (final_user, customer, _core_name(final_user), _core_name(customer)):
-        if nm and nm not in toks:
-            toks.append(nm)
     for nm in (final_user, customer):
-        if nm and len(nm) >= 3 and nm[:3] not in toks:
-            toks.append(nm[:3])
+        if not nm:
+            continue
+        variants = [
+            nm,                                   # ① 全名
+            _core_name(nm),                       # ② 去公司后缀
+            _strip_admin_prefix(nm),              # ③ 去行政区划前缀
+            _core_name(_strip_admin_prefix(nm)),  # ④ 去前缀 + 去后缀
+        ]
+        pre = nm[:3]
+        if len(pre) >= 3 and not _is_admin_prefix(pre):
+            variants.append(pre)                 # ⑤ 前三字（非纯行政区划）
+        for v in variants:
+            if v and v not in toks:
+                toks.append(v)
     return toks
 
 
@@ -73,6 +138,8 @@ class RefProject:
     obligation_project_states: List[str] = field(default_factory=list)  # 义务「项目状态」(v1.1 C2)
     obligation_names: List[str] = field(default_factory=list)
     matched_products: List[str] = field(default_factory=list)
+    pm: str = ""                  # 参考项目对应项目经理（履约义务/项目记录负责人，Rex 2026-11-20）
+    pm_basis: str = ""
     source: str = ""              # direct（OA 项目编号）/ candidate（名称候选）
     note: str = ""
 
@@ -94,6 +161,8 @@ def _status_label(project_name: str, project_status: str,
     其余状态词来自履约义务的「状态」（status.name）。
     """
     states = [s for s in ob_states if s]
+    # 口径（Rex 2026-11-20）：**履约义务优先**，无结论时才回退项目状态字段。
+    # ① 义务「项目状态」=已归档 → 已结项（v1.1 C2）
     if "已归档" in [x for x in ob_project_states if x]:
         return "已结项", "履约义务「项目状态」=已归档（ONES 字段 _Gvi8gt9w）"
     has_archive = "验收文件已归档" in states
@@ -102,27 +171,31 @@ def _status_label(project_name: str, project_status: str,
     is_advance = _ADVANCE_HINT in project_name
     is_poc = "POC" in (project_name or "").upper()
 
+    # ② 履约义务结论（优先）
     # 口径校准自 Rex 5 个参考项目实测（PRD §0.1）：
     #   2066 验收文件交接中 → 已交付未验收；0858 交付邮件已归档 → 已交付未验收；
     #   2598 交接中+交付邮件 → 已交付未验收（优先于「可结项」）；
     #   1641 提前实施+已完成交付义务 → 已交付未关联签约合同；
     #   2727 POC+已完成义务 → 可结项
-    if project_status == "验收完成" or has_archive:
-        return "已交付已验收", f"项目状态={project_status or '—'}；履约义务含「验收文件已归档」"
+    if has_archive:
+        return "已交付已验收", "履约义务含「验收文件已归档」"
     if is_advance and has_delivery:
         return "已交付未关联签约合同", "项目名含「提前实施」；履约义务含「交付邮件已归档」"
-    if is_advance and "已完成" in states and not has_archive and project_status != "已完成":
+    if is_advance and "已完成" in states and project_status != "已完成":
         return "已交付未关联签约合同", (
             f"项目名含「提前实施」；存在已完成交付义务且无验收归档（项目状态={project_status}）")
     if has_handover or has_delivery:
         return "已交付未验收", "履约义务含「验收文件交接中/交付邮件已归档」"
     if is_poc and "已完成" in states:
         return "可结项", "POC 项目且存在已完成履约义务（无验收/交付待办）"
-    if project_status == "已完成" and has_delivery:
-        return "可结项", "项目状态=已完成；履约义务含「交付邮件已归档」"
     if "实施未开始" in states:
         return "待实施", "履约义务含「实施未开始」"
-    return "进行中", f"项目状态={project_status or '—'}（未命中交付/验收特征）"
+    # ③ 义务无结论 → 回退项目状态字段
+    if project_status == "验收完成":
+        return "已交付已验收", "项目状态=验收完成（履约义务无验收特征，回退项目状态）"
+    if project_status == "已完成" and has_delivery:
+        return "可结项", "项目状态=已完成；履约义务含「交付邮件已归档」"
+    return "进行中", f"项目状态={project_status or '—'}（履约义务无结论，回退项目状态）"
 
 
 def _matched(items: Sequence[str], codes: Sequence[str]) -> List[str]:
@@ -162,6 +235,11 @@ def _build(code: str, uuid: str, name: str, final_user: str,
 
     period, evid = ones_client.license_period(tasks)
     label, basis = _status_label(name, status, ob_states, ob_project_states)
+    # 参考项目对应项目经理（Rex 2026-11-20：履约义务/项目记录负责人）
+    try:
+        pm, pm_basis = ones_client.project_pm(uuid)
+    except Exception:  # noqa: BLE001 - PM 缺失不阻塞主流程
+        pm, pm_basis = "", "（查询失败，未取到）"
     # 匹配键 = 产品编码 + 产品名 + 产品服务类别
     # （ONES 义务名按「类别-形态-产品名」书写，如「渠道监测-服务-APP渠道监测服务」；
     #   仅按产品名匹配会漏掉结算/综合服务类项目，如 886404 的 SSXM-2026-0924-2598）
@@ -175,6 +253,7 @@ def _build(code: str, uuid: str, name: str, final_user: str,
         obligation_project_states=ob_project_states,
         obligation_names=ob_items,
         matched_products=_matched(ob_items, keys),
+        pm=pm, pm_basis=pm_basis,
         source=source,
     )
 
@@ -218,9 +297,16 @@ def find_reference_projects(
     #    始终执行：OA 项目编号只是候选，参考项目须由客户名检索得出（实证见上）。
     allowed_types = _TYPE_SCOPE.get(workflow_id, ())
     seen_codes: set = set()
-    probes = [x for x in (final_user, customer, _core_name(final_user),
-                          _core_name(customer)) if x]
+    probes = []
+    for x in (final_user, customer, _core_name(final_user), _core_name(customer),
+              _strip_admin_prefix(final_user), _strip_admin_prefix(customer),
+              _core_name(_strip_admin_prefix(final_user)),
+              _core_name(_strip_admin_prefix(customer))):
+        if x and x not in probes:
+            probes.append(x)
     short = final_user[:3] if final_user else ""
+    if _is_admin_prefix(short):
+        short = ""
     for key in _search_tokens(final_user, customer):
         try:
             cands = ones_client.search_projects(key)

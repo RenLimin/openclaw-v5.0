@@ -53,6 +53,17 @@ def _short_end(period: str) -> str:
     return f"{yy}.{m}.{d}"
 
 
+def _pm_text(ref: RefProject) -> str:
+    """参考项目对应项目经理（Rex 2026-11-20 第2点：反馈信息须比手工备注多此项）。
+
+    取 ONES 履约义务/项目记录任务负责人；缺失写「项目经理【缺失】」（不伪造）。
+    """
+    pm = (ref.pm or "").strip()
+    if not pm:
+        return "，项目经理【缺失】"
+    return "，项目经理：%s" % pm
+
+
 def _period_text(ref: RefProject, order: ProjectOrder) -> str:
     """授权/维保说明文本（Rex 批注口径）。
 
@@ -70,16 +81,24 @@ _FENG_GANG = "冯刚"
 _FRAMEWORK_CATEGORIES = {"框架合同", "框架合同订单/结算单"}
 
 
-def _pm_lead(order: ProjectOrder, pm: str = "") -> str:
-    """首段指派措辞（v1.1 C1，Rex 2026-11-19 拍板）。
+def _pm_lead(order: ProjectOrder, pm: str = "", assigner: str = "") -> str:
+    """首段指派措辞。
 
+    v1.2 C5（Rex 2026-11-20）：**按参考项目 PM 所属部门**区分指派人——
+    - 交付中心（项目管理部）序列 → 「请任立民安排项目经理」
+    - 区域/其他序列 → 「请冯刚安排项目经理」
+    指派人由调用方经企微通讯录判定后注入（渲染层保持纯函数，不触网）。
+
+    降级：assigner 为空（企微通讯录不可用 / PM 无部门）→ 回退 v1.1 C1：
     ① 区域负责人（OA 字段 qyfzr）= 冯刚 → 「请冯刚安排项目经理」
     ② 否则 PM 字段非空 → 「请<PM>负责」
-    ③ 否则 → 「请冯刚安排项目经理」（区域项目统一由冯刚分配）
+    ③ 否则 → 「请冯刚安排项目经理」
 
-    实证 8/8：885576/885673/885755（区域负责人=冯刚）→ 冯刚；
+    C1 实证 8/8：885576/885673/885755（区域负责人=冯刚）→ 冯刚；
     886404（PM 空）→ 冯刚；886314/886362/886368/886448（PM 非空且区域负责人≠冯刚）→ PM 本人。
     """
+    if (assigner or "").strip():
+        return "请%s安排项目经理" % assigner.strip()
     if (order.region_owner or "").strip() == _FENG_GANG:
         return "请冯刚安排项目经理"
     name = (pm or order.pm or "").strip()
@@ -127,13 +146,16 @@ def render_remark(
     pm: str = "",
     *,
     date_text: str = "",
+    assigner: str = "",
 ) -> str:
     """渲染可粘贴的三段式批注。
 
     Args:
         date_text: 注入日期（纯函数可测；空则不使用）。
+        assigner: v1.2 C5 指派人（任立民/冯刚），由调用方经企微通讯录判定后注入；
+                  空则回退 C1 口径（区域负责人/PM 字段）。
     """
-    lead = _pm_lead(order, pm)
+    lead = _pm_lead(order, pm, assigner)
     lines: List[str] = []
 
     # 首段：指派（范围词来自被参考项目类型；混合类型留空 → 只写「参考：」）
@@ -158,13 +180,15 @@ def render_remark(
         mixed = len({project_type(r.name) for r in refs}) > 1
         if len(refs) == 1 and not mixed:
             r = refs[0]
-            lines.append("%s（%s，%s）。" % (r.code, r.status_label, _period_text(r, order)))
+            lines.append("%s（%s，%s%s）。" % (
+                r.code, r.status_label, _period_text(r, order), _pm_text(r)))
         else:
             for i, r in enumerate(refs, 1):
                 tw = ("%s " % project_type(r.name)) if mixed else ""
                 period = _period_text(r, order) if (i == 1 or r.license_period) else ""
                 tail = "，%s" % period if period else ""
-                lines.append("%d. %s%s（%s%s）。" % (i, tw, r.code, r.status_label, tail))
+                lines.append("%d. %s%s（%s%s%s）。" % (
+                    i, tw, r.code, r.status_label, tail, _pm_text(r)))
 
     # 注：风险
     risk_txt = "\n".join("%s：%s" % (r.level, r.text) for r in risks if r.text)
@@ -183,19 +207,27 @@ def render_markdown(
     notes: Optional[Any] = None,
     pm: str = "",
     missing: Optional[Sequence[str]] = None,
+    assigner: str = "",
 ) -> str:
     """完整 Markdown 建议稿（正文 + 依据表 + 降级项）。"""
-    out: List[str] = ["## 批注建议", "", "```", render_remark(order, refs, risks, pm), "```", ""]
+    out: List[str] = ["## 批注建议", "", "```",
+                      render_remark(order, refs, risks, pm, assigner=assigner), "```", ""]
     out.append("## 参考项目依据")
     out.append("")
     if refs:
-        out.append("| 编号 | 项目 | 状态 | 推断依据 | 授权/维保 | 证据 | 来源 |")
-        out.append("|---|---|---|---|---|---|---|")
+        out.append("| 编号 | 项目 | 状态 | 推断依据 | 授权/维保 | 证据 | 参考项目PM | 来源 |")
+        out.append("|---|---|---|---|---|---|---|---|")
         for r in refs:
-            out.append("| %s | %s | %s | %s | %s | #%s | %s |" % (
+            out.append("| %s | %s | %s | %s | %s | #%s | %s | %s |" % (
                 r.code, r.name, r.status_label, r.status_basis,
                 r.license_period or "【缺失】", r.license_task or "—",
+                r.pm or "【缺失】",
                 "OA 项目编号" if r.source == "direct" else "名称候选（需人工确认）"))
+        pm_missing = [r.code for r in refs if not (r.pm or "").strip()]
+        if pm_missing:
+            out.append("")
+            out.append("> 参考项目 PM 未取到：%s（ONES 履约义务/项目记录无负责人，需人工确认）"
+                       % "、".join(pm_missing))
     else:
         out.append("无（ONES 未匹配）。")
     out.append("")

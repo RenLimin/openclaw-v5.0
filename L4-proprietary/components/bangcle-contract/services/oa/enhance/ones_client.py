@@ -72,6 +72,54 @@ def project_status(uuid: str) -> str:
     )
 
 
+def project_pm(uuid: str) -> tuple[str, str]:
+    """参考项目对应项目经理（Rex 2026-11-20 口径：履约义务/项目记录对应的负责人）。
+
+    ONES 项目对象 owner 恒为「管理员」（无 PM 语义）；任务 ``_2jEz2XG9`` 实测全空。
+    实测可用字段：任务 ``owner`` 与 ``assign``。取数优先级：
+      ① 履约义务（issueType=项目履约义务）任务的 owner/assign
+      ② 项目记录类（项目信息/项目管理）任务的 owner/assign
+    同一项目多人时取出现次数最多者（并列取字典序），并记录依据。
+    返回 (姓名, 依据)；无则 ("", "")，不伪造。
+    """
+    mod = _load()
+    q = ('query { tasks(filter:{project_in:["%s"]}) { name owner{name} assign{name} '
+         'issueType{name} } }' % uuid)
+    r = mod.gql(q)
+    tasks = (r.get("data") or {}).get("tasks") or []
+    if not tasks:
+        return "", ""
+    from collections import Counter
+    ob_c = Counter()
+    rec_c = Counter()
+
+    def _pick(persons: Counter) -> str:
+        persons.pop("", None)
+        persons.pop("管理员", None)
+        persons.pop("流程自动化", None)
+        if not persons:
+            return ""
+        top = max(persons.values())
+        return sorted(k for k, v in persons.items() if v == top)[0]
+
+    for t in tasks:
+        it = (t.get("issueType") or {}).get("name") or ""
+        who = (t.get("assign") or {}).get("name") or (t.get("owner") or {}).get("name") or ""
+        if not who or who in ("管理员", "流程自动化"):
+            continue
+        if it == "项目履约义务":
+            ob_c[who] += 1
+        elif it in ("项目信息", "项目管理", "项目记录"):
+            rec_c[who] += 1
+    if ob_c:
+        return _pick(ob_c), "履约义务任务负责人（%s）" % "、".join(
+            "%s×%d" % (k, v) for k, v in ob_c.most_common())
+    if rec_c:
+        return _pick(rec_c), "项目记录任务负责人（%s）" % "、".join(
+            "%s×%d" % (k, v) for k, v in rec_c.most_common())
+    return "", ""
+
+
 def raw_dir() -> Path:
     """ONES 复用脚本的默认 raw 目录。"""
     return _load().RAW_DEFAULT

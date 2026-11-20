@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-20 13:48 UTC+08:00
+最后生成：2026-11-20 15:01 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -77,6 +77,7 @@
 | L4 专有业务 | `ones-browser-export` | ONES 数据获取：浏览器自动化导出 CSV + GraphQL API 查询。支持签约项目统计/POC统计/异常处置等视图导出，以及... | `L4-proprietary/skills/ones-browser-export` |
 | L4 专有业务 | `product-kb` | Bangcle 产品知识库 — 产品信息查询、合同标的匹配、文档知识检索；OA 产品中心文档自动增量同步（水位过滤/一键编排） | `L4-proprietary/skills/product-kb` |
 | L4 专有业务 | `product-manager-expert` | Bangcle 产品管理专家 — L4 层 Bangcle 产品相关的统一入口。产品咨询解答、跨产品组合方案、产品知识库检准与维护、O... | `L4-proprietary/skills/product-manager-expert` |
+| L4 专有业务 | `wecomcli-contact` | 企业微信通讯录查询：按姓名/关键词检索成员及其所属部门（QueryUserOpenUserInfo.departments），用于判定... | `L4-proprietary/skills/wecomcli-contact` |
 | L3 通用业务 | `bangcle-customer-profile` | Bangcle 客户画像分析：业务目标是制定客户画像，基于项目工作项/评论/附件与知识库，输出客户画像，重点为客户环境（云/OS/CP... | `L3-business/skills/bangcle-customer-profile` |
 | L3 通用业务 | `bangcle-obligation-summary` | Bangcle 项目履约义务汇总：业务目标是为指定的项目经理服务，参考历史项目的交付情况，按最终用户/客户检索全部项目履约义务工作项，... | `L3-business/skills/bangcle-obligation-summary` |
 | L3 通用业务 | `bangcle-project-report` | Bangcle 项目汇报材料生成：输入「客户 + 周期 + 受众」，从 ONES/合同台账取数，经完整取数→口径清洗→多维汇总→目标闭... | `L3-business/skills/bangcle-project-report` |
@@ -94,7 +95,7 @@
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
+_自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -293,8 +294,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `7c2c1f2` |
-| Commit 数 | 739 |
+| HEAD | `4751718` |
+| Commit 数 | 742 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -353,7 +354,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
-| `bangcle-contract` | 109 | 17 | 3 | `L4-proprietary/components/bangcle-contract` |
+| `bangcle-contract` | 110 | 17 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
 | `bdms` | 216 | 12 | 29 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
@@ -453,7 +454,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 > 维护：`L2-infra/components/config/capability-registry/registry.yaml`
 > 门禁：pre-commit `--check --staged`（重复家族脚本命中即阻断并指出权威入口）
 
-**共 81 项能力**（更新于 2026-11-20）
+**共 82 项能力**（更新于 2026-11-20）
 
 | 能力 ID | 名称 | 层 | 权威入口 |
 |---|---|---|---|
@@ -536,6 +537,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `skill-customer-delivery-intelligence` | 客户交付智能（skill，统一入口） | L4 | `L4-proprietary/skills/customer-delivery-intelligence/SKILL.md` |
 | `skill-fin-l4` | 家庭理财 FIN-L4（skill） | L4 | `L4-proprietary/skills/fin-l4/SKILL.md` |
 | `skill-ones-browser-export` | ONES 浏览器导出（skill） | L4 | `L4-proprietary/skills/ones-browser-export/SKILL.md` |
+| `skill-wecomcli-contact` | 企业微信通讯录查询（skill） | L4 | `python3 L4-proprietary/skills/wecomcli-contact/scripts/wecom_contact.py --name <姓名>` |
 | `skill-product-kb` | 产品知识库（skill） | L4 | `L4-proprietary/skills/product-kb/SKILL.md` |
 | `skill-product-manager-expert` | 产品管理专家（skill，统一入口） | L4 | `L4-proprietary/skills/product-manager-expert/SKILL.md` |
 
