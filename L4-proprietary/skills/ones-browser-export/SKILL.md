@@ -154,6 +154,9 @@ curl -X POST "https://ones.bangcle.com/project/api/project/auth/login" \
 
 ## 知识库引用
 - 工作前先搜知识库：`python3 L2-infra/components/knowledge-base/kb_index.py --query ...`
+- **能力注册表（防重复建设）**：动手前先查
+  `python3 L2-infra/components/config/capability-registry/capability_registry.py --query ones`
+  本 skill 的权威能力 = `ones-export` / `ones-auth` / `oa-workflow-ones`。**禁止另写 ONES 导出/登录脚本**（pre-commit 会拦截）。
 
 ---
 

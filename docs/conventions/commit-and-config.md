@@ -135,8 +135,12 @@ python3 scripts/snapshot_config.py --diff     # 显示当前配置与上次快�
 □ 推翻旧结论时已标注 supersedes / superseded_by
 □ commit message 符合 §1 规范
 □ 无凭据泄漏（`bash scripts/config.sh scan`）
+□ GitHub 凭据链路自检（push 前，见 §5）— `bash L2-infra/components/credentials/credentials.sh github-sync --check`
 □ 建设类交付：已实测验证 → 直接 commit + push（§1.5 授权）
 ```
+
+> **凭据自检必做**：曾反复出现「push 时才发现 gh 未登录 / token 失效」，浪费整轮。
+> push 前跑一次 `github-sync --check`，异常先修（§5），不要带着坏凭据去 push。
 
 ## 4. 凭据存储与 Git 提交（安全红线）
 
@@ -201,6 +205,33 @@ python3 L2-infra/components/config/secret-scan/secret_scan.py --allow-pattern '^
 - 资产清单自动更新：`.git/hooks/pre-commit`（见 `scripts/install-hooks.sh`）
 - 凭据管理：`ADR-202608-005`、`scripts/credentials.sh`
 - 配置踩坑：`EXP-20260821-003`（配置被覆盖）、`EXP-20260822-004`（实测优于文档）
+
+## 6. GitHub 凭据链路（2026-11-20 固化）
+
+> 事故：2026-11-19 起反复出现「push/gh 要求重新登录」。根因是三条凭据链路互不覆盖、无自检（详见
+> `EXP-20260821-002` + `L2-infra/components/credentials/github_credential_sync.py` 头部注释）。
+
+**单一事实来源（SSOT）**：`~/.openclaw/secrets/github.token`（chmod 600，无尾换行）
+**派生目标**：`~/.config/gh/hosts.yml`（gh CLI 读取，chmod 600）
+
+```bash
+# push 前自检（只读，不写）
+bash L2-infra/components/credentials/credentials.sh github-sync --check
+
+# 修复（幂等同步 SSOT → gh 配置，并实测 gh api）
+bash L2-infra/components/credentials/credentials.sh github-sync
+```
+
+- Never 依赖裸 `gh auth login`（交互，定时/隔离环境必卡）
+- Never 直接把 keychain `gh:github.com` 的值当 token（是 `go-keyring-base64:` 包装，需剥壳）
+- Never 把 token 写进 `.git/config` remote URL 或 `~/.git-credentials`
+- Always 换机/换 clone 后先跑 `github-sync`，再 push
+
+## 7. 变更历史
+
+- 2026-08-22: 创建。起因是 compaction 配置静默丢失事故 + Rex 要求统一 commit 规则
+- 2026-10-28: 新增 §4 凭据存储与提交规范（filter-repo 清历史后建立防泄密机制）
+- 2026-11-20: 新增 §6 GitHub 凭据链路（SSOT + 自检脚本 + push 前检查）
 
 ## 6. 变更历史
 

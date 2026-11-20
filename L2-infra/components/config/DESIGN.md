@@ -114,10 +114,16 @@ config/
 
 ```
 pre-commit
+  ├─ 0. 明文凭据扫描 → 命中即阻断
   ├─ 1. 重生成资产清单 → 有变化自动 git add
   ├─ 2. 检查配置快照 → 仅提醒（不阻塞）
-  └─ 3. 知识库 schema 校验 → 阻塞性错误拒绝提交
+  ├─ 3. 知识库 schema 校验 → 阻塞性错误拒绝提交
+  ├─ 4. 应答契约黄金基准 → 仅 prompts/ 改动时触发
+  └─ 5. 防重复建设门禁（capability_registry --check --staged）→ 拦新建重复家族脚本
 ```
+
+> 步 5 于 2026-11-20 新增：能力注册表拦截重复建设（OA/ONES 导出、登录、诊断类），
+> 设计见 `capability-registry/DESIGN.md`。
 
 ## 4. 接口与用法
 

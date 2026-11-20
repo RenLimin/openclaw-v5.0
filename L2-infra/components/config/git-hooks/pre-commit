@@ -8,7 +8,8 @@
 #   2. 检查 ~/.openclaw/openclaw.json 是否有未快照的变更, 仅提醒
 #   3. 知识库 schema 校验 + INDEX.md 派生小节同步 (ADR-003 阶段 2)
 #   4. 应答契约黄金基准 —— 仅当 prompts/ 下 spec/校验器/测试被改动时触发 (ADR-035 P1 §10)
-#   1/2 不阻塞; 0/3/4 命中阻塞性错误时阻塞提交
+#   5. 防重复建设门禁 —— 新建脚本命中重复家族即阻断, 并指出能力注册表中的权威入口
+#   1/2 不阻塞; 0/3/4/5 命中阻塞性错误时阻塞提交
 
 set -euo pipefail
 
@@ -96,6 +97,23 @@ if [ -f "$CONTRACT_SUITE" ]; then
             exit 1
         fi
     fi
+fi
+
+# --- 5. 防重复建设门禁 (能力注册表) ---
+# 背景: 2026-11 反复出现「OA/ONES 浏览器自动化重复造脚本」(单目录 15+ 同族变体)。
+# 根因是能力不可发现 + 无前置门禁。此处拦截**新增**的重复家族脚本, 并给出权威入口;
+# 已在仓库的历史脚本不翻旧账 (由 system-governor P6 扫归位)。
+REGISTRY="L2-infra/components/config/capability-registry/capability_registry.py"
+if [ -f "$REGISTRY" ]; then
+    if ! python3 "$REGISTRY" --check --staged; then
+        echo ""
+        echo "❌ pre-commit 拦截: 检测到重复建设嫌疑脚本"
+        echo "    这些能力已建成, 请复用权威入口 (见上方 '改用:' 提示)。"
+        echo "    动手前先查: python3 $REGISTRY --query <关键词>"
+        echo "    确需新建: 先补 registry.yaml 条目 (含 entry/notes), 或登记到 allow 并写明理由。"
+        exit 1
+    fi
+    echo "✅ 防重复建设检查通过"
 fi
 
 exit 0

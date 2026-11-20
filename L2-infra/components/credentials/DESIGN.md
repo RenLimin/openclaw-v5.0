@@ -106,6 +106,23 @@
 
 **安全保证**：全程不打印凭据原文，仅输出 SHA-256 前 8 字符。
 
+### 4.4 github_credential_sync.py — GitHub 凭据链路同步
+
+**背景**：GitHub 凭据曾同时存在三条互不覆盖的链路（keychain 包装格式 / repo-local git helper / 环境变量），
+且无自检 → 新会话反复要求重新登录。
+
+**SSOT**：`~/.openclaw/secrets/github.token`（600，无尾换行）
+**派生目标**：`~/.config/gh/hosts.yml`（gh CLI 读取，600）
+
+| 命令 | 说明 |
+|---|---|
+| `credentials.sh github-sync` | 幂等同步 SSOT → gh 配置，并实测 `gh auth status` + `gh api user` |
+| `credentials.sh github-sync --check` | 只自检不写（push 前用） |
+
+**测试**：`tests/test_github_credential_sync.py`（9 用例：权限拒收 / 幂等 / 权限 600/700 / 只读模式 / 绝对路径解析）
+
+**设计约束**：永不打印 token 原文（只长度/前缀/SHA-8）；权限不符即拒同步；gh 绝对路径兜底。
+
 ## 5. 检测模式对照
 
 | 模式 | 文件 | 场景 |
@@ -159,3 +176,4 @@
 | 2026-08 | scan_secrets.sh 首版（14 类模式，staged/range 双模式） |
 | 2026-08 | cred_scan.py 首版（递归 JSON 扫描，SHA-8 摘要输出） |
 | 2026-09-11 | 编写 DESIGN.md |
+| 2026-11-20 | 新增 `github_credential_sync.py`（SSOT + gh 同步 + 自检）+ `credentials.sh github-sync` 子命令 |

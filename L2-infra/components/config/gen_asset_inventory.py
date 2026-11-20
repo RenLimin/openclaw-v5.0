@@ -661,6 +661,7 @@ def build_document(data: dict) -> str:
 
     lines += render_components()
     lines += render_l3_l4()
+    lines += render_capability_registry()
     return "\n".join(lines) + "\n"
 
 
@@ -830,6 +831,63 @@ def render_l3_l4() -> list:
         "> 演进路线见 [架构文档 §6 演进路线](./00-system-architecture.md#6-演进路线)。",
         "",
     ]
+    return lines
+
+
+# --------------------------------------------------------------------------
+# 能力注册表（防重复建设）
+# --------------------------------------------------------------------------
+
+REGISTRY_DIR = REPO_ROOT / "L2-infra" / "components" / "config" / "capability-registry"
+
+
+def render_capability_registry() -> list[str]:
+    """渲染能力注册表（capability-registry/registry.yaml）→ 能力级可发现性。
+
+    背景：旧清单只有组件级粒度，脚本级能力查不到，导致 agent 误判「能力缺失」
+    而重复建设（bdms/scripts 下 15+ 个 ONES/OA 导出同族变体）。
+    本节把「能力 → 权威入口」直接列进资产清单。
+    """
+    import yaml  # 延迟导入；无 yaml 时降级提示（不静默）
+
+    registry = REGISTRY_DIR / "registry.yaml"
+    lines = ["---", "", "## 能力注册表（Capability Registry）", "",
+             "已建能力的**唯一权威索引**。动手前必须先查：",
+             "```bash",
+             "python3 L2-infra/components/config/capability-registry/capability_registry.py --query <关键词>",
+             "```",
+             "",
+             "> 维护：`L2-infra/components/config/capability-registry/registry.yaml`",
+             "> 门禁：pre-commit `--check --staged`（重复家族脚本命中即阻断并指出权威入口）", ""]
+
+    if not registry.is_file():
+        lines += [f"⚠️ 注册表不可用：{registry}", ""]
+        return lines
+
+    try:
+        raw = yaml.safe_load(registry.read_text(encoding="utf-8")) or {}
+    except Exception as exc:  # 解析失败显式报错，不静默
+        lines += [f"⚠️ 注册表解析失败：{exc}", ""]
+        return lines
+
+    caps = raw.get("capabilities", [])
+    if not caps:
+        lines += ["（注册表为空）", ""]
+        return lines
+
+    lines.append(f"**共 {len(caps)} 项能力**（更新于 {raw.get('updated', '?')}）")
+    lines.append("")
+    lines.append("| 能力 ID | 名称 | 层 | 权威入口 |")
+    lines.append("|---|---|---|---|")
+    for c in caps:
+        entry = c.get("entry") or []
+        first = entry[0] if entry else "—"
+        if len(first) > 96:
+            first = first[:93] + "..."
+        first = first.replace("|", "\\|")
+        name = str(c.get("name", "")).replace("|", "\\|")
+        lines.append(f"| `{c.get('id', '?')}` | {name} | {c.get('layer', '?')} | `{first}` |")
+    lines.append("")
     return lines
 
 

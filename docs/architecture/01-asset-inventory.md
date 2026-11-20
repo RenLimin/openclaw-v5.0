@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-19 16:14 UTC+08:00
+最后生成：2026-11-20 10:59 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -293,8 +293,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `5680742` |
-| Commit 数 | 729 |
+| HEAD | `b1af3f3` |
+| Commit 数 | 733 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -310,10 +310,10 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | `ai-knowledge-base` | 93 | 29 | 13 | `L2-infra/components/ai-knowledge-base` |
 | `backup` | 0 | 0 | 0 | `L2-infra/components/backup` |
 | `browser-automation` | 0 | 0 | 0 | `L2-infra/components/browser-automation` |
-| `config` | 7 | 0 | 3 | `L2-infra/components/config` |
+| `config` | 9 | 0 | 4 | `L2-infra/components/config` |
 | `context-guardian` | 0 | 0 | 0 | `L2-infra/components/context-guardian` |
 | `context-management` | 5 | 0 | 1 | `L2-infra/components/context-management` |
-| `credentials` | 3 | 0 | 1 | `L2-infra/components/credentials` |
+| `credentials` | 5 | 0 | 2 | `L2-infra/components/credentials` |
 | `delivery-quality` | 2 | 0 | 0 | `L2-infra/components/delivery-quality` |
 | `gateway-safety` | 4 | 0 | 1 | `L2-infra/components/gateway-safety` |
 | `knowledge-base` | 19 | 0 | 6 | `L2-infra/components/knowledge-base` |
@@ -355,7 +355,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
 | `bangcle-contract` | 109 | 17 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 216 | 11 | 29 | `L4-proprietary/components/bdms` |
+| `bdms` | 216 | 12 | 29 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |
@@ -438,4 +438,31 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 回滚 | `backups/pre-rebuild-20261101/`（重建前完整前端快照）；`data/backups/`（DB 周期备份） |
 
 > 演进路线见 [架构文档 §6 演进路线](./00-system-architecture.md#6-演进路线)。
+
+---
+
+## 能力注册表（Capability Registry）
+
+已建能力的**唯一权威索引**。动手前必须先查：
+```bash
+python3 L2-infra/components/config/capability-registry/capability_registry.py --query <关键词>
+```
+
+> 维护：`L2-infra/components/config/capability-registry/registry.yaml`
+> 门禁：pre-commit `--check --staged`（重复家族脚本命中即阻断并指出权威入口）
+
+**共 10 项能力**（更新于 2026-11-20）
+
+| 能力 ID | 名称 | 层 | 权威入口 |
+|---|---|---|---|
+| `oa-session` | OA 会话建立与复用 | L4 | `python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-login` |
+| `oa-contract-fetch` | OA 合同原文/附件拉取 | L4 | `python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-fetch --oa-billid <id>` |
+| `oa-ledger-export` | OA 合同台账导出 | L4 | `delivery_center.v1.collectors.oa_collector::collect_contract_ledger_chrome(month)` |
+| `oa-workflow-ones` | OA 工作流 → ONES 字段导出 | L4 | `python3 L4-proprietary/skills/ones-browser-export/scripts/oa_workflow_ones.py --code <OA编码>` |
+| `oa-todo-dist` | OA 待办分发 | L4 | `python3 L4-proprietary/skills/ones-browser-export/scripts/oa_todo_dist.py --save` |
+| `oa-project-mgmt` | OA 项目实施管理批注（只读） | L4 | `python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-project-mgmt --reque...` |
+| `ones-export` | ONES 项目数据导出 | L4 | `delivery_center.v1.collectors.ones_collector::collect(filter_name)` |
+| `ones-auth` | ONES 认证（cookie 复用 + IAM 取码） | L4 | `delivery_center.v1.collectors.iam_auth::get_cookie/set_cookie/is_cookie_valid` |
+| `browser-isolated-chrome` | 隔离 Chrome 实例（专用 profile + CDP 端口） | L2 | `~/.openclaw/data/chrome-profiles/oa-live + CDP http://127.0.0.1:9333` |
+| `github-credential` | GitHub 凭据链路与自检 | L2 | `python3 L2-infra/components/credentials/github_credential_sync.py` |
 

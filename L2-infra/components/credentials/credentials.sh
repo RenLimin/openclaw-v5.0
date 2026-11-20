@@ -8,6 +8,7 @@
 #   bash scripts/credentials.sh revoke <service>          # 撤销凭据
 #   bash scripts/credentials.sh audit                     # 审计所有凭据
 #   bash scripts/credentials.sh check                     # 权限检查
+#   bash scripts/credentials.sh github-sync               # 同步 GitHub 凭据链路 + 自检
 #
 # 参考: docs/architecture/components/credentials/DESIGN.md
 # ADR: docs/knowledge-base/by-category/project-experience/adr/ADR-202608-005-credential-management.md
@@ -228,6 +229,18 @@ cmd_check() {
 }
 
 # --------------------------------------------------------------------------
+# GitHub 凭据链路同步（SSOT: ~/.openclaw/secrets/github.token）
+# --------------------------------------------------------------------------
+cmd_github_sync() {
+    local script="${REPO_ROOT}/L2-infra/components/credentials/github_credential_sync.py"
+    if [[ ! -f "$script" ]]; then
+        log_err "未找到同步脚本: $script"
+        return 1
+    fi
+    python3 "$script" "$@"
+}
+
+# --------------------------------------------------------------------------
 # 主入口
 # --------------------------------------------------------------------------
 case "${1:-}" in
@@ -236,14 +249,16 @@ case "${1:-}" in
     revoke) shift; cmd_revoke "$@" ;;
     audit)  cmd_audit ;;
     check)  cmd_check ;;
+    github-sync) shift; cmd_github_sync "$@" ;;
     *)
-        echo "用法: $0 {add|rotate|revoke|audit|check} [args]"
+        echo "用法: $0 {add|rotate|revoke|audit|check|github-sync} [args]"
         echo ""
         echo "  add <service> <type>   — 接入新凭据"
         echo "  rotate <service>       — 轮换凭据"
         echo "  revoke <service>       — 撤销凭据"
         echo "  audit                  — 审计所有凭据"
         echo "  check                  — 权限检查（轻量）"
+        echo "  github-sync [--check]  — 同步 GitHub 凭据链路 + 自检"
         exit 1
         ;;
 esac
