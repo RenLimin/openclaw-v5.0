@@ -1,0 +1,336 @@
+#!/usr/bin/env python3
+"""能力注册表引擎 — 查询已建能力 + 防重复建设门禁。
+
+定位：让**任何会话**动手前先查到「能力是否已建成、权威入口在哪」。
+配套数据：`registry.yaml`（唯一权威索引，人工维护）。
+
+用法:
+    # 可发现性
+    capability_registry.py --query ones
+    capability_registry.py --query oa
+    capability_registry.py --list
+    capability_registry.py --json
+    capability_registry.py --explain <capability_id>
+
+    # 门禁（扫描新增/改动脚本，判定是否重复建设）
+    capability_registry.py --check                      # 扫工作树改动
+    capability_registry.py --check --staged             # 只扫暂存区（pre-commit 用）
+    capability_registry.py --check --all                # 扫全部高危目录
+
+设计约束:
+  - 只读注册表；门禁只报告不自动改文件
+  - 判定依据：文件名家族正则 + supersedes 路径 + 同名脚本
+  - 命中即指出**权威入口**，让 agent 有路可走（不是只报错）
+  - 白名单 allow 显式登记，避免误伤一次性合法脚本
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import subprocess
+import sys
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
+
+import yaml
+
+# 本文件在 L2-infra/components/config/capability-registry/ 下 → 需上溯 5 层到仓库根
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
+REGISTRY = Path(__file__).resolve().parent / "registry.yaml"
+
+
+# -----------------------------------------------------------
+
+@dataclass
+class Capability:
+    id: str
+    name: str
+    layer: str
+    interfaces: list[str] = field(default_factory=list)
+    entry: list[str] = field(default_factory=list)
+    notes: str = ""
+    supersedes: list[str] = field(default_factory=list)
+    ssot: str = ""
+    state_file: str = ""
+    cdp: str = ""
+    profile: str = ""
+    auth: str = ""
+
+
+@dataclass
+class Registry:
+    version: int
+    updated: str
+    high_risk_dirs: list[str]
+    duplicate_family_patterns: list[str]
+    capabilities: list[Capability]
+    allow: list[dict]
+
+
+def load_registry(path: Path = REGISTRY) -> Registry:
+    if not path.is_file():
+        sys.exit(f"注册表不存在: {path}")
+    raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    caps = [Capability(**{k: v for k, v in c.items() if k in Capability.__dataclass_fields__})
+            for c in raw.get("capabilities", [])]
+    return Registry(
+        version=int(raw.get("version", 0)),
+        updated=str(raw.get("updated", "")),
+        high_risk_dirs=list(raw.get("high_risk_dirs", [])),
+        duplicate_family_patterns=list(raw.get("duplicate_family_patterns", [])),
+        capabilities=caps,
+        allow=list(raw.get("allow", [])),
+    )
+
+
+# -----------------------------------------------------------
+
+def match_score(cap: Capability, term: str) -> int:
+    """粗排打分：命中 id/name/interfaces/notes。"""
+    t = term.lower().strip()
+    if not t:
+        return 0
+    score = 0
+    if t == cap.id.lower():
+        score += 100
+    elif cap.id.lower().startswith(t):
+        score += 60
+    elif t in cap.id.lower():
+        score += 50
+    if t in cap.name.lower():
+        score += 40
+    for iface in cap.interfaces:
+        if t == iface.lower():
+            score += 30
+        elif t in iface.lower():
+            score += 10
+    if t in cap.notes.lower():
+        score += 5
+    # 下划线/连字符归一（ones_export ↔ ones export）
+    norm = re.sub(r"[-_]", " ", t)
+    if norm and norm in cap.name.lower():
+        score += 20
+    return score
+
+
+def query(reg: Registry, term: str) -> list[tuple[int, Capability]]:
+    scored = [(match_score(c, term), c) for c in reg.capabilities]
+    return sorted([x for x in scored if x[0] > 0], key=lambda x: -x[0])
+
+
+def render_cap(cap: Capability, verbose: bool = False) -> str:
+    lines = [f"[{cap.layer}] {cap.id} — {cap.name}"]
+    for e in cap.entry:
+        lines.append(f"    入口: {e}")
+    if cap.ssot:
+        lines.append(f"    SSOT: {cap.ssot}")
+    if cap.state_file:
+        lines.append(f"    状态: {cap.state_file}")
+    if cap.cdp:
+        lines.append(f"    CDP:  {cap.cdp}  profile: {cap.profile}")
+    if verbose and cap.notes:
+        lines.append(f"    说明: {cap.notes}")
+    if verbose and cap.supersedes:
+        lines.append(f"    已取代: {', '.join(Path(p).name for p in cap.supersedes)}")
+    return "\n".join(lines)
+
+
+# -----------------------------------------------------------
+
+def _git_changed_files(staged: bool = False) -> list[str]:
+    """取改动文件（相对仓库根）。staged=True 取暂存区。"""
+    args = ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"] if staged else \
+           ["git", "diff", "HEAD", "--name-only", "--diff-filter=ACMR"]
+    try:
+        out = subprocess.run(args, cwd=REPO_ROOT, capture_output=True, text=True, timeout=60)
+    except (subprocess.TimeoutExpired, OSError):
+        return []
+    if out.returncode != 0:
+        return []
+    return [ln for ln in out.stdout.splitlines() if ln.strip()]
+
+
+def _scan_all_files(reg: Registry) -> list[str]:
+    """扫高危目录下所有 .py。"""
+    files: list[str] = []
+    for rel in reg.high_risk_dirs:
+        base = REPO_ROOT / rel
+        if not base.is_dir():
+            continue
+        files += [str(p.relative_to(REPO_ROOT)) for p in base.rglob("*.py")]
+    return sorted(files)
+
+
+def _is_allowed(reg: Registry, rel: str) -> str | None:
+    for item in reg.allow:
+        if str(item.get("path", "")) == rel:
+            return str(item.get("reason", ""))
+    return None
+
+
+def detect_duplicates(reg: Registry, files: list[str]) -> list[dict]:
+    """判定重复建设嫌疑。返回 [{file, reason, suggestion}]。"""
+    patterns = [re.compile(p, re.I) for p in reg.duplicate_family_patterns]
+    hits: list[dict] = []
+    for rel in files:
+        name = Path(rel).name
+        reason = ""
+        suggestion = ""
+        for pat in patterns:
+            if pat.search(name):
+                reason = f"命中重复家族正则 `{pat.pattern}`"
+                break
+        if not reason:
+            continue
+        # 找最贴切的能力 → 给出权威入口
+        stem = re.sub(r"^\d{6}[-_]?", "", name)
+        term = re.sub(r"\.py$", "", stem)
+        term = re.sub(r"^(re_?export|export|refetch|auto_refetch|diag|login|selftest)_?", "", term)
+        # 剥日期/版本尾缀（_202609 / _2026_09 / _v2 / _20260920）
+        term = re.sub(r"[_-]?(\d{4}[_-]?\d{2}|\d{6,8}|v\d+)$", "", term)
+        term = re.sub(r"[_-]+(all|fixed|with_reset|missing|poc_abnormal|single|abnormal_osascript)$", "", term)
+        term = term.strip("_- ")
+        best = query(reg, term)
+        if not best:
+            # 回退 1：用原始 stem 再试（保留信息）
+            best = query(reg, re.sub(r"\.py$", "", stem))
+        if not best:
+            # 回退 2：从原始文件名抽关键词（ones / iam / oa / sso / browser）
+            keywords = [k for k in ("iam", "ones", "oa", "sso", "browser", "todo", "ledger")
+                         if k in name.lower()]
+            for kw in keywords:
+                cand = query(reg, kw)
+                if cand:
+                    best = cand
+                    break
+        if best:
+            cap = best[0][1]
+            suggestion = f"{cap.id}: {cap.entry[0] if cap.entry else '(见注册表)'}"
+        allowed = _is_allowed(reg, rel)
+        hits.append({
+            "file": rel,
+            "reason": reason,
+            "suggestion": suggestion,
+            "allowed": allowed,
+        })
+    return hits
+
+
+# -----------------------------------------------------------
+
+def cmd_query(args, reg: Registry) -> int:
+    results = query(reg, args.query)
+    if not results:
+        print(f"未命中能力: {args.query}")
+        print("提示: 先跑 `--list` 看全量；确认能力缺失后才允许新建。")
+        return 1
+    print(f"命中 {len(results)} 个能力 — {args.query}")
+    print()
+    for score, cap in results:
+        print(render_cap(cap, verbose=args.verbose))
+        print()
+    return 0
+
+
+def cmd_list(args, reg: Registry) -> int:
+    print(f"能力注册表 v{reg.version}（{reg.updated}）— 共 {len(reg.capabilities)} 项")
+    print()
+    by_layer: dict[str, list[Capability]] = {}
+    for c in reg.capabilities:
+        by_layer.setdefault(c.layer, []).append(c)
+    for layer in sorted(by_layer):
+        print(f"### {layer}")
+        for c in by_layer[layer]:
+            print(f"- `{c.id}` — {c.name}")
+            if args.verbose and c.entry:
+                print(f"    {c.entry[0]}")
+        print()
+    return 0
+
+
+def cmd_explain(args, reg: Registry) -> int:
+    for c in reg.capabilities:
+        if c.id == args.id:
+            print(render_cap(c, verbose=True))
+            return 0
+    print(f"未知能力 id: {args.id}")
+    return 1
+
+
+def cmd_check(args, reg: Registry) -> int:
+    if args.staged:
+        files = _git_changed_files(staged=True)
+        mode = "staged"
+    elif args.all:
+        files = _scan_all_files(reg)
+        mode = "all"
+    else:
+        files = _git_changed_files(staged=False)
+        mode = "working-tree"
+
+    files = [f for f in files if f.endswith(".py")]
+    hits = detect_duplicates(reg, files)
+    blocked = [h for h in hits if not h["allowed"]]
+    allowed_hits = [h for h in hits if h["allowed"]]
+
+    if not hits:
+        print(f"✅ 防重复建设检查通过（扫描 {len(files)} 个 .py，模式={mode}）")
+        return 0
+
+    print(f"⚠️  防重复建设检查（模式={mode}，扫描 {len(files)} 个 .py）")
+    for h in blocked:
+        print(f"  ❌ {h['file']}")
+        print(f"     原因: {h['reason']}")
+        if h["suggestion"]:
+            print(f"     改用: {h['suggestion']}")
+    for h in allowed_hits:
+        print(f"  ℹ️  {h['file']}（白名单: {h['allowed']}）")
+    print()
+    if blocked:
+        print("处理方式: 复用上方权威入口；确需新建 → 先补 registry.yaml 条目，")
+        print("          或把该脚本登记到 allow 并写明理由。不要直接提交重复脚本。")
+        return 1
+    print("✅ 命中项均为白名单，放行。")
+    return 0
+
+
+# -----------------------------------------------------------
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="能力注册表：查询已建能力 + 防重复建设门禁")
+    ap.add_argument("--query", help="按关键词查能力（如 ones / oa / browser）")
+    ap.add_argument("--list", action="store_true", help="列出全部能力")
+    ap.add_argument("--explain", dest="id", help="查看单个能力详情")
+    ap.add_argument("--check", action="store_true", help="防重复建设检查")
+    ap.add_argument("--staged", action="store_true", help="只扫暂存区（配 pre-commit）")
+    ap.add_argument("--all", action="store_true", help="扫全部高危目录")
+    ap.add_argument("--verbose", "-v", action="store_true", help="显示说明/入口细节")
+    ap.add_argument("--json", action="store_true", help="结构化输出（--query/--list 时生效）")
+    args = ap.parse_args(argv)
+
+    reg = load_registry()
+
+    if args.query:
+        results = query(reg, args.query)
+        if args.json:
+            print(json.dumps([asdict(c) for _, c in results], ensure_ascii=False, indent=2))
+            return 0 if results else 1
+        return cmd_query(args, reg)
+    if args.list:
+        if args.json:
+            print(json.dumps([asdict(c) for c in reg.capabilities], ensure_ascii=False, indent=2))
+            return 0
+        return cmd_list(args, reg)
+    if args.id:
+        return cmd_explain(args, reg)
+    if args.check:
+        return cmd_check(args, reg)
+
+    ap.print_help()
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

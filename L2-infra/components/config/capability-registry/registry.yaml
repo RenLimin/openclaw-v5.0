@@ -1,0 +1,159 @@
+# 能力注册表 (Capability Registry) — 已建能力的唯一权威索引
+#
+# 目的：让**任何会话**在动手前能一键查到「这个能力是否已建成、权威入口在哪」，
+#       从机制上消除「重复建设」与「找不到已有能力」。
+#
+# 用途：
+#   1. 可发现性：`capability_registry.py --query ones` → 命中能力 + 权威入口
+#   2. 门禁：pre-commit 检测新建的「重复建设型」脚本 → 指向本表权威入口
+#   3. 渲染：gen_asset_inventory.py 输出到 docs/architecture/01-asset-inventory.md
+#
+# 维护约束：
+#   - 新增能力 → 先查本表（避免重复登记）；确实新建 → 同日补条目
+#   - 能力下线/迁移 → 更新 entry，保留 id（不删历史）
+#   - entry 必须是**可直接调用**的路径/命令，禁止写「见文档」这类不可执行指针
+
+version: 1
+updated: 2026-11-20
+
+# ── 重复建设高危目录（门禁扫描范围） ──
+high_risk_dirs:
+  - "L4-proprietary/components/bdms/scripts"
+  - "L4-proprietary/components/delivery-center/scripts"
+  - "tmp"
+
+# 重复家族文件名正则（新建即触发门禁，除非已登记在 allow）
+duplicate_family_patterns:
+  - '(re_?export|export|refetch|auto_refetch)[a-z0-9_]*ones'
+  - 'oa_export'
+  - '^(diag|login|selftest)_[a-z0-9_]*(iam|ones|oa|sso|browser)'
+  - 'oa_workflow_ones'
+  - 'oa_todo'
+
+capabilities:
+  # ══════════ OA 家族 ══════════
+  - id: oa-session
+    name: OA 会话建立与复用
+    layer: L4
+    interfaces: [oa, session, login, iam, cookie]
+    entry:
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-login"
+      - "L4-proprietary/components/delivery-center/src/delivery_center/v1/collectors/iam_auth.py::iam_credentials"
+    state_file: "~/.openclaw/data/clm-oa-recon/state.json"
+    notes: "会话过期会跳 iam.bangcle.com/#/login；复用既有 state.json，不要另写登录器"
+    supersedes: []
+
+  - id: oa-contract-fetch
+    name: OA 合同原文/附件拉取
+    layer: L4
+    interfaces: [oa, contract, fetch, cube]
+    entry:
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-fetch --oa-billid <id>"
+      - "L4-proprietary/components/bangcle-contract/services/oa::get_contract_with_fallback"
+    notes: "API 优先，浏览器兜底（CubeClient）；合同正文权威来源=OA，BDMS 摘要不可替代"
+    supersedes: []
+
+  - id: oa-ledger-export
+    name: OA 合同台账导出
+    layer: L4
+    interfaces: [oa, export, ledger, contract, browser]
+    entry:
+      - "delivery_center.v1.collectors.oa_collector::collect_contract_ledger_chrome(month)"
+    notes: "权威路径=真实 Chrome 导出（落 ~/.openclaw/data/oa_exports/）；headless 下导出按钮不触发，禁用 headless；勿用 /api/ec/dev/table/datas 分页（固定 300 行会漏）"
+    supersedes: []
+
+  - id: oa-workflow-ones
+    name: OA 工作流 → ONES 字段导出
+    layer: L4
+    interfaces: [oa, workflow, ones, export, graphql]
+    entry:
+      - "python3 L4-proprietary/skills/ones-browser-export/scripts/oa_workflow_ones.py --code <OA编码>"
+    cdp: "http://127.0.0.1:9333"
+    profile: "~/.openclaw/data/chrome-profiles/oa-live"
+    notes: "专用 CDP 通道 9333 + 专用 profile；字段映射 references/oa-workflow-fields.md"
+    supersedes: []
+
+  - id: oa-todo-dist
+    name: OA 待办分发
+    layer: L4
+    interfaces: [oa, todo, distribute]
+    entry:
+      - "python3 L4-proprietary/skills/ones-browser-export/scripts/oa_todo_dist.py --save"
+    notes: "落盘 tmp/oa-pif/full_todo_items.json"
+    supersedes: []
+
+  - id: oa-project-mgmt
+    name: OA 项目实施管理批注（只读）
+    layer: L4
+    interfaces: [oa, project-mgmt, approval]
+    entry:
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-project-mgmt --requestid <rid> --workflow wf_916|wf_815|wf_820"
+    notes: "只读；Rex 拍板：OA 销售合同审查仅提供建议，不做 OA 操作"
+    supersedes: []
+
+  # ══════════ ONES 家族 ══════════
+  - id: ones-export
+    name: ONES 项目数据导出
+    layer: L4
+    interfaces: [ones, export, filter, browser]
+    entry:
+      - "delivery_center.v1.collectors.ones_collector::collect(filter_name)"
+      - "delivery_center.v1.collectors.ones_export_auto::run_js/open_ones_page/click_export_item"
+    auth: "~/.openclaw/data/oa_exports/ones_auth.json"
+    notes: "筛选器：2026周报-签约项目统计 / POC&提前实施统计 / 签约项目异常处置"
+    supersedes:
+      - "L4-proprietary/components/bdms/scripts/export_ones_202609.py"
+      - "L4-proprietary/components/bdms/scripts/ones_export_202609.py"
+      - "L4-proprietary/components/bdms/scripts/re_export_ones_202610.py"
+      - "L4-proprietary/components/bdms/scripts/reexport_ones_all_202609.py"
+      - "L4-proprietary/components/bdms/scripts/reexport_ones_all_fixed_202609.py"
+      - "L4-proprietary/components/bdms/scripts/reexport_ones_all_with_reset_202609.py"
+      - "L4-proprietary/components/bdms/scripts/refetch_ones_202606.py"
+      - "L4-proprietary/components/bdms/scripts/auto_refetch_ones_202606.py"
+
+  - id: ones-auth
+    name: ONES 认证（cookie 复用 + IAM 取码）
+    layer: L4
+    interfaces: [ones, auth, iam, cookie]
+    entry:
+      - "delivery_center.v1.collectors.iam_auth::get_cookie/set_cookie/is_cookie_valid"
+    notes: "二步验证走 IMAP 取 6 位邮箱码（imb@bangcle.com，60s 有效，需「重新发送」后即时取）"
+    supersedes:
+      - "L4-proprietary/components/bdms/scripts/login_iam.py"
+      - "L4-proprietary/components/bdms/scripts/diag_iam_login.py"
+      - "L4-proprietary/components/bdms/scripts/diag_ones_login.py"
+      - "L4-proprietary/components/bdms/scripts/diag_ones_login_auto.py"
+      - "L4-proprietary/components/bdms/scripts/diag_sso_login.py"
+      - "L4-proprietary/components/bdms/scripts/selftest_sso_flow.py"
+      - "L4-proprietary/components/bdms/scripts/selftest_sso_ones.py"
+      - "L4-proprietary/components/bdms/scripts/diag_iam_login.py"
+
+  # ══════════ 浏览器自动化基础设施 ══════════
+  - id: browser-isolated-chrome
+    name: 隔离 Chrome 实例（专用 profile + CDP 端口）
+    layer: L2
+    interfaces: [browser, chrome, cdp, playwright, isolation]
+    entry:
+      - "~/.openclaw/data/chrome-profiles/oa-live + CDP http://127.0.0.1:9333"
+      - "Playwright connect_over_cdp"
+    notes: "红线 commit 0a19971：禁止驱动用户现有 Chrome；用后即关主进程并确认端口释放"
+    supersedes: []
+
+  # ══════════ GitHub 凭据 ══════════
+  - id: github-credential
+    name: GitHub 凭据链路与自检
+    layer: L2
+    interfaces: [github, credential, token, gh, git]
+    entry:
+      - "python3 L2-infra/components/credentials/github_credential_sync.py"
+      - "bash L2-infra/components/credentials/credentials.sh github-sync"
+    ssot: "~/.openclaw/secrets/github.token"
+    notes: "SSOT=github.token(600) → 派生 ~/.config/gh/hosts.yml；push 前跑 --check"
+    supersedes: []
+
+# 已登记的合法一次性脚本（门禁白名单；用完即归档/清理）
+allow:
+  - path: "L4-proprietary/components/bdms/scripts/reconcile_oa.py"
+    reason: "OA 对账一次性脚本，已固化在组件内"
+  - path: "L4-proprietary/components/bdms/scripts/register_contract_ontology.py"
+    reason: "本体注册工具，组件配套"
