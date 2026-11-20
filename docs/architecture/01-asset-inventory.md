@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-20 10:59 UTC+08:00
+最后生成：2026-11-20 11:36 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -293,8 +293,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `b1af3f3` |
-| Commit 数 | 733 |
+| HEAD | `abfd054` |
+| Commit 数 | 737 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -451,10 +451,55 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 > 维护：`L2-infra/components/config/capability-registry/registry.yaml`
 > 门禁：pre-commit `--check --staged`（重复家族脚本命中即阻断并指出权威入口）
 
-**共 10 项能力**（更新于 2026-11-20）
+**共 81 项能力**（更新于 2026-11-20）
 
 | 能力 ID | 名称 | 层 | 权威入口 |
 |---|---|---|---|
+| `ai-knowledge-base` | AI 知识库（多 agent 实例 + 导入） | L2 | `python3 L2-infra/components/ai-knowledge-base/cli/main.py` |
+| `backup` | 备份（SQLite 加密 / 官方全量） | L2 | `bash L2-infra/components/backup/backup.sh --daily` |
+| `browser-automation` | 浏览器自动化基础设施（占位，能力在 delivery-center/oa-live） | L2 | `L2-infra/components/browser-automation/ (空占位目录，无独立入口；实际能力 = browser-isolated-chrome)` |
+| `config` | 配置管理（快照/审计/hook 安装） | L2 | `bash L2-infra/components/config/config.sh apply` |
+| `context-guardian` | 上下文守护（插件） | L2 | `node --test L2-infra/components/context-guardian/tests/test_core.js` |
+| `context-management` | 上下文管理（窗口探测 / 子代理守护） | L2 | `python3 L2-infra/components/context-management/probe_context_window.py` |
+| `credentials` | 凭据管理（扫描 / 审计 / GitHub 同步） | L2 | `bash L2-infra/components/credentials/credentials.sh audit` |
+| `delivery-quality` | 交付质量反馈（记录 / 评审） | L2 | `python3 L2-infra/components/delivery-quality/record.py --domain <d> --dimension <d> --severit...` |
+| `gateway-safety` | 网关安全（安全重启 / 预检守卫） | L2 | `bash L2-infra/components/gateway-safety/scripts/safe_restart.sh` |
+| `knowledge-base` | 知识库（索引 / 检索 / 重建） | L2 | `python3 L2-infra/components/knowledge-base/kb_index.py --query <关键词>` |
+| `logs` | 日志收集（骨架，由 observability 代理） | L2 | `L2-infra/components/logs/ (骨架；日志收集走 observability)` |
+| `maintenance` | 维护（记忆维护 / 仓库健康） | L2 | `bash L2-infra/components/maintenance/memory_maintenance.sh` |
+| `memory-embedding` | 记忆与嵌入（openclaw memory） | L2 | `openclaw memory search <关键词>` |
+| `model-scheduling` | 模型调度（配额 / 恢复 / 路由） | L2 | `python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail` |
+| `observability` | 可观测性（网关看门狗） | L2 | `bash L2-infra/components/observability/gateway_watchdog.sh` |
+| `ocr-digitalization` | OCR 文档数字化（扫描件/图片 → 文本 + 签名印章检测） | L2 | `python3 L2-infra/components/ocr-digitalization/ocr_digitize.py <img>` |
+| `office-generation` | Office 文档生成（Excel / PPT / Word） | L2 | `python3 L2-infra/components/office-generation/office_generate.py excel --data data.json` |
+| `persistence` | 持久化（SQLite 迁移 / schema） | L2 | `python3 L2-infra/components/persistence/migrations/001_initial_schema.sql` |
+| `sandbox` | 沙箱（隔离执行 / 健康检查） | L2 | `python3 L2-infra/components/sandbox/sandbox.py --start` |
+| `scheduler-guard` | 调度守卫（LaunchAgent 审计） | L2 | `python3 L2-infra/components/scheduler-guard/audit.py` |
+| `session-boundary-guard` | 会话边界守卫（插件） | L2 | `node --test L2-infra/components/session-boundary-guard/tests/` |
+| `session-isolation` | 会话隔离（task/state/event-log） | L2 | `python3 L2-infra/components/session-isolation/cli.py --health` |
+| `session-recovery` | 会话恢复（task_tracker / 断点重试） | L2 | `python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --json` |
+| `system-governor` | 系统治理（审计 P1~P6 / 归位） | L2 | `python3 L2-infra/components/system-governor/scripts/governor.py audit` |
+| `tool-policy` | 工具策略（审计 / 健康） | L2 | `bash L2-infra/components/tool-policy/tool_policy_audit.sh` |
+| `web-common` | Web 通用（FastAPI 应用基座） | L2 | `python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000` |
+| `workspace-temp-cleanup` | 工作区临时文件清理 | L2 | `python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py dry-run` |
+| `contract-approval` | 合同审批（L3 纯逻辑核心） | L3 | `python3 -c "from contract_approval import *; print('OK')"` |
+| `contract-management` | 合同管理（解析 / 审查 / 风险扫描 / 本体适配） | L3 | `python3 L3-business/components/contract-management/contract_management/contract_auditor.py` |
+| `delivery-management-framework` | 交付管理框架（DMS CLI） | L3 | `python3 L3-business/components/delivery-management-framework/dms_cli.py --help` |
+| `dms-framework` | DMS 框架（成员/项目/Web UI） | L3 | `python3 L3-business/components/dms-framework/dms.py --help` |
+| `finance-engine` | 财务引擎（记账/贷款/保险） | L3 | `python3 -c "from finance_engine import *; print('OK')"` |
+| `health-engine` | 健康引擎（评分/生命体征） | L3 | `python3 -c "from health_engine import *; print('OK')"` |
+| `health-management` | 健康管理（档案/体检/仓储） | L3 | `python3 -c "from health_management import *; print('OK')"` |
+| `office-business` | 办公业务（模板/角色/知识库） | L3 | `cat L3-business/components/office-business/templates/index.json \| python3 -m json.tool` |
+| `bangcle-contract` | 合同智能审查（contractctl） | L4 | `python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py --help` |
+| `bangcle-ppt` | Bangcle PPT 模板系统 | L4 | `node L4-proprietary/components/bangcle-ppt/pptx-automizer/build_final.cjs` |
+| `bdms` | BDMS 交付管理系统（Web + 数据库） | L4 | `python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000` |
+| `cissp-trainer` | CISSP 训练器 | L4 | `PYTHONPATH=src python3 -m cissp_trainer.cli init --sample` |
+| `customer-delivery-intelligence` | 客户交付智能工作流（CDI） | L4 | `python3 -m runner.main decide` |
+| `delivery-center` | 交付中心（采集器/月报/导出） | L4 | `python3 -c "from delivery_center.v1.collectors import oa_collector, ones_collector"` |
+| `fin-l4` | 家庭个人理财 FIN-L4 | L4 | `python3 -m fin_l4.cli --help` |
+| `office-contract` | 合同编制（contractctl，L4 持久化编排） | L4 | `python3 -m cli.contractctl init` |
+| `product-kb` | 产品知识库（查询 / 标的匹配 / OA 同步） | L4 | `python3 -m product_kb.cli query <关键词>` |
+| `revenue-recognition` | 收入确认（v1） | L4 | `python3 -m revenue_recognition.v1.main` |
 | `oa-session` | OA 会话建立与复用 | L4 | `python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-login` |
 | `oa-contract-fetch` | OA 合同原文/附件拉取 | L4 | `python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-fetch --oa-billid <id>` |
 | `oa-ledger-export` | OA 合同台账导出 | L4 | `delivery_center.v1.collectors.oa_collector::collect_contract_ledger_chrome(month)` |
@@ -465,4 +510,30 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `ones-auth` | ONES 认证（cookie 复用 + IAM 取码） | L4 | `delivery_center.v1.collectors.iam_auth::get_cookie/set_cookie/is_cookie_valid` |
 | `browser-isolated-chrome` | 隔离 Chrome 实例（专用 profile + CDP 端口） | L2 | `~/.openclaw/data/chrome-profiles/oa-live + CDP http://127.0.0.1:9333` |
 | `github-credential` | GitHub 凭据链路与自检 | L2 | `python3 L2-infra/components/credentials/github_credential_sync.py` |
+| `skill-dag-orchestrator` | DAG 工作流编排器（skill） | L2 | `L2-infra/skills/dag-orchestrator/SKILL.md` |
+| `skill-meeting-minutes` | 会议纪要（skill） | L2 | `L2-infra/skills/meeting-minutes/SKILL.md` |
+| `skill-model-scheduling` | 模型调度（skill） | L2 | `L2-infra/skills/model-scheduling/SKILL.md` |
+| `skill-ocr-digitalization` | OCR 数字化（skill） | L2 | `L2-infra/skills/ocr-digitalization/SKILL.md` |
+| `skill-ontology-identity-gate` | 本体身份门禁（skill） | L2 | `L2-infra/skills/ontology-identity-gate/SKILL.md` |
+| `skill-pdf-toolkit` | PDF 工具箱（skill） | L2 | `python3 L2-infra/skills/pdf-toolkit/scripts/pdf_ops.py merge a.pdf b.pdf -o out.pdf` |
+| `skill-role-library` | 角色库（skill） | L2 | `L2-infra/skills/role-library/SKILL.md` |
+| `skill-system-governor` | 系统治理（skill） | L2 | `L2-infra/skills/system-governor/SKILL.md` |
+| `skill-system-health-check` | 系统健康检查（skill） | L2 | `python3 L2-infra/skills/system-health-check/scripts/health_check.py` |
+| `skill-web-ui-design` | Web UI 设计（skill） | L2 | `L2-infra/skills/web-ui-design/SKILL.md` |
+| `skill-bangcle-customer-profile` | 客户画像（skill） | L3 | `L3-business/skills/bangcle-customer-profile/SKILL.md` |
+| `skill-bangcle-obligation-summary` | 履约义务汇总（skill） | L3 | `L3-business/skills/bangcle-obligation-summary/SKILL.md` |
+| `skill-bangcle-project-report` | 项目汇报材料（skill） | L3 | `L3-business/skills/bangcle-project-report/SKILL.md` |
+| `skill-bangcle-project-retrospective` | 项目复盘（skill） | L3 | `L3-business/skills/bangcle-project-retrospective/SKILL.md` |
+| `skill-bangcle-project-summary` | 项目信息汇总（skill） | L3 | `L3-business/skills/bangcle-project-summary/SKILL.md` |
+| `skill-contract-approval` | 合同审批（skill） | L3 | `L3-business/skills/contract-approval/SKILL.md` |
+| `skill-bangcle-ppt` | Bangcle PPT 模板（skill） | L4 | `L4-proprietary/skills/bangcle-ppt/SKILL.md` |
+| `skill-bangcle-project-manager-expert` | 项目管理专家（skill，统一入口） | L4 | `L4-proprietary/skills/bangcle-project-manager-expert/SKILL.md` |
+| `skill-bdms-revenue-forecast` | BDMS 确收预算预测（skill） | L4 | `L4-proprietary/skills/bdms-revenue-forecast/SKILL.md` |
+| `skill-bdms-web-ui-design` | BDMS Web UI 设计（skill） | L4 | `L4-proprietary/skills/bdms-web-ui-design/SKILL.md` |
+| `skill-contract-manager-expert` | 合同管理专家（skill，统一入口） | L4 | `L4-proprietary/skills/contract-manager-expert/SKILL.md` |
+| `skill-customer-delivery-intelligence` | 客户交付智能（skill，统一入口） | L4 | `L4-proprietary/skills/customer-delivery-intelligence/SKILL.md` |
+| `skill-fin-l4` | 家庭理财 FIN-L4（skill） | L4 | `L4-proprietary/skills/fin-l4/SKILL.md` |
+| `skill-ones-browser-export` | ONES 浏览器导出（skill） | L4 | `L4-proprietary/skills/ones-browser-export/SKILL.md` |
+| `skill-product-kb` | 产品知识库（skill） | L4 | `L4-proprietary/skills/product-kb/SKILL.md` |
+| `skill-product-manager-expert` | 产品管理专家（skill，统一入口） | L4 | `L4-proprietary/skills/product-manager-expert/SKILL.md` |
 

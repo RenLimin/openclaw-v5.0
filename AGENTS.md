@@ -96,21 +96,23 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --j
 > 而没有先查 memory + skill + 已建组件能力——导致把**已建成能力**当缺口，反复犯。
 > 此规则与「品牌素材检索铁律」同源：**先查记忆与已建能力，再判定缺失**。
 
-**能力注册表是权威索引（2026-11-20 固化）**：已建能力统一登记在
-`L2-infra/components/config/capability-registry/registry.yaml`，同时渲染进
-`docs/architecture/01-asset-inventory.md` §能力注册表。**先查表，再动手**。
+**能力注册表是权威索引（2026-11-20 全量固化）**：已建能力统一登记在
+`L2-infra/components/config/capability-registry/registry.yaml`（**81 条目 = 45 组件 + 26 skill + 10 能力族，覆盖率 100%**），
+同时渲染进 `docs/architecture/01-asset-inventory.md` §能力注册表。**先查表，再动手**。
 ```bash
 python3 L2-infra/components/config/capability-registry/capability_registry.py --query <关键词>
+python3 L2-infra/components/config/capability-registry/capability_registry.py --coverage   # 全量覆盖率硬指标
 ```
 
 - Always 接业务需求（合同/财务/DMS/PPT/ONES/OA 等）先 `memory_search` + 读对应 `SKILL.md`
   的**路由表与已建能力清单**，确认能力是否已存在，再决定是复用还是新建。
-- Always 判断"能力缺失"前，先查能力注册表（上面命令）——**旧资产清单只有组件级粒度，
-  脚本级能力查不到，是误判缺失的结构性原因**。
+- Always 判断"能力缺失"前，先查能力注册表——**注册表已全量覆盖所有组件/skill**，
+  查不到就是真没有；但仍需确认是否只是**未固化**（/tmp 临时脚本、散落脚本）。
 - Always 判断"能力缺失"前，先确认是否只是**未固化**（/tmp 临时脚本、散落脚本、
   会话记忆里有使用记录）——未固化 = 沉淀修复，不是重新建设。
 - Always 当天生产验证过的临时脚本/管线，**当日固化**进组件 + 更新 SKILL.md + 补注册表条目，不留 /tmp 资产。
-- Always 新脚本命名命中重复家族（OA/ONES 导出、登录、诊断类）时，pre-commit 会阻断并指出权威入口；
+- Always 新建组件/skill 目录 → **必须**同日补 registry.yaml 条目，否则 pre-commit step 6 阻断。
+- Always 新脚本命名命中重复家族（OA/ONES 导出、登录、诊断类）时，pre-commit step 5 会阻断并指出权威入口；
   确需新建 → 先补 registry.yaml 条目（含 entry/notes），或登记 allow 并写明理由。
 - 合同正文权威来源 = OA（`contractctl oa-fetch`/`review --oa-billid`）；BDMS/底稿摘要
   只作财务/确收视角的补充，**禁止**作为合同条款结论的替代来源。 <!-- observed: 2026-11-10 | status: active -->

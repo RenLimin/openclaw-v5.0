@@ -5,11 +5,13 @@
 #
 # 用途：
 #   1. 可发现性：`capability_registry.py --query ones` → 命中能力 + 权威入口
-#   2. 门禁：pre-commit 检测新建的「重复建设型」脚本 → 指向本表权威入口
-#   3. 渲染：gen_asset_inventory.py 输出到 docs/architecture/01-asset-inventory.md
+#   2. 覆盖率：`capability_registry.py --coverage` → 未登记资产清单（目标 100%）
+#   3. 门禁：pre-commit 检测新建的「重复建设型」脚本 → 指向本表权威入口
+#   4. 渲染：gen_asset_inventory.py 输出到 docs/architecture/01-asset-inventory.md
 #
 # 维护约束：
-#   - 新增能力 → 先查本表（避免重复登记）；确实新建 → 同日补条目
+#   - 新增能力/组件/skill → 先查本表（避免重复登记）；确实新建 → 同日补条目
+#   - 新增组件或 skill 目录 → **必须**补条目，否则 `--coverage` 报缺口
 #   - 能力下线/迁移 → 更新 entry，保留 id（不删历史）
 #   - entry 必须是**可直接调用**的路径/命令，禁止写「见文档」这类不可执行指针
 
@@ -31,6 +33,436 @@ duplicate_family_patterns:
   - 'oa_todo'
 
 capabilities:
+  # ══════════ L2 基础设施组件 ══════════
+  - id: ai-knowledge-base
+    name: AI 知识库（多 agent 实例 + 导入）
+    layer: L2
+    interfaces: [ai, knowledge, kb, import, instance]
+    entry:
+      - "python3 L2-infra/components/ai-knowledge-base/cli/main.py"
+      - "bash L2-infra/components/ai-knowledge-base/agents/bangcle-product-expert/scripts/import_knowledge.sh"
+    notes: "多 agent 实例；导入脚本在 agents/<name>/scripts/ 下"
+    supersedes: []
+
+  - id: backup
+    name: 备份（SQLite 加密 / 官方全量）
+    layer: L2
+    interfaces: [backup, sqlite, full, daily, restore]
+    entry:
+      - "bash L2-infra/components/backup/backup.sh --daily"
+      - "bash L2-infra/components/backup/backup.sh --full"
+    notes: "--daily=SQLite+加密；--full=官方全量（需停 gateway）"
+    supersedes: []
+
+  - id: browser-automation
+    name: 浏览器自动化基础设施（占位，能力在 delivery-center/oa-live）
+    layer: L2
+    interfaces: [browser, chrome, cdp, automation]
+    entry:
+      - "L2-infra/components/browser-automation/ (空占位目录，无独立入口；实际能力 = browser-isolated-chrome)"
+    notes: "目录为空占位，真实能力在 L4 delivery-center collectors + 专用 CDP"
+    supersedes: []
+
+  - id: config
+    name: 配置管理（快照/审计/hook 安装）
+    layer: L2
+    interfaces: [config, snapshot, audit, hooks, install]
+    entry:
+      - "bash L2-infra/components/config/config.sh apply"
+      - "bash L2-infra/components/config/config.sh audit"
+      - "bash L2-infra/components/config/install-hooks.sh"
+    notes: "install-hooks.sh 安装 pre-commit/pre-push；--check 校验一致性"
+    supersedes: []
+
+  - id: context-guardian
+    name: 上下文守护（插件）
+    layer: L2
+    interfaces: [context, guardian, plugin, guard]
+    entry:
+      - "node --test L2-infra/components/context-guardian/tests/test_core.js"
+    notes: "OpenClaw 插件形态；17 用例"
+    supersedes: []
+
+  - id: context-management
+    name: 上下文管理（窗口探测 / 子代理守护）
+    layer: L2
+    interfaces: [context, window, probe, subagent, guard]
+    entry:
+      - "python3 L2-infra/components/context-management/probe_context_window.py"
+      - "python3 L2-infra/components/context-management/subagent_ctx_guard.py"
+    supersedes: []
+
+  - id: credentials
+    name: 凭据管理（扫描 / 审计 / GitHub 同步）
+    layer: L2
+    interfaces: [credential, secret, scan, audit, github, token]
+    entry:
+      - "bash L2-infra/components/credentials/credentials.sh audit"
+      - "bash L2-infra/components/credentials/credentials.sh github-sync"
+      - "python3 L2-infra/components/credentials/github_credential_sync.py --check"
+    ssot: "~/.openclaw/secrets/github.token"
+    notes: "SSOT=github.token(600) → 派生 ~/.config/gh/hosts.yml；push 前跑 --check"
+    supersedes: []
+
+  - id: delivery-quality
+    name: 交付质量反馈（记录 / 评审）
+    layer: L2
+    interfaces: [quality, feedback, review, record]
+    entry:
+      - "python3 L2-infra/components/delivery-quality/record.py --domain <d> --dimension <d> --severity <s>"
+      - "python3 L2-infra/components/delivery-quality/review.py"
+    notes: "收到纠正时默认执行 record.py；全量评审 review.py"
+    supersedes: []
+
+  - id: gateway-safety
+    name: 网关安全（安全重启 / 预检守卫）
+    layer: L2
+    interfaces: [gateway, safety, restart, guard]
+    entry:
+      - "bash L2-infra/components/gateway-safety/scripts/safe_restart.sh"
+      - "python3 L2-infra/components/gateway-safety/scripts/pre_restart_guard.py"
+    notes: "禁止裸调 openclaw gateway restart（绕过 guard）"
+    supersedes: []
+
+  - id: knowledge-base
+    name: 知识库（索引 / 检索 / 重建）
+    layer: L2
+    interfaces: [kb, knowledge, search, index, rebuild]
+    entry:
+      - "python3 L2-infra/components/knowledge-base/kb_index.py --query <关键词>"
+      - "python3 -m knowledge_base.cli search <kw> --mode hybrid -n 10"
+    notes: "工作前先搜知识库；kb_index.py 是工作流入口"
+    supersedes: []
+
+  - id: logs
+    name: 日志收集（骨架，由 observability 代理）
+    layer: L2
+    interfaces: [logs, collect, observability]
+    entry:
+      - "L2-infra/components/logs/ (骨架；日志收集走 observability)"
+    notes: "骨架阶段，无独立命令"
+    supersedes: []
+
+  - id: maintenance
+    name: 维护（记忆维护 / 仓库健康）
+    layer: L2
+    interfaces: [maintenance, memory, repo, health]
+    entry:
+      - "bash L2-infra/components/maintenance/memory_maintenance.sh"
+      - "bash L2-infra/components/maintenance/repo_health.sh"
+    supersedes: []
+
+  - id: memory-embedding
+    name: 记忆与嵌入（openclaw memory）
+    layer: L2
+    interfaces: [memory, embedding, search, status]
+    entry:
+      - "openclaw memory search <关键词>"
+      - "openclaw memory status"
+    supersedes: []
+
+  - id: model-scheduling
+    name: 模型调度（配额 / 恢复 / 路由）
+    layer: L2
+    interfaces: [model, scheduling, quota, restore, routing]
+    entry:
+      - "python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail"
+      - "bash L2-infra/components/model-scheduling/setup.sh"
+    supersedes: []
+
+  - id: observability
+    name: 可观测性（网关看门狗）
+    layer: L2
+    interfaces: [observability, watchdog, gateway, monitor]
+    entry:
+      - "bash L2-infra/components/observability/gateway_watchdog.sh"
+    supersedes: []
+
+  - id: ocr-digitalization
+    name: OCR 文档数字化（扫描件/图片 → 文本 + 签名印章检测）
+    layer: L2
+    interfaces: [ocr, digitize, scan, contract, signature]
+    entry:
+      - "python3 L2-infra/components/ocr-digitalization/ocr_digitize.py <img>"
+      - "python3 L2-infra/components/ocr-digitalization/contract_ocr.py contract.pdf"
+    supersedes: []
+
+  - id: office-generation
+    name: Office 文档生成（Excel / PPT / Word）
+    layer: L2
+    interfaces: [office, excel, ppt, word, generate]
+    entry:
+      - "python3 L2-infra/components/office-generation/office_generate.py excel --data data.json"
+      - "python3 L2-infra/components/office-generation/office_generate.py ppt --data data.json"
+      - "python3 L2-infra/components/office-generation/office_generate.py word --data data.json"
+    supersedes: []
+
+  - id: persistence
+    name: 持久化（SQLite 迁移 / schema）
+    layer: L2
+    interfaces: [persistence, sqlite, migration, schema]
+    entry:
+      - "python3 L2-infra/components/persistence/migrations/001_initial_schema.sql"
+    notes: "数据落 ~/.openclaw/data/platform.db"
+    supersedes: []
+
+  - id: sandbox
+    name: 沙箱（隔离执行 / 健康检查）
+    layer: L2
+    interfaces: [sandbox, exec, health, isolate]
+    entry:
+      - "python3 L2-infra/components/sandbox/sandbox.py --start"
+      - "python3 L2-infra/components/sandbox/sandbox.py --health"
+      - "python3 L2-infra/components/sandbox/sandbox.py --exec <cmd>"
+    supersedes: []
+
+  - id: scheduler-guard
+    name: 调度守卫（LaunchAgent 审计）
+    layer: L2
+    interfaces: [scheduler, guard, launchd, audit]
+    entry:
+      - "python3 L2-infra/components/scheduler-guard/audit.py"
+    notes: "审计 agent-observer / auto-recovery LaunchAgent"
+    supersedes: []
+
+  - id: session-boundary-guard
+    name: 会话边界守卫（插件）
+    layer: L2
+    interfaces: [session, boundary, guard, plugin]
+    entry:
+      - "node --test L2-infra/components/session-boundary-guard/tests/"
+    notes: "OpenClaw 插件形态"
+    supersedes: []
+
+  - id: session-isolation
+    name: 会话隔离（task/state/event-log）
+    layer: L2
+    interfaces: [session, isolation, task, state, event]
+    entry:
+      - "python3 L2-infra/components/session-isolation/cli.py --health"
+      - "python3 L2-infra/components/session-isolation/cli.py task-init --id <id>"
+      - "python3 L2-infra/components/session-isolation/cli.py state-write --scope <s> --data <json>"
+    supersedes: []
+
+  - id: session-recovery
+    name: 会话恢复（task_tracker / 断点重试）
+    layer: L2
+    interfaces: [session, recovery, task, tracker, retry]
+    entry:
+      - "python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --json"
+      - "python3 L2-infra/components/session-recovery/scripts/check_and_retry.py"
+    notes: "会话启动自检入口；task_tracker 有并发竞态红线（见 AGENTS.md）"
+    supersedes: []
+
+  - id: system-governor
+    name: 系统治理（审计 P1~P6 / 归位）
+    layer: L2
+    interfaces: [governor, audit, policy, P6]
+    entry:
+      - "python3 L2-infra/components/system-governor/scripts/governor.py audit"
+      - "python3 L2-infra/components/system-governor/scripts/governor.py audit --apply"
+    notes: "P6=重复资产扫描归位；--json 机器可读"
+    supersedes: []
+
+  - id: tool-policy
+    name: 工具策略（审计 / 健康）
+    layer: L2
+    interfaces: [tool, policy, audit, health]
+    entry:
+      - "bash L2-infra/components/tool-policy/tool_policy_audit.sh"
+      - "bash L2-infra/components/tool-policy/tool_policy_audit.sh --health"
+    supersedes: []
+
+  - id: web-common
+    name: Web 通用（FastAPI 应用基座）
+    layer: L2
+    interfaces: [web, fastapi, uvicorn, common]
+    entry:
+      - "python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000"
+    supersedes: []
+
+  - id: workspace-temp-cleanup
+    name: 工作区临时文件清理
+    layer: L2
+    interfaces: [temp, cleanup, workspace, trash]
+    entry:
+      - "python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py dry-run"
+      - "python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py clean --yes"
+    notes: "实删进废纸篓；默认 dry-run"
+    supersedes: []
+
+  # ══════════ L3 通用业务组件 ══════════
+  - id: contract-approval
+    name: 合同审批（L3 纯逻辑核心）
+    layer: L3
+    interfaces: [contract, approval, workflow, risk]
+    entry:
+      - "python3 -c \"from contract_approval import *; print('OK')\""
+    notes: "L3 纯逻辑；L4 持久化编排见 office-contract"
+    supersedes: []
+
+  - id: contract-management
+    name: 合同管理（解析 / 审查 / 风险扫描 / 本体适配）
+    layer: L3
+    interfaces: [contract, parser, auditor, risk, ontology]
+    entry:
+      - "python3 L3-business/components/contract-management/contract_management/contract_auditor.py"
+      - "python3 L3-business/components/contract-management/contract_management/risk_scanner.py"
+    notes: "amount_utils/audit_standard/state_machine 同目录"
+    supersedes: []
+
+  - id: delivery-management-framework
+    name: 交付管理框架（DMS CLI）
+    layer: L3
+    interfaces: [dms, delivery, management, cli, project]
+    entry:
+      - "python3 L3-business/components/delivery-management-framework/dms_cli.py --help"
+    supersedes: []
+
+  - id: dms-framework
+    name: DMS 框架（成员/项目/Web UI）
+    layer: L3
+    interfaces: [dms, member, project, webui]
+    entry:
+      - "python3 L3-business/components/dms-framework/dms.py --help"
+      - "python3 L3-business/components/dms-framework/dms.py webui start"
+    supersedes: []
+
+  - id: finance-engine
+    name: 财务引擎（记账/贷款/保险）
+    layer: L3
+    interfaces: [finance, accounting, loan, insurance, engine]
+    entry:
+      - "python3 -c \"from finance_engine import *; print('OK')\""
+    notes: "AccountingEngine/LoanEngine/InsuranceEngine"
+    supersedes: []
+
+  - id: health-engine
+    name: 健康引擎（评分/生命体征）
+    layer: L3
+    interfaces: [health, score, vitals, engine]
+    entry:
+      - "python3 -c \"from health_engine import *; print('OK')\""
+    notes: "ScoreEngine/VitalsEngine（部分待设计）"
+    supersedes: []
+
+  - id: health-management
+    name: 健康管理（档案/体检/仓储）
+    layer: L3
+    interfaces: [health, profile, checkup, repository]
+    entry:
+      - "python3 -c \"from health_management import *; print('OK')\""
+    notes: "BaseRepository/HealthProfile/Checkup"
+    supersedes: []
+
+  - id: office-business
+    name: 办公业务（模板/角色/知识库）
+    layer: L3
+    interfaces: [office, business, template, role, knowledge]
+    entry:
+      - "cat L3-business/components/office-business/templates/index.json | python3 -m json.tool"
+    notes: "src/ 业务逻辑 + templates/ 模板 + roles/ 角色 + knowledge/ 知识；入口按场景走对应 skill"
+    supersedes: []
+
+  # ══════════ L4 专有业务组件 ══════════
+  - id: bangcle-contract
+    name: 合同智能审查（contractctl）
+    layer: L4
+    interfaces: [contract, review, oa, ontology, cli]
+    entry:
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py --help"
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-fetch --oa-billid <id>"
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-project-mgmt --requestid <rid> --workflow wf_916|wf_815|wf_820"
+    notes: "合同正文权威来源=OA；review --oa-billid 直查"
+    supersedes: []
+
+  - id: bangcle-ppt
+    name: Bangcle PPT 模板系统
+    layer: L4
+    interfaces: [ppt, template, vi, generate]
+    entry:
+      - "node L4-proprietary/components/bangcle-ppt/pptx-automizer/build_final.cjs"
+      - "L4-proprietary/skills/bangcle-ppt/SKILL.md"
+    notes: "品牌 VI 规范；字体必须用目标机已安装字体（微软雅黑/宋体）"
+    supersedes: []
+
+  - id: bdms
+    name: BDMS 交付管理系统（Web + 数据库）
+    layer: L4
+    interfaces: [bdms, delivery, web, db, report]
+    entry:
+      - "python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000"
+    db: "~/.openclaw/data/bdms.db"
+    notes: "确收/收入分析/利润管理等模块；勿直改 db 文件"
+    supersedes: []
+
+  - id: cissp-trainer
+    name: CISSP 训练器
+    layer: L4
+    interfaces: [cissp, trainer, exam, study]
+    entry:
+      - "PYTHONPATH=src python3 -m cissp_trainer.cli init --sample"
+      - "PYTHONPATH=src python3 -m cissp_trainer.web.main"
+    supersedes: []
+
+  - id: customer-delivery-intelligence
+    name: 客户交付智能工作流（CDI）
+    layer: L4
+    interfaces: [cdi, delivery, intelligence, workflow, customer]
+    entry:
+      - "python3 -m runner.main decide"
+      - "python3 -m runner.main start --customer <name>"
+    notes: "两道人工闸；产出 Markdown+PPTX+DOCX 交付包"
+    supersedes: []
+
+  - id: delivery-center
+    name: 交付中心（采集器/月报/导出）
+    layer: L4
+    interfaces: [delivery, center, collector, report, oa, ones]
+    entry:
+      - "python3 -c \"from delivery_center.v1.collectors import oa_collector, ones_collector\""
+      - "L4-proprietary/components/delivery-center/src/delivery_center/v1/collectors/ (oa/ones/iam_auth/workhour/wecom)"
+    notes: "月报/工时/企微采集器；真实 Chrome 导出"
+    supersedes: []
+
+  - id: fin-l4
+    name: 家庭个人理财 FIN-L4
+    layer: L4
+    interfaces: [fin, finance, budget, loan, insurance, invest]
+    entry:
+      - "python3 -m fin_l4.cli --help"
+      - "python3 -m fin_l4.cli account list"
+      - "python3 L4-proprietary/components/fin-l4/src/fin_l4/run_web.py"
+    notes: "全本地 SQLite；Web UI + CLI + OpenClaw 三通道"
+    supersedes: []
+
+  - id: office-contract
+    name: 合同编制（contractctl，L4 持久化编排）
+    layer: L4
+    interfaces: [contract, create, office, cli]
+    entry:
+      - "python3 -m cli.contractctl init"
+      - "python3 -m cli.contractctl create"
+    notes: "工作目录须在 office-contract 组件内（cli 包）"
+    supersedes: []
+
+  - id: product-kb
+    name: 产品知识库（查询 / 标的匹配 / OA 同步）
+    layer: L4
+    interfaces: [product, kb, query, match, oa, sync]
+    entry:
+      - "python3 -m product_kb.cli query <关键词>"
+    notes: "OA 产品中心文档增量同步（水位过滤）"
+    supersedes: []
+
+  - id: revenue-recognition
+    name: 收入确认（v1）
+    layer: L4
+    interfaces: [revenue, recognition, accounting]
+    entry:
+      - "python3 -m revenue_recognition.v1.main"
+    supersedes: []
+
   # ══════════ OA 家族 ══════════
   - id: oa-session
     name: OA 会话建立与复用
@@ -126,7 +558,6 @@ capabilities:
       - "L4-proprietary/components/bdms/scripts/diag_sso_login.py"
       - "L4-proprietary/components/bdms/scripts/selftest_sso_flow.py"
       - "L4-proprietary/components/bdms/scripts/selftest_sso_ones.py"
-      - "L4-proprietary/components/bdms/scripts/diag_iam_login.py"
 
   # ══════════ 浏览器自动化基础设施 ══════════
   - id: browser-isolated-chrome
@@ -149,6 +580,226 @@ capabilities:
       - "bash L2-infra/components/credentials/credentials.sh github-sync"
     ssot: "~/.openclaw/secrets/github.token"
     notes: "SSOT=github.token(600) → 派生 ~/.config/gh/hosts.yml；push 前跑 --check"
+    supersedes: []
+
+  # ══════════ Skills（L2） ══════════
+  - id: skill-dag-orchestrator
+    name: DAG 工作流编排器（skill）
+    layer: L2
+    interfaces: [dag, workflow, orchestrator, skill]
+    entry:
+      - "L2-infra/skills/dag-orchestrator/SKILL.md"
+    supersedes: []
+
+  - id: skill-meeting-minutes
+    name: 会议纪要（skill）
+    layer: L2
+    interfaces: [meeting, minutes, transcript, skill]
+    entry:
+      - "L2-infra/skills/meeting-minutes/SKILL.md"
+      - "python3 L2-infra/skills/meeting-minutes/scripts/verify_minutes.py --file <md>"
+    supersedes: []
+
+  - id: skill-model-scheduling
+    name: 模型调度（skill）
+    layer: L2
+    interfaces: [model, scheduling, skill]
+    entry:
+      - "L2-infra/skills/model-scheduling/SKILL.md"
+    supersedes: []
+
+  - id: skill-ocr-digitalization
+    name: OCR 数字化（skill）
+    layer: L2
+    interfaces: [ocr, digitize, skill]
+    entry:
+      - "L2-infra/skills/ocr-digitalization/SKILL.md"
+    supersedes: []
+
+  - id: skill-ontology-identity-gate
+    name: 本体身份门禁（skill）
+    layer: L2
+    interfaces: [ontology, identity, gate, hmac, skill]
+    entry:
+      - "L2-infra/skills/ontology-identity-gate/SKILL.md"
+    supersedes: []
+
+  - id: skill-pdf-toolkit
+    name: PDF 工具箱（skill）
+    layer: L2
+    interfaces: [pdf, merge, split, rotate, skill]
+    entry:
+      - "python3 L2-infra/skills/pdf-toolkit/scripts/pdf_ops.py merge a.pdf b.pdf -o out.pdf"
+      - "python3 L2-infra/skills/pdf-toolkit/scripts/pdf_ops.py extract in.pdf -o out.pdf --pages 1,3-5"
+    supersedes: []
+
+  - id: skill-role-library
+    name: 角色库（skill）
+    layer: L2
+    interfaces: [role, library, skill]
+    entry:
+      - "L2-infra/skills/role-library/SKILL.md"
+    supersedes: []
+
+  - id: skill-system-governor
+    name: 系统治理（skill）
+    layer: L2
+    interfaces: [governor, audit, skill]
+    entry:
+      - "L2-infra/skills/system-governor/SKILL.md"
+    supersedes: []
+
+  - id: skill-system-health-check
+    name: 系统健康检查（skill）
+    layer: L2
+    interfaces: [health, check, system, skill]
+    entry:
+      - "python3 L2-infra/skills/system-health-check/scripts/health_check.py"
+      - "python3 L2-infra/skills/system-health-check/scripts/service_health_check.py --list"
+    supersedes: []
+
+  - id: skill-web-ui-design
+    name: Web UI 设计（skill）
+    layer: L2
+    interfaces: [web, ui, design, skill]
+    entry:
+      - "L2-infra/skills/web-ui-design/SKILL.md"
+    supersedes: []
+
+  # ══════════ Skills（L3） ══════════
+  - id: skill-bangcle-customer-profile
+    name: 客户画像（skill）
+    layer: L3
+    interfaces: [customer, profile, skill]
+    entry:
+      - "L3-business/skills/bangcle-customer-profile/SKILL.md"
+    supersedes: []
+
+  - id: skill-bangcle-obligation-summary
+    name: 履约义务汇总（skill）
+    layer: L3
+    interfaces: [obligation, summary, skill]
+    entry:
+      - "L3-business/skills/bangcle-obligation-summary/SKILL.md"
+    supersedes: []
+
+  - id: skill-bangcle-project-report
+    name: 项目汇报材料（skill）
+    layer: L3
+    interfaces: [project, report, skill]
+    entry:
+      - "L3-business/skills/bangcle-project-report/SKILL.md"
+      - "python3 L3-business/skills/bangcle-project-report/scripts/aggregate.py"
+    supersedes: []
+
+  - id: skill-bangcle-project-retrospective
+    name: 项目复盘（skill）
+    layer: L3
+    interfaces: [project, retrospective, skill]
+    entry:
+      - "L3-business/skills/bangcle-project-retrospective/SKILL.md"
+    supersedes: []
+
+  - id: skill-bangcle-project-summary
+    name: 项目信息汇总（skill）
+    layer: L3
+    interfaces: [project, summary, skill]
+    entry:
+      - "L3-business/skills/bangcle-project-summary/SKILL.md"
+    supersedes: []
+
+  - id: skill-contract-approval
+    name: 合同审批（skill）
+    layer: L3
+    interfaces: [contract, approval, skill]
+    entry:
+      - "L3-business/skills/contract-approval/SKILL.md"
+      - "python3 L3-business/skills/contract-approval/scripts/approval_engine.py init"
+    supersedes: []
+
+  # ══════════ Skills（L4） ══════════
+  - id: skill-bangcle-ppt
+    name: Bangcle PPT 模板（skill）
+    layer: L4
+    interfaces: [ppt, template, skill]
+    entry:
+      - "L4-proprietary/skills/bangcle-ppt/SKILL.md"
+    supersedes: []
+
+  - id: skill-bangcle-project-manager-expert
+    name: 项目管理专家（skill，统一入口）
+    layer: L4
+    interfaces: [project, manager, expert, skill, router]
+    entry:
+      - "L4-proprietary/skills/bangcle-project-manager-expert/SKILL.md"
+    notes: "L4 项目管理统一入口：交付台账/履约义务/复盘/客户画像/月报/ONES 导出"
+    supersedes: []
+
+  - id: skill-bdms-revenue-forecast
+    name: BDMS 确收预算预测（skill）
+    layer: L4
+    interfaces: [bdms, revenue, forecast, skill]
+    entry:
+      - "L4-proprietary/skills/bdms-revenue-forecast/SKILL.md"
+    supersedes: []
+
+  - id: skill-bdms-web-ui-design
+    name: BDMS Web UI 设计（skill）
+    layer: L4
+    interfaces: [bdms, web, ui, design, skill]
+    entry:
+      - "L4-proprietary/skills/bdms-web-ui-design/SKILL.md"
+    supersedes: []
+
+  - id: skill-contract-manager-expert
+    name: 合同管理专家（skill，统一入口）
+    layer: L4
+    interfaces: [contract, manager, expert, skill, router]
+    entry:
+      - "L4-proprietary/skills/contract-manager-expert/SKILL.md"
+    notes: "L4 合同管理统一入口：审查/标的匹配/OA 拉取/审批"
+    supersedes: []
+
+  - id: skill-customer-delivery-intelligence
+    name: 客户交付智能（skill，统一入口）
+    layer: L4
+    interfaces: [cdi, delivery, intelligence, skill, router]
+    entry:
+      - "L4-proprietary/skills/customer-delivery-intelligence/SKILL.md"
+    supersedes: []
+
+  - id: skill-fin-l4
+    name: 家庭理财 FIN-L4（skill）
+    layer: L4
+    interfaces: [fin, finance, skill]
+    entry:
+      - "L4-proprietary/skills/fin-l4/SKILL.md"
+    supersedes: []
+
+  - id: skill-ones-browser-export
+    name: ONES 浏览器导出（skill）
+    layer: L4
+    interfaces: [ones, export, browser, skill]
+    entry:
+      - "L4-proprietary/skills/ones-browser-export/SKILL.md"
+    notes: "权威能力=ones-export/ones-auth/oa-workflow-ones；禁止另写 ONES 导出/登录脚本"
+    supersedes: []
+
+  - id: skill-product-kb
+    name: 产品知识库（skill）
+    layer: L4
+    interfaces: [product, kb, skill]
+    entry:
+      - "L4-proprietary/skills/product-kb/SKILL.md"
+    supersedes: []
+
+  - id: skill-product-manager-expert
+    name: 产品管理专家（skill，统一入口）
+    layer: L4
+    interfaces: [product, manager, expert, skill, router]
+    entry:
+      - "L4-proprietary/skills/product-manager-expert/SKILL.md"
+    notes: "L4 产品统一入口：咨询/方案/检准/标的匹配"
     supersedes: []
 
 # 已登记的合法一次性脚本（门禁白名单；用完即归档/清理）

@@ -259,6 +259,73 @@ def cmd_explain(args, reg: Registry) -> int:
     return 1
 
 
+# ── 覆盖率校验：所有组件/skill 是否都已登记 ──
+
+def _discover_assets() -> dict[str, list[str]]:
+    """扫描仓库内的组件与 skill 目录。
+
+    只扫 L2/L3/L4 三层，排除 .git/node_modules/__pycache__/.pytest_cache。
+    返回 {"components": [...], "skills": [...]}（相对仓库根的目录名）。
+    """
+    out = {"components": [], "skills": []}
+    for layer in ("L2-infra", "L3-business", "L4-proprietary"):
+        cdir = REPO_ROOT / layer / "components"
+        sdir = REPO_ROOT / layer / "skills"
+        if cdir.is_dir():
+            out["components"].extend(
+                sorted(p.name for p in cdir.iterdir()
+                       if p.is_dir() and not p.name.startswith((".", "__")))
+            )
+        if sdir.is_dir():
+            out["skills"].extend(
+                sorted(p.name for p in sdir.iterdir()
+                       if p.is_dir() and not p.name.startswith((".", "__")))
+            )
+    return out
+
+
+def _registered_names(reg: Registry) -> set[str]:
+    """注册表已覆盖的资产名（能力 id 去掉 skill- 前缀后的目录名）。"""
+    names = set()
+    for c in reg.capabilities:
+        if c.id.startswith("skill-"):
+            names.add(c.id[len("skill-"):])
+        else:
+            names.add(c.id)
+    return names
+
+
+def cmd_coverage(args, reg: Registry) -> int:
+    assets = _discover_assets()
+    registered = _registered_names(reg)
+
+    unreg_comp = [c for c in assets["components"] if c not in registered]
+    unreg_skill = [s for s in assets["skills"] if s not in registered]
+
+    total = len(assets["components"]) + len(assets["skills"])
+    covered = total - len(unreg_comp) - len(unreg_skill)
+    pct = (covered / total * 100) if total else 0
+
+    print(f"能力覆盖率: {covered}/{total} ({pct:.1f}%)")
+    print(f"  组件 {len(assets['components'])} 个 / skill {len(assets['skills'])} 个")
+    print(f"  注册表能力条目: {len(reg.capabilities)}")
+
+    if unreg_comp or unreg_skill:
+        print()
+        print("❌ 未登记资产（动手前会被误判为「能力缺失」→ 重复建设）:")
+        for c in unreg_comp:
+            print(f"  [组件] {c}")
+        for s in unreg_skill:
+            print(f"  [skill] {s}")
+        print()
+        print("处理: 在 registry.yaml 补条目（entry 必须可直接调用），")
+        print("      或确认为废弃资产后从目录移除。")
+        return 1
+
+    print("\n✅ 全部组件与 skill 均已登记，无覆盖缺口。")
+    return 0
+
+
 def cmd_check(args, reg: Registry) -> int:
     if args.staged:
         files = _git_changed_files(staged=True)
@@ -304,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--list", action="store_true", help="列出全部能力")
     ap.add_argument("--explain", dest="id", help="查看单个能力详情")
     ap.add_argument("--check", action="store_true", help="防重复建设检查")
+    ap.add_argument("--coverage", action="store_true", help="覆盖率校验：所有组件/skill 是否已登记")
     ap.add_argument("--staged", action="store_true", help="只扫暂存区（配 pre-commit）")
     ap.add_argument("--all", action="store_true", help="扫全部高危目录")
     ap.add_argument("--verbose", "-v", action="store_true", help="显示说明/入口细节")
@@ -327,6 +395,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_explain(args, reg)
     if args.check:
         return cmd_check(args, reg)
+    if args.coverage:
+        return cmd_coverage(args, reg)
 
     ap.print_help()
     return 1

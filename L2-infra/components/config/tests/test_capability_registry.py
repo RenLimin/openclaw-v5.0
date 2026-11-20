@@ -92,3 +92,50 @@ def test_non_py_ignored(reg):
 def test_supersedes_paths_are_recorded(reg):
     cap = next(c for c in reg.capabilities if c.id == "ones-export")
     assert any("export_ones_202609.py" in p for p in cap.supersedes)
+
+
+# ── 覆盖率校验（--coverage）──
+
+def test_all_assets_registered(reg):
+    """硬指标：仓库内每个组件/skill 都必须在注册表有条目。"""
+    assets = cr._discover_assets()
+    registered = cr._registered_names(reg)
+    missing = [c for c in assets["components"] if c not in registered]
+    missing += [s for s in assets["skills"] if s not in registered]
+    assert not missing, f"未登记资产（会被误判能力缺失 → 重复建设）: {missing}"
+
+
+def test_registered_names_normalize_skill_prefix(reg):
+    names = cr._registered_names(reg)
+    assert "ones-browser-export" in names  # skill-ones-browser-export 归一
+    assert "ones-export" in names
+
+
+def test_discover_assets_finds_known_dirs():
+    assets = cr._discover_assets()
+    assert "credentials" in assets["components"]
+    assert "delivery-center" in assets["components"]
+    assert "knowledge-base" in assets["components"]
+    assert "ones-browser-export" in assets["skills"]
+
+
+def test_coverage_cli_exit_zero(reg, capsys):
+    rc = cr.cmd_coverage(type("A", (), {"json": False})(), reg)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "100.0%" in out
+
+
+def test_every_capability_entry_executable(reg):
+    """entry 必须是可直接调用的路径/命令，禁止「见文档」类指针。"""
+    for c in reg.capabilities:
+        assert c.entry, f"{c.id} 缺 entry"
+        for e in c.entry:
+            assert "见文档" not in e, f"{c.id} entry 不可执行: {e}"
+            assert "见 " not in e, f"{c.id} entry 不可执行: {e}"
+
+
+def test_no_duplicate_capability_ids(reg):
+    ids = [c.id for c in reg.capabilities]
+    dupes = {i for i in ids if ids.count(i) > 1}
+    assert not dupes, f"重复能力 id: {dupes}"

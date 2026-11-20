@@ -42,6 +42,7 @@ allow: [{path, reason}]          # 合法一次性脚本白名单
 | 链路 | 实现 | 作用 |
 |---|---|---|
 | 可发现性 | `capability_registry.py --query/--list/--explain` | agent 动手前查 |
+| 覆盖率 | `capability_registry.py --coverage` ← pre-commit step 6 | 未登记资产即阻断（硬指标 100%） |
 | 门禁 | `capability_registry.py --check --staged` ← pre-commit step 5 | 拦新建重复脚本，指出权威入口 |
 | 渲染 | `gen_asset_inventory.py` §能力注册表 | 人看 / agent 读资产清单时可见 |
 
@@ -60,6 +61,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 python3 L2-infra/components/config/capability-registry/capability_registry.py --explain ones-export
 python3 L2-infra/components/config/capability-registry/capability_registry.py --check --staged
 python3 L2-infra/components/config/capability-registry/capability_registry.py --check --all
+python3 L2-infra/components/config/capability-registry/capability_registry.py --coverage
 ```
 
 ## 5. 依赖
@@ -79,8 +81,8 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 
 ## 7. 测试
 
-`L2-infra/components/config/tests/test_capability_registry.py`（12 用例）：
-加载 / 精确查询 / 别名查询 / 全能力 entry 可执行性 / 三类重复脚本识别与建议准确性 / 白名单 / 非 py 忽略 / supersedes 登记。
+`L2-infra/components/config/tests/test_capability_registry.py`（18 用例）：
+加载 / 精确查询 / 别名查询 / 全能力 entry 可执行性 / 三类重复脚本识别与建议准确性 / 白名单 / 非 py 忽略 / supersedes 登记 / **覆盖率 100%** / 无重复 id。
 
 ## 8. 演进
 
@@ -95,3 +97,4 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | 日期 | 变更 |
 |---|---|
 | 2026-11-20 | 首版：registry.yaml（10 能力）+ 引擎 + 测试 + pre-commit 门禁 + 资产清单渲染 |
+| 2026-11-20 | 全量覆盖：81 条目（45 组件 + 26 skill + 10 能力族）；新增 `--coverage` 覆盖率硬指标 + pre-commit step 6 |
