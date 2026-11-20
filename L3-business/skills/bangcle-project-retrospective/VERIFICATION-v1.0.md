@@ -28,7 +28,7 @@
 
 | # | 场景 | 输入 | 预期结果 | 实测 |
 |---|---|---|---|---|
-| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ❌ 无 `tests/` 目录（无自动化测试） |
+| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ✅ test_report_skeleton_contract.py（报告骨架实例化过契约闸门 + 6 指标/三档证据铁律不回归） |
 | T2 | SKILL frontmatter | SKILL.md | name/description/layer 完整 | ✅ name/desc/layer=L3 |
 | T3 | 参考文档齐备 | 3 个 references | PMBOK/Program/证据化手册齐备 | ✅ 齐备 |
 | T4 | 6 指标手册 | `retro-evidence-playbook.md` | 6 指标算法+实测齐备 | ✅ 齐备 |
@@ -60,3 +60,7 @@
      5. 收敛两张改进清单（交付方案/项目计划），每条带责任方 + 验收点；
      6. 落盘 `analysis_output/<客户或项目>项目复盘报告-vN.md`，跑 `check_answer_contract.py` 须 PASS。
   3. 缺口：**无 `tests/` 自动化测试**；建议补 6 指标算法的表驱动单测（可复用山盟实测值作黄金基准）。
+
+## 修复记录（2026-11-20）
+
+- D-09 已修：新增 `tests/test_report_skeleton_contract.py`（报告骨架实例化过契约闸门 + 6 指标/三档证据铁律不回归）。关键路径 hermetic（不依赖 analysis_output/），实测通过。

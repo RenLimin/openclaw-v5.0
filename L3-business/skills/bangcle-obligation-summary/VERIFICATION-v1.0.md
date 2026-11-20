@@ -27,7 +27,7 @@
 
 | # | 场景 | 输入 | 预期结果 | 实测 |
 |---|---|---|---|---|
-| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ❌ 无 `tests/` 目录（无自动化测试） |
+| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ✅ test_obligation_template_contract.py（履约义务模板实例化过契约闸门（补 F4/F5 信封）） |
 | T2 | SKILL frontmatter | SKILL.md | name/description/layer 完整 | ✅ name/desc/layer=L3 |
 | T3 | 到期提取规则 | `references/expiry-extraction.md` | 关键词/区间取结束日/缺失规则齐备 | ✅ 齐备 |
 | T4 | 模板结构 | `assets/obligation-summary-template.md` | 总表+逐义务子表齐备 | ✅ 齐备 |
@@ -59,3 +59,7 @@
      5. 按 `references/expiry-extraction.md` 从子任务文本/评论/附件名提取到期日，附 `#编号 + 原文摘录`，取不到写【缺失】；
      6. 按模板落盘 `analysis_output/<客户或项目>履约义务汇总-vN.md`，跑 `check_answer_contract.py` 须 PASS。
   3. 缺口：**无本技能真实产物 + 无自动化测试**，建议后续用华夏/建行真实数据跑通一遍并补 `tests/`（到期提取规则表驱动断言 + 模板结构断言）。
+
+## 修复记录（2026-11-20）
+
+- D-09 已修：新增 `tests/test_obligation_template_contract.py`（履约义务模板实例化过契约闸门（补 F4/F5 信封））。关键路径 hermetic（不依赖 analysis_output/），实测通过。

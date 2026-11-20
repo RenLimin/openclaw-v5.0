@@ -26,7 +26,7 @@
 
 | # | 场景 | 输入 | 预期结果 | 实测 |
 |---|---|---|---|---|
-| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ❌ 无 `tests/` 目录（无自动化测试） |
+| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ✅ test_ledger_template_contract.py（台账模板实例化过契约闸门 + 信封骨架不回归） |
 | T2 | SKILL frontmatter | SKILL.md | name/description/layer 完整 | ✅ name/desc/layer=L3 |
 | T3 | 台账模板列 | `assets/delivery-ledger-template.md` | 标准 13 列齐备 | ✅ 13 列齐备 |
 | T4 | 真实产物存在性 | 华夏台账 md/xlsx/json | 三件套存在 | ✅ 三件套存在 |

@@ -27,8 +27,8 @@
 
 | ID | 资产 | 现状 | 状态 |
 |---|---|---|---|
-| D-09 | 5 个 L3 skill（project-report/summary/retrospective/obligation-summary/customer-profile） | 均无 `tests/` 目录，验收靠真实运行+手动步骤 | 🔴 建议补关键路径 pytest |
-| D-10 | bangcle-project-report | 新增 `tests/test_render_fail_closed.py`（4 用例）：缺 fetchedAt fail-closed exit=2 + normalize/aggregate 透传 + 带时间戳渲染，防 D-02 复发 | ✅ 已修 2026-11-20：4 passed；其余 4 个 L3 skill 仍无自动化测试，待后续 |
+| D-09 | 5 个 L3 skill（project-report/summary/retrospective/obligation-summary/customer-profile） | 均无 `tests/` 目录，验收靠真实运行+手动步骤 | ✅ 已修 2026-11-20：5 个 skill 全补关键路径 pytest（模板实例化过契约闸门 / 报告骨架 + 6 指标铁律），18 passed |
+| D-10 | bangcle-project-report | 新增 `tests/test_render_fail_closed.py`（4 用例）：缺 fetchedAt fail-closed exit=2 + normalize/aggregate 透传 + 带时间戳渲染，防 D-02 复发 | ✅ 已修 2026-11-20：4 passed |
 | D-10 | dag-orchestrator | DAG 执行引擎未实现（SKILL 自身已标 `[ ]`）；定义层/模板达标，运行时未验收 | 🔵 路线图，非缺陷，**不得当已建成能力调用** |
 | D-11 | ones-browser-export | 仅离线契约验证，真实浏览器/OA 链路未验 | ⚪ 待有登录态/专用 CDP 时补 E2E |
 
@@ -61,4 +61,4 @@
 | D-06 | `launchctl load` exit=0；`audit.py --json`：total=17 scheduled=16 unscheduled=0 **inconsistent=0** |
 | D-07 | 聚合 `-k` 3 连跑 38 passed；组件全量 175 passed in 4.13s（未复现，标记 flaky） |
 | D-08 | 8 个 YAML 角色文件 frontmatter 六字段全齐，无非 YAML 残留 |
-| D-09 | `pytest L3-business/skills/bangcle-project-report/tests` 4 passed in 0.14s |
+| D-09 | 5 skill 关键路径测试 18 passed in 0.30s（project-report 4 + summary 3 + obligation 3 + customer-profile 3 + retrospective 3 + 交叉） |

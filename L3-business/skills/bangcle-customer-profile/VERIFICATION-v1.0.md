@@ -28,7 +28,7 @@
 
 | # | 场景 | 输入 | 预期结果 | 实测 |
 |---|---|---|---|---|
-| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ❌ 无 `tests/` 目录（无自动化测试） |
+| T1 | 自动化测试发现 | `tests/` 目录 | pytest 通过 | ✅ test_customer_profile_template_contract.py（客户画像模板实例化过契约闸门（补 F5 信封）） |
 | T2 | SKILL frontmatter | SKILL.md | name/description/layer 完整 | ✅ name/desc/layer=L3 |
 | T3 | 模板结构 | `assets/customer-profile-template.md` | 五维度章节齐备 | ✅ 五维齐备 |
 | T4 | 真实产物存在性 | `analysis_output/*客户画像*` | 存在真实画像产物 | ⚠️ 无客户画像类产物（仅台账/报告） |
@@ -57,3 +57,7 @@
      5. 落盘 `analysis_output/<客户>客户画像-vN.md`；
      6. 运行 `python3 ../../../L2-infra/prompts/tools/check_answer_contract.py <画像路径>`，须 PASS（exit=0）。
   3. 缺口：**无真实产物样本 + 无自动化测试**，建议后续在跑通一个真实客户画像后补 `tests/`（模板结构断言 + 契约校验断言）。
+
+## 修复记录（2026-11-20）
+
+- D-09 已修：新增 `tests/test_customer_profile_template_contract.py`（客户画像模板实例化过契约闸门（补 F5 信封））。关键路径 hermetic（不依赖 analysis_output/），实测通过。
