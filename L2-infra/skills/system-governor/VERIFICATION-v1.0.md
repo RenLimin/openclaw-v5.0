@@ -67,3 +67,7 @@
 2. **dry-run 结果含大量 open 项**：`run --json` 报 `open 192`，其中 lane B 15 项 warnings、lane A/C 各 1 项。属真实环境状态，非本 skill 缺陷；但说明巡检口径需与「系统当前健康度」联动解读。
 3. **审计回归项与并行会话在途相关**：`audit` 的 `P4 未跟踪/未提交` 命中 6 未跟踪 / 15 未提交，与本次验收同时段其他会话的在途改动重叠（`git status` 中 L4-proprietary 多项 MM）。该结论只在无并行写入时才有证明力，需在稳定窗口复跑确认。
 4. **账本时间戳口径**：`run --json` 输出 `timestamp` 为 UTC（`2026-11-20T05:30:18+00:00`），与本地 +08:00 混用，建议统一口径。
+
+## 修复记录（2026-11-20）
+
+- D-01 已修：`governor.py report` 无参崩溃 → `--ledger` 缺省回退 `ledger.DEFAULT_LEDGER`。实测无参 exit=0 读取默认账本；组件回归 50 passed in 12.60s。

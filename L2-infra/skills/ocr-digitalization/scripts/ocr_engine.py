@@ -23,6 +23,16 @@ from PIL import Image
 from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Dict
 
+
+def correct_ocr_errors(text: str) -> str:
+    """OCR 文本纠错（40+ 合同场景规则）。
+
+    SKILL.md「公共 API 总览」将本函数列为 ocr_engine API；实际实现位于
+    ocr_backends 模块（避免模块级重依赖，此处 lazy 转发）。
+    """
+    from ocr_backends import correct_ocr_errors as _impl
+    return _impl(text)
+
 # ============================================================
 # 数据结构
 # ============================================================

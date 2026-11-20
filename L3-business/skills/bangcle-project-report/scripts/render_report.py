@@ -242,6 +242,20 @@ def main():
 
     data["audience"] = args.audience
 
+    # fail-closed：没有真实取数时间时绝不渲染。
+    # 旧行为会静默吐出空日期的「【已验证 |来源】」假溯源章，比报错更危险。
+    # 真实管道由 fetch_project_tasks.py 的 completeness.fetchedAt 经
+    # normalize→aggregate→build_goal_matrix 透传至此。
+    if not data.get("fetchedAt"):
+        print(
+            json.dumps({
+                "error": "missing fetchedAt：拒绝渲染无取数时间的报告（fail-closed）",
+                "hint": "请从 fetch_project_tasks.py 输出接入管道；真实取数时间在 completeness.fetchedAt",
+            }, ensure_ascii=False),
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
     if args.audience == "external":
         report = render_external(data)
     else:

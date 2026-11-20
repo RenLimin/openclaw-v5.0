@@ -75,3 +75,8 @@
   3. **缺口 1（已验证缺陷）**: 渲染产物在缺 `fetchedAt` 时不含 `【已验证 日期|来源】`，`check_answer_contract.py` 判 BLOCK。真实报告 `analysis_output/ccb-2026/中国建设银行-项目服务汇总材料-20261106.md` 该校验 **PASS**（47 处时间戳），说明缺陷出现在**回放/无快照时间**场景，需在 `render_report.py` 强制注入 `fetchedAt` 或标注【缺失】以过闸门。
   4. **缺口 2**: 无 `tests/` 自动化测试目录，黄金回归目前依赖手工命令序列（本文档已给出可复现步骤）。
   5. AC1/AC2 的真实取数链路（T10）依赖 ONES 浏览器登录态，本机环境不可完整复现；已用 2026-11-08 真实快照（15,334 任务）完成等价回放。
+
+## 修复记录（2026-11-20）
+
+- D-02 已修：render_report 缺 `fetchedAt` 时 **fail-closed exit=2**（stdout 零输出，杜绝空日期假「【已验证|来源】」章）；normalize/aggregate 透传 `completeness.fetchedAt` 溯源字段。实测：缺时间戳 exit=2；带真实时间戳 exit=0 且日期正确。
+- D-09 已修：新增 `tests/test_render_fail_closed.py`（4 用例）防复发，4 passed in 0.14s。

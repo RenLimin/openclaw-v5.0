@@ -73,3 +73,8 @@
 2. **文档与实现位置不一致**：SKILL.md「公共 API 总览」把 `correct_ocr_errors(text)` 列为 `ocr_engine` 的 API，实际定义在 `scripts/ocr_backends.py`（`ocr_engine` 内对应函数名为 `correct_contract_text`）。→ 建议修正 SKILL.md 或提供 re-export，避免调用方按文档找不到符号。
 3. **CLI 错误路径不友好**：对不存在的输入文件，`ocr_engine.py <missing.pdf>` 直接抛 `pymupdf.FileNotFoundError` 栈回溯，未转为一行 `error:` 提示（对比 pdf-toolkit 的 `error:` 约定）。
 4. **可选引擎未装**：paddleocr / pytesseract 缺失。SKILL.md 已声明 paddle 为可选，但 `auto` 引擎在二者皆缺时的降级路径建议补一条实测。
+
+## 修复记录（2026-11-20）
+
+- D-04 已修：`test_adaptive_binarize` 纯渐变图全白是数学必然（无高频结构，OpenCV 同款公式亦然）——测试夹具不真实，改用带黑白结构的 `text_image`。test_03 21 passed，组件全量 113 passed in 0.22s。
+- D-05 已修：`ocr_engine` 新增 `correct_ocr_errors` lazy re-export（文档 API 即契约）。实测 `合同产晶数量→合同产品数量`。

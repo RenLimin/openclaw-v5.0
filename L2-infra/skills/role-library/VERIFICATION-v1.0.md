@@ -49,3 +49,7 @@
 2. **格式不统一**：SKILL.md 要求新增角色建 YAML（含 frontmatter），但 `ui-designer.md` 是 Markdown 结构，`yaml.safe_load` 直接抛 `ScannerError`。→ 需统一为 YAML 或在 SKILL.md 显式声明支持两种格式。
 3. **角色自动匹配 / 多角色协作未实现**：SKILL.md 实施状态已将「角色自动匹配逻辑」「多角色协作编排」标为 `[ ]`，本次不纳入验收覆盖。
 4. **无自动化校验**：建议补一个 `verify_roles.py`，校验「SKILL.md 声明集合 == references/roles 文件集合」与「YAML frontmatter 字段完整」，把 TC04 变成机器门禁。
+
+## 修复记录（2026-11-20）
+
+- D-08 已修：补齐 7 个声明角色 YAML（report-generator/quality-auditor/sys-admin/db-admin/pm-assistant/data-collector/ui-designer），旧 `ui-designer.md` 转 YAML 后删除。8 个角色文件全部 YAML frontmatter 六字段合规。

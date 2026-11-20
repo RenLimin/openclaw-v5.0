@@ -69,3 +69,7 @@
 1. **聚合运行下的篡改用例红项**：`pytest -k "identity or toolchain or token"` 下 `test_tampered_signature_rejected` 未抛 `InvalidToken`；但 `pytest tests/test_ontology_identity_token.py` 单跑 18/18 全绿，且我独立真实调用篡改令牌确实抛 `InvalidToken`。→ 该用例对**同进程内 secret/缓存状态**敏感（多文件共同导入时被前序用例影响），建议改为每个用例独立 secret 或在 conftest 隔离。此为测试隔离缺陷，非实现缺陷。
 2. **TC06 选择器串入无关文件**：`-k` 匹配到 `test_ontology_identity.py`（137 deselected），导致红项出现在非目标文件。验收回归建议按文件显式列举（如本次 TC05 方式）而非关键词聚合。
 3. **本 skill 目录无脚本/无测试**：实现与测试均在 `L2-infra/components/ai-knowledge-base/`，skill 侧仅 SKILL.md。已有 P6/P7 验收文档（`docs/VERIFICATION-P6-…-v1.0.md` / `P7-…`）覆盖端到端黄金用例（agent 停 validated / human 令牌 commit 双指纹），本文档不重复其结论，只核对可复现性。
+
+## 修复记录（2026-11-20）
+
+- D-07 复验：聚合选择器 `-k "identity or toolchain or token"` 3 连跑 38 passed + 组件全量 175 passed in 4.13s，红项**未复现**。登记册标记为 flaky（测试隔离隐患，暂缓）。

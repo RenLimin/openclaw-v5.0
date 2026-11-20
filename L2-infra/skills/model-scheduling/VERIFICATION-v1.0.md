@@ -68,3 +68,7 @@
 1. **调度漂移（新发现）**：`scheduler-guard/audit.py` 实测 `scheduled 15 / plist_not_loaded 1 / inconsistent 1`，而 SKILL.md「验证方式」声明「总计 17 | 已调度 16 | 未调度 0 | 不一致 0」。差异条目为 `session_cleanup.py`（plist 存在但未 loaded）。→ **SKILL.md 口径已过期，需修正**；同时应 `launchctl load` 该 plist 或调整 manifest。
 2. **真实环境额度未恢复**：deepseek 两个模型仍为 HTTP 402，属外部账户状态，非本 skill 缺陷；TC03 的验收点是「脚本正确判定并保持 exhausted」，该点通过。
 3. **SKILL.md 与组件文档双份维护**：`VERIFICATION-v1.1.md` 在组件侧，skill 侧本文档需与其保持口径同步。
+
+## 修复记录（2026-11-20）
+
+- D-06 已修：`ai.openclaw.session-cleanup` plist 已 `launchctl load`。复验 audit：total=17 scheduled=16 unscheduled=0 **inconsistent=0**，与 SKILL.md 声明口径一致。

@@ -31,3 +31,7 @@
 ## 已知漂移（如实记录）
 
 - `inconsistent=1`：`session_cleanup.py` 的 LaunchAgent plist 未加载，与 SKILL.md 声明的「不一致 0」口径不符；属运行时调度状态问题，建议后续 `--fix` 或手动 load 修复。
+
+## 修复记录（2026-11-20）
+
+- 已知漂移已修：`ai.openclaw.session-cleanup` plist 已 load。复验 audit：total=17 scheduled=16 unscheduled=0 **inconsistent=0**。

@@ -59,3 +59,7 @@
      2. 按 `assets/delivery-ledger-template.md` 13 列组织，已完成按交付日期正序；
      3. 导出 Excel 到 `analysis_output/`，核对行数 = 工作项数；
      4. 运行 `python3 ../../../L2-infra/prompts/tools/check_answer_contract.py <台账md>`，须 PASS（exit=0）。
+
+## 修复记录（2026-11-20）
+
+- D-03 已修：`assets/delivery-ledger-template.md` 补契约信封骨架（元信息块 F2/F3、`## 0. 溯源链` F4、`## 质量信号` F5、降级标注约定）。模板样例实测过 `check_answer_contract.py`：2 处时间戳、全部硬性项通过、PASS exit=0。

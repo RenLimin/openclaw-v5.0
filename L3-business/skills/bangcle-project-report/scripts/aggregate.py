@@ -116,6 +116,10 @@ def main():
         "detail": detail,
         "reconciliation": reconciliation,
         "period": period,
+        # 透传溯源字段（normalize 已从 fetch/completeness 取出），防 render 丢取数时间
+        "fetchedAt": data.get("fetchedAt"),
+        "customer": data.get("customer", ""),
+        "dataSource": data.get("dataSource", "项目管理系统"),
     }
     print(json.dumps(output, ensure_ascii=False))
 

@@ -70,7 +70,9 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    path = Path(args.ledger)
+    # 与 ledger.save_report 的默认路径对齐：--ledger 缺省读 DEFAULT_LEDGER，
+    # 避免 `governor.py report` 无参时 Path(None) 崩溃（2026-11-20 验收缺陷）。
+    path = Path(args.ledger) if args.ledger else ledger.DEFAULT_LEDGER
     if not path.exists():
         print(f"no ledger at {path} — run `governor.py run` first", file=sys.stderr)
         return 1

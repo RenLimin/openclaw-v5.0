@@ -259,10 +259,21 @@ def main():
         ),
     }
 
+    # 透传溯源字段：fetch 的 completeness.fetchedAt 是真实取数时间，
+    # 必须一路传到 render；丢失会导致渲染出无日期的假「【已验证|来源】」。
+    fetched_at = data.get("fetchedAt")
+    if not fetched_at:
+        completeness = data.get("completeness")
+        if isinstance(completeness, dict):
+            fetched_at = completeness.get("fetchedAt")
+
     output = {
         "workItems": work_items,
         "stats": stats,
         "period": period,
+        "fetchedAt": fetched_at,
+        "customer": data.get("customer", ""),
+        "dataSource": data.get("dataSource", "项目管理系统"),
     }
     print(json.dumps(output, ensure_ascii=False))
 

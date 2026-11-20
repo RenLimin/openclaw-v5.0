@@ -89,10 +89,13 @@ class TestBinarize:
         assert result.getpixel((0, 0)) == 0
         assert result.getpixel((1, 0)) == 255
 
-    def test_adaptive_binarize(self, gradient_image):
-        result = adaptive_binarize(gradient_image)
+    def test_adaptive_binarize(self, text_image):
+        # 注意：纯渐变图（gradient_image）无高频结构，自适应二值化输出全白是
+        # 数学必然（arr > local_mean - C 对均匀渐变恒真），OpenCV 同款公式亦然。
+        # 自适应二值化面向拍照文档，须用带真实黑白结构的图验证。
+        result = adaptive_binarize(text_image)
         assert result.mode == "L"
-        # 自适应二值化后应该有黑白分布
+        # 自适应二值化后应该有黑白分布（黑字保留、白底保留）
         arr = np.array(result)
         assert arr.min() == 0
         assert arr.max() == 255
