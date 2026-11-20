@@ -215,17 +215,22 @@ python3 L2-infra/components/config/secret-scan/secret_scan.py --allow-pattern '^
 **派生目标**：`~/.config/gh/hosts.yml`（gh CLI 读取，chmod 600）
 
 ```bash
-# push 前自检（只读，不写）
+# push 前自检（只读，不写）——pre-push hook 已自动跑，也可手动
 bash L2-infra/components/credentials/credentials.sh github-sync --check
 
 # 修复（幂等同步 SSOT → gh 配置，并实测 gh api）
 bash L2-infra/components/credentials/credentials.sh github-sync
 ```
 
+**已装 hook**（`bash L2-infra/components/config/install-hooks.sh`）：
+- `pre-push`：push 前自动跑 `--check`，登录态异常即阻断并给修复命令；联网校验仅告警
+- `pre-commit`：step 0~5（密钥扫描 / 资产清单 / 配置快照 / 知识库 / 应答契约 / 防重复建设）
+
 - Never 依赖裸 `gh auth login`（交互，定时/隔离环境必卡）
 - Never 直接把 keychain `gh:github.com` 的值当 token（是 `go-keyring-base64:` 包装，需剥壳）
 - Never 把 token 写进 `.git/config` remote URL 或 `~/.git-credentials`
 - Always 换机/换 clone 后先跑 `github-sync`，再 push
+- Never 删/绕过 pre-push hook（绕过 = 回到「push 时才发现没登录」）
 
 ## 7. 变更历史
 
