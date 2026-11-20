@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-20 13:12 UTC+08:00
+最后生成：2026-11-20 13:48 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -293,8 +293,8 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9b69f1e` |
-| Commit 数 | 738 |
+| HEAD | `7c2c1f2` |
+| Commit 数 | 739 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -369,7 +369,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 ## L2 / L3 / L4 已建设完成组件（自动登记）
 
 > 由 `gen_asset_inventory.discover_completed_components()` 全盘扫描，
-> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 42 个。
+> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 44 个。
 
 ### L2 基础设施
 
@@ -377,11 +377,13 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 |---|---|---|---|
 | AI Knowledge Base (ai-knowledge-base) | — | `L2-infra/components/ai-knowledge-base` | `VERIFICATION-P2-kinetic-v1.0.md`, `VERIFICATION-P1-identity-v1.0.md`, `OPERATIONS-v1.0.md` |
 | backup | — | `L2-infra/components/backup` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| browser-automation | — | `L2-infra/components/browser-automation` | `VERIFICATION-v1.0.md` |
 | config | — | `L2-infra/components/config` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | context-guardian（修复版） | 文档：PRD-v1.0 / DESIGN-OUTLINE-v1.0 / DESIGN-DETAIL-v1.0 / ... | `L2-infra/components/context-guardian` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | context-management | — | `L2-infra/components/context-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | credentials | — | `L2-infra/components/credentials` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
-| delivery-quality：交付质量反馈闭环 | 把 Rex 对交付结果的**问题反馈/纠正**默认沉淀为结构化记录，定期聚类 review，把复发/高危问题反哺到... | `L2-infra/components/delivery-quality` | README+code |
+| delivery-quality：交付质量反馈闭环 | 把 Rex 对交付结果的**问题反馈/纠正**默认沉淀为结构化记录，定期聚类 review，把复发/高危问题反哺到... | `L2-infra/components/delivery-quality` | `VERIFICATION-v1.0.md` |
+| gateway-safety | — | `L2-infra/components/gateway-safety` | `VERIFICATION-v1.0.md` |
 | knowledge-base — 通用知识库组件 | 模型不可用时自动降级为 MockEmbedder，不影响系统可用性。 | `L2-infra/components/knowledge-base` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | logs | ✅ 已实现（聚合器核心可用）；日志查询 DSL、轮转策略为演进方向，尚未实现。 | `L2-infra/components/logs` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | maintenance | 返回退出码 0 = 健康，非 0 = 存在问题。 | `L2-infra/components/maintenance` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
@@ -392,7 +394,7 @@ _自建技能总计: 26 个（L2: 10, L3: 6, L4: 10, 根目录: 0）_
 | office-generation | — | `L2-infra/components/office-generation` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | 持久化适配 (L2 基础设施组件) | — | `L2-infra/components/persistence` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | sandbox | — | `L2-infra/components/sandbox` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
-| scheduler-guard — 调度资产守卫 | 防止「脚本写好了但从未被调度」这类静默失败。 | `L2-infra/components/scheduler-guard` | README+code |
+| scheduler-guard — 调度资产守卫 | 防止「脚本写好了但从未被调度」这类静默失败。 | `L2-infra/components/scheduler-guard` | `VERIFICATION-v1.0.md` |
 | session-boundary-guard — 会话边界护栏 | 判据：sessionKey 前缀（稳定契约，不查询实时状态）—— | `L2-infra/components/session-boundary-guard` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | L2 会话隔离组件 (session-isolation) | 统一的会话隔离与编排组件，提供**任务卡协议 + 共享状态 + 事件日志 + 任务调度**四大能力。 | `L2-infra/components/session-isolation` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | session-recovery — 会话失败自动重试与断点记忆（v1.2 SQLite） | 走**条件 UPDATE**，归属不匹配 rowcount=0 → exit 2 拒绝，绝不写入。 | `L2-infra/components/session-recovery` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |

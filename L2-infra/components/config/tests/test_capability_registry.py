@@ -222,3 +222,18 @@ def test_lifecycle_existing_asset_not_flagged(reg, monkeypatch, tmp_path):
         assert rc == 0
     finally:
         cr.REPO_ROOT = old_root
+
+
+def test_lifecycle_recursive_finds_docs_in_subdir(reg, monkeypatch, tmp_path):
+    """递归：docs/ 子目录下的 DESIGN/VERIFICATION 必须被识别（防误报）。"""
+    fake = tmp_path / "ws"
+    (fake / "L2-infra" / "components" / "subdoc-asset" / "docs").mkdir(parents=True)
+    (fake / "L2-infra" / "components" / "subdoc-asset" / "docs" / "DESIGN-v1.0.md").write_text("d")
+    (fake / "L2-infra" / "components" / "subdoc-asset" / "docs" / "VERIFICATION-v1.0.md").write_text("v")
+    old_root = cr.REPO_ROOT
+    cr.REPO_ROOT = fake
+    try:
+        rc = cr.cmd_lifecycle(type("A", (), {"new_only": False, "require_design": True})(), reg)
+        assert rc == 0
+    finally:
+        cr.REPO_ROOT = old_root

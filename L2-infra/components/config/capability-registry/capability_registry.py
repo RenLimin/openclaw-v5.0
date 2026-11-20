@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -384,10 +385,28 @@ def cmd_validate(args, reg: Registry) -> int:
 # ── 资产生命周期闭环：设计 → 验收 文档门禁（业界 DoD / ADR Guard / OWASP shift-left）──
 
 def _asset_docs(asset_dir: Path) -> dict:
-    """检查单个资产目录的设计/验收文档。"""
-    names = [p.name for p in asset_dir.iterdir() if p.is_file()] if asset_dir.is_dir() else []
-    design = [n for n in names if re.match(r"^(DESIGN|PRD|SKILL)", n, re.I)]
-    verify = [n for n in names if re.match(r"^VERIFICATION", n, re.I)]
+    """检查单个资产目录的设计/验收文档（递归 docs/ 子目录，排除缓存）。
+
+    仓库惯例：部分资产把文档放在根级，部分放在 docs/ 子目录；
+    只扫根级会把 docs/ 下的 DESIGN/PRD/VERIFICATION 误判为缺失。
+    """
+    design: list[str] = []
+    verify: list[str] = []
+    if not asset_dir.is_dir():
+        return {"design": design, "verify": verify}
+    for dirpath, dirnames, filenames in os.walk(asset_dir):
+        depth = len(Path(dirpath).relative_to(asset_dir).parts)
+        if depth > 2:
+            dirnames[:] = []
+            continue
+        dirnames[:] = [x for x in dirnames if x not in (".git", "node_modules", "__pycache__", ".pytest_cache", ".deprecated")]
+        for fn in filenames:
+            n = fn.upper()
+            rel = f"{Path(dirpath).relative_to(asset_dir)}/{fn}"
+            if re.match(r"^(DESIGN|PRD|SKILL)", n):
+                design.append(rel)
+            elif n.startswith("VERIFICATION"):
+                verify.append(rel)
     return {"design": design, "verify": verify}
 
 

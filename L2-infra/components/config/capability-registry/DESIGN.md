@@ -87,10 +87,11 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 
 ## 7. 测试
 
-`L2-infra/components/config/tests/test_capability_registry.py`（25 用例）：
+`L2-infra/components/config/tests/test_capability_registry.py`（26 用例）：
 加载 / 精确查询 / 别名查询 / 全能力 entry 可执行性 / 三类重复脚本识别与建议准确性 /
 白名单 / 非 py 忽略 / supersedes 登记 / 覆盖率 100% / 无重复 id /
-`--validate` 孤儿检测（构造坏路径 + 不可执行指针）/ `--lifecycle` 新增资产判定与阻断。
+`--validate` 孤儿检测（构造坏路径 + 不可执行指针）/ `--lifecycle` 新增资产判定与阻断 /
+`_asset_docs` 递归（docs/ 子目录文档可被识别，防根级误报）。
 
 ## 8. 演进
 
@@ -98,9 +99,10 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 |---|---|
 | 能力依赖图（调用链） | 多能力串联编排需求 |
 | 与 system-governor P6 打通（自动归位） | P6 成熟后 |
-| 验收文档补齐（存量 27 个资产） | Rex 拍板排期 |
+| ~~验收文档补齐~~ ✅ 2026-11-20 完成（71/71） | 已闭环 |
 
 > entry 健康探测已实现（`--validate`，2026-11-20）。
+> 文档递归识别已实现（`_asset_docs` 扫 docs/ 子目录，2026-11-20）。
 
 ## 9. 变更记录
 
@@ -109,3 +111,4 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | 2026-11-20 | 首版：registry.yaml（10 能力）+ 引擎 + 测试 + pre-commit 门禁 + 资产清单渲染 |
 | 2026-11-20 | 全量覆盖：81 条目（45 组件 + 26 skill + 10 能力族）；新增 `--coverage` 覆盖率硬指标 + pre-commit step 6 |
 | 2026-11-20 | 工程化补齐：14 个孤儿 entry 修正（99 条路径全部真实）；新增 `--validate`（fitness function）+ `--lifecycle`（DoD/ADR Guard 闭环门禁）+ pre-commit step 7/8 |
+| 2026-11-20 | 全量闭环：71 个资产设计/验收文档 71/71（补 5 DESIGN + 29 VERIFICATION）；`_asset_docs` 递归识别 docs/ 子目录，消除根级误报 |
