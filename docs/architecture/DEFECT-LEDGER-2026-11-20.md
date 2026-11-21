@@ -28,8 +28,8 @@
 | ID | 资产 | 现状 | 状态 |
 |---|---|---|---|
 | D-09 | 5 个 L3 skill（project-report/summary/retrospective/obligation-summary/customer-profile） | 均无 `tests/` 目录，验收靠真实运行+手动步骤 | ✅ 已修 2026-11-20：5 个 skill 全补关键路径 pytest（模板实例化过契约闸门 / 报告骨架 + 6 指标铁律），18 passed |
-| D-10 | bangcle-project-report | 新增 `tests/test_render_fail_closed.py`（4 用例）：缺 fetchedAt fail-closed exit=2 + normalize/aggregate 透传 + 带时间戳渲染，防 D-02 复发 | ✅ 已修 2026-11-20：4 passed |
-| D-10 | dag-orchestrator | DAG 执行引擎未实现（SKILL 自身已标 `[ ]`）；定义层/模板达标，运行时未验收 | 🔵 路线图，非缺陷，**不得当已建成能力调用** |
+| D-10 | dag-orchestrator | DAG 执行引擎未实现（SKILL 自身已标 `[ ]`）；定义层/模板达标，运行时未验收 | 🔵 路线图，非缺陷；**2026-11-21 已提交 DESIGN-v1.0.md 草案待 Rex 评审**（自研轻量执行器方案，13 条 hermetic 验收用例；未写代码、未打钩 SKILL.md）；**评审通过前不得当已建成能力调用** |
+| D-12 | bangcle-project-report | 新增 `tests/test_render_fail_closed.py`（4 用例）：缺 fetchedAt fail-closed exit=2 + normalize/aggregate 透传 + 带时间戳渲染，防 D-02 复发 | ✅ 已修 2026-11-20：4 passed |
 | D-11 | ones-browser-export | 仅离线契约验证，真实浏览器/OA 链路未验 | ⚪ 待有登录态/专用 CDP 时补 E2E |
 
 ## 环境性 / 外部（非代码缺陷，仅留证）
@@ -42,6 +42,7 @@
 | E-03 | model-scheduling：deepseek 两模型 HTTP 402 | ⚪ 外部账户额度，脚本判定正确 |
 | E-04 | product-manager-expert 检准 1 error：源文件缺失 | ⚪ 真实数据问题，按 SKILL 由维护者补录 |
 | E-05 | product-kb/CDI 等 openpyxl/pydantic/PyPDF2 弃用告警 | ⚪ 依赖告警非失败 |
+| D-13 | bdms/scripts 历史重复脚本归并 | 34 个 git 跟踪脚本，经只读分析聚类：A 组 ONES 导出 11、B 组认证诊断 9、C 组页面诊断 3、D 组 OA 导出 5、E 组企微/异常 3、F 组报告 2、G 组通用 1 | ⚪ 方案已出（2026-11-21 只读分析报告）：24 个可立即安全归档（前置：同步改 registry supersedes + test_capability_registry 固定输入）；4 个需 Rex 拍板（oa_export_playwright / oa_export_full / export_abnormal_osascript / start_wecom_chrome，被跨组件文档引用）；另发现 registry allow 白名单 2 条幽灵路径。**未执行任何删除/移动** |
 
 ## 修复纪律
 
