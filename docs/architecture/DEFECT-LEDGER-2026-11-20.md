@@ -36,7 +36,8 @@
 
 | ID | 现象 | 判定 |
 |---|---|---|
-| E-01 | bangcle-ppt visual 3 failed、fin-l4 visual 14 failed（127.0.0.1:18806 ERR_CONNECTION_REFUSED） | ⚪ Web 预览服务未启动；功能测试 249/189 全绿 |
+| E-01 | bangcle-ppt visual 3 failed、fin-l4 visual 14 failed（127.0.0.1:18806 ERR_CONNECTION_REFUSED） | ✅ 已治理（2026-11-21）：共享基类加「服务缺失即 skip」前置守卫，服务未启动不再误报 fail（见修复记录）；功能测试 249/189 全绿 |
+| E-06 | visual 套件跨组件**端口撞号**：18801 同时被 bangcle-ppt 与 fin-l4 套件引用、18803/18804 被 delivery-center/office-contract 交叉引用；服务起到 A 端口时 B 套件打 404 | ⚪ 配置/环境类，非本批代码缺陷；重排端口需同步各组件预览脚本+文档，待 Rex 拍板。守卫已确保「服务在但 404」仍真实 fail 不被掩盖（聚合跑 18 failed 即此类，均为 404） |
 | E-02 | system-health-check：bdms-web、llama-cpp-embedding Connection refused | ⚪ 真实服务未启动，三态判定正确 |
 | E-03 | model-scheduling：deepseek 两模型 HTTP 402 | ⚪ 外部账户额度，脚本判定正确 |
 | E-04 | product-manager-expert 检准 1 error：源文件缺失 | ⚪ 真实数据问题，按 SKILL 由维护者补录 |
@@ -48,6 +49,22 @@
 - 验收文档与登记册口径同步：修复后更新对应 VERIFICATION 的「遗留问题」。
 - P0/P1 代码修复走 pre-commit 全门禁 + 显式 pathspec 提交（共享 index 有并行会话文件）。
 - D-10 引擎类大改须先 DESIGN 评审，不在本批次顺手做。
+
+## E-01 修复记录（2026-11-21）：visual 服务缺失 skip 守卫
+
+**根因**：`web-common/tests/visual/base.py` 直接 `page.goto()`，预览服务未启动时浏览器抛 `ERR_CONNECTION_REFUSED`，被记成视觉回归 failed——但这是「环境未就绪」而非「页面回归」。
+
+**改动**（共享基类，一处覆盖全部 visual 套件：ppt:18806 / fin:18801 / cissp:18802 / dc:18803 / oc:18805 / bdms:8000）：
+- 新增 `ensure_http_service_available()`：导航前用 `socket.create_connection` 探测目标主机端口，**仅** `ECONNREFUSED` → `pytest.skip`；服务在监听（哪怕返回 4xx/5xx）、超时、非 http URL 一律不 skip，交后续真实浏览器/像素校验暴露，不用 skip 掩盖产品缺陷。
+- `assert_visual_match()` 在 `goto` 前调用该守卫。
+
+**验证（真实运行）**：
+- hermetic 单测 `tests/visual/test_service_guard.py`（3 用例：关端口必 skip / 在监听不 skip / file:// 绕过）：**3 passed**。
+- 真实 ppt visual 套件（18806 无服务）：改动前 3 failed（ERR_CONNECTION_REFUSED）→ 改动后 **3 skipped**。
+- 全 visual 聚合跑（`--import-mode=importlib`，绕过既有同名 test_pages.py 收集冲突）：服务在的套件真实执行像素对比；无服务的 skip。聚合中 18 failed 经逐一定位**全部是 404（E-06 端口撞号），无一例 ERR_CONNECTION_REFUSED 误报**，反证守卫语义正确。
+- 非 visual 功能测试不受影响（守卫只在 VisualTestBase 内）。
+
+**文件**：`L2-infra/components/web-common/tests/visual/base.py`、`L2-infra/components/web-common/tests/visual/test_service_guard.py`（新增）。
 
 ## 修复记录（2026-11-20 批次）
 

@@ -5,8 +5,12 @@ visual/base.py — 视觉回归测试基类 (同步版)
 注意: 与 pytest-playwright 同步 page fixture 配合，测试方法为普通同步函数
 """
 
+import errno
 import os
+import socket
 from pathlib import Path
+from urllib.parse import urlparse
+
 from PIL import Image, ImageChops, ImageDraw
 import pytest
 
@@ -40,6 +44,29 @@ class VisualTestBase:
         if self.url.startswith("http://") or self.url.startswith("file://"):
             return self.url
         return f"{self.base_url.rstrip('/')}/{self.url.lstrip('/')}"
+
+    @staticmethod
+    def ensure_http_service_available(full_url: str, timeout: float = 0.5) -> None:
+        """视觉测试前置检查：HTTP 服务未启动时 skip，而不是误报页面失败。
+
+        只把 ECONNREFUSED 视为“服务缺失”。服务已监听但返回 4xx/5xx、页面渲染异常、
+        HTTP 超时等仍由后续真实浏览器检查暴露，避免用 skip 掩盖产品缺陷。
+        """
+        parsed = urlparse(full_url)
+        if parsed.scheme != "http" or not parsed.hostname:
+            return
+
+        port = parsed.port or 80
+        try:
+            with socket.create_connection((parsed.hostname, port), timeout=timeout):
+                pass
+        except OSError as exc:
+            if isinstance(exc, ConnectionRefusedError) or exc.errno == errno.ECONNREFUSED:
+                pytest.skip(
+                    f"视觉回归依赖的预览服务未启动，已跳过: {parsed.scheme}://{parsed.hostname}:{port}\n"
+                    "请先启动对应组件的预览服务，再运行 visual 测试。"
+                )
+            raise
 
     def get_golden_path(self, name: str) -> Path:
         """获取基准图路径"""
@@ -141,11 +168,16 @@ class VisualTestBase:
         """截图并与基准图对比，断言视觉一致（同步版）"""
         golden_path = self.get_golden_path(name)
 
+        full_url = self.get_full_url()
+
+        # 预览服务缺失属于环境未就绪，应显式 skip；不能让浏览器把 ERR_CONNECTION_REFUSED
+        # 记成视觉回归失败。服务存在时，后续仍执行真实 HTTP/像素校验。
+        self.ensure_http_service_available(full_url)
+
         # 设置视口
         page.set_viewport_size({"width": self.viewport[0], "height": self.viewport[1]})
 
         # 导航到测试页面
-        full_url = self.get_full_url()
         response = page.goto(full_url, wait_until="networkidle")
 
         # HTTP 状态码校验：非允许状态码一律视为失败，禁止错误页存为基准图
