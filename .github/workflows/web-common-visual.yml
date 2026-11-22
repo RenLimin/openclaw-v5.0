@@ -33,11 +33,11 @@ jobs:
           # 在 CI 中需要配置启动所有被测服务
           # 这里提供框架，实际需要根据被测服务调整启动步骤
           cd ${{ github.workspace }}
-          python -m pytest --collect-only -q L*/**/tests/visual/test_pages.py
+          python -m pytest --collect-only -q L2-infra/components/web-common/tests/visual -p no:cacheprovider
 
       - name: Upload test artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: visual-test-diff
-          path: '*/tests/visual/diff/'
+          path: 'L2-infra/components/web-common/tests/visual/diff/'

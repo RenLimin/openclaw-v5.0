@@ -50,9 +50,10 @@ python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000
 
 ```bash
 cd L4-proprietary/components/bdms
-PYTHONPATH=src python3 -m pytest -q --ignore=tests/test_e2e_v21.py --ignore=tests/visual
-# 全量非 e2e/visual 回归：409 passed / 16 skipped / 0 failed
+PYTHONPATH=src python3 -m pytest -q --ignore=tests/test_e2e_v21.py
+# 全量非 e2e 回归：409 passed / 16 skipped / 0 failed
 ```
 
-- `pytest.ini`：`addopts = -m "not slow"`（e2e/visual 单独跑）
-- E2E（需真实浏览器 + 在线服务）：`tests/test_e2e_v21.py`、`tests/visual/`
+- `pytest.ini`：`addopts = -m "not slow"`（e2e 单独跑）
+- E2E（需真实浏览器 + 在线服务）：`tests/test_e2e_v21.py`
+- 视觉回归：统一在 L2 `web-common/tests/visual/`（组件内不再重复维护，见 D-13/E-06 治理）

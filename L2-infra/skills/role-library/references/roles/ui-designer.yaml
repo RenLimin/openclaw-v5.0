@@ -91,7 +91,8 @@ permissions: [read-only]
 
 ### 基准图建立（首次走查）
 1. 目标服务已启动，页面可访问
-2. 创建测试文件 `tests/visual/test_pages.py`，继承 `VisualTestBase`，定义每个页面 URL
+2. 在 `L2-infra/components/web-common/tests/visual/<组件>/test_<组件>.py` 中新增测试类，
+   继承 `VisualTestBase`，定义页面 URL（**视觉回归统一在此聚合套件维护，组件内不再重复建 `tests/visual/test_pages.py`**，见 D-13/E-06 治理）
 3. 运行 pytest，首次运行会自动生成基准图到 `web-common/tests/visual/golden/`
 4. 基准图提交到 git 版本控制
 
@@ -104,11 +105,11 @@ permissions: [read-only]
 
 ### 运行脚本
 ```bash
-# 运行所有视觉测试
-./tests/run-visual-tests.sh
+# 运行所有视觉测试（唯一权威套件）
+./L2-infra/components/web-common/tests/run-visual-tests.sh
 
-# 运行单个组件测试
-python -m pytest path/to/component/tests/visual/test_pages.py -v
+# 运行单个组件
+python -m pytest L2-infra/components/web-common/tests/visual/<组件>/test_<组件>.py -v
 ```
 
 ### 配置

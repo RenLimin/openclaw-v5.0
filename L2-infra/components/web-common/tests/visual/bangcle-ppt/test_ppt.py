@@ -32,11 +32,11 @@ class TestPPTGenerator(VisualTestBase):
 
 
 class TestPPTDetail(VisualTestBase):
-    """Bangcle PPT 模板详情页面测试"""
-    url = "http://127.0.0.1:18801/templates/demo"
+    """Bangcle PPT 模板详情页面测试（cover-light 为真实模板路由）"""
+    url = "http://127.0.0.1:18801/templates/cover-light"
     viewport = (1440, 900)
     threshold = 0.001
     wait_for_selector = "body"
 
     def test_detail(self, page):
-        self.assert_visual_match(page, "detail")
+        self.assert_visual_match(page, "template_detail")
