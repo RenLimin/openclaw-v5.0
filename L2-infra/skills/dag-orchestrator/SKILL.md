@@ -66,6 +66,103 @@ tasks:
     depends_on: [analyze]
 ```
 
+```yaml
+name: 确收月报生成
+description: 采集确收/验收凭证并生成确收月报
+tasks:
+  - id: collect_revenue
+    name: 采集确收凭证
+    agent: data-collector
+    action: collect_revenue_vouchers
+    outputs: [revenue_data]
+
+  - id: collect_acceptance
+    name: 采集验收凭证
+    agent: data-collector
+    action: collect_acceptance_vouchers
+    outputs: [acceptance_data]
+
+  - id: join_data
+    name: 关联确收与验收
+    agent: data-analyst
+    action: join_sources
+    inputs: [revenue_data, acceptance_data]
+    outputs: [joined_data]
+    depends_on: [collect_revenue, collect_acceptance]
+
+  - id: analyze
+    name: 分析确收达成
+    agent: data-analyst
+    action: analyze_revenue
+    inputs: [joined_data]
+    outputs: [analysis_result]
+    depends_on: [join_data]
+
+  - id: generate_report
+    name: 生成确收月报
+    agent: report-generator
+    action: generate_revenue_report
+    inputs: [analysis_result]
+    outputs: [report_file]
+    depends_on: [analyze]
+```
+
+```yaml
+name: 系统健康检查
+description: 并行检查交付中心/BDMS/OA/企微四个系统可用性
+tasks:
+  - id: check_delivery_center
+    name: 检查交付中心
+    agent: health-checker
+    action: check_http
+    outputs: [dc_status]
+
+  - id: check_bdms
+    name: 检查 BDMS
+    agent: health-checker
+    action: check_http
+    outputs: [bdms_status]
+
+  - id: check_oa
+    name: 检查泛微 OA
+    agent: health-checker
+    action: check_http
+    outputs: [oa_status]
+
+  - id: check_wecom
+    name: 检查企业微信
+    agent: health-checker
+    action: check_http
+    outputs: [wecom_status]
+```
+
+```yaml
+name: 数据质量审计
+description: 串行执行数据抽取、校验与审计报告
+tasks:
+  - id: extract_data
+    name: 抽取源数据
+    agent: data-auditor
+    action: extract
+    outputs: [raw_data]
+
+  - id: validate_data
+    name: 校验数据质量
+    agent: data-auditor
+    action: validate
+    inputs: [raw_data]
+    outputs: [validation_result]
+    depends_on: [extract_data]
+
+  - id: generate_report
+    name: 生成审计报告
+    agent: data-auditor
+    action: generate_audit_report
+    inputs: [validation_result]
+    outputs: [audit_report]
+    depends_on: [validate_data]
+```
+
 ## 执行规则
 
 1. **并行执行**：无依赖关系的任务并行执行（通过 `sessions_spawn`）
