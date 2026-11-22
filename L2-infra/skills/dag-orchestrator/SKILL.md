@@ -87,5 +87,5 @@ tasks:
 - [x] DAG 编排器 SKILL.md
 - [x] YAML 工作流定义格式
 - [x] 内置工作流模板
-- [ ] DAG 执行引擎（Python 实现）
-- [ ] 可视化（DAG 图形展示）
+- [x] DAG 执行引擎（Python 实现）
+- [x] 可视化（DAG 图形展示，Mermaid 文本）

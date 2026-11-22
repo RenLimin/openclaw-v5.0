@@ -1,7 +1,7 @@
 # dag-orchestrator — 验收文档 (VERIFICATION)
 
-> 版本: v1.0 · 日期: 2026-11-20
-> 验收对象: `L2-infra/skills/dag-orchestrator/`（仅 `SKILL.md`，无 scripts/、无 tests/）
+> 版本: v1.1 · 更新: 2026-11-22
+> 验收对象: `L2-infra/skills/dag-orchestrator/`（SKILL.md + scripts/ 执行引擎 + tests/）
 
 ## 验收标准（Definition of Done）
 
@@ -10,17 +10,20 @@
 3. 执行规则可执行语义清晰：并行（无依赖并行）、变量传递（上游 outputs → 下游 inputs）、失败停下游、超时（单任务 5min / 整体 30min）。
 4. 内置工作流模板齐全：交付月报 / 确收月报 / 系统健康检查 / 数据质量审计。
 5. 实施状态清单与实际文件一致（未实现项不得标成已实现）。
+6. **运行时行为真实可执行**（v1.1 新增）：`scripts/runner.py` 可加载真实 YAML 并执行，拓扑/并行/失败/超时/契约门禁均有自动化覆盖。
 
 ## 测试范围
 
-- SKILL.md 内嵌 YAML 工作流定义块的结构与引用完整性。
-- 内置工作流模板覆盖度（对照 SKILL.md 声明表）。
+- SKILL.md 内嵌 YAML 工作流定义块的结构与引用完整性（TC01–TC05）。
+- 执行引擎 hermetic 自动化测试（T01–T13，DESIGN §5）：
+  loader 校验 / 拓扑环检测 / 并行真实发生 / 变量传递 / 失败停下游 / 单任务与整体超时 / 契约门禁 fail-closed / 状态落盘 / Mermaid 生成。
 - 实施状态清单（`[x]`/`[ ]`）与目录实际内容的一致性。
 
-> 说明：本 skill 无执行引擎、无脚本、无 pytest 用例（SKILL.md 自己将「DAG 执行引擎（Python 实现）」标为 `[ ]` 未实现）。
-> 因此验收方式为**静态结构校验 + 人工走查**，不含运行时行为验证。
+> 说明：v1.0 验收时引擎未实现（仅静态结构校验）。v1.1 已落地执行引擎
+> `scripts/`（loader/graph/executor/artifact_store/state/runner/viz）+ `tests/`（17 用例），
+> 运行时行为已纳入自动化验收。
 
-## 测试用例
+## 测试用例（静态，v1.0 保留）
 
 | # | 场景 | 输入 | 预期结果 | 实测 |
 |---|---|---|---|---|
@@ -29,34 +32,46 @@
 | TC03 | 依赖无悬空 | tasks[].depends_on | 每个 dep 都在 ids 中 | ✅ 无悬空 |
 | TC04 | 并行/变量传递规则 | 执行规则章节 | 4 条规则齐备 | ✅ 齐备 |
 | TC05 | 内置工作流模板 | SKILL.md 表格 | 4 个模板声明 | ✅ 4 个（步骤数/并行度标注） |
-| TC06 | 实施状态一致性 | 文件清单 vs 清单 | 声明与实际相符 | ⚠️ 见遗留问题 |
+| TC06 | 实施状态一致性 | 文件清单 vs 清单 | 声明与实际相符 | ✅ 引擎+可视化已 [x]，与 scripts/ 实际存在一致 |
+
+## 运行时测试（v1.1 新增，hermetic 自动化）
+
+| # | 用例 | 输入 | 断言 | 实测 |
+|---|---|---|---|---|
+| T01 | YAML 加载与校验 | SKILL.md 示例 | 6 任务、id 唯一 | ✅ |
+| T02 | 悬空依赖检测 | `depends_on: [nope]` | 抛错含 `nope` | ✅ |
+| T02b | 输入未产出检测 | `inputs: [ghost]` | 抛错含 `ghost` | ✅ |
+| T02c | 重复 id 检测 | 两个同 id | 抛错含「重复」 | ✅ |
+| T03 | 环检测 | A→B→A | 抛 DagCycleError | ✅ |
+| T04 | 拓扑序正确 | 示例 DAG | collect_* 均在 join_data 前 | ✅ |
+| T05 | 并行真实发生 | 3 无依赖任务各 sleep 0.5 | 总耗时 < 1.0s（串行对照 ≥1.2s） | ✅ |
+| T06 | 变量传递 | 上游写工件下游读 | join_data 收到 3 上游输出 | ✅ |
+| T07 | 失败停下游 | 中间任务抛错 | 下游 skipped、run failed、无下游工件 | ✅ |
+| T08 | 单任务超时 | sleep 3 > timeout 1 | failed(timeout)、下游 skipped | ✅ |
+| T09 | 整体超时 | 多任务总耗时 > 配置 | run failed、超时任务标 failed | ✅ |
+| T10 | 契约门禁通过 | 合规报告 | run success、契约 PASS | ✅ |
+| T11 | 契约门禁拦截 | 缺信封报告 | fail-closed 拦截 | ✅ |
+| T11b | 报告缺失 | 不存在路径 | fail-closed | ✅ |
+| T12 | 状态落盘可解析 | 任意 run | JSON 可独立解析 | ✅ |
+| T13 | 可视化生成 | 示例 DAG | Mermaid 6 节点 + 5 边 | ✅ |
 
 ## 实测结果
 
-- 命令:
+- 命令（自动化）:
   ```bash
-  cd /Users/bangcle/.openclaw/workspace && python3 - <<'EOF'
-  import yaml, pathlib, re
-  txt = pathlib.Path('L2-infra/skills/dag-orchestrator/SKILL.md').read_text(encoding='utf-8')
-  blocks = re.findall(r"```yaml\n(.*?)```", txt, re.S)
-  for b in blocks:
-      d = yaml.safe_load(b); tasks = d.get('tasks', []); ids = [t['id'] for t in tasks]
-      assert len(ids) == len(set(ids))
-      for t in tasks:
-          for dep in t.get('depends_on', []): assert dep in ids
-      print(d.get('name'), len(tasks), ids)
-  EOF
+  /opt/homebrew/opt/python@3.14/bin/python3.14 -m pytest L2-infra/skills/dag-orchestrator/tests/ -q
   ```
-- 输出摘要:
+- 输出: **17 passed in 8.28s**（含契约门禁 T10/T11/T11b 真实调用 check_answer_contract）。
+- 真实运行（非仅测试）：从 SKILL.md 提取真实 YAML 块 →
+  ```bash
+  python3 L2-infra/skills/dag-orchestrator/scripts/runner.py /tmp/dag_skill_sample.yaml --max-workers 3
   ```
-  dag-orchestrator yaml blocks: 1
-    block0: name=交付月报生成 tasks=6 ids=['collect_oa','collect_revenue','collect_acceptance','join_data','analyze','generate_report'] deps-ok
-  dag YAML structure valid: OK
-  ```
-- 结论: **部分通过**。定义层（格式规范 + YAML 结构 + 执行规则 + 4 个模板）达标；**执行引擎未实现**，故运行时行为（并行、变量传递、失败停下游、超时）不在本次验收覆盖内，不得视为已验收能力。
+  输出 6 任务按序执行（3 并行采集 → join → analyze → report），`run 状态: success`，exit=0；
+  `--mermaid` 输出合法 Mermaid（6 节点 + 5 边）。
+- 结论: **通过**。定义层 + 运行时行为全部验收；实施状态与实际文件一致。
 
 ## 遗留问题（如实记录）
 
-1. **执行引擎缺失**：SKILL.md「实施状态」中 `DAG 执行引擎（Python 实现）` 与 `可视化` 均为 `[ ]`，当前只有规范文本，没有可执行引擎。运行时验收待引擎落地后补做。
-2. **声明与实现存在口径差**：SKILL.md 声明交付月报「步骤数 6 / 并行度 3」，实测 YAML 确为 6 任务；但「确收月报 5」「系统健康检查 4」「数据质量审计 3」三个模板**没有对应 YAML 定义块**（仅表格声明），无法逐条结构校验。
-3. **无自动化回归**：建议后续为 YAML 定义块补一个结构校验脚本（本次 TC01–TC03 的校验逻辑可直接固化）。
+1. **内置模板仅「交付月报」有 YAML 定义块**：「确收月报 5」「系统健康检查 4」「数据质量审计 3」三个模板仅有表格声明（SKILL.md 未内嵌对应 YAML）。引擎已就绪，可后续补 YAML 定义块。
+2. **默认执行器为框架实现**：runner 默认执行器打印任务信息并透传 inputs；真实 agent 派发（sessions_spawn）待接入（接口已留 `runner(task, inputs)` 注入点）。
+3. **两套 visual 测试并存**（L2 聚合 + L4 组件内）待拍板去重（E-06 遗留）。

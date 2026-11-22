@@ -590,6 +590,7 @@ capabilities:
     interfaces: [dag, workflow, orchestrator, skill]
     entry:
       - "L2-infra/skills/dag-orchestrator/SKILL.md"
+      - "L2-infra/skills/dag-orchestrator/scripts/runner.py"
     supersedes: []
 
   - id: skill-meeting-minutes
