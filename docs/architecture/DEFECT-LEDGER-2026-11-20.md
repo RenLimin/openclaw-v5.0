@@ -37,7 +37,7 @@
 | ID | 现象 | 判定 |
 |---|---|---|
 | E-01 | bangcle-ppt visual 3 failed、fin-l4 visual 14 failed（127.0.0.1:18806 ERR_CONNECTION_REFUSED） | ✅ 已治理（2026-11-21）：共享基类加「服务缺失即 skip」前置守卫，服务未启动不再误报 fail（见修复记录）；功能测试 249/189 全绿 |
-| E-06 | visual 套件跨组件**端口撞号**：18801 同时被 bangcle-ppt 与 fin-l4 套件引用、18803/18804 被 delivery-center/office-contract 交叉引用；服务起到 A 端口时 B 套件打 404 | ⚪ 配置/环境类，非本批代码缺陷；重排端口需同步各组件预览脚本+文档，待 Rex 拍板。守卫已确保「服务在但 404」仍真实 fail 不被掩盖（聚合跑 18 failed 即此类，均为 404） |
+| E-06 | visual 套件跨组件**端口撞号**：L4 组件内 `tests/visual/test_pages.py` 四处 BASE 错乱（ppt→18806 无服务、fin→18801 撞 PPT、dc→18804 撞 FIN、oc→18803 撞 DC），L2 web-common 套件端口正确；服务起到权威端口时错乱套件打 404 | ✅ 已治理（2026-11-22）：4 个 L4 套件 BASE 对齐权威映射（PPT:18801/CISSP:18802/DC:18803/FIN:18804/OC:18805）；真实服务身份经 lsof+health+title 三方钉死；对齐后四套件 18 passed（此前 18 failed 全 404），6 个 skip 为 golden 首建非缺陷。**遗留待拍板**：L2 聚合套件与 L4 组件内套件页面重叠（两套并存），是否去重另议；CI glob `L*/**/tests/visual/test_pages.py` 与 role-library ui-designer 规范仍指向组件内套件 |
 | E-02 | system-health-check：bdms-web、llama-cpp-embedding Connection refused | ⚪ 真实服务未启动，三态判定正确 |
 | E-03 | model-scheduling：deepseek 两模型 HTTP 402 | ⚪ 外部账户额度，脚本判定正确 |
 | E-04 | product-manager-expert 检准 1 error：源文件缺失 | ⚪ 真实数据问题，按 SKILL 由维护者补录 |

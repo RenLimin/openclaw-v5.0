@@ -8,7 +8,7 @@ import os
 sys.path.insert(0, os.path.abspath('/Users/bangcle/.openclaw/workspace/L2-infra/components/web-common/tests/visual'))
 from base import VisualTestBase
 
-BASE = "http://127.0.0.1:18806"
+BASE = "http://127.0.0.1:18801"
 
 
 class TestPPTIndex(VisualTestBase):
