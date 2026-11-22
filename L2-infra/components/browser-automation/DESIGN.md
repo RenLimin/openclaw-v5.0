@@ -65,8 +65,8 @@
 │ 方法论文：                             │   │   ├─ save/get_browser_cookies         │
 │  docs/architecture/components/        │   │   ├─ connect_local_chrome(:9222)      │
 │   browser-automation-oa-export.md     │   │   └─ import_wecom_mac_cookies        │
-│   browser-automation-oa-export-detail │   │ scripts/start_wecom_chrome.py        │
-│   browser-automation-wecom-doc.md     │   │   （launch_persistent_context + 9222）│
+│   browser-automation-oa-export-detail │   │ （已删除 2026-11-22，D-13）           │
+│   browser-automation-wecom-doc.md     │   │ 企微采集走 wecom_collector.py（MCP）    │
 └───────────────────────────────────────┘   └──────────────────────────────────────┘
                                     │
                                     ▼
@@ -83,7 +83,7 @@
 | 统一浏览器适配层 | `L4-proprietary/components/bdms/src/bdms/modules/integration/adapters/browser_adapter.py` → `BrowserAdapter` / `browser_session()` | Playwright CDP + IAM Cookie 池，统一 OA/ONES/工时 |
 | OA 采集器 | `python -m delivery_center.v1.collectors.oa_collector <YYYYMM> [--headless]` | 合同台账；Cookie 池复用 + `expect_download()` |
 | ONES 采集器 | `L4-proprietary/components/delivery-center/src/delivery_center/v1/collectors/ones_collector.py` | ONES 工作项导出 |
-| 企微文档 Chrome | `python3 L4-proprietary/components/bdms/scripts/start_wecom_chrome.py` | `launch_persistent_context` + 持久化 profile + CDP 9222 |
+| 企微文档采集 | `delivery_center.v1.collectors.wecom_collector`（wecom_mcp 读智能表格） | 原 `start_wecom_chrome.py` 已删除 2026-11-22（D-13） |
 | 方法论文档 | `docs/architecture/components/browser-automation-*.md` | 环境隔离 / 等待策略 / 定位降级 / iframe 处理 |
 
 ### 3.2 本目录的（预期）空结构
@@ -110,9 +110,9 @@ browser-automation/
 #    adapter = BrowserAdapter(); adapter.launch(cdp_url="http://127.0.0.1:9222")
 ```
 
-> 端口说明：registry `browser-isolated-chrome` 记 `9333`；`bdms` 侧 `connect_local_chrome` 默认 `9222`，
-> `start_wecom_chrome.py` 亦为 `9222`。两处为**不同 profile 的不同实例**（`oa-live` vs `wecom`），
-> 使用时按 profile 选端口，并遵守「用后即关 + 端口释放」红线。
+> 端口说明：registry `browser-isolated-chrome` 记 `9333`；`bdms` 侧 `connect_local_chrome` 默认 `9222`。
+> 按 profile 选端口，并遵守「用后即关 + 端口释放」红线。
+> （原 `start_wecom_chrome.py` 的 9222 实例已随 D-13 删除，企微采集改走 `wecom_collector` MCP 路径。）
 
 ## 5. 业界对标
 

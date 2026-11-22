@@ -136,7 +136,7 @@ class ReviewRecord:       # 持久化
 |---|---|
 | IAM 全自动登录（含 IMAP 验证码） | `L4.../bdms/src/bdms/modules/integration/adapters/browser_adapter.py::login_iam` |
 | CDP 复用登录态 Chrome | 同模块 `connect_over_cdp` + `oa_click_card_iam` |
-| OA 页面/iframe 导航模式 | `bdms/scripts/oa_export_playwright.py`；主内容 `iframe#mainFrame` |
+| OA 页面/iframe 导航模式 | `browser_adapter.py::find_frame` + `oa_click_card_iam`；主内容 `iframe#mainFrame` |
 
 `browser_fallback.py` 职责：连接/启动 CDP Chrome → 导航 Cube 卡片 → 在 `iframe#mainFrame` 内提取字段与附件 → 落盘。会话有效期 12h，用 storage_state 复用，避免重复登录。
 

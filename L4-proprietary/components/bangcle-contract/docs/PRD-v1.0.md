@@ -184,7 +184,7 @@ OA 发起合同审批
 | 审批状态 | WorkflowService WebService / REST 查流程节点 | `获取审批申请详情(sp_no)` → sp_status / sp_record |
 | 状态变更 | OA 流程节点推进 | `审批申请状态变化回调(open_approval_change)` 推送 |
 | 消息/报告推送 | — | 应用消息（文本/卡片/文件）推送风险报告 |
-| 兜底 | RPA / 浏览器自动化（**复用 BDMS 已实现资产**：`bdms/src/bdms/modules/integration/adapters/browser_adapter.py` Playwright CDP + IAM Cookie pool、`bdms/scripts/oa_export_playwright.py` CDP 复用登录态、`export_abnormal_osascript.py` osascript 模式；设计依据 `bdms/docs/DESIGN-OUTLINE-BROWSER-AUTOMATION-TECH-SELECTION-v1.0.md`） | 手动上传合同文件 |
+| 兜底 | RPA / 浏览器自动化（**复用 BDMS 已实现资产**：`bdms/src/bdms/modules/integration/adapters/browser_adapter.py`（Playwright CDP + IAM Cookie pool + `connect_over_cdp` 复用登录态 + `find_frame`/`expect_download`）；设计依据 `bdms/docs/DESIGN-OUTLINE-BROWSER-AUTOMATION-TECH-SELECTION-v1.0.md`） | 手动上传合同文件 |
 
 > 注：若泛微无开放 REST 权限或版本受限，**MVP 先走「手动/企微上传合同文件」+ 模拟审批**，OA 深度集成作为 P1，保证分析闭环先行。
 

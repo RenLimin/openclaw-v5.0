@@ -43,8 +43,8 @@ BDMS 依赖 5 个外部系统的数据导入（ONES / OA / 工时门户 / 企微
 | `oa_collector.py` | `delivery-center/src/.../collectors/` | Playwright CDP | ⚠️ 有代码，未稳定 |
 | `oa_adapter.py` | `bdms/.../adapters/` | osascript | ❌ 不适用于 OA 异步导出 |
 | `oa_connector.py` | `bdms/.../connectors/` | Adapter 封装 | ⚠️ 依赖旧适配器 |
-| `oa_export_playwright.py` | `bdms/scripts/` | Playwright CDP | ⚠️ 有代码，未测试通过 |
-| `oa_export_full.py` | `bdms/scripts/` | Playwright CDP（自包含） | ⚠️ 有代码，未测试通过 |
+| ~~`oa_export_playwright.py`~~ | ~~`bdms/scripts/`~~ | Playwright CDP | ❌ 已删除 2026-11-22（D-13；被 `browser_adapter.py` + `oa_collector.py` 取代） |
+| ~~`oa_export_full.py`~~ | ~~`bdms/scripts/`~~ | Playwright CDP（自包含） | ❌ 已删除 2026-11-22（D-13；`pkill -9` 误伤用户 Chrome，违反隔离红线） |
 
 ### 2.4 工时门户（已通过）
 
@@ -184,7 +184,7 @@ BDMS 依赖 5 个外部系统的数据导入（ONES / OA / 工时门户 / 企微
 - [ ] 验证筛选器切换 + 导出 + 下载全流程
 
 ### Phase 4：清理旧资产
-- [ ] 删除 `oa_export_playwright.py` / `oa_export_full.py` / `oa_export_v2.py`（重复脚本）
+- [x] 删除 `oa_export_playwright.py` / `oa_export_full.py` / `oa_export_v2.py`（重复脚本）——2026-11-22 完成（D-13）
 - [ ] 将 `oa_adapter.py` 和 `ones_adapter.py` 标记为 deprecated
 - [ ] 更新 `DESIGN-DETAIL-INTEGRATION-v2.1.md` 反映新方案
 

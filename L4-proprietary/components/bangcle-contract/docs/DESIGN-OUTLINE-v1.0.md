@@ -244,7 +244,7 @@ OA 发起审批 ──回调──▶ OaProvider.register_callback
 |---|---|---|
 | `services/oa/mock.py` | MVP | 本地/企微上传文件 → 模拟流程（离线兜底） |
 | `services/oa/weaver.py` | P1 | 泛微 e-cology：requestid→docid→imagefileid→下载附件；WorkflowService 查节点；需先确认版本与开放权限 |
-| `services/oa/browser_fallback.py` | P1 | **浏览器自动化兜底**（API 不可用/权限不足时）：复用 BDMS `browser_adapter.py`（Playwright CDP + IAM Cookie pool + connect_over_cdp 复用登录态 Chrome）+ `oa_export_playwright.py` 模式，导航 OA 合同详情页提取附件与字段 |
+| `services/oa/browser_fallback.py` | P1 | **浏览器自动化兜底**（API 不可用/权限不足时）：复用 BDMS `browser_adapter.py`（Playwright CDP + IAM Cookie pool + `connect_over_cdp` 复用登录态 Chrome + `find_frame`/`expect_download`），导航 OA 合同详情页提取附件与字段 |
 | `services/wecom/` | P1 | 企业微信自建应用：sp_no 详情、open_approval_change 回调、应用消息推报告 |
 | ~~`dingtalk.py`~~ | 取消 | 范围改为泛微 + 企微，不做钉钉 |
 

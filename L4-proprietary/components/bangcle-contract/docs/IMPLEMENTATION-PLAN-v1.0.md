@@ -45,7 +45,7 @@ P1 ── P2 ── P3 ── P4 ── P5 ── P7 ── P8
 |---|---|
 | 风险规则/状态机/金额 | L3 contract-management |
 | 产品/SKU/红线匹配 | product-kb ContractMatcher（已在权威仓库） |
-| IAM 登录/CDP/iframe 导航 | BDMS browser_adapter / oa_export_playwright |
+| IAM 登录/CDP/iframe 导航 | BDMS `browser_adapter.py`（`login_iam`/`find_frame`/`expect_download`） |
 | OCR | L2 OCR-001 |
 | 持久化约定 | L2 SQLite repository 规范 |
 
