@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-22 09:00 UTC+08:00
+最后生成：2026-11-22 10:51 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -294,8 +294,8 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `a77b73a` |
-| Commit 数 | 746 |
+| HEAD | `dcc1076` |
+| Commit 数 | 748 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -356,7 +356,7 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
 | `bangcle-contract` | 110 | 17 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 216 | 12 | 29 | `L4-proprietary/components/bdms` |
+| `bdms` | 186 | 12 | 29 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |

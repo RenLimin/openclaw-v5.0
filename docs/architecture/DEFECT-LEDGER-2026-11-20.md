@@ -42,7 +42,7 @@
 | E-03 | model-scheduling：deepseek 两模型 HTTP 402 | ⚪ 外部账户额度，脚本判定正确 |
 | E-04 | product-manager-expert 检准 1 error：源文件缺失 | ⚪ 真实数据问题，按 SKILL 由维护者补录 |
 | E-05 | product-kb/CDI 等 openpyxl/pydantic/PyPDF2 弃用告警 | ⚪ 依赖告警非失败 |
-| D-13 | bdms/scripts 历史重复脚本归并 | 34 个 git 跟踪脚本，经只读分析聚类：A 组 ONES 导出 11、B 组认证诊断 9、C 组页面诊断 3、D 组 OA 导出 5、E 组企微/异常 3、F 组报告 2、G 组通用 1 | ⚪ 方案已出（2026-11-21 只读分析报告）：24 个可立即安全归档（前置：同步改 registry supersedes + test_capability_registry 固定输入）；4 个需 Rex 拍板（oa_export_playwright / oa_export_full / export_abnormal_osascript / start_wecom_chrome，被跨组件文档引用）；另发现 registry allow 白名单 2 条幽灵路径。**未执行任何删除/移动** |
+| D-13 | bdms/scripts 历史重复脚本归并 | 34 个 git 跟踪脚本，经只读分析聚类：A 组 ONES 导出 11、B 组认证诊断 9、C 组页面诊断 3、D 组 OA 导出 5、E 组企微/异常 3、F 组报告 2、G 组通用 1 | ✅ 已治理（2026-11-22）：**删除 30 个重复/一次性脚本**（A11+B7+C3+BC2+EF5+D2，git 历史可恢复，supersedes 谱系保留）；**保留 4 个待 Rex 拍板**（oa_export_playwright / oa_export_full / export_abnormal_osascript / start_wecom_chrome，被跨组件文档引用）；registry 幽灵路径已修（D-13 关联）。前置：detect_duplicates 只按文件名不查存在性→测试固定输入仍通过；pre-commit ACMR 排除 D；无代码 import 引用 |
 
 ## 修复纪律
 
