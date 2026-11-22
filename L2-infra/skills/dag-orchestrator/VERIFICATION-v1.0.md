@@ -54,6 +54,13 @@
 | T11b | 报告缺失 | 不存在路径 | fail-closed | ✅ |
 | T12 | 状态落盘可解析 | 任意 run | JSON 可独立解析 | ✅ |
 | T13 | 可视化生成 | 示例 DAG | Mermaid 6 节点 + 5 边 | ✅ |
+| T14 | 派发消息契约 | 任务节点 | 含 id/agent/action/outputs + JSON 回报契约 | ✅ |
+| T15 | 回复解析（纯 JSON） | `{"outputs":{...}}` | 解析出 outputs | ✅ |
+| T16 | 回复解析（嵌套+前后文字） | 嵌套 JSON 带解释文字 | 括号平衡提取正确 | ✅ |
+| T17 | 错误信封 → 失败 | `{"error":...}` | 抛错，不静默 | ✅ |
+| T18 | CLI 非零/失败信封 | rc≠0 / ok=false | 抛 RuntimeError | ✅ |
+| T19 | CLI 定位 | PATH / 候选绝对路径 | 绝对路径兜底 | ✅ |
+| T20 | 派发接入执行器 | dispatcher + run_dag | 端到端 success | ✅ |
 
 ## 实测结果
 
@@ -61,7 +68,8 @@
   ```bash
   /opt/homebrew/opt/python@3.14/bin/python3.14 -m pytest L2-infra/skills/dag-orchestrator/tests/ -q
   ```
-- 输出: **17 passed in 8.28s**（含契约门禁 T10/T11/T11b 真实调用 check_answer_contract）。
+- 输出: **34 passed in 8.88s**（含契约门禁 T10/T11/T11b 真实调用 check_answer_contract；
+  派发 T14–T20 用 fake CLI 注入，hermetic 不触真实 Gateway）。
 - 真实运行（非仅测试）：从 SKILL.md 提取真实 YAML 块 →
   ```bash
   python3 L2-infra/skills/dag-orchestrator/scripts/runner.py /tmp/dag_skill_sample.yaml --max-workers 3

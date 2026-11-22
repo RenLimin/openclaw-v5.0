@@ -186,3 +186,4 @@ tasks:
 - [x] 内置工作流模板
 - [x] DAG 执行引擎（Python 实现）
 - [x] 可视化（DAG 图形展示，Mermaid 文本）
+- [x] agent 派发后端（可插拔；默认 openclaw CLI 真实派发）

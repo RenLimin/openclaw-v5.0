@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Callable
 
 from artifact_store import ArtifactStore
+from dispatch import make_agent_dispatcher
 from executor import (
     DEFAULT_OVERALL_TIMEOUT_S,
     DEFAULT_TASK_TIMEOUT_S,
@@ -103,6 +104,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--task-timeout", type=int, default=DEFAULT_TASK_TIMEOUT_S)
     ap.add_argument("--overall-timeout", type=int, default=DEFAULT_OVERALL_TIMEOUT_S)
     ap.add_argument("--contract-report", help="末端产物路径（过契约校验，fail-closed）")
+    ap.add_argument("--dispatch", choices=("echo", "agent"), default="echo",
+                    help="执行后端：echo=框架演示（默认）；agent=openclaw CLI 真实派发")
+    ap.add_argument("--run-id", default="run", help="run 标识（agent 派发时用于 session-key 隔离）")
     ap.add_argument("--mermaid", action="store_true", help="仅输出 Mermaid 定义")
     args = ap.parse_args(argv)
 
@@ -116,9 +120,14 @@ def main(argv: list[str] | None = None) -> int:
         print(to_mermaid(dag))
         return 0
 
+    if args.dispatch == "agent":
+        runner = make_agent_dispatcher(run_id=args.run_id)
+    else:
+        runner = default_runner
+
     ok, msg = run_with_contract(
         dag,
-        default_runner,
+        runner,
         max_workers=args.max_workers,
         task_timeout_s=args.task_timeout,
         overall_timeout_s=args.overall_timeout,

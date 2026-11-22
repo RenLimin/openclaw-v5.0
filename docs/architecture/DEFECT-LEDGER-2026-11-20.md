@@ -28,7 +28,7 @@
 | ID | 资产 | 现状 | 状态 |
 |---|---|---|---|
 | D-09 | 5 个 L3 skill（project-report/summary/retrospective/obligation-summary/customer-profile） | 均无 `tests/` 目录，验收靠真实运行+手动步骤 | ✅ 已修 2026-11-20：5 个 skill 全补关键路径 pytest（模板实例化过契约闸门 / 报告骨架 + 6 指标铁律），18 passed |
-| D-10 | dag-orchestrator | DAG 执行引擎未实现（SKILL 自身已标 `[ ]`）；定义层/模板达标，运行时未验收 | ✅ 已实现 2026-11-22：DESIGN-v1.0.md 评审通过后落地 `scripts/` 执行引擎（loader/graph/executor/artifact_store/state/runner/viz，graphlib+concurrent.futures 零依赖）；`tests/` 17 用例全绿（并行真实/变量传递/失败停下游/超时/契约门禁 fail-closed/Mermaid）；真实运行 SKILL.md 示例 YAML success exit=0；SKILL.md 打钩、registry 补 runner.py 入口、VERIFICATION 升级 v1.1 |
+| D-10 | dag-orchestrator | DAG 执行引擎未实现（SKILL 自身已标 `[ ]`）；定义层/模板达标，运行时未验收 | ✅ 已实现 2026-11-22：DESIGN-v1.0.md 评审通过后落地 `scripts/` 执行引擎（loader/graph/executor/artifact_store/state/runner/viz，graphlib+concurrent.futures 零依赖）；同日晚补齐 **4 个内置模板 YAML 定义块** + **agent 派发后端**（dispatch.py，可插拔，默认 openclaw CLI 真实派发）；`tests/` **34 用例全绿**（并行真实/变量传递/失败停下游/超时/契约门禁 fail-closed/Mermaid/派发 T14-T20）；真实运行 SKILL.md 示例 YAML success exit=0；SKILL.md 打钩、registry 补 runner.py+dispatch.py 入口、VERIFICATION 升级 v1.1 |
 | D-12 | bangcle-project-report | 新增 `tests/test_render_fail_closed.py`（4 用例）：缺 fetchedAt fail-closed exit=2 + normalize/aggregate 透传 + 带时间戳渲染，防 D-02 复发 | ✅ 已修 2026-11-20：4 passed |
 | D-11 | ones-browser-export | 仅离线契约验证，真实浏览器/OA 链路未验 | ⚪ 待有登录态/专用 CDP 时补 E2E |
 
