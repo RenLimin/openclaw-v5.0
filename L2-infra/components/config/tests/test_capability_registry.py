@@ -81,7 +81,7 @@ def test_detect_oa_export_duplicate(reg):
 
 
 def test_allowlist_bypasses(reg):
-    allowed_path = "L4-proprietary/components/bdms/scripts/reconcile_oa.py"
+    allowed_path = "L4-proprietary/components/bangcle-contract/scripts/reconcile_oa.py"
     assert cr._is_allowed(reg, allowed_path)
 
 

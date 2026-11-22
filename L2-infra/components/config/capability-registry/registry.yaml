@@ -815,7 +815,7 @@ capabilities:
 
 # 已登记的合法一次性脚本（门禁白名单；用完即归档/清理）
 allow:
-  - path: "L4-proprietary/components/bdms/scripts/reconcile_oa.py"
-    reason: "OA 对账一次性脚本，已固化在组件内"
-  - path: "L4-proprietary/components/bdms/scripts/register_contract_ontology.py"
-    reason: "本体注册工具，组件配套"
+  - path: "L4-proprietary/components/bangcle-contract/scripts/reconcile_oa.py"
+    reason: "OA 对账可调度 runner（P4.4），已固化在 bangcle-contract 组件内（合同能力从 bdms 迁建后路径更正 2026-11-22）"
+  - path: "L4-proprietary/components/bangcle-contract/scripts/register_contract_ontology.py"
+    reason: "contractctl ontology 装配脚本，bangcle-contract 组件配套（路径更正 2026-11-22）"
