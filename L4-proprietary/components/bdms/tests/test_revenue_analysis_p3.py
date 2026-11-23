@@ -190,3 +190,54 @@ def test_trend_amount_redline_none():
     assert rows[0]["future_amount_wan"] is None
     assert rows[0]["check_amount"] is None
     assert rows[0]["amount_pending"] == "A/B/C 待拍板"
+
+
+# ─────────────────────── 图例紧凑布局（Rex 2026-11-23 拍板 §4.3）───────────────────────
+
+def test_legend_compact_columns(tmp_path):
+    """图例导出：删除 4 个全空重复分隔列（D/H/K/N）→ 12 列紧凑布局，非空内容不丢。"""
+    import sqlite3
+    from openpyxl import load_workbook
+    from bdms.core import db as _db
+    from bdms.modules.revenue_analysis.exporter import RevenueAnalysisExporter
+
+    db_path = tmp_path / "legend.db"
+    _db.init_db(db_path)
+    conn = sqlite3.connect(db_path)
+    try:
+        # 16 列：0-15；列 3/7/10/13 为全空分隔列（golden 图例 D/H/K/N）
+        columns = [str(i) for i in range(16)]
+        rows = [
+            {"0": "项目经理", "1": "部门", "2": "备注",
+             "4": "偏差-状态/趋势", "5": "偏差-原因类别", "6": "偏差-原因类别说明",
+             "8": "滞后验收原因", "9": "滞后验收处置措施",
+             "11": "预算执行进度", "12": "预算执行进度类别",
+             "14": "团队", "15": "产线"},
+            {"0": "张三", "1": "交付一", "2": "备注1",
+             "4": "正常确收", "5": "交付原因-延期", "6": "延期说明",
+             "8": "验收已完成", "9": "N/A",
+             "11": "进度正常", "12": "正常", "14": "T1", "15": "P1"},
+        ]
+        _db.save_sheet_rows(conn, "202606", "图例", columns, rows,
+                            prefix="rr", overwrite=True)
+        conn.commit()
+    finally:
+        conn.close()
+
+    out = tmp_path / "out.xlsx"
+    RevenueAnalysisExporter(db_path).export("202606", out_path=out)
+    wb = load_workbook(out, data_only=True)
+    ws = wb["图例"]
+    assert ws.max_column == 12, f"图例应紧凑为 12 列，实际 {ws.max_column}"
+    assert ws.max_row == 2
+    # 表头：删除 D/H/K/N 后其余列按序保留
+    assert [ws.cell(1, c).value for c in range(1, 13)] == [
+        "项目经理", "部门", "备注", "偏差-状态/趋势", "偏差-原因类别",
+        "偏差-原因类别说明", "滞后验收原因", "滞后验收处置措施",
+        "预算执行进度", "预算执行进度类别", "团队", "产线",
+    ]
+    # 数据行非空内容完整
+    assert [ws.cell(2, c).value for c in range(1, 13)] == [
+        "张三", "交付一", "备注1", "正常确收", "交付原因-延期", "延期说明",
+        "验收已完成", "N/A", "进度正常", "正常", "T1", "P1",
+    ]

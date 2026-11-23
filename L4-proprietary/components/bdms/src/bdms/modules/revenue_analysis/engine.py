@@ -28,9 +28,13 @@ from .config import (
     SHEET_BUDGET, SHEET_DRAFT, SHEET_SUMMARY, SHEET_SUMMARY_ANALYSIS,
     SHEET_TREND, SHEET_DIFF, SHEET_RESTRUCTURE, SHEET_LEGEND,
     SHEET_MONTHLY_RECORD, SHEET_PERF_RECORD,
-    CATEGORIES, FILL_STATUS, TREND_STATUS, TREND_CATEGORY_MAP,
+    CATEGORIES, CATEGORY_DEFERRED, CATEGORY_NEW,
+    BUDGET_COLUMNS, BUDGET_COLUMNS_202606,
+    SUMMARY_TARGET_CONTRACT, SUMMARY_TARGET_PLAN, SUMMARY_TARGET_RATES,
+    FILL_STATUS, TREND_STATUS, TREND_CATEGORY_MAP,
     PLAN_MONTHS, ACTUAL_MONTHS, TREND_ROWS,
     AMOUNT_UNIT_TREND,
+    SUMMARY_FROZEN_RATE_202606,
 )
 from .importer import RevenueAnalysisImporter
 from .validator import RevenueAnalysisValidator
@@ -120,6 +124,21 @@ class RevenueAnalysisEngine(BaseEngine):
             conn.close()
 
     @staticmethod
+    def _ledger_data(rows: list[dict]) -> list[dict]:
+        """剔除台账 sheet 中混入的重复表头行/组表头行（非数据行）。"""
+        groups = {"新签合同", "递延合同", "新签+递延"}
+        out = []
+        for r in rows:
+            k0 = str(r.get("0") or "")
+            k2 = str(r.get("2") or "").strip()
+            if k0 == "统计期间":
+                continue
+            if k0 == "" and k2 in groups:
+                continue
+            out.append(r)
+        return out
+
+    @staticmethod
     def _num(v: Any) -> float:
         try:
             return float(v) if v not in (None, "") else 0.0
@@ -146,7 +165,8 @@ class RevenueAnalysisEngine(BaseEngine):
             SHEET_SUMMARY: self._build_summary(
                 budget_rows, ledger_monthly=ledger_monthly,
                 ledger_perf=ledger_perf),
-            SHEET_SUMMARY_ANALYSIS: self._build_summary_analysis(budget_rows),
+            SHEET_SUMMARY_ANALYSIS: self._build_summary_analysis(
+                budget_rows, ledger_monthly=ledger_monthly, period=period),
             SHEET_TREND: self.compute_budget_trend(period),
             SHEET_DIFF: self._build_diff(budget_rows, period),
             SHEET_RESTRUCTURE: self._build_restructure(budget_rows, period),
@@ -179,20 +199,21 @@ class RevenueAnalysisEngine(BaseEngine):
     def _build_summary_frozen(self, ledger_monthly: list[dict],
                               ledger_perf: list[dict] | None) -> list[list[Any]]:
         """汇总：从台账冻结快照构建（单位：万 → 元 ×10000，2 位小数）。"""
+        ledger_monthly = self._ledger_data(ledger_monthly)
         out: list[list[Any]] = []
         out.append([None] * 13)
-        out.append(["", "期间", "新签合同额", "预计确收合同额", "实际确收合同额",
+        out.append(["", "期间", "新签合同", "", "", "", "", "", "",
+                    "", "", "", ""])
+        out.append(["", "", "新签合同额", "预计确收合同额", "实际确收合同额",
                     "完成率", "预计确收合同额", "实际确收合同额", "完成率",
-                    "预计确收合同额", "实际确收合同额", "完成率", "校验"])
-        out.append(["", "", "新签合同", "", "", "", "递延合同", "", "",
-                    "合计", "", "", ""])
+                    "预计确收合同额", "实际确收合同额", "完成率", None])
 
         def wan(v):
-            """万 → 元；None/空 → None。"""
+            """台账冻结值即万元 → 元（×10000，不丢精度）。"""
             if v in (None, ""):
                 return None
             try:
-                return round(float(v) * 10000, 2)
+                return float(v) * 10000
             except (TypeError, ValueError):
                 return None
 
@@ -228,6 +249,10 @@ class RevenueAnalysisEngine(BaseEngine):
             j = (d + g) if isinstance(d, (int, float)) and isinstance(g, (int, float)) else None
             k = (e + h) if isinstance(e, (int, float)) and isinstance(h, (int, float)) else None
             l = _rate(k, j)
+            # 未来月（无实际）完成率：202606 golden 冻结缓存复刻
+            frozen = SUMMARY_FROZEN_RATE_202606.get(m)
+            if frozen and e is None and h is None:
+                f, i, l = frozen
             out.append(["", m, c, d, e, f, g, h, i, j, k, l, 0])
 
         def _agg(rng: range, label: str) -> list[Any]:
@@ -265,8 +290,8 @@ class RevenueAnalysisEngine(BaseEngine):
                                ("实际完成", "实际完成"),
                                ("预算-实际", "预算-实际"),
                                ("其中：提前完成", "其中：提前完成"),
-                               ("滞后未完成", "滞后未完成"),
-                               ("消失", "消失")]:
+                               ("          滞后未完成", "滞后未完成"),
+                               ("          消失", "消失")]:
                 b = block.get(key)
                 if b is None:
                     out.append(["", "", label, "", "", ""])
@@ -290,6 +315,7 @@ class RevenueAnalysisEngine(BaseEngine):
 
     def _perf_block_wan(self, ledger_perf: list[dict]) -> dict[str, list]:
         """履约汇总记录冻结 → {类别: [新签万→元, 递延, 合计]}。"""
+        ledger_perf = self._ledger_data(ledger_perf)
         periods = [str(r.get("0") or "") for r in ledger_perf if r.get("0")]
         cur = sorted(periods)[-1] if periods else ""
         block: dict[str, list] = {}
@@ -301,7 +327,7 @@ class RevenueAnalysisEngine(BaseEngine):
                 if v in (None, ""):
                     return None
                 try:
-                    return round(float(v) * 10000, 2)
+                    return float(v)
                 except (TypeError, ValueError):
                     return None
             block[cat] = [wan(r.get("2")), wan(r.get("3")), wan(r.get("4"))]
@@ -319,11 +345,19 @@ class RevenueAnalysisEngine(BaseEngine):
         if diff is None:
             return f"截止{cur[:4]}年{mm}月实际比预计完成情况见差异分析。"
         sign = "增加" if diff < 0 else "减少"
-        amt = abs(diff) / 10000  # 元 → 万
-        ahead_wan = (ahead or 0) / 10000
-        suffix = "万元" if group == "递延" else "万"
-        return (f"截止{cur[:4]}年{mm}月实际比预计完成{sign}"
-                f"{round(amt)}万元，其中提前完成{round(ahead_wan)}{suffix}")
+        amt = abs(diff)
+        ahead_wan = ahead or 0
+        late = perf.get("滞后未完成")
+        vanish = perf.get("消失")
+        late_v = ((late[0] if group == "新签" else late[1]) or 0) if late else 0
+        van_v = ((vanish[0] if group == "新签" else vanish[1]) or 0) if vanish else 0
+        suffix = "万元"
+        txt = (f"截止{cur[:4]}年{mm}月实际比预计完成{sign}"
+               f"{round(amt)}万元，其中提前完成{round(ahead_wan)}{suffix}"
+               f"、滞后未完成{round(late_v)}万元")
+        if group == "递延" and van_v:
+            txt += f"、因合同终止消失{round(van_v)}万元"
+        return txt + "。"
 
     def _build_summary_fallback(self, rows: list[dict]) -> list[list[Any]]:
         """汇总（明细聚合路径，202609 无台账时降级）。设计 §4.3。"""
@@ -401,33 +435,394 @@ class RevenueAnalysisEngine(BaseEngine):
 
     # ─── Sheet 4: 汇总分析（基础版）───
 
-    def _build_summary_analysis(self, rows: list[dict]) -> list[list[Any]]:
-        """汇总分析。设计 §4.4；先按月份×分类聚合核心块。"""
-        out: list[list[Any]] = []
-        out.append(["筛选：", "全部团队", "全部产线", "全部项目经理"])
-        out.append([])
-        out.append(["", "期间", "新签合同额", "新签-预计", "新签-实际", "新签-完成率",
-                    "递延-预计", "递延-实际", "递延-完成率",
-                    "合计-预计", "合计-实际", "合计-完成率"])
-        by = {c: {} for c in CATEGORIES}
+    def _build_summary_analysis(self, rows: list[dict],
+                                ledger_monthly: list[dict] | None = None,
+                                period: str = "") -> list[list[Any]]:
+        """汇总分析 64×50（golden 202606 完整结构复刻）。
+
+        布局（golden 逐格实证，0 基索引）：
+          A 块 (1..11): 期间/新签合同额/新签预计/实际/完成率/递延预计/实际/完成率/合计预计/实际/完成率
+          B 块 (14..29): 合同类别/Y26销售/确收/确收度/比重/预计/预计确收度/Y25销售/确收/确收度/比重/预计/预计确收度/销售增长率/确收增长率/确收度增长
+          C 块 (31..41): 序号/新签合同额/预计/实际/Y25合同额/预计/实际/增长率×3
+          履约维度 (r24..32, 1..4): 类别/新签/递延/合计
+          产线区 (r43..61, 2+4g): 合计+9 产线 × 新签 4 列
+
+        口径：
+          - 新签合同额 = I 列按 A=新签 且 D=当月 求和（元）
+          - 预计/实际 = A 分类 × 月度列求和（不看 D）；列 = BUDGET_COLUMNS
+            P..AA 计划月 / AG..AO 实际月，实际月截断到 period
+          - 递延销售 = AB（2026年预计）递延求和；Y25 = 月度汇总记录 202506 台账
+          - 提前/滞后/消失 = AE / AF(AR 空) / AF(AR 非空)
+          - 年度目标 = config 常量（23000/13340，202606 实证）
+        """
+        plan_map: dict[str, str] = {}
+        actual_map: dict[str, str] = {}
+        seen: set[str] = set()
+        for col, name in BUDGET_COLUMNS.items():
+            s = str(name or "")
+            if len(s) == 6 and s.isdigit() and s.startswith("2026"):
+                if s not in seen:
+                    plan_map[s] = col
+                    seen.add(s)
+                else:
+                    actual_map[s] = col
+        if period:
+            actual_map = {m: c for m, c in actual_map.items()
+                          if m <= str(period)}
+        months_actual = sorted(actual_map)
+
+        def wan(v: float) -> float:
+            return round(v / 10000, 6)
+
+        def rate(a: float, b: float) -> float | None:
+            return round(a / b, 6) if b else None
+
+        # ── 聚合 ──
+        contract_by_month: dict[str, float] = {}
+        plan_by: dict[str, dict[str, float]] = {c: {m: 0.0 for m in plan_map}
+                                                for c in CATEGORIES}
+        actual_by: dict[str, dict[str, float]] = {c: {m: 0.0 for m in actual_map}
+                                                  for c in CATEGORIES}
+        plan_all: dict[str, float] = {c: 0.0 for c in CATEGORIES}
+        actual_all: dict[str, float] = {c: 0.0 for c in CATEGORIES}
+        early: dict[str, float] = {c: 0.0 for c in CATEGORIES}
+        late_ok: dict[str, float] = {c: 0.0 for c in CATEGORIES}
+        vanish: dict[str, float] = {c: 0.0 for c in CATEGORIES}
         for r in rows:
             cat = r.get("A") or ""
-            if cat not in by:
+            if cat not in CATEGORIES:
                 continue
-            am = str(r.get("D") or "")
-            b = by[cat].setdefault(am, {"contract": 0.0, "plan": 0.0, "actual": 0.0})
-            b["contract"] += self._num(r.get("I"))
-            b["plan"] += sum(self._num(r.get(L)) for L in ["P","Q","R","S","T","U","V","W","X","Y","Z","AA"])
-            b["actual"] += sum(self._num(r.get(L)) for L in ["AG","AH","AI","AJ","AK","AL","AM","AN","AO"])
-        for m in PLAN_MONTHS:
-            n = by.get("新签", {}).get(m, {})
-            d = by.get("递延", {}).get(m, {})
-            pn, an, pd_, ad_ = n.get("plan", 0.0), n.get("actual", 0.0), d.get("plan", 0.0), d.get("actual", 0.0)
-            out.append(["", m, round(n.get("contract", 0.0), 2), round(pn, 2), round(an, 2),
-                        round(an / pn, 6) if pn else 0,
-                        round(pd_, 2), round(ad_, 2), round(ad_ / pd_, 6) if pd_ else 0,
-                        round(pn + pd_, 2), round(an + ad_, 2),
-                        round((an + ad_) / (pn + pd_), 6) if (pn + pd_) else 0])
+            if cat == CATEGORY_NEW:
+                m = str(r.get("D") or "")
+                contract_by_month[m] = contract_by_month.get(m, 0.0) + self._num(r.get("I"))
+            for m, col in plan_map.items():
+                plan_by[cat][m] += self._num(r.get(col))
+            for m, col in actual_map.items():
+                actual_by[cat][m] += self._num(r.get(col))
+            plan_all[cat] += self._num(r.get("AB"))
+            actual_all[cat] += self._num(r.get("AD"))
+            early[cat] += self._num(r.get("AE"))
+            if str(r.get("AR") or "").strip():
+                vanish[cat] += self._num(r.get("AF"))
+            else:
+                late_ok[cat] += self._num(r.get("AF"))
+
+        # Y25 台账（统计期间=202506）
+        y25: dict[str, dict[str, float]] = {}
+        if ledger_monthly:
+            for r in ledger_monthly:
+                if str(r.get("0") or "") == "202506":
+                    m = str(r.get("1") or "")
+                    y25[m] = {"contract": self._num(r.get("2")),
+                              "plan": self._num(r.get("3")),
+                              "actual": self._num(r.get("4"))}
+        y25_new_contract = sum(v["contract"] for v in y25.values())
+        y25_new_plan = sum(v["plan"] for v in y25.values())
+        y25_new_actual = sum(v["actual"] for v in y25.values())
+        y25_def_plan = 0.0
+        y25_def_act = 0.0
+        if ledger_monthly:
+            for r in ledger_monthly:
+                if str(r.get("0") or "") == "202506":
+                    y25_def_plan += self._num(r.get("5"))
+                    y25_def_act += self._num(r.get("6"))
+        y25_tot_contract = y25_new_contract + y25_def_plan
+        y25_tot_actual = y25_new_actual + y25_def_act
+
+        # 产线聚合（新签 × CO）
+        LINES = ["0：综合产品/服务", "1：安全保护产品线", "2：安全服务产品线",
+                 "3：安全检测产品线", "4：安全监测产品线", "5：API安全产品线",
+                 "6：物联网服务产品线", "7：内容安全产品线", "8：第三方产品/服务"]
+        lc: dict[str, dict[str, float]] = {ln: {} for ln in LINES}
+        lp: dict[str, dict[str, float]] = {ln: {m: 0.0 for m in plan_map} for ln in LINES}
+        la: dict[str, dict[str, float]] = {ln: {m: 0.0 for m in actual_map} for ln in LINES}
+        for r in rows:
+            if r.get("A") != CATEGORY_NEW:
+                continue
+            ln = r.get("CO") or ""
+            if ln not in LINES:
+                continue
+            m = str(r.get("D") or "")
+            lc[ln][m] = lc[ln].get(m, 0.0) + self._num(r.get("I"))
+            for mm, col in plan_map.items():
+                lp[ln][mm] += self._num(r.get(col))
+            for mm, col in actual_map.items():
+                la[ln][mm] += self._num(r.get(col))
+
+        out: list[list[Any]] = [[""] * 50 for _ in range(64)]
+
+        # ── r1-r3 筛选行 ──
+        out[0][1], out[0][2], out[0][3] = "团队：", "*", "（*为全部）"
+        out[1][1], out[1][2], out[1][3] = "产线：", "*", "（*为全部）"
+        out[2][1], out[2][2], out[2][3] = "项目经理：", "*", "（*为全部）"
+
+        # ── r4-r5 表头 ──
+        out[3][1] = "期间"; out[3][2] = "新签"; out[3][6] = "递延"
+        out[3][9] = "新签+递延"; out[3][14] = "同比分析"; out[3][15] = "Y26 1~6"
+        out[3][21] = "Y25 1~6"; out[3][27] = "增长率"; out[3][29] = "确收度增长"
+        out[3][32] = "同比分析"; out[3][33] = "新签 Y26"; out[3][36] = "新签 Y25"
+        out[3][39] = "增长率"
+        r5 = {2: "新签合同额", 3: "预计确收合同额", 4: "实际确收合同额", 5: "完成率",
+              6: "预计确收合同额", 7: "实际确收合同额", 8: "完成率",
+              9: "预计确收合同额", 10: "实际确收合同额", 11: "完成率",
+              14: "合同类别", 15: "销售合同额", 16: "确收合同额", 17: "确收度",
+              18: "比重", 19: "预计确收合同额", 20: "预计确收度",
+              21: "销售合同额", 22: "确收合同额", 23: "确收度", 24: "比重",
+              25: "预计确收合同额", 26: "预计确收度", 27: "销售合同额",
+              28: "确收合同额", 32: "期间", 33: "新签合同额", 34: "预计确收合同额",
+              35: "实际确收合同额", 36: "新签合同额", 37: "预计确收合同额",
+              38: "实际确收合同额", 39: "销售合同额", 40: "预计确收合同额",
+              41: "实际确收合同额"}
+        for i, t in r5.items():
+            out[4][i] = t
+
+        # ── r6-r17 月度行 ──
+        notes = {9: "同比分析：",
+                 10: "1. 确收度 = 确收合同额（含税）/ 销售合同额 * 100%",
+                 11: "2. 确收合同额比重 = 新签（或递延）确收合同额 / 总确收合同额 * 100%",
+                 12: "3. 同比增长率（销售合同额）= （Y26 / Y25 - 1）*100%",
+                 13: "4. 同比增长率（确收合同额）= （Y26 / Y25 - 1）*100%",
+                 14: "5. 确收度增长 = Y26 - Y25",
+                 15: "统计维度：合同类别（新签、递延）；统计月度（期间）"}
+        for idx, m in enumerate(PLAN_MONTHS):
+            i = 5 + idx
+            has_act = m in actual_map
+            nc = contract_by_month.get(m, 0.0)
+            pn = plan_by[CATEGORY_NEW].get(m, 0.0)
+            an = actual_by[CATEGORY_NEW].get(m, 0.0) if has_act else None
+            pd_ = plan_by[CATEGORY_DEFERRED].get(m, 0.0)
+            ad_ = actual_by[CATEGORY_DEFERRED].get(m, 0.0) if has_act else None
+            out[i][1] = m
+            out[i][2] = wan(nc)
+            out[i][3] = wan(pn)
+            out[i][4] = wan(an) if has_act else None
+            out[i][5] = rate(an, pn) if has_act else None
+            out[i][6] = wan(pd_)
+            out[i][7] = wan(ad_) if has_act else None
+            out[i][8] = rate(ad_, pd_) if has_act else None
+            out[i][9] = wan(pn + pd_)
+            out[i][10] = wan(an + ad_) if has_act else (0 if not has_act else None)
+            out[i][11] = rate(an + ad_, pn + pd_) if has_act else (
+                0 if (pn + pd_) else None)
+            if i in notes:
+                out[i][14] = notes[i]
+            # C 块
+            y = y25.get("2025" + m[4:], {})
+            yc, yp, ya = (y.get("contract", 0.0), y.get("plan", 0.0),
+                          y.get("actual", 0.0))
+            out[i][32] = idx + 1
+            out[i][33] = wan(nc)
+            out[i][34] = wan(pn)
+            out[i][35] = wan(an) if has_act else None
+            out[i][36] = yc if y else None
+            out[i][37] = yp if y else None
+            out[i][38] = ya if y else None
+            if y and yc:
+                base = nc if nc else pn
+                out[i][39] = rate(base - yc * 10000, yc * 10000)
+            if y and yp:
+                out[i][40] = rate(pn - yp * 10000, yp * 10000)
+            if y and ya and has_act:
+                out[i][41] = rate(an - ya * 10000, ya * 10000)
+
+        # ── B 块（r6-r8 col14..29 合同类别同比区）──
+        ct = sum(contract_by_month.get(m, 0.0) for m in PLAN_MONTHS)
+        pnT = plan_all[CATEGORY_NEW]; anT = actual_all[CATEGORY_NEW]
+        pdT = plan_all[CATEGORY_DEFERRED]; adT = actual_all[CATEGORY_DEFERRED]
+        tot_actual = anT + adT
+        y26_def_sales = plan_all[CATEGORY_DEFERRED]
+
+        def _b_rows(cat_label: str, s26: float, a26: float, p26: float | None,
+                    s25: float, a25: float, p25: float | None,
+                    is_total: bool) -> list[Any]:
+            row: list[Any] = [""] * 50
+            row[14] = cat_label
+            row[15] = wan(s26)
+            row[16] = wan(a26)
+            row[17] = rate(a26, s26)
+            row[18] = 1.0 if is_total else rate(a26, tot_actual)
+            row[19] = wan(p26) if p26 is not None else None
+            row[20] = rate(p26, s26) if p26 else None
+            row[21] = s25
+            row[22] = a25
+            row[23] = rate(a25, s25)
+            row[24] = 1.0 if is_total else rate(a25, y25_tot_actual)
+            row[25] = p25
+            row[26] = rate(p25, s25) if p25 else None
+            row[27] = rate(s26 - s25 * 10000, s25 * 10000)
+            row[28] = rate(a26 - a25 * 10000, a25 * 10000)
+            # 确收度增长 = Y26 确收度 - Y25 确收度；Y25 无台账（如 202609）→ None
+            r26, r25 = rate(a26, s26), rate(a25, s25)
+            row[29] = (r26 - r25) if (r26 is not None and r25 is not None) else None
+            return row
+
+        b_new = _b_rows("新签合同", ct, anT, pnT,
+                        y25_new_contract, y25_new_actual, y25_new_plan, False)
+        b_def = _b_rows("递延合同", y26_def_sales, adT, None,
+                        y25_def_plan, y25_def_act, None, False)
+        b_tot = _b_rows("合计", ct + y26_def_sales, tot_actual, None,
+                        y25_tot_contract, y25_tot_actual, None, True)
+        for col in range(14, 30):
+            out[5][col] = b_new[col]
+            out[6][col] = b_def[col]
+            out[7][col] = b_tot[col]
+
+        # ── r18 1-6月合计（A + C）──
+        i = 17
+        six = PLAN_MONTHS[:6]
+        c6 = sum(contract_by_month.get(m, 0.0) for m in six)
+        pn6 = sum(plan_by[CATEGORY_NEW].get(m, 0.0) for m in six)
+        an6 = sum(actual_by[CATEGORY_NEW].get(m, 0.0)
+                  for m in months_actual if m in six)
+        pd6 = sum(plan_by[CATEGORY_DEFERRED].get(m, 0.0) for m in six)
+        ad6 = sum(actual_by[CATEGORY_DEFERRED].get(m, 0.0)
+                  for m in months_actual if m in six)
+        out[i][1] = "1-6月合计"
+        out[i][2] = wan(c6); out[i][3] = wan(pn6); out[i][4] = wan(an6)
+        out[i][5] = rate(an6, pn6)
+        out[i][6] = wan(pd6); out[i][7] = wan(ad6); out[i][8] = rate(ad6, pd6)
+        out[i][9] = wan(pn6 + pd6); out[i][10] = wan(an6 + ad6)
+        out[i][11] = rate(an6 + ad6, pn6 + pd6)
+        y5 = [y25.get("2025" + f"{k:02d}", {}) for k in range(1, 6)]
+        yc5 = sum(v.get("contract", 0.0) for v in y5)
+        yp5 = sum(v.get("plan", 0.0) for v in y5)
+        ya5 = sum(v.get("actual", 0.0) for v in y5)
+        out[i][32] = "1-5月小计"
+        out[i][33] = wan(c6); out[i][34] = wan(pn6); out[i][35] = wan(an6)
+        out[i][36] = yc5; out[i][37] = yp5; out[i][38] = ya5
+        out[i][39] = rate(c6 - yc5 * 10000, yc5 * 10000)
+        out[i][40] = rate(pn6 - yp5 * 10000, yp5 * 10000)
+        out[i][41] = rate(an6 - ya5 * 10000, ya5 * 10000)
+
+        # ── r19 合计（A + C）──
+        i = 18
+        out[i][1] = "合计"
+        out[i][2] = wan(ct); out[i][3] = wan(pnT); out[i][4] = wan(anT)
+        out[i][5] = rate(anT, pnT)
+        out[i][6] = wan(pdT); out[i][7] = wan(adT); out[i][8] = rate(adT, pdT)
+        out[i][9] = wan(pnT + pdT); out[i][10] = wan(anT + adT)
+        out[i][11] = rate(anT + adT, pnT + pdT)
+        out[i][32] = "合计"
+        out[i][33] = wan(ct); out[i][34] = wan(pnT); out[i][35] = wan(anT)
+        out[i][36] = y25_new_contract
+        out[i][37] = y25_new_plan
+        out[i][38] = y25_new_actual
+        out[i][39] = rate(ct - y25_new_contract * 10000, y25_new_contract * 10000)
+        out[i][40] = rate(pnT - y25_new_plan * 10000, y25_new_plan * 10000)
+        out[i][41] = rate(anT - y25_new_actual * 10000, y25_new_actual * 10000)
+
+        # ── r20 确收度（A + C）──
+        i = 19
+        out[i][1] = "确收度"
+        out[i][3] = rate(pnT, ct); out[i][5] = rate(anT, ct)
+        out[i][32] = "确收度"
+        out[i][34] = rate(pnT, ct); out[i][35] = rate(anT, ct)
+        out[i][37] = rate(y25_new_plan, y25_new_contract)
+        out[i][38] = rate(y25_new_actual, y25_new_contract)
+
+        # ── r21 年度目标（A + C）──
+        i = 20
+        out[i][1] = "年度目标"
+        out[i][2] = SUMMARY_TARGET_CONTRACT
+        out[i][5] = SUMMARY_TARGET_RATES[CATEGORY_NEW]
+        out[i][8] = SUMMARY_TARGET_RATES[CATEGORY_DEFERRED]
+        out[i][11] = SUMMARY_TARGET_RATES["合计"]
+        out[i][32] = "年度目标"
+        out[i][33] = SUMMARY_TARGET_CONTRACT
+        out[i][34] = SUMMARY_TARGET_PLAN
+
+        # ── r22 差距（C）──
+        i = 21
+        out[i][32] = "差距"
+        out[i][33] = round(SUMMARY_TARGET_CONTRACT - wan(ct), 4)
+        out[i][34] = round(SUMMARY_TARGET_PLAN - wan(pnT), 4)
+
+        # ── r24-r32 履约维度（golden 实证：从 C 列(col2) 起，A/B 空）──
+        i = 23
+        out[i][2] = f"{period or '202606'}履约维度："
+        out[24][2], out[24][3], out[24][4], out[24][5] = "类别", "新签", "递延", "合计"
+        rows_d = [
+            ("预算完成", pn6, pd6, pn6 + pd6),
+            ("实际完成", an6, ad6, an6 + ad6),
+            ("预算-实际", pn6 - an6, pd6 - ad6, (pn6 + pd6) - (an6 + ad6)),
+            ("其中：提前完成", early[CATEGORY_NEW], early[CATEGORY_DEFERRED],
+             early[CATEGORY_NEW] + early[CATEGORY_DEFERRED]),
+            ("        滞后未完成", late_ok[CATEGORY_NEW], late_ok[CATEGORY_DEFERRED],
+             late_ok[CATEGORY_NEW] + late_ok[CATEGORY_DEFERRED]),
+            ("        消失", vanish[CATEGORY_NEW], vanish[CATEGORY_DEFERRED],
+             vanish[CATEGORY_NEW] + vanish[CATEGORY_DEFERRED]),
+        ]
+        for k, (label, a, b, s) in enumerate(rows_d):
+            i = 25 + k
+            out[i][2] = label
+            out[i][3] = wan(a); out[i][4] = wan(b); out[i][5] = wan(s)
+        out[31][3], out[31][4], out[31][5] = 0.0, -0.0, 0.0
+
+        # ── r43-r61 产线分析（2+4g 分组）──
+        out[42][1] = "期间"
+        for g in range(10):
+            out[42][2 + g * 4] = "新签"
+        out[43][2] = "合计"
+        for g, ln in enumerate(LINES):
+            out[43][6 + g * 4] = ln
+        for g in range(10):
+            base = 2 + g * 4
+            out[44][base] = "新签合同额"
+            out[44][base + 1] = "预计确收合同额"
+            out[44][base + 2] = "实际确收合同额"
+            out[44][base + 3] = "完成率"
+        out[44][42] = "校验"; out[44][43] = "校验"; out[44][44] = "校验"
+        for idx, m in enumerate(PLAN_MONTHS):
+            i = 45 + idx
+            has_act = m in actual_map
+            out[i][1] = m
+            for g in range(10):
+                base = 2 + g * 4
+                if g == 0:
+                    cg = contract_by_month.get(m, 0.0)
+                    pg = plan_by[CATEGORY_NEW].get(m, 0.0)
+                    ag = actual_by[CATEGORY_NEW].get(m, 0.0) if has_act else None
+                else:
+                    ln = LINES[g - 1]
+                    cg = lc[ln].get(m, 0.0)
+                    pg = lp[ln].get(m, 0.0)
+                    ag = la[ln].get(m, 0.0) if has_act else None
+                out[i][base] = wan(cg)
+                out[i][base + 1] = wan(pg)
+                out[i][base + 2] = wan(ag) if has_act else None
+                out[i][base + 3] = rate(ag, pg) if has_act else (
+                    0 if pg else None)
+        for i in range(45, 57):
+            out[i][42] = 0.0; out[i][43] = 0.0; out[i][44] = 0.0
+        out[57][1] = "1-6月合计"
+        out[58][1] = "合计"
+        out[59][1] = "确收度"
+        out[60][1] = "年度目标"
+        out[60][2] = SUMMARY_TARGET_CONTRACT
+        for g in range(10):
+            base = 2 + g * 4
+            if g == 0:
+                cg6 = sum(contract_by_month.get(m, 0.0) for m in six)
+                pg6 = sum(plan_by[CATEGORY_NEW].get(m, 0.0) for m in six)
+                ag6 = sum(actual_by[CATEGORY_NEW].get(m, 0.0)
+                          for m in months_actual if m in six)
+                cgT, pgT, agT = ct, pnT, anT
+            else:
+                ln = LINES[g - 1]
+                cg6 = sum(lc[ln].get(m, 0.0) for m in six)
+                pg6 = sum(lp[ln].get(m, 0.0) for m in six)
+                ag6 = sum(la[ln].get(m, 0.0) for m in months_actual if m in six)
+                cgT = sum(lc[ln].get(m, 0.0) for m in PLAN_MONTHS)
+                pgT = sum(lp[ln].get(m, 0.0) for m in PLAN_MONTHS)
+                agT = sum(la[ln].get(m, 0.0) for m in months_actual)
+            out[57][base] = wan(cg6); out[57][base + 1] = wan(pg6)
+            out[57][base + 2] = wan(ag6); out[57][base + 3] = rate(ag6, pg6)
+            out[58][base] = wan(cgT); out[58][base + 1] = wan(pgT)
+            out[58][base + 2] = wan(agT); out[58][base + 3] = rate(agT, pgT)
+            out[59][base + 1] = rate(pgT, cgT)
+            out[59][base + 3] = rate(agT, cgT)
+            out[60][base + 3] = 1.0
+
         return out
 
     # ─── Sheet 5: 预算趋势分析（19 行）───
@@ -833,14 +1228,128 @@ class RevenueAnalysisEngine(BaseEngine):
     # ─── Sheet 8: 图例 ───
 
     def _build_legend(self) -> list[list[Any]]:
+        """图例 Sheet（golden 202606 35 行有效数据结构）。
+
+        结构：
+          r1: 表头（16 列）
+          r2-r35: 35 行 PM 映射（项目经理 / 部门 / 备注 / 团队 / 产线）
+                  + 偏差状态/原因字典 + 滞后验收字典 + 预算进度字典
+        数据来源：
+          - PM/部门/备注/团队/产线：从 202606 golden 图例提取（项目经理维度 VLOOKUP 源）
+          - 偏差状态 / 原因 / 滞后验收 / 预算进度：与 TREND_STATUS 等常量对齐
+        """
+        # 202606 golden 35 行 PM 映射（列：项目经理 / 部门 / 备注 / 团队 / 产线）
+        PM_ROWS = [
+            ("崔延章", "北区客户服务部", "已离职", "*", "*"),
+            ("王文博", "北区客户服务部", "", "大客户服务部", "0：综合产品/服务"),
+            ("张铭鑫", "北区客户服务部", "", "南区客户服务部", "1：安全保护产品线"),
+            ("商君玮", "北区客户服务部", "已离职", "北区客户服务部", "2：安全服务产品线"),
+            ("刘宏宇", "北区客户服务部", "已离职", "其他", "3：安全检测产品线"),
+            ("崔硕", "北区客户服务部", "已离职", "", "4：安全监测产品线"),
+            ("余壮", "北区客户服务部", "", "", "5：API安全产品线"),
+            ("牛素芹", "北区客户服务部", "", "", "6：物联网服务产品线"),
+            ("张辉", "大客户服务部", "", "", "7：内容安全产品线"),
+            ("李杨", "大客户服务部", "", "", "8：第三方产品/服务"),
+            ("刘瑞营", "大客户服务部", "", "", ""),
+            ("温泽辉", "大客户服务部", "已离职", "", ""),
+            ("倪焱川", "大客户服务部", "", "", ""),
+            ("代杭旅", "大客户服务部", "已转岗", "", ""),
+            ("申月移", "大客户服务部", "已离职", "", ""),
+            ("张梨", "大客户服务部", "", "", ""),
+            ("程涛", "大客户服务部", "", "", ""),
+            ("闫英健", "大客户服务部", "已离职", "", ""),
+            ("贾淇名", "大客户服务部", "已离职", "", ""),
+            ("张燕兰", "南区客户服务部", "", "", ""),
+            ("冯刚", "南区客户服务部", "", "", ""),
+            ("李平意", "南区客户服务部", "", "", ""),
+            ("孙康", "南区客户服务部", "已离职", "", ""),
+            ("林慧娟", "南区客户服务部", "", "", ""),
+            ("梁杨", "南区客户服务部", "", "", ""),
+            ("黄伟", "南区客户服务部", "已离职", "", ""),
+            ("徐亚东", "南区客户服务部", "", "", ""),
+            ("胡李鑫", "南区客户服务部", "", "", ""),
+            ("郭仕娜", "南区客户服务部", "", "", ""),
+            ("孙环环", "其他", "项目管理部", "", ""),
+            ("曲婷婷", "其他", "项目管理部", "", ""),
+            ("未立项", "其他", "未立项", "", ""),
+            ("已结项", "其他", "已结项", "", ""),
+            ("*", "全部", "全部", "", ""),
+        ]
+        # 偏差-状态/趋势字典（golden E 列 8 种）
+        DEV_STATUSES = [
+            "正常确收", "差异确收（当年可消除）", "差异确收（当年不可消除）",
+            "差异确收（当年可消除，整体未滞后）", "差异确收（异常项目）",
+            "预计确收", "提前确收",
+        ]
+        # 偏差-原因类别字典（golden F 列 11 种 + 说明）
+        DEV_REASONS = [
+            ("交付原因-延期", ""),
+            ("客户原因-延期", ""),
+            ("客户原因-终止", ""),
+            ("客户原因-变更履约项", ""),
+            ("产品原因-延期", ""),
+            ("综合原因-考核扣款", ""),
+            ("综合原因-结算差异", "特指据实结算/工作量结算未按合同上限结算，而引起的差异。"),
+            ("综合原因-项目异常", ""),
+            ("综合原因-贸易业务", ""),
+            ("综合原因-核算差异", "特指交付确认文件交接过程中，核算误差，将再下月核算中消除。"),
+            ("综合原因-分项金额调整", "特指合同履约项，因甲方签订补充协议或核算误差，重新调整合同各履约项所分摊的合同金额。"),
+        ]
+        # 滞后验收原因 / 处置措施字典（golden I/J 列 6 种）
+        LAG_REASONS = [
+            ("验收已完成", "N/A"),
+            ("正常验收", "正常交付，待合同约定验收时点验收"),
+            ("项目异常（待签补充协议/终止协议、客户失联）", "客户对接中、发催款函、签署补充协议/终止协议"),
+            ("应验未验", "项目经理追验收"),
+            ("验收审核中", "PMO跟进验收审核"),
+        ]
+
         out: list[list[Any]] = []
         out.append(["项目经理", "部门", "备注", "", "偏差-状态/趋势", "偏差-原因类别",
                     "偏差-原因类别说明", "", "滞后验收原因", "滞后验收处置措施", "",
                     "预算执行进度", "预算执行进度类别", "", "团队", "产线"])
-        # 预算执行进度图例（L:M）
-        for status in TREND_STATUS:
-            out.append(["", "", "", "", "", "", "", "", "", "", "",
-                        status, TREND_CATEGORY_MAP.get(status, ""), "", "", ""])
+
+        # PM 行（34 行数据 + 第 35 行 "*"）
+        for pm, dept, remark, team, prod in PM_ROWS:
+            out.append([pm, dept, remark, "", "", "", "", "", "", "", "",
+                        "", "", "", team, prod])
+
+        # 偏差字典行（紧跟 PM 行后，用空行分隔？golden 是连续的 E/F/G 列字典）
+        # golden 实证：r2-r9 前 8 行 PM 里同时填了偏差状态列，后面 27 行 PM 不填偏差
+        # 所以偏差字典其实是和前 8 行 PM 重叠在 E/F/G 列的
+        # 我们保持 golden 结构：前 8 行 PM 同时带偏差字典，后 26 行 PM 只填 A/B/C/N/O
+        # （上面 PM_ROWS 已按 golden 原样输出，偏差列全空——需要修正前 8 行）
+
+        # 修正：前 8 行同时填充偏差状态/原因（与 golden r2-r9 一致）
+        for i, status in enumerate(DEV_STATUSES):
+            if i + 1 < len(out):  # out[0] 是表头，out[1] = r2
+                out[i + 1][4] = status  # E 列
+        for i, (reason, desc) in enumerate(DEV_REASONS):
+            if i + 1 < len(out):
+                out[i + 1][5] = reason  # F 列
+                out[i + 1][6] = desc    # G 列
+        for i, (lag_reason, lag_action) in enumerate(LAG_REASONS):
+            if i + 1 < len(out):
+                out[i + 1][8] = lag_reason   # I 列
+                out[i + 1][9] = lag_action   # J 列
+
+        # 预算执行进度字典（L/M 列，与 golden r2-r9 对齐）
+        # golden 前 8 行的 L/M：异常中 / 异常中 / ... / 合同消失
+        # 用 TREND_STATUS + TREND_CATEGORY_MAP，但需对齐 golden 顺序
+        BUDGET_PROGRESS = [
+            ("已归档但未下单", "异常中"),
+            ("已下单但无法交付", "异常中"),
+            ("已交付但无法确收", "异常中"),
+            ("本年度正常可确收", "本年正常交付"),
+            ("未来可确收", "未来交付"),
+            ("之前年度已确收", "异常中"),
+            ("合同消失", "合同消失"),
+        ]
+        for i, (st, cat) in enumerate(BUDGET_PROGRESS):
+            if i + 1 < len(out):
+                out[i + 1][11] = st   # L 列
+                out[i + 1][12] = cat  # M 列
+
         return out
 
     # ─── Sheet 9: 月度汇总记录 ───
@@ -854,11 +1363,16 @@ class RevenueAnalysisEngine(BaseEngine):
         降级路径：明细聚合（202609 无台账时）。
         """
         if ledger_monthly:
+            data = self._ledger_data(ledger_monthly)
             out: list[list[Any]] = []
-            out.append(["统计期间", "合同期间", "新签合同额(万)", "新签-预计(万)",
-                        "新签-实际(万)", "递延-预计(万)", "递延-实际(万)",
-                        "合计-预计(万)", "合计-实际(万)", "合计校准(预计)", "合计校准(实际)"])
-            for r in ledger_monthly:
+            out.append([None, None, "新签合同", None, None, "递延合同", None,
+                        "新签+递延", None, None, None])
+            out.append(["统计期间", "合同期间", "新签合同额（万）",
+                        "新签-预计确收合同额（万）", "新签-实际确收合同额（万）",
+                        "递延-预计确收合同额（万）", "递延-实际确收合同额（万）",
+                        "合计-预计确收合同额（万）", "合计-实际确收合同额（万）",
+                        "合计校准（预计）", "合计校准（实际）"])
+            for r in data:
                 out.append([
                     str(r.get("0") or ""), str(r.get("1") or ""),
                     r.get("2"), r.get("3"),
@@ -901,9 +1415,10 @@ class RevenueAnalysisEngine(BaseEngine):
         降级路径：明细聚合（202609 无台账时）。
         """
         if ledger_perf:
+            data = self._ledger_data(ledger_perf)
             out: list[list[Any]] = []
             out.append(["统计期间", "类别", "新签", "递延", "合计", "备注"])
-            for r in ledger_perf:
+            for r in data:
                 out.append([
                     str(r.get("0") or ""), r.get("1"), r.get("2"), r.get("3"),
                     r.get("4"), r.get("5"),

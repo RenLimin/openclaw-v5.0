@@ -96,12 +96,12 @@ def test_p0_ledger_frozen_import(eng):
     eng.import_source("202606", GOLDEN_202606)
     data = eng.compute("202606")
     led = data["月度汇总记录"]
-    # 表头 + 264 数据行
-    assert len(led) == 265  # 表头 + 264
+    # golden 202606 结构：R1 组表头 + R2 列表头 + 264 数据行 = 266
+    assert len(led) == 266  # 组表头 + 表头 + 264
     n202606 = sum(1 for r in led if r[0] == "202606")
     assert n202606 == 12
     # 历史期保留（22 统计期）
-    periods = {r[0] for r in led[1:]}
+    periods = {r[0] for r in led[2:]}
     assert "202403" in periods and "202512" in periods
 
 

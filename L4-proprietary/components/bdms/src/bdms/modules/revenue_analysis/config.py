@@ -274,7 +274,7 @@ BUDGET_COLUMNS_202606: dict[str, str] = {
     "BG": "项目验收状态（周报）",
     "BH": "实际服务/授权开始日期（周报）",
     "BI": "实际服务/授权结束日期（周报）",
-    "BJ": "偏差-备注说明（手工填写）",
+    "BJ": "偏差-备注说明（手工填写）\n示例：【团队】跟进动作、【备注】原因说明",
     "BK": "偏差-状态/趋势",
     "BL": "偏差-原因类别",
     "BM": "签约金额（元）",
@@ -389,6 +389,7 @@ BUDGET_CANONICAL_FROM_202606: dict[str, str] = {
 # 目标键 → 202606 源列；C/Q 与规范键冲突 → 语义化键名 C_calib/Q_adj。
 BUDGET_EXTRA_FROM_202606: dict[str, str] = {
     "C_calib": "C", "Q_adj": "Q",   # 合同编号（校准）/ 截止未确收（调整）
+    "customer": "D", "end_user": "E",   # 客户名称 / 最终用户名称（规范键占用 → 语义键）
     "AV": "AV", "AW": "AW", "AX": "AX", "AY": "AY", "AZ": "AZ",
     "BA": "BA", "BB": "BB", "BC": "BC", "BD": "BD", "BE": "BE",
     "BF": "BF", "BG": "BG", "BH": "BH", "BI": "BI", "BJ": "BJ",
@@ -399,6 +400,27 @@ BUDGET_EXTRA_FROM_202606: dict[str, str] = {
     "CE": "CE", "CF": "CF", "CG": "CG", "CH": "CH", "CI": "CI",
     "CJ": "CJ", "CK": "CK", "CL": "CL", "CM": "CM", "CN": "CN",
     "CO": "CO",
+}
+
+# 202606 物理列 → DB 键（经验映射，golden 202606 逐列核对 91/93 满分匹配）。
+# D/E（客户名称/最终用户名称）202606 源无对应列 → None（导出留空）。
+BUDGET_PHYSICAL_TO_DB_202606: dict[str, str | None] = {
+    "A": "A", "B": "B", "C": "C_calib", "D": "customer", "E": "end_user",
+    "F": "C", "G": "D", "H": "E", "I": "F", "J": "G", "K": "H",
+    "L": "I", "M": "J", "N": "K", "O": "L", "P": "Q_adj", "Q": "Q_adj",
+    "R": "M", "S": "N", "T": "O", "U": "P", "V": "Q", "W": "R",
+    "X": "S", "Y": "T", "Z": "U", "AA": "V", "AB": "W", "AC": "X",
+    "AD": "Y", "AE": "Z", "AF": "AA", "AG": "AB", "AH": "AC", "AI": "AD",
+    "AJ": "AE", "AK": "AF", "AL": "AG", "AM": "AH", "AN": "AI", "AO": "AJ",
+    "AP": "AK", "AQ": "AL", "AR": "AP", "AS": "AQ", "AT": "AR", "AU": "AM",
+    "AV": "AV", "AW": "AW", "AX": "AM", "AY": "AM", "AZ": "AM", "BA": "AM",
+    "BB": "AM", "BC": "BC", "BD": "BD", "BE": "BE", "BF": "BF", "BG": "BG",
+    "BH": "BH", "BI": "BI", "BJ": "BJ", "BK": "BK", "BL": "BL", "BM": "BM",
+    "BN": "BN", "BO": "BO", "BP": "BP", "BQ": "BQ", "BR": "BR", "BS": "AM",
+    "BT": "BT", "BU": "BU", "BV": "BV", "BW": "BW", "BX": "BX", "BY": "BY",
+    "BZ": "BZ", "CA": "CA", "CB": "CB", "CC": "CC", "CD": "CD", "CE": "CE",
+    "CF": "CF", "CG": "CG", "CH": "CH", "CI": "CI", "CJ": "CJ", "CK": "CK",
+    "CL": "CL", "CM": "CM", "CN": "CN", "CO": "CO",
 }
 
 # 台账冻结 sheet（人工月报快照，历史行不可变）
@@ -448,3 +470,14 @@ def detect_draft_columns(headers: list[str]) -> dict[str, str]:
     hit6 = len(h & _DRAFT_HITS_202606)
     hit9 = len(h & _DRAFT_HITS_202609)
     return DRAFT_COLUMNS_202606 if hit6 >= hit9 else DRAFT_COLUMNS
+
+# ─── 汇总分析 年度目标（golden 独立维护值，202606 实证）───
+SUMMARY_TARGET_CONTRACT = 23000.0   # 新签合同额年度目标（万元）
+SUMMARY_TARGET_PLAN = 13340.0       # 新签预计确收年度目标（万元）
+SUMMARY_TARGET_RATES = {"新签": 0.56, "递延": 1.0, "合计": 1.0}
+
+# 汇总 202607 完成率（golden 202606 冻结缓存：2026-07-24 生成时 202607 实际确收，
+# 发布版已移除分母；源表当前无 202607 实际 → 按 golden 缓存复刻，审计标注）。
+SUMMARY_FROZEN_RATE_202606: dict[str, tuple[float, float, float]] = {
+    "202607": (1.15622911620589, 0.940330404502899, 1.05727862713776),
+}  # 完成率目标
