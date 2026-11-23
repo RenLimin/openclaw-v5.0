@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import csv
 import logging
+import os
 import shutil
+import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -21,6 +24,45 @@ from ..adapters.browser_adapter import (
 logger = logging.getLogger(__name__)
 
 DOWNLOAD_DIR = Path.home() / ".openclaw" / "data" / "ones_exports"
+
+# 专用实例端口：与 registry `browser-isolated-chrome` 及 ensure_chrome.py 一致（9333）。
+# 历史错值 9222 会导致「连不上专用实例 → 静默另起浏览器」，复用失效（2026-11-23 修）。
+CDP_URL = os.environ.get("ONES_CDP_URL", "http://127.0.0.1:9333")
+
+
+def _ensure_chrome_script() -> Optional[Path]:
+    """定位权威启动器（以 AGENTS.md 为锚点找 workspace 根，兼容 sandbox 副本层级）。"""
+    here = Path(__file__).resolve()
+    for base in here.parents:
+        if (base / "AGENTS.md").exists():
+            cand = base / "L2-infra" / "components" / "browser-automation" / "scripts" / "ensure_chrome.py"
+            return cand if cand.is_file() else None
+    return None
+
+
+def ensure_dedicated_instance() -> bool:
+    """确保 OA/ONES 专用 Chrome 实例可用（幂等，已跑则复用）。
+
+    被触发即可用：不再要求调用方自己拼 Chrome 命令行（缺口 2026-11-23）。
+    失败返回 False，由调用方显式失败——**不得静默另起浏览器**。
+    """
+    script = _ensure_chrome_script()
+    if script is None:
+        logger.error("未找到 ensure_chrome.py（专用实例启动器）")
+        return False
+    py = sys.executable or "python3"
+    try:
+        proc = subprocess.run(
+            [py, str(script), "ensure"],
+            capture_output=True, text=True, timeout=60,
+        )
+    except subprocess.TimeoutExpired:
+        logger.error("ensure_chrome.py 超时")
+        return False
+    if proc.returncode != 0:
+        logger.error(f"ensure_chrome.py 失败: {(proc.stderr or proc.stdout).strip()}")
+        return False
+    return True
 
 FILTERS = {
     "sign": {
@@ -182,48 +224,47 @@ class OnesConnector(BaseConnector):
         output_csv = filter_config["output_csv"]
 
         try:
+            # 被触发即可用：先确保专用实例（幂等），再连 9333 复用登录态。
+            # 失败即显式返回 None，**不静默另起浏览器**（那会绕过专用 profile 红线）。
+            if not ensure_dedicated_instance():
+                return None
             adapter = BrowserAdapter(headless=False)
-            # Try to reuse existing Chrome CDP instance (started by OA export)
-            # This is the already logged-in instance, reuse it to avoid slow startup
-            try:
-                adapter.launch(cdp_url="http://127.0.0.1:9222")
-                # Step 1: 确保 ONES 标签页
-                adapter.ones_ensure_tab()
-                time.sleep(3)
+            # 复用既有专用实例（已登录），不再 launch 新浏览器
+            adapter.launch(cdp_url=CDP_URL)
+            # Step 1: 确保 ONES 标签页
+            adapter.ones_ensure_tab()
+            time.sleep(3)
 
-                # Step 2: 点击筛选器子 tab（优先文本匹配，失败再用索引）
-                adapter.ones_click_filter_tab(
-                    label=filter_config["label"],
-                    tab_index=filter_config.get("tab_index", -1),
-                )
-                time.sleep(3)
+            # Step 2: 点击筛选器子 tab（优先文本匹配，失败再用索引）
+            adapter.ones_click_filter_tab(
+                label=filter_config["label"],
+                tab_index=filter_config.get("tab_index", -1),
+            )
+            time.sleep(3)
 
-                # Step 3: 先点击"还原"按钮，恢复所有数据显示
-                adapter.ones_click_reset()
-                time.sleep(10)  # Wait for data reload
+            # Step 3: 先点击"还原"按钮，恢复所有数据显示
+            adapter.ones_click_reset()
+            time.sleep(10)  # Wait for data reload
 
-                # Step 4: 点击更多菜单
-                adapter.ones_click_more_menu()
+            # Step 4: 点击更多菜单
+            adapter.ones_click_more_menu()
 
-                # Step 5: 点击导出工作项
-                adapter.ones_click_export_item()
+            # Step 5: 点击导出工作项
+            adapter.ones_click_export_item()
 
-                # Step 6: 点击确认，同时捕获下载
-                # Use Playwright native expect_download to capture download
-                # Must register expect_download BEFORE clicking confirm!
-                with adapter._page.expect_download(timeout=600000) as download_info:
-                    adapter.ones_click_confirm()
-                download = download_info.value
-                DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
-                cached = DOWNLOAD_DIR / output_csv
-                # Delete existing if any
-                cached.unlink(missing_ok=True)
-                download.save_as(cached)
-                logger.info(f"导出成功: {cached} ({cached.stat().st_size:,} bytes)")
-                return self._read_csv(cached)
-            finally:
-                # Don't close the shared CDP browser - keep it open for reuse
-                pass
+            # Step 6: 点击确认，同时捕获下载
+            # Use Playwright native expect_download to capture download
+            # Must register expect_download BEFORE clicking confirm!
+            with adapter._page.expect_download(timeout=600000) as download_info:
+                adapter.ones_click_confirm()
+            download = download_info.value
+            DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+            cached = DOWNLOAD_DIR / output_csv
+            # Delete existing if any
+            cached.unlink(missing_ok=True)
+            download.save_as(cached)
+            logger.info(f"导出成功: {cached} ({cached.stat().st_size:,} bytes)")
+            return self._read_csv(cached)
         except Exception as e:
             logger.error(f"浏览器自动化导出失败: {e}")
             return None

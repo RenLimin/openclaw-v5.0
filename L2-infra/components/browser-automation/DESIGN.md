@@ -95,24 +95,33 @@ browser-automation/
 
 ## 4. 接口与用法
 
-本目录**没有接口**，也没有定时任务。使用真实能力请走 §3.1 入口。典型形态：
+本组件的**唯一权威入口**是 `scripts/ensure_chrome.py`（幂等启动器）。不再要求调用方自己拼 Chrome 命令行——那正是「每轮重复探索」的根源（缺口 2026-11-23，见 `memory/2026-11-20.md:40`）。
 
 ```bash
-# 1) 隔离 Chrome（专用 profile + CDP）——见 browser-automation-oa-export.md §1 的完整命令行
-/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
-  --remote-debugging-port=9222 \
-  --user-data-dir=/Users/bangcle/.chrome-automation-profile \
-  --no-first-run --disable-extensions --disable-sync \
-  --disable-background-networking --disable-gpu \
-  https://iam.bangcle.com/#/login
-
-# 2) Playwright 连接（复用登录态），而非启动新浏览器
-#    adapter = BrowserAdapter(); adapter.launch(cdp_url="http://127.0.0.1:9222")
+# 确保专用实例可用（已在跑则复用，毫秒级）
+python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py ensure
+python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py status   # 只读
+python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py stop    # 用后即关
 ```
 
-> 端口说明：registry `browser-isolated-chrome` 记 `9333`；`bdms` 侧 `connect_local_chrome` 默认 `9222`。
-> 按 profile 选端口，并遵守「用后即关 + 端口释放」红线。
-> （原 `start_wecom_chrome.py` 的 9222 实例已随 D-13 删除，企微采集改走 `wecom_collector` MCP 路径。）
+启动器内部固定契约：
+- profile：`~/.openclaw/data/chrome-profiles/oa-live`（**不碰用户现有 Chrome**）
+- 端口：`9333`（registry `browser-isolated-chrome` 权威值；`ONES_CDP_URL`/`ONES_CDP_PORT` 可覆盖）
+- 幂等：CDP `/json/version` 探测命中即复用，不重复起进程
+- 并发安全：`~/.openclaw/data/chrome-profiles/oa-live.lock` 文件锁串行化
+- 回收安全：`stop` 只杀「命令行含本 profile + 本端口」的进程，用后即关 + 端口释放
+
+Playwright 侧复用（不另起浏览器）：
+
+```python
+# 复用已登录实例，而非 launch 新浏览器
+adapter = BrowserAdapter(); adapter.launch(cdp_url="http://127.0.0.1:9333")
+```
+
+> 端口说明：registry `browser-isolated-chrome` 与本启动器统一记 `9333`。
+> `bdms` 侧 `ones_connector.py` 的 `cdp_url="…:9222"` 是**历史遗留错值**（2026-11-23 修），
+> 它连不上 9333 实例后会静默回退另起浏览器，造成「复用失效」——现已对齐 9333。
+> 遵守「用后即关 + 端口释放」红线（USER.md 2026-11-19）。
 
 ## 5. 业界对标
 

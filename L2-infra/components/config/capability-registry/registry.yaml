@@ -55,12 +55,17 @@ capabilities:
     supersedes: []
 
   - id: browser-automation
-    name: 浏览器自动化基础设施（占位，能力在 delivery-center/oa-live）
+    name: 浏览器自动化基础设施（隔离 Chrome 幂等管理）
     layer: L2
     interfaces: [browser, chrome, cdp, automation]
     entry:
-      - "L2-infra/components/browser-automation/ (空占位目录，无独立入口；实际能力 = browser-isolated-chrome)"
-    notes: "目录为空占位，真实能力在 L4 delivery-center collectors + 专用 CDP"
+      - "python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py ensure"
+      - "python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py status"
+      - "python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py stop"
+    tests:
+      - "python3 -m pytest L2-infra/components/browser-automation/tests/"
+    notes: "隔离 Chrome 幂等启动器（ensure/status/stop）：专用 profile ~/.openclaw/data/chrome-profiles/oa-live + CDP 9333；
+      幂等复用已运行实例；文件锁串行化；stop 只杀「本 profile+本端口」进程，绝不误伤用户 Chrome（缺口 2026-11-23）"
     supersedes: []
 
   - id: config
