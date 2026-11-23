@@ -148,13 +148,18 @@ if [ -f "$REGISTRY" ]; then
     # 目的: 新增资产必须带设计/调研文档（调研来源 + 业界最佳实践引用），
     #       避免「跳过设计直接写代码」。仅对**真正新增**的资产目录生效
     #       (HEAD 中不存在), 存量资产的文档欠账不阻断本次提交。
-    if python3 "$REGISTRY" --lifecycle --new-only --require-design; then
-        echo "✅ 资产生命周期检查通过（无新增资产或已含设计文档）"
+    #       2026-11-23 增强: 新增资产同时必须有可调用性探针 (health) 或
+    #       显式豁免理由 (health_exempt) —— entry 存在 ≠ 能力可用。
+    if python3 "$REGISTRY" --lifecycle --new-only --require-design --require-health; then
+        echo "✅ 资产生命周期检查通过（无新增资产或已含设计文档 + 探针）"
     else
         echo ""
-        echo "❌ pre-commit 拦截: 新增资产缺设计/调研文档"
+        echo "❌ pre-commit 拦截: 新增资产缺设计/调研文档 或 缺可调用性探针"
         echo "    闭环要求: 调研(先查能力注册表 + 业界最佳实践) → 设计(PRD/DESIGN) → 建设 → 测试 → 验收(VERIFICATION)。"
+        echo "    探针要求: registry.yaml 该条目补 health: [<离线/只读/无副作用探针命令>]，"
+        echo "              或补 health_exempt: \"理由\"（纯文档/无稳定入口等）。"
         echo "    动手前先查: python3 $REGISTRY --query <关键词>；调研渠道: AI Agent 官方文档 / 社区 / GitHub / Clawhub。"
+        echo "    应急跳过: --lifecycle --require-health --skip-health-requirement（需在 PR 说明）。"
         exit 1
     fi
 fi

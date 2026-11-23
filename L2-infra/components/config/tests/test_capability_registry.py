@@ -304,3 +304,92 @@ def test_health_probe_missing_command_is_fail_closed(monkeypatch):
     ok, msg = cr._run_health_probe("definitely_not_a_real_cmd_xyz", 1)
     assert ok is False
     assert "无法执行" in msg
+
+
+# ── 新增资产可调用性探针强制（--require-health）──
+
+def _fake_ws(tmp_path, name="brand-new-asset"):
+    """构造 fake 仓库：一个新资产目录（含 DESIGN 文档，避免被文档检查先拦）。"""
+    root = tmp_path / "ws"
+    d = root / "L2-infra" / "components" / name
+    d.mkdir(parents=True)
+    (d / "main.py").write_text("x")
+    (d / "DESIGN.md").write_text("d")
+    return root, f"L2-infra/components/{name}"
+
+
+def _lifecycle_args(**kw):
+    base = {"new_only": True, "require_design": True,
+            "require_health": True, "skip_health_requirement": False}
+    base.update(kw)
+    return type("A", (), base)()
+
+
+def test_lifecycle_require_health_blocks_asset_without_probe(monkeypatch, tmp_path):
+    """新增资产无 health 探针且无豁免理由 → 阻断（entry 存在 ≠ 可用）。"""
+    root, key = _fake_ws(tmp_path)
+    old = cr.REPO_ROOT
+    cr.REPO_ROOT = root
+    monkeypatch.setattr(cr, "_new_asset_dirs", lambda: {key})
+    cap = cr.load_registry()
+    cap.capabilities.append(cr.Capability(
+        id="brand-new-asset", name="新资产", layer="L2", entry=["python3 x.py"]))
+    try:
+        assert cr.cmd_lifecycle(_lifecycle_args(), cap) == 1
+    finally:
+        cr.REPO_ROOT = old
+
+
+def test_lifecycle_require_health_passes_with_probe(monkeypatch, tmp_path):
+    """新增资产已登记 health 探针 → 通过（不实际执行，执行由 --validate 负责）。"""
+    root, key = _fake_ws(tmp_path)
+    old = cr.REPO_ROOT
+    cr.REPO_ROOT = root
+    monkeypatch.setattr(cr, "_new_asset_dirs", lambda: {key})
+    cap = cr.load_registry()
+    cap.capabilities.append(cr.Capability(
+        id="brand-new-asset", name="新资产", layer="L2",
+        entry=["python3 x.py"], health=["python3 x.py --probe"]))
+    try:
+        assert cr.cmd_lifecycle(_lifecycle_args(), cap) == 0
+    finally:
+        cr.REPO_ROOT = old
+
+
+def test_lifecycle_require_health_passes_with_exempt_reason(monkeypatch, tmp_path):
+    """无探针但写明豁免理由 → 通过（可审计，不得留空绕过）。"""
+    root, key = _fake_ws(tmp_path)
+    old = cr.REPO_ROOT
+    cr.REPO_ROOT = root
+    monkeypatch.setattr(cr, "_new_asset_dirs", lambda: {key})
+    cap = cr.load_registry()
+    cap.capabilities.append(cr.Capability(
+        id="brand-new-asset", name="新资产", layer="L2",
+        entry=["python3 x.py"], health_exempt="纯文档型 skill，无稳定可执行入口"))
+    try:
+        assert cr.cmd_lifecycle(_lifecycle_args(), cap) == 0
+    finally:
+        cr.REPO_ROOT = old
+
+
+def test_lifecycle_require_health_escape_hatch(monkeypatch, tmp_path):
+    """--skip-health-requirement 应急跳过（须显式传参）。"""
+    root, key = _fake_ws(tmp_path)
+    old = cr.REPO_ROOT
+    cr.REPO_ROOT = root
+    monkeypatch.setattr(cr, "_new_asset_dirs", lambda: {key})
+    cap = cr.load_registry()
+    cap.capabilities.append(cr.Capability(
+        id="brand-new-asset", name="新资产", layer="L2", entry=["python3 x.py"]))
+    try:
+        assert cr.cmd_lifecycle(
+            _lifecycle_args(skip_health_requirement=True), cap) == 0
+    finally:
+        cr.REPO_ROOT = old
+
+
+def test_capability_health_exempt_field_parses():
+    """registry.yaml 的 health_exempt 必须能解析进 Capability。"""
+    cap = cr.Capability(id="x", name="X", layer="L2", health_exempt="无稳定入口")
+    assert cap.health_exempt == "无稳定入口"
+    assert cap.health == []

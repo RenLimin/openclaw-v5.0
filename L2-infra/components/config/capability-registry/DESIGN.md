@@ -98,6 +98,24 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 
 **与 `--expect` 的区别**：`--expect` 断言运行态（测试/运维），`--probe` 断言可调用性（门禁）。
 
+### 3.5 新增资产默认强制（而非可选）
+
+**问题**：`health:` 若只是可选字段，新增资产不写探针照样能过门禁，等于仍靠自觉。
+
+**解**：pre-commit step 8 以 `--require-health` 强制：
+
+| 规则 | 说明 |
+|---|---|
+| 新增资产（HEAD 中不存在）必须有 `health:` 探针 | 否则阻断提交 |
+| 确无稳定可执行入口 → 写 `health_exempt: "理由"` | 可审计，不得留空绕过 |
+| 应急跳过：`--lifecycle --require-health --skip-health-requirement` | 显式传参，需在 PR 说明 |
+
+**为何不追溯存量资产**：与 `--lifecycle --new-only` 一致——只对新资产强制，
+存量资产的探针登记逐次补齐（避免一次性阻断并行会话）。
+
+存量资产的探针仍以 `--validate`（全量执行所有已登记 `health:`）为准，两者互补：
+`--require-health` 管「新增必须有」，`--validate` 管「已登记的必须真的能跑」。
+
 ## 5. 依赖
 
 | 依赖 | 说明 |
@@ -141,3 +159,4 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | 2026-11-20 | 工程化补齐：14 个孤儿 entry 修正（99 条路径全部真实）；新增 `--validate`（fitness function）+ `--lifecycle`（DoD/ADR Guard 闭环门禁）+ pre-commit step 7/8 |
 | 2026-11-20 | 全量闭环：71 个资产设计/验收文档 71/71（补 5 DESIGN + 29 VERIFICATION）；`_asset_docs` 递归识别 docs/ 子目录，消除根级误报 |
 | 2026-11-23 | 可调用性探针门禁：registry 新增可选 `health:` 字段；`--validate` 执行探针（超时/非零退出 fail-closed，`--skip-health` 逃生阀）；已登记 3 条（browser-automation / config / skill-system-health-check）。动因：entry 路径存在 ≠ 能力可用（browser-automation 无启动器的实证缺口） |
+| 2026-11-23 | 探针改为**新增资产默认强制**：新增字段 `health_exempt`（显式豁免理由）；`--lifecycle --require-health` 阻断无探针/无豁免的新资产；pre-commit step 8 同步启用。可选 → 默认强制，消除「靠自觉」缺口 |

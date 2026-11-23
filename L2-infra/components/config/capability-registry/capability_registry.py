@@ -59,8 +59,10 @@ class Capability:
     profile: str = ""
     auth: str = ""
     # 可执行健康探针（health gate）：entry 声称可用但探针失败 = 阻断提交。
-    # 只登记**离线、无副作用、状态感知**的探针（如 `status --expect=down`）。
+    # 只登记**离线、无副作用、状态感知**的探针（如 `status --probe`）。
     health: list[str] = field(default_factory=list)
+    # 新增资产强制要求 health 探针；确无稳定入口时填豁免理由（可审计，不得留空绕过）。
+    health_exempt: str = ""
 
 
 @dataclass
@@ -299,6 +301,15 @@ def _registered_names(reg: Registry) -> set[str]:
     return names
 
 
+def _cap_by_asset_name(reg: Registry) -> dict[str, Capability]:
+    """资产目录名 → 能力条目（与 _registered_names 同口径：去掉 skill- 前缀）。"""
+    out: dict[str, Capability] = {}
+    for c in reg.capabilities:
+        name = c.id[len("skill-"):] if c.id.startswith("skill-") else c.id
+        out.setdefault(name, c)
+    return out
+
+
 def cmd_coverage(args, reg: Registry) -> int:
     assets = _discover_assets()
     registered = _registered_names(reg)
@@ -508,7 +519,8 @@ def cmd_lifecycle(args, reg: Registry) -> int:
       - OWASP shift-left：最早的门禁在提交时，而非数天后的评审
     """
     new_only = bool(getattr(args, "new_only", False))
-    new_dirs = _new_asset_dirs() if new_only else set()
+    new_keys = _new_asset_dirs()
+    new_dirs = new_keys if new_only else set()
 
     rows = []
     for layer, kind, d in _iter_asset_dirs():
@@ -549,6 +561,39 @@ def cmd_lifecycle(args, reg: Registry) -> int:
     if no_design:
         print()
         print("⚠️  存在缺设计文档的资产（提醒，不阻断本次提交）")
+
+    # ── 可调用性探针：新增资产默认必须有 health 探针（或显式豁免理由）──
+    # 「已登记 ≠ 被触发即可用」：新增资产若只写 entry 不写探针，等于把
+    # 「重复探索入口」留给后续会话。门禁强制登记；豁免必须写理由（可审计）。
+    if getattr(args, "require_health", False) and not getattr(args, "skip_health_requirement", False):
+        by_name = _cap_by_asset_name(reg)
+        have, exempt, missing = 0, [], []
+        for key in sorted(new_keys):
+            cap = by_name.get(key.split("/", 2)[2])
+            if cap is None:
+                continue  # 未登记由 --coverage 负责
+            reason = (getattr(cap, "health_exempt", "") or "").strip()
+            if cap.health:
+                have += 1
+            elif reason:
+                exempt.append(f"{key}（{reason}）")
+            else:
+                missing.append(key)
+        total = have + len(exempt) + len(missing)
+        if total:
+            print(f"  可调用性探针: {have}/{total}" + (f"（豁免 {len(exempt)}）" if exempt else ""))
+            for e in exempt:
+                print(f"     ↳ 豁免 {e}")
+        if missing:
+            print()
+            print("❌ 新增资产缺可调用性探针（health）—— entry 存在 ≠ 能力可用:")
+            for m in missing:
+                print(f"  • {m}")
+            print()
+            print("处理: 在 registry.yaml 该条目补 health: [<离线/只读/无副作用探针命令>]，")
+            print("      或补 health_exempt: \"理由\"（纯文档/无稳定入口等），")
+            print("      应急跳过: --lifecycle --require-health --skip-health-requirement。")
+            return 1
     return 0
 
 
@@ -602,6 +647,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--lifecycle", action="store_true", help="资产生命周期：设计/验收文档闭环")
     ap.add_argument("--new-only", action="store_true", help="配合 --lifecycle：只查本次新增资产")
     ap.add_argument("--require-design", action="store_true", help="配合 --lifecycle：缺设计文档即阻断")
+    ap.add_argument("--require-health", action="store_true", help="配合 --lifecycle：新增资产必须有 health 探针或显式豁免理由")
+    ap.add_argument("--skip-health-requirement", action="store_true", help="配合 --lifecycle：跳过新增资产探针强制要求（应急）")
     ap.add_argument("--skip-health", action="store_true", help="配合 --validate：跳过 health 探针（仅验路径）")
     ap.add_argument("--staged", action="store_true", help="只扫暂存区（配 pre-commit）")
     ap.add_argument("--all", action="store_true", help="扫全部高危目录")
