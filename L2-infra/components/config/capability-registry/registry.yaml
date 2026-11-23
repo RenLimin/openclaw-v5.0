@@ -16,7 +16,7 @@
 #   - entry 必须是**可直接调用**的路径/命令，禁止写「见文档」这类不可执行指针
 
 version: 1
-updated: 2026-11-20
+updated: 2026-11-23
 
 # ── 重复建设高危目录（门禁扫描范围） ──
 high_risk_dirs:
@@ -64,8 +64,11 @@ capabilities:
       - "python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py stop"
     tests:
       - "python3 -m pytest L2-infra/components/browser-automation/tests/"
+    health:
+      - "python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py status --probe"
     notes: "隔离 Chrome 幂等启动器（ensure/status/stop）：专用 profile ~/.openclaw/data/chrome-profiles/oa-live + CDP 9333；
-      幂等复用已运行实例；文件锁串行化；stop 只杀「本 profile+本端口」进程，绝不误伤用户 Chrome（缺口 2026-11-23）"
+      幂等复用已运行实例；文件锁串行化；stop 只杀「本 profile+本端口」进程，绝不误伤用户 Chrome（缺口 2026-11-23）。
+      health 探针 status --probe 只读校验可调用性前置（Chrome/profile/可写），不启动也不关闭实例。"
     supersedes: []
 
   - id: config
@@ -76,6 +79,8 @@ capabilities:
       - "bash L2-infra/components/config/config.sh apply"
       - "bash L2-infra/components/config/config.sh audit"
       - "bash L2-infra/components/config/install-hooks.sh"
+    health:
+      - "bash L2-infra/components/config/install-hooks.sh --check"
     notes: "install-hooks.sh 安装 pre-commit/pre-push；--check 校验一致性"
     supersedes: []
 
@@ -666,6 +671,8 @@ capabilities:
     interfaces: [health, check, system, skill]
     entry:
       - "python3 L2-infra/skills/system-health-check/scripts/health_check.py"
+      - "python3 L2-infra/skills/system-health-check/scripts/service_health_check.py --list"
+    health:
       - "python3 L2-infra/skills/system-health-check/scripts/service_health_check.py --list"
     supersedes: []
 

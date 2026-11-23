@@ -58,6 +58,9 @@ class Capability:
     cdp: str = ""
     profile: str = ""
     auth: str = ""
+    # 可执行健康探针（health gate）：entry 声称可用但探针失败 = 阻断提交。
+    # 只登记**离线、无副作用、状态感知**的探针（如 `status --expect=down`）。
+    health: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -331,6 +334,29 @@ def cmd_coverage(args, reg: Registry) -> int:
 
 _ENTRY_PATH_RE = re.compile(r"(L[234]-[a-z-]+/[A-Za-z0-9_./-]+)")
 
+# health 探针单条超时（秒）。探针必须离线、无副作用；超时即视为失败（fail-closed）。
+HEALTH_TIMEOUT = float(os.environ.get("REGISTRY_HEALTH_TIMEOUT", "60"))
+
+
+def _run_health_probe(cmd: str, timeout: float) -> tuple[bool, str]:
+    """执行一条 health 探针命令。返回 (ok, 摘要)。
+
+    约束：只在仓库根执行；超时/无法执行均判失败（不静默放行）。
+    """
+    try:
+        proc = subprocess.run(
+            cmd, shell=True, cwd=REPO_ROOT,
+            capture_output=True, text=True, timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False, f"探针超时（>{timeout:.0f}s）"
+    except OSError as exc:
+        return False, f"无法执行: {exc}"
+    out = (proc.stdout or "").strip()
+    err = (proc.stderr or "").strip()
+    tail = (out or err).splitlines()[-1] if (out or err) else ""
+    return proc.returncode == 0, tail[:200]
+
 
 def _entry_paths(entry: str) -> list[str]:
     """从一条 entry 描述里抽出仓库相对路径（去掉占位符/参数）。"""
@@ -378,7 +404,35 @@ def cmd_validate(args, reg: Registry) -> int:
         print("      路径确已废弃 → 更新 entry 或移除该能力条目。")
         return 1
 
-    print("✅ 全部 entry 路径真实存在，注册表自校验通过。")
+    # ── health 探针：entry 路径存在 ≠ 能力可用（可调用性硬指标）──
+    # 只执行显式登记在 `health:` 的离线探针；超时/无法执行均 fail-closed。
+    if getattr(args, "skip_health", False):
+        print("⏭️  已跳过 health 探针（--skip-health）")
+        return 0
+
+    probed = 0
+    failed: list[str] = []
+    for c in reg.capabilities:
+        for h in getattr(c, "health", []) or []:
+            probed += 1
+            ok, tail = _run_health_probe(h, HEALTH_TIMEOUT)
+            if ok:
+                print(f"  ✅ {c.id}: {tail}")
+            else:
+                failed.append(f"{c.id}: 探针失败 → {h}\n      ({tail})")
+                print(f"  ❌ {c.id}: {tail}")
+
+    if failed:
+        print()
+        print(f"❌ {len(failed)}/{probed} 条 health 探针失败（能力不可调用）:")
+        for f in failed:
+            print(f"  • {f}")
+        print()
+        print("处理: 修复能力使其可用，或修正 health 探针命令；")
+        print("      确属环境依赖（需网络/登录态）→ 从 health 移除，改用 entry + notes 说明。")
+        return 1
+
+    print(f"✅ 全部 entry 路径真实存在（{checked} 条），health 探针通过（{probed} 条）。")
     return 0
 
 
@@ -544,10 +598,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--explain", dest="id", help="查看单个能力详情")
     ap.add_argument("--check", action="store_true", help="防重复建设检查")
     ap.add_argument("--coverage", action="store_true", help="覆盖率校验：所有组件/skill 是否已登记")
-    ap.add_argument("--validate", action="store_true", help="注册表自校验：entry 路径存在性 + 可执行性")
+    ap.add_argument("--validate", action="store_true", help="注册表自校验：entry 路径存在性 + health 探针可调用性")
     ap.add_argument("--lifecycle", action="store_true", help="资产生命周期：设计/验收文档闭环")
     ap.add_argument("--new-only", action="store_true", help="配合 --lifecycle：只查本次新增资产")
     ap.add_argument("--require-design", action="store_true", help="配合 --lifecycle：缺设计文档即阻断")
+    ap.add_argument("--skip-health", action="store_true", help="配合 --validate：跳过 health 探针（仅验路径）")
     ap.add_argument("--staged", action="store_true", help="只扫暂存区（配 pre-commit）")
     ap.add_argument("--all", action="store_true", help="扫全部高危目录")
     ap.add_argument("--verbose", "-v", action="store_true", help="显示说明/入口细节")

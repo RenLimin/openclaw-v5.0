@@ -133,10 +133,14 @@ if [ -f "$REGISTRY" ]; then
     # 目的: 防止「声称可直接调用但路径不存在」的孤儿 entry —— 它会让后续会话
     #       调用失败却以为能力已建成。对应 Backstage catalog validation /
     #       Archgate fitness function（文档 + 可执行规则双表达）。
+    #       2026-11-23 增强: 新增执行 registry 中 `health:` 探针，验证「可调用性」
+    #       （entry 路径存在 ≠ 能力可用）。仅执行显式登记的离线只读探针；
+    #       超时/无法执行/非零退出均 fail-closed。跳过: --validate --skip-health。
     if ! python3 "$REGISTRY" --validate; then
         echo ""
-        echo "❌ pre-commit 拦截: 注册表 entry 校验失败"
-        echo "    孤儿 entry = 能力不可调用。修正为真实路径后再提交。"
+        echo "❌ pre-commit 拦截: 注册表 entry / health 探针校验失败"
+        echo "    孤儿 entry = 能力不可调用；探针失败 = 能力声称可用但实际不可用。"
+        echo "    处理: 修正真实路径 / 修复能力，或从 health 移除并改用 entry+notes 说明。"
         exit 1
     fi
 

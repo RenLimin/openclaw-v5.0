@@ -195,6 +195,50 @@ def status() -> tuple[bool, dict]:
     return probe is not None, info
 
 
+def probe() -> tuple[bool, str]:
+    """可调用性探针（health 门禁用）——**只读**校验「被触发即可用」的前置条件。
+
+    与 `--expect` 的区别：
+      - `--expect` 断言**运行态**（实例该开/该关），适合测试与运维断言；
+      - `--probe` 只验**能力可用性**（Chrome 在不在、profile 在不在、目录能不能写），
+        不要求实例处于任何状态，也不启动/不关闭任何进程。
+
+    为什么提交门禁必须用 `--probe`：`--expect=down` 在用户合法使用实例时会误判阻断提交。
+    """
+    problems: list[str] = []
+    chrome = resolve_chrome()
+    if chrome is None:
+        problems.append("未找到 Chrome/Chromium 可执行文件")
+    if not PROFILE_DIR.is_dir():
+        problems.append(f"profile 不存在: {PROFILE_DIR}")
+    if not DATA_DIR.is_dir():
+        problems.append(f"数据目录不存在: {DATA_DIR}")
+    elif not os.access(DATA_DIR, os.W_OK):
+        problems.append(f"数据目录不可写: {DATA_DIR}")
+    up = is_available()
+    state = f"当前 CDP 可用={up}"
+    if problems:
+        return False, f"{state}；前置缺失: {'; '.join(problems)}"
+    return True, f"{state}；前置齐备（chrome={chrome}, profile 存在, 目录可写）"
+
+
+def probe_state(expect: str = "up") -> tuple[bool, str]:
+    """状态感知探针（测试/运维断言用）。
+
+    expect=up   → 要求实例可用（rc=0 表示探针通过）
+    expect=down → 要求实例**不在运行**（rc=0 表示探针通过）
+
+    为什么需要 expect：`status` 在实例关闭时 rc=1，那是**正常态**；
+    没有 expect 语义时无法区分「故障」与「本就应当关闭」。
+    """
+    up, info = status()
+    if expect == "down":
+        return (not up), f"CDP 可用={up}（期望 down）pids={info['pids']}"
+    if expect == "up":
+        return up, f"CDP 可用={up}（期望 up）pids={info['pids']}"
+    return False, f"未知 expect={expect!r}"
+
+
 def stop() -> tuple[bool, str]:
     """关闭本专用实例（只杀匹配本 profile+端口的进程）。"""
     pids = _dedicated_pids()
@@ -212,9 +256,29 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("action", nargs="?", default="ensure",
                     choices=["ensure", "status", "stop"])
     ap.add_argument("--json", action="store_true", help="机器可读输出")
+    ap.add_argument("--probe", action="store_true",
+                    help="可调用性探针（只读，不启动/不关闭进程；health 门禁用）")
+    ap.add_argument("--expect", choices=["up", "down"], default=None,
+                    help="status 的状态感知探针语义（测试/运维断言用）")
     args = ap.parse_args(argv)
 
     if args.action == "status":
+        if args.probe:
+            ok, msg = probe()
+            if args.json:
+                print(json.dumps({"probe": "callability", "ok": ok,
+                                  "msg": msg}, ensure_ascii=False))
+            else:
+                print(("✅" if ok else "❌") + f" 可调用性探针: {msg}")
+            return 0 if ok else 1
+        if args.expect:
+            ok, msg = probe_state(args.expect)
+            if args.json:
+                print(json.dumps({"expect": args.expect, "ok": ok,
+                                  "msg": msg}, ensure_ascii=False))
+            else:
+                print(("✅" if ok else "❌") + f" 探针(expect={args.expect}): {msg}")
+            return 0 if ok else 1
         ok, info = status()
         if args.json:
             print(json.dumps({"available": ok, **info}, ensure_ascii=False))

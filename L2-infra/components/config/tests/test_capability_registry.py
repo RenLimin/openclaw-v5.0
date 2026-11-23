@@ -237,3 +237,70 @@ def test_lifecycle_recursive_finds_docs_in_subdir(reg, monkeypatch, tmp_path):
         assert rc == 0
     finally:
         cr.REPO_ROOT = old_root
+
+
+# ── health 探针门禁（可调用性硬指标）──
+
+def test_validate_runs_health_probes_and_passes(monkeypatch):
+    """登记 health 探针后，--validate 必须真实执行它。"""
+    monkeypatch.setattr(cr, "_run_health_probe", lambda cmd, t: (True, "ok"))
+    cap = reg_cap = cr.load_registry()
+    target = next(c for c in cap.capabilities if c.id == "browser-automation")
+    target.health = ["python3 fake.py --probe"]
+    try:
+        rc = cr.cmd_validate(type("A", (), {"skip_health": False})(), cap)
+        assert rc == 0
+    finally:
+        target.health = []
+
+
+def test_validate_fails_when_health_probe_fails(monkeypatch):
+    """探针失败 = 阻断（可调用性不达标）。"""
+    monkeypatch.setattr(cr, "_run_health_probe", lambda cmd, t: (False, "boom"))
+    cap = cr.load_registry()
+    target = next(c for c in cap.capabilities if c.id == "browser-automation")
+    target.health = ["python3 fake.py --probe"]
+    try:
+        rc = cr.cmd_validate(type("A", (), {"skip_health": False})(), cap)
+        assert rc == 1
+    finally:
+        target.health = []
+
+
+def test_validate_skip_health_escape_hatch(monkeypatch):
+    """--skip-health 必须跳过探针（仅验路径）。"""
+    def boom(cmd, t):
+        raise AssertionError("不该执行探针")
+    monkeypatch.setattr(cr, "_run_health_probe", boom)
+    cap = cr.load_registry()
+    target = next(c for c in cap.capabilities if c.id == "browser-automation")
+    target.health = ["python3 fake.py --probe"]
+    try:
+        rc = cr.cmd_validate(type("A", (), {"skip_health": True})(), cap)
+        assert rc == 0
+    finally:
+        target.health = []
+
+
+def test_health_probe_timeout_is_fail_closed(monkeypatch):
+    """探针超时不得静默放行（fail-closed）。"""
+    import subprocess as sp
+
+    def slow(*a, **k):
+        raise sp.TimeoutExpired(a[0] if a else "cmd", 0.1)
+    monkeypatch.setattr(cr.subprocess, "run", slow)
+    ok, msg = cr._run_health_probe("sleep 99", 0.1)
+    assert ok is False
+    assert "超时" in msg
+
+
+def test_health_probe_missing_command_is_fail_closed(monkeypatch):
+    """命令不存在（OSError）同样判失败，不得静默放行。"""
+    import subprocess as sp
+
+    def boom(*a, **k):
+        raise sp.TimeoutExpired("x", 1) if False else OSError("no such binary")
+    monkeypatch.setattr(cr.subprocess, "run", boom)
+    ok, msg = cr._run_health_probe("definitely_not_a_real_cmd_xyz", 1)
+    assert ok is False
+    assert "无法执行" in msg

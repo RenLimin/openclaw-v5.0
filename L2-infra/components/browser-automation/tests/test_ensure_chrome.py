@@ -126,3 +126,82 @@ def test_main_ensure_exit_code(monkeypatch):
     assert ec.main([]) == 0
     monkeypatch.setattr(ec, "ensure", lambda: (False, "bad"))
     assert ec.main(["ensure"]) == 1
+
+
+def test_probe_state_down(monkeypatch):
+    """probe_state(down)：实例关闭时为通过（rc=0）。"""
+    monkeypatch.setattr(ec, "status", lambda: (False, {"pids": []}))
+    ok, msg = ec.probe_state("down")
+    assert ok is True
+    assert ec.main(["status", "--expect=down"]) == 0
+
+
+def test_probe_state_up_fails_when_down(monkeypatch):
+    """probe_state(up)：实例关闭时必须判失败（rc=1），不得误放行。"""
+    monkeypatch.setattr(ec, "status", lambda: (False, {"pids": []}))
+    ok, msg = ec.probe_state("up")
+    assert ok is False
+    assert ec.main(["status", "--expect=up"]) == 1
+
+
+def test_probe_state_down_fails_when_up(monkeypatch):
+    """probe_state(down)：实例在跑时必须判失败（防止该关不关）。"""
+    monkeypatch.setattr(ec, "status", lambda: (True, {"pids": [1]}))
+    ok, msg = ec.probe_state("down")
+    assert ok is False
+    assert ec.main(["status", "--expect=down"]) == 1
+
+
+def test_probe_state_rejects_unknown_expect(monkeypatch):
+    """未知 expect 值必须判失败（fail-closed）。"""
+    monkeypatch.setattr(ec, "status", lambda: (False, {"pids": []}))
+    ok, msg = ec.probe_state("sideways")
+    assert ok is False
+
+
+# ── 可调用性探针（health 门禁用，只读、不要求实例状态）──
+
+def test_callability_probe_passes_when_prereqs_ok(monkeypatch, tmp_path):
+    """前置齐备（chrome + profile + 可写）→ 探针通过，且**不启动/不关闭**进程。"""
+    monkeypatch.setattr(ec, "resolve_chrome", lambda: "/fake/chrome")
+    monkeypatch.setattr(ec, "PROFILE_DIR", tmp_path / "oa-live")
+    monkeypatch.setattr(ec, "DATA_DIR", tmp_path)
+    (tmp_path / "oa-live").mkdir()
+    monkeypatch.setattr(ec, "is_available", lambda: False)
+    monkeypatch.setattr(ec, "ensure", lambda: (_ for _ in ()).throw(AssertionError("不该启动")))
+    monkeypatch.setattr(ec, "stop", lambda: (_ for _ in ()).throw(AssertionError("不该关闭")))
+    ok, msg = ec.probe()
+    assert ok is True
+    assert ec.main(["status", "--probe"]) == 0
+
+
+def test_callability_probe_fails_without_chrome(monkeypatch, tmp_path):
+    """无 Chrome 可执行 → 探针失败（能力不可用）。"""
+    monkeypatch.setattr(ec, "resolve_chrome", lambda: None)
+    monkeypatch.setattr(ec, "PROFILE_DIR", tmp_path / "oa-live")
+    monkeypatch.setattr(ec, "DATA_DIR", tmp_path)
+    (tmp_path / "oa-live").mkdir()
+    ok, msg = ec.probe()
+    assert ok is False
+    assert ec.main(["status", "--probe"]) == 1
+
+
+def test_callability_probe_fails_without_profile(monkeypatch, tmp_path):
+    """profile 不存在 → 探针失败（防止「需要时才发现没初始化」）。"""
+    monkeypatch.setattr(ec, "resolve_chrome", lambda: "/fake/chrome")
+    monkeypatch.setattr(ec, "PROFILE_DIR", tmp_path / "oa-live")
+    monkeypatch.setattr(ec, "DATA_DIR", tmp_path)
+    ok, msg = ec.probe()
+    assert ok is False
+
+
+def test_callability_probe_passes_even_when_instance_up(monkeypatch, tmp_path):
+    """关键：实例在跑时探针仍应通过（否则用户合法使用时会被误判阻断提交）。"""
+    monkeypatch.setattr(ec, "resolve_chrome", lambda: "/fake/chrome")
+    monkeypatch.setattr(ec, "PROFILE_DIR", tmp_path / "oa-live")
+    monkeypatch.setattr(ec, "DATA_DIR", tmp_path)
+    (tmp_path / "oa-live").mkdir()
+    monkeypatch.setattr(ec, "is_available", lambda: True)
+    ok, msg = ec.probe()
+    assert ok is True
+    assert "CDP 可用=True" in msg

@@ -32,9 +32,14 @@ capabilities:
     layer: L4
     interfaces: [ones, export, browser]   # 查询关键词
     entry: ["..."]               # 可直接调用的路径/命令（禁止「见文档」）
+    health: ["..."]              # 可选：可调用性探针（离线/只读/无副作用）
     notes: "..."                 # 陷阱与红线
     supersedes: ["被本能力取代的旧脚本路径"]
 allow: [{path, reason}]          # 合法一次性脚本白名单
+```
+
+> `health:` 是 2026-11-23 新增字段（见 §3.4）。只有「能力可用」可被机器证明时才会用到，
+> 属于**可选**：没有探针的能力只需保证 entry 可调用并在 notes 写明运行态前提。
 ```
 
 ### 3.2 五条防线（业界对标）
@@ -44,6 +49,7 @@ allow: [{path, reason}]          # 合法一次性脚本白名单
 | 可发现性 | `--query/--list/--explain` | Backstage Software Catalog（统一资产索引，防重复） | agent 动手前查 |
 | 覆盖率 | `--coverage` ← pre-commit step 6 | Backstage catalog completeness（无孤儿） | 未登记资产即阻断 |
 | 自校验 | `--validate` ← pre-commit step 7 | Archgate fitness function / catalog validation | 孤儿 entry 即阻断 |
+| 可调用性 | `--validate`（执行 `health:` 探针）← pre-commit step 7 | Archgate fitness function / chaos engineering 前置检查 | entry 存在但能力不可用即阻断 |
 | 生命周期 | `--lifecycle --new-only --require-design` ← pre-commit step 8 | DoD / ADR Guard / OWASP shift-left | 新增资产无设计文档即阻断 |
 | 门禁 | `--check --staged` ← pre-commit step 5 | OWASP shift-left（最早门禁） | 拦新建重复脚本，指出权威入口 |
 | 渲染 | `gen_asset_inventory.py` §能力注册表 | TechDocs docs-like-code | 人看 / agent 读资产清单时可见 |
@@ -67,8 +73,30 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 python3 L2-infra/components/config/capability-registry/capability_registry.py --check --all
 python3 L2-infra/components/config/capability-registry/capability_registry.py --coverage
 python3 L2-infra/components/config/capability-registry/capability_registry.py --validate
+python3 L2-infra/components/config/capability-registry/capability_registry.py --validate --skip-health   # 仅验路径
 python3 L2-infra/components/config/capability-registry/capability_registry.py --lifecycle --new-only --require-design
 ```
+
+### 3.4 可调用性探针（`health:`）—— 为什么 entry 存在还不够
+
+**实证缺口（2026-11-23）**：`browser-automation` 条目路径真实、覆盖率 100%，
+但**全仓无启动器** → `ones_available()` 恒 `False` → 每轮会话重复摸索启动命令。
+即「已登记 ≠ 被触发即可用」。
+
+`--validate` 因此在路径校验之后**顺带执行 `health:` 探针**：
+
+| 约束 | 理由 |
+|---|---|
+| 只执行显式登记的探针 | 不自动探测，避免把慢/有副作用的命令带入提交门禁 |
+| 必须离线、只读、无副作用 | 提交时不应启动服务/写文件/联网 |
+| 单条超时（默认 60s，`REGISTRY_HEALTH_TIMEOUT` 可覆盖） | 防止门禁挂死 |
+| 超时 / 无法执行 / 非零退出 → **fail-closed** | 不得静默放行 |
+| `--skip-health` 逃生阀 | 应急绕过（需在 PR 说明） |
+
+探针语义由资产自己定义，必须**状态无关**（例：`ensure_chrome.py status --probe` 只验
+前置齐备，不要求实例处于开或关；否则用户合法使用实例时会被误判阻断提交）。
+
+**与 `--expect` 的区别**：`--expect` 断言运行态（测试/运维），`--probe` 断言可调用性（门禁）。
 
 ## 5. 依赖
 
@@ -112,3 +140,4 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | 2026-11-20 | 全量覆盖：81 条目（45 组件 + 26 skill + 10 能力族）；新增 `--coverage` 覆盖率硬指标 + pre-commit step 6 |
 | 2026-11-20 | 工程化补齐：14 个孤儿 entry 修正（99 条路径全部真实）；新增 `--validate`（fitness function）+ `--lifecycle`（DoD/ADR Guard 闭环门禁）+ pre-commit step 7/8 |
 | 2026-11-20 | 全量闭环：71 个资产设计/验收文档 71/71（补 5 DESIGN + 29 VERIFICATION）；`_asset_docs` 递归识别 docs/ 子目录，消除根级误报 |
+| 2026-11-23 | 可调用性探针门禁：registry 新增可选 `health:` 字段；`--validate` 执行探针（超时/非零退出 fail-closed，`--skip-health` 逃生阀）；已登记 3 条（browser-automation / config / skill-system-health-check）。动因：entry 路径存在 ≠ 能力可用（browser-automation 无启动器的实证缺口） |
