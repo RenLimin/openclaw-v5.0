@@ -59,6 +59,14 @@ def _resolve_gh() -> str | None:
     return None
 
 
+def _run_gh(args: list[str], timeout: int = 30) -> subprocess.CompletedProcess:
+    """执行 gh（绝对路径兜底）。gh 缺失时抛 FileNotFoundError。"""
+    gh = _resolve_gh()
+    if not gh:
+        raise FileNotFoundError("gh 二进制未找到")
+    return subprocess.run([gh, *args], capture_output=True, text=True, timeout=timeout)
+
+
 def _perms(path: Path) -> str:
     try:
         return oct(path.stat().st_mode & 0o777)[2:]
@@ -115,14 +123,10 @@ def sync_hosts(token: str, login: str | None) -> str:
 
 def check_gh_cli() -> tuple[bool, str]:
     """本地自检：gh auth status（不依赖网络）。"""
-    gh = _resolve_gh()
-    if not gh:
-        return False, "gh 二进制未找到（检查 /opt/homebrew/bin/gh）"
     try:
-        proc = subprocess.run(
-            [gh, "auth", "status"],
-            capture_output=True, text=True, timeout=20,
-        )
+        proc = _run_gh(["auth", "status"], timeout=20)
+    except FileNotFoundError:
+        return False, "gh 二进制未找到（检查 /opt/homebrew/bin/gh）"
     except subprocess.TimeoutExpired:
         return False, "gh auth status 超时"
     out = (proc.stdout + proc.stderr).strip()
@@ -131,14 +135,10 @@ def check_gh_cli() -> tuple[bool, str]:
 
 def verify_token() -> tuple[bool, str]:
     """联网校验 token 真实可用（gh api user）。"""
-    gh = _resolve_gh()
-    if not gh:
-        return False, "gh 二进制未找到"
     try:
-        proc = subprocess.run(
-            [gh, "api", "user", "--jq", ".login"],
-            capture_output=True, text=True, timeout=30,
-        )
+        proc = _run_gh(["api", "user", "--jq", ".login"])
+    except FileNotFoundError:
+        return False, "gh 二进制未找到"
     except subprocess.TimeoutExpired:
         return False, "gh api user 超时（网络问题，不代表 token 失效）"
     if proc.returncode == 0:
@@ -146,11 +146,39 @@ def verify_token() -> tuple[bool, str]:
     return False, (proc.stderr or proc.stdout).strip()
 
 
+def fetch_scopes() -> tuple[bool, list[str], str]:
+    """读取 token 的 OAuth scopes（gh api user -i 的 X-Oauth-Scopes 响应头）。
+
+    返回 (ok, scopes, detail)。**永不打印 token**。
+    为什么必须读响应头：GitHub 的 push 拒绝发生在服务端，本地 `gh auth status`
+    只报登录态、不报 scope —— 2026-11-23 因此反复 push 失败却看不到根因。
+    """
+    try:
+        proc = _run_gh(["api", "user", "-i"])
+    except FileNotFoundError:
+        return False, [], "gh 二进制未找到"
+    except subprocess.TimeoutExpired:
+        return False, [], "gh api user -i 超时（网络问题，不代表 token 失效）"
+    if proc.returncode != 0:
+        return False, [], (proc.stderr or proc.stdout).strip()
+    for line in proc.stdout.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        if key.strip().lower() == "x-oauth-scopes":
+            scopes = [s.strip() for s in value.split(",") if s.strip()]
+            return True, scopes, ""
+    return False, [], "响应中无 X-Oauth-Scopes 头（无法判定 scope）"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="GitHub 凭据链路同步与自检")
     parser.add_argument("--check", action="store_true", help="只自检，不写文件")
     parser.add_argument("--stdout", action="store_true", help="打印报告")
     parser.add_argument("--login", default=None, help="hosts.yml 的 user 字段（默认读现有配置）")
+    parser.add_argument("--require-scope", default=None,
+                        help="要求 token 必须含指定 scope（逗号分隔），缺失则非零退出。"
+                             "用于 pre-push：推 .github/workflows/* 前必须验 workflow scope")
     args = parser.parse_args(argv)
 
     token, err = load_token()
@@ -183,6 +211,29 @@ def main(argv: list[str] | None = None) -> int:
 
     if not ok_local:
         return 1
+
+    # scope 门禁：--require-scope 时读 X-Oauth-Scopes，缺失即阻断（fail-closed）。
+    # 为什么放在网络校验之后：网络失败 ≠ token 失效，但若显式要求 scope，
+    # 拿不到 scope 就必须拒绝放行（不能因网络异常而静默放过）。
+    if args.require_scope:
+        want = [s.strip() for s in args.require_scope.split(",") if s.strip()]
+        ok_sc, scopes, detail = fetch_scopes()
+        if ok_sc:
+            missing = [s for s in want if s not in scopes]
+            if missing:
+                print(f"❌ token 缺 scope: {', '.join(missing)}")
+                print(f"   现有 scopes: {', '.join(scopes) or '（空）'}")
+                print("   根因：GitHub 拒绝 workflow 文件改动需要 workflow scope；"
+                      "缺 scope 时 push 必然失败。")
+                print("   修复：在 GitHub 生成/更新 token 时勾选 workflow 作用域，"
+                      "然后重跑本脚本同步。")
+                return 1
+            print(f"✅ scope 校验通过（含 {', '.join(want)}）")
+        else:
+            print(f"❌ 无法读取 token scopes：{detail}")
+            print("   显式要求 scope 时必须 fail-closed，拒绝放行。")
+            return 1
+
     return 0
 
 

@@ -118,3 +118,72 @@ def test_resolve_gh_absolute():
     found = ghsync._resolve_gh()
     if found is not None:
         assert Path(found).is_absolute()
+
+
+# --- scope 门禁（2026-11-23 事故：缺 workflow scope 导致反复 push 失败）---
+
+class _FakeProc:
+    def __init__(self, returncode=0, stdout="", stderr=""):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def test_fetch_scopes_parses_header(monkeypatch):
+    """从 X-Oauth-Scopes 响应头解析 scope（大小写不敏感）。"""
+    monkeypatch.setattr(ghsync, "_run_gh", lambda *a, **k: _FakeProc(
+        stdout="HTTP/2.0 200 OK\nX-Oauth-Scopes: gist, repo, workflow\n\n{}"))
+    ok, scopes, detail = ghsync.fetch_scopes()
+    assert ok
+    assert "workflow" in scopes
+    assert detail == ""
+
+
+def test_fetch_scopes_missing_header_fail_closed(monkeypatch):
+    """响应无 scope 头 → 必须判为不可读（不能默认放行）。"""
+    monkeypatch.setattr(ghsync, "_run_gh", lambda *a, **k: _FakeProc(
+        stdout="HTTP/2.0 200 OK\nContent-Type: application/json\n\n{}"))
+    ok, scopes, detail = ghsync.fetch_scopes()
+    assert not ok
+    assert scopes == []
+    assert "无" in detail
+
+
+def test_fetch_scopes_never_prints_token(monkeypatch):
+    """scope 读取路径不得回显 token（只输出 scope 名）。"""
+    monkeypatch.setattr(ghsync, "_run_gh", lambda *a, **k: _FakeProc(
+        stdout="HTTP/2.0 200 OK\nX-Oauth-Scopes: gist, repo\n\n{}"))
+    ok, scopes, _ = ghsync.fetch_scopes()
+    assert ok and "gho_" not in " ".join(scopes)
+
+
+def test_require_scope_missing_blocks(fake_home, monkeypatch, capsys):
+    """缺指定 scope → 非零退出（fail-closed）。"""
+    _write_token(ghsync.TOKEN_FILE)
+    monkeypatch.setattr(ghsync, "check_gh_cli", lambda: (True, "ok"))
+    monkeypatch.setattr(ghsync, "verify_token", lambda: (True, "RenLimin"))
+    monkeypatch.setattr(ghsync, "fetch_scopes", lambda: (True, ["gist", "repo"], ""))
+    rc = ghsync.main(["--check", "--require-scope", "workflow"])
+    assert rc == 1
+    out = capsys.readouterr().out
+    assert "workflow" in out
+
+
+def test_require_scope_present_ok(fake_home, monkeypatch):
+    """含指定 scope → 放行。"""
+    _write_token(ghsync.TOKEN_FILE)
+    monkeypatch.setattr(ghsync, "check_gh_cli", lambda: (True, "ok"))
+    monkeypatch.setattr(ghsync, "verify_token", lambda: (True, "RenLimin"))
+    monkeypatch.setattr(ghsync, "fetch_scopes", lambda: (True, ["gist", "repo", "workflow"], ""))
+    rc = ghsync.main(["--check", "--require-scope", "workflow"])
+    assert rc == 0
+
+
+def test_require_scope_unreadable_fail_closed(fake_home, monkeypatch):
+    """要求 scope 但读不到 → 必须拒绝放行（不得因网络异常静默放过）。"""
+    _write_token(ghsync.TOKEN_FILE)
+    monkeypatch.setattr(ghsync, "check_gh_cli", lambda: (True, "ok"))
+    monkeypatch.setattr(ghsync, "verify_token", lambda: (True, "RenLimin"))
+    monkeypatch.setattr(ghsync, "fetch_scopes", lambda: (False, [], "响应中无 X-Oauth-Scopes 头"))
+    rc = ghsync.main(["--check", "--require-scope", "workflow"])
+    assert rc == 1

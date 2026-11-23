@@ -8,6 +8,8 @@
 # 行为:
 #   - 自检 gh CLI 登录态 (本地, 不依赖网络) → 失败即阻断 push
 #   - 联网校验 token (gh api user) 仅告警, 不阻断 (网络问题不代表 token 失效)
+#   - **scope 门禁**: 本次 push 触及 .github/workflows/* 时, 强制要求 token 含
+#     workflow scope → 缺失即阻断 (2026-11-23 事故: 服务端拒绝但本地看不到根因)
 #   - 通过则放行, 输出一行确认
 #
 # 安装: L2-infra/components/config/install-hooks.sh
@@ -22,7 +24,29 @@ if [ ! -f "$SYNC" ]; then
     exit 0
 fi
 
-OUT="$(python3 "$SYNC" --check 2>&1)" && RC=0 || RC=$?
+# --- 本次 push 是否触及 .github/workflows/* ---
+# pre-push 从 stdin 读: <local_ref> <local_sha> <remote_ref> <remote_sha>
+SCOPE_ARG=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -n "$local_sha" ] || continue
+    case "$local_sha" in
+        0000000000000000000000000000000000000000) continue ;;  # 删除引用, 无内容
+    esac
+    if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+        # 新分支: 与远端默认分支比较
+        base="$(git rev-parse --verify --quiet origin/HEAD 2>/dev/null | sed 's#.*/##')" || true
+        range="${base:-main}..$local_sha"
+    else
+        range="$remote_sha..$local_sha"
+    fi
+    if git diff --name-only "$range" 2>/dev/null | grep -qE '^\.github/workflows/'; then
+        SCOPE_ARG="--require-scope workflow"
+        echo "🔍 本次 push 触及 .github/workflows/*，启用 workflow scope 门禁"
+        break
+    fi
+done
+
+OUT="$(python3 "$SYNC" --check $SCOPE_ARG 2>&1)" && RC=0 || RC=$?
 
 if [ "$RC" -ne 0 ]; then
     echo ""
@@ -30,6 +54,9 @@ if [ "$RC" -ne 0 ]; then
     echo "$OUT"
     echo ""
     echo "   修复: python3 $SYNC    (幂等同步 SSOT → gh 配置)"
+    if [ -n "$SCOPE_ARG" ]; then
+        echo "   scope 不足: 需在 GitHub 为 token 勾选 workflow 作用域后重新同步。"
+    fi
     echo "   然后重新 push。不要用 gh auth login (交互, 定时/隔离环境必卡)。"
     exit 1
 fi

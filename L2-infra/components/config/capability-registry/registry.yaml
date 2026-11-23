@@ -100,8 +100,11 @@ capabilities:
       - "bash L2-infra/components/credentials/credentials.sh audit"
       - "bash L2-infra/components/credentials/credentials.sh github-sync"
       - "python3 L2-infra/components/credentials/github_credential_sync.py --check"
+      - "python3 L2-infra/components/credentials/github_credential_sync.py --check --require-scope workflow"
     ssot: "~/.openclaw/secrets/github.token"
-    notes: "SSOT=github.token(600) → 派生 ~/.config/gh/hosts.yml；push 前跑 --check"
+    notes: "SSOT=github.token(600) → 派生 ~/.config/gh/hosts.yml；push 前跑 --check。
+      scope 门禁：--require-scope workflow 读 X-Oauth-Scopes 响应头，缺失即 fail-closed；
+      pre-push 在触及 .github/workflows/* 时自动启用（事故 2026-11-23）"
     supersedes: []
 
   - id: delivery-quality
