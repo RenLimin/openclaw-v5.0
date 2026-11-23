@@ -249,6 +249,20 @@ You're a participant, not Rex's voice. **Respond when:** directly mentioned, can
 
 **排查清单（按顺序）：** 进程/端口 → 订阅额度 → 国内对照 → MTU → 节点固定 vs 自动选择 → 分层测试
 
+## GitHub 凭据链路（事故 2026-11-23，一次做对）
+
+- **SSOT**：`~/.openclaw/secrets/github.token`（`chmod 600`、**无尾换行**）；派生目标 `~/.config/gh/hosts.yml`（`chmod 600`）。
+- **同步命令**：`python3 L2-infra/components/credentials/github_credential_sync.py`（幂等，写 hosts.yml + 自检）。
+- **换 token 必做 3 步**（缺一即翻车）：
+  1. 写 SSOT → `printf %s '<token>' > ~/.openclaw/secrets/github.token && chmod 600 …`
+  2. 跑同步脚本（更新 gh hosts.yml）
+  3. **清 keychain 旧条目**：`printf 'protocol=https\nhost=github.com\n\n' | git credential-osxkeychain erase`
+     → 否则 `git credential fill` 仍返回旧 token，push 照挂（本次实测：SSOT 已新、push 仍用旧 `gho_`）。
+- **验证口径（不打印 token）**：`git credential fill` 取 password → 打 `x-oauth-scopes`；含 `workflow` 才允许推 `.github/workflows/*` 改动。
+- **device flow 授权（`gh auth refresh -s workflow`）只能由 Rex 在终端完成**：助手是 headless，等不到浏览器确认。**最多发起 1 次**并把一次性码交 Rex，禁止反复发起（本次连发 7 次全超时 = 事故）。
+- **token 传递红线**：**禁止**把 token 走剪贴板（`pbpaste` 会被不定时清空，实测丢 2 次）或聊天正文；只走 Rex 本机终端命令字符串。
+- **push 被拒原文**：`refusing to allow an OAuth App to create or update workflow … without workflow scope` → 根因恒为 token 缺 `workflow` scope，非网络问题。
+
 ## 工具策略（Tools）
 
 **Skills 落盘位置：** 新建 skill 必须落到 workspace 分层目录才会持久化 + 进 git：
