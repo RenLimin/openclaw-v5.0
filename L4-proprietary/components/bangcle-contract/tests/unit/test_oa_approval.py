@@ -94,6 +94,22 @@ def test_remark_format_block(form, body):
     assert "R2 概算一致性：超概算（提醒级）" in md
 
 
+def test_remark_has_answer_contract_footer(form, body):
+    """ADR-035 fail-closed：备注必须自带时间戳 + 溯源链（否则交付门禁 BLOCK）。"""
+    checks = run_fixed_checks(form, body, None)
+    md = render_remark(form, checks, {"verdict": "正常", "queried_at": "2026-11-24 15:00:00"},
+                       {"verdict": "一致", "billid": "9938",
+                        "total_estimate": "100.00", "total_actual": "100.00"},
+                       degraded=["R1"])
+    assert "【已验证 2026-" in md
+    assert "溯源链：" in md
+    assert "ONES GraphQL" in md
+    # 正文（可贴 OA）在前，脚注在分隔线之后
+    body_part, _, foot = md.partition("\n---\n")
+    assert body_part.startswith("【审批建议】")
+    assert "溯源链：" in foot
+
+
 def test_discover_todos_real_oa():
     """真实 OA 待办发现（会话失效 skip 留证；0 条也算有效结果）。"""
     try:

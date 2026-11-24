@@ -111,9 +111,62 @@ def render_remark(
     if degraded:
         lines.append("⚠️ 数据源降级：%s（%s）可能过期，以上结论绑定 requestid + 读取时间。"
                      % ("/".join(degraded), "/".join(degraded)))
+
+    # ADR-035 应答契约脚注（fail-closed 门禁：时间戳 + 溯源链）
+    lines += _evidence_footer(form, r1, r2, degraded=degraded)
     return "\n".join(lines)
 
 
 def _form_field(form: OrderForm, name: str) -> str:
     """兼容 OrderForm 字段扩展（合同名称可能未建模）。"""
     return str(getattr(form, name, "") or "")
+
+
+def _evidence_footer(
+    form: OrderForm,
+    r1: Optional[Dict[str, Any]] = None,
+    r2: Optional[Dict[str, Any]] = None,
+    *,
+    degraded: Optional[List[str]] = None,
+    date_str: Optional[str] = None,
+) -> List[str]:
+    """ADR-035 应答契约脚注：证据时间戳 + minimal trace 溯源链。
+
+    目的：``check_answer_contract.py`` 为 fail-closed 门禁，任何落盘结论必须带
+    ``【已验证 日期|来源】`` 与「数据源→查询→结论」溯源链，否则 BLOCK。
+    本函数只追加元信息，不改动「可直接贴 OA」的正文。
+    """
+    r1 = r1 or {}
+    r2 = r2 or {}
+    degraded = [d.lower() for d in (degraded or [])]
+    d = date_str or _DATE
+    rid = form.request_id
+    billid = r2.get("billid") or "【无】"
+
+    # 溯源链（数据源→查询→结论）
+    chain = [
+        "OA workflowid=757 单据 %s（body.txt 渲染表单 + xhrs.json 字段）→ 固定核查 L1/L2 → 本备注" % rid,
+        "R1 ONES GraphQL 实时（读取时点 %s）→ 履约义务判定" % (r1.get("queried_at") or d),
+        "R2 OA 概算卡片 billid %s 只读 → 概算一致性判定" % billid,
+    ]
+
+    stamps = ["【已验证 %s｜OA 单据 %s】合同名称/金额/服务期/合同编号" % (d, rid)]
+
+    r1v = r1.get("verdict") or "未知"
+    r1_line = "【已验证 %s｜ONES GraphQL】R1 履约义务=%s" % (d, r1v)
+    if "r1" in degraded:
+        r1_line += "（⚠️ 数据源降级，project_not_found/查询失效，不伪造）"
+    stamps.append(r1_line)
+
+    r2v = r2.get("verdict") or "未知"
+    if r2.get("skipped"):
+        r2_line = "【已验证 %s｜OA 卡片 billid %s】R2=%s（skipped: %s）" % (
+            d, billid, r2v, r2.get("skipped"))
+    else:
+        r2_line = "【已验证 %s｜OA 卡片 billid %s】R2=%s（概算 %s / 本单 %s）" % (
+            d, billid, r2v, r2.get("total_estimate"), r2.get("total_actual"))
+    if "r2" in degraded:
+        r2_line += "（⚠️ 数据源降级，不伪造）"
+    stamps.append(r2_line)
+
+    return ["", "---", "> 溯源链：" + "；".join(chain), "> " + "；".join(stamps)]
