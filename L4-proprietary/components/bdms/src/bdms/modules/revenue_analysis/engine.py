@@ -1704,8 +1704,11 @@ class RevenueAnalysisEngine(BaseEngine):
 
     # ─── Q3 跨期继承（DESIGN-DETAIL v1.1 §4）───
 
-    BUCKET_COL = "BU"          # 「预算趋势」列（两期表头一致，r2/r3 实证）
-    PERF_ID_COL = "J"          # 履约ID 列（§10.1 列位表 + r3 表头实证）
+    # ⚠️ DB 存储键是「规范字母」（config.BUDGET_CANONICAL_FROM_202606），
+    #    不是 Excel 物理列位：Excel 物理 J=履约ID → 规范键 G；AT=消失备注 → AR；
+    #    计划开始/结束/完成 Excel R/S/T → 规范键 M/N/O。
+    BUCKET_COL = "BU"          # 预算趋势（规范键，两期一致）
+    PERF_ID_COL = "G"          # 履约ID（规范键；对应 Excel 物理列 J）
 
     def _prev_period(self, period: str) -> Optional[str]:
         """账期回退一格：202606 → 202605（跨年 202601 → 202512）。"""
@@ -1853,6 +1856,211 @@ class RevenueAnalysisEngine(BaseEngine):
             return {r["perf_id"]: r["budget_trend"] for r in rows}
         finally:
             conn.close()
+
+    # ─── §3 分桶规则引擎（DESIGN-DETAIL v1.1 §3；上期为空/新增履约ID 时）───
+
+    BUCKET_DISAPPEAR = "合同消失"
+    BUCKET_ARCHIVED_UNORDERED = "已归档但未下单"
+    BUCKET_ORDERED_UNDELIVERABLE = "已下单但无法交付"
+    BUCKET_DELIVERED_UNCONFIRMED = "已交付但无法确收"
+    BUCKET_FUTURE = "未来可确收"
+    BUCKET_PRIOR_YEAR = "之前年度已确收"
+    BUCKET_NORMAL = "本年度正常可确收"
+
+    # §3.4 优先级（高 → 低）
+    BUCKET_PRIORITY = (
+        BUCKET_DISAPPEAR, BUCKET_ARCHIVED_UNORDERED,
+        BUCKET_ORDERED_UNDELIVERABLE, BUCKET_DELIVERED_UNCONFIRMED,
+        BUCKET_FUTURE, BUCKET_PRIOR_YEAR, BUCKET_NORMAL,
+    )
+
+    DISAPPEAR_NOTE = "合同终止"       # AT 消失备注
+    BF_EXCEPTION = "3：交付异常"      # BF 履约项统计状态（周报）
+
+    @staticmethod
+    def _year_of(v) -> Optional[int]:
+        """多种日期表示取年份；无法解析返回 None（不猜）。"""
+        if v in (None, ""):
+            return None
+        if isinstance(v, (datetime.datetime, datetime.date)):
+            return v.year
+        head = (str(v).strip().replace("年", "").replace("/", "-")
+                .split("-")[0].split(".")[0])
+        if len(head) >= 4 and head[:4].isdigit():
+            return int(head[:4])
+        return None
+
+    @staticmethod
+    def _is_yes(v) -> Optional[bool]:
+        """OA「合同下单（y/n）」归一化；未知/不可解析返回 None。"""
+        if v is None:
+            return None
+        s = str(v).strip().lower()
+        if s in ("是", "y", "yes", "true", "1"):
+            return True
+        if s in ("否", "n", "no", "false", "0", ""):
+            return False
+        return None
+
+    def judge_bucket(self, column: str, *, at=None, bf=None, bx=None,
+                     plan_start=None, plan_end=None, plan_finish=None,
+                     oa_ordered=None, ones_matched=None,
+                     year: Optional[int] = None) -> dict:
+        """单行分桶判定。column: 'BU'（预算趋势，§3.3）或 'BQ'（预算填报，§3.2）。
+
+        返回 {bucket, rule, missing_signals}；无规则命中 → bucket=None（留空待人工）。
+        fail-closed：所需外部信号未知时不推断（§3.5）。
+        """
+        missing: list[str] = []
+        ordered = self._is_yes(oa_ordered)
+        if ordered is None:
+            missing.append("oa_ordered")
+        if ones_matched is None:
+            missing.append("ones_matched")
+
+        cands: list[tuple[int, str, str]] = []
+
+        # ① 合同消失（两列同规则）
+        if str(at or "").strip() == self.DISAPPEAR_NOTE:
+            cands.append((0, self.BUCKET_DISAPPEAR, "at_contract_terminated"))
+
+        # ②③ 依赖 OA + ONES（信号未知则整条不参与判定）
+        if ordered is not None and ones_matched is not None:
+            if ordered is False and ones_matched is False:
+                cands.append((1, self.BUCKET_ARCHIVED_UNORDERED,
+                              "oa_no__ones_unmatched"))
+            elif ordered is True and ones_matched is False:
+                cands.append((2, self.BUCKET_ORDERED_UNDELIVERABLE,
+                              "oa_yes__ones_unmatched"))
+
+        # ④ 已交付但无法确收
+        if ones_matched is True and str(bf or "").strip() == self.BF_EXCEPTION:
+            cands.append((3, self.BUCKET_DELIVERED_UNCONFIRMED,
+                          "ones_matched__bf_exception"))
+
+        y = year
+        if column == "BU":
+            ybx = self._year_of(bx)
+            if ybx is None:
+                missing.append("bx")
+            elif y is not None:
+                if ybx > y:
+                    cands.append((4, self.BUCKET_FUTURE, "bx_after_year"))
+                elif ybx == y:
+                    cands.append((6, self.BUCKET_NORMAL, "bx_in_year"))
+            # 注：§3.3「之前年度已确收」Rex 未给规则 → BU 不产出该桶（留空）
+        else:
+            ys = [self._year_of(x) for x in (plan_start, plan_end, plan_finish)]
+            if y is not None and any(v == y for v in ys):
+                cands.append((6, self.BUCKET_NORMAL, "plan_in_year"))
+            fut = [self._year_of(x) for x in (plan_start, plan_finish)]
+            if y is not None and any(v is not None and v > y for v in fut):
+                cands.append((4, self.BUCKET_FUTURE, "plan_after_year"))
+            pri = [self._year_of(x) for x in (plan_end, plan_finish)]
+            if y is not None and any(v is not None and v < y for v in pri):
+                cands.append((5, self.BUCKET_PRIOR_YEAR, "plan_before_year"))
+
+        if not cands:
+            return {"bucket": None, "rule": "unresolved",
+                    "missing_signals": sorted(set(missing))}
+        cands.sort(key=lambda t: t[0])
+        _, bucket, rule = cands[0]
+        return {"bucket": bucket, "rule": rule,
+                "missing_signals": sorted(set(missing))}
+
+    def save_bucket_entry(self, period: str, perf_id: str, *,
+                          trend: Optional[str] = None,
+                          fill: Optional[str] = None,
+                          rule: Optional[str] = None,
+                          matched_oa: Optional[bool] = None,
+                          matched_ones: Optional[bool] = None,
+                          week_status: Optional[str] = None) -> None:
+        """写入/更新单条分桶（upsert，COALESCE 不覆盖已存在值）。"""
+        source = f"rule:{rule}" if rule else "manual"
+        conn = _db.get_connection(self.db_path)
+        try:
+            conn.execute(
+                """INSERT INTO ra_bucket
+                   (period, perf_id, budget_fill, budget_trend, bucket_source,
+                    matched_oa, matched_ones, week_status, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   ON CONFLICT(period, perf_id) DO UPDATE SET
+                     budget_fill=COALESCE(excluded.budget_fill, ra_bucket.budget_fill),
+                     budget_trend=COALESCE(excluded.budget_trend, ra_bucket.budget_trend),
+                     bucket_source=excluded.bucket_source,
+                     matched_oa=COALESCE(excluded.matched_oa, ra_bucket.matched_oa),
+                     matched_ones=COALESCE(excluded.matched_ones, ra_bucket.matched_ones),
+                     week_status=COALESCE(excluded.week_status, ra_bucket.week_status)""",
+                (period, perf_id, fill, trend, source, matched_oa, matched_ones,
+                 week_status,
+                 datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+            conn.commit()
+        finally:
+            conn.close()
+
+    def apply_bucket_rules(self, period: str, *, year: Optional[int] = None,
+                           oa_ordered: Optional[dict] = None,
+                           ones_matched: Optional[dict] = None) -> dict:
+        """对尚未定桶的履约ID应用 §3 规则（**不覆盖**已继承/已填值）。
+
+        oa_ordered / ones_matched: {合同编号(B列): bool}；None 表示该源未接入
+        → 相关规则按 fail-closed 跳过并计入 missing_signals。
+        """
+        rows = self._load_sheet_rows(period, SHEET_BUDGET)
+        if not rows:
+            raise ImportError_(f"{period} 预算执行表缺失，无法分桶")
+        y = year or int(period[:4])
+        existing = self.load_buckets(period)
+
+        agg: dict[str, dict] = {}
+        order: list[str] = []
+        # 规范键（同上）：AR=消失备注、BF=周报状态、BX=预估交付日期、M/N/O=计划时间
+        cols = (("at", "AR"), ("bf", "BF"), ("bx", "BX"),
+                ("plan_start", "M"), ("plan_end", "N"), ("plan_finish", "O"))
+        for r in rows:
+            pid = str(r.get(self.PERF_ID_COL) or "").strip()
+            if not pid:
+                continue
+            if pid not in agg:
+                agg[pid] = {"row": r, "signals": {}}
+                order.append(pid)
+            sig = agg[pid]["signals"]
+            for k, col in cols:
+                v = str(r.get(col) or "").strip()
+                if v and not sig.get(k):
+                    sig[k] = v
+
+        results: dict[str, str] = {}
+        stats: dict[str, int] = {}
+        unresolved: list[dict] = []
+        for pid in order:
+            if existing.get(pid):
+                stats["skipped_existing"] = stats.get("skipped_existing", 0) + 1
+                continue
+            sig = agg[pid]["signals"]
+            cid = str(agg[pid]["row"].get("B") or "").strip()
+            j = self.judge_bucket(
+                "BU", at=sig.get("at"), bf=sig.get("bf"), bx=sig.get("bx"),
+                plan_start=sig.get("plan_start"), plan_end=sig.get("plan_end"),
+                plan_finish=sig.get("plan_finish"),
+                oa_ordered=(oa_ordered or {}).get(cid),
+                ones_matched=(ones_matched or {}).get(cid), year=y)
+            if j["bucket"]:
+                results[pid] = j["bucket"]
+                key = f"rule:{j['rule']}"
+                stats[key] = stats.get(key, 0) + 1
+                self.save_bucket_entry(period, pid, trend=j["bucket"],
+                                       rule=j["rule"],
+                                       matched_ones=(ones_matched or {}).get(cid),
+                                       week_status=sig.get("bf"))
+            else:
+                stats["unresolved"] = stats.get("unresolved", 0) + 1
+                unresolved.append({"perf_id": pid, "contract": cid,
+                                   "missing_signals": j["missing_signals"]})
+
+        return {"period": period, "year": y, "total": len(order),
+                "newly_bucketed": len(results), "stats": stats,
+                "unresolved": unresolved, "results": results}
 
     def has_data(self, period: str) -> bool:
         conn = _db.get_connection(self.db_path)

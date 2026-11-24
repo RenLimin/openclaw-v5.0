@@ -10,8 +10,13 @@ from bdms.modules.base import ImportError_
 from bdms.modules.revenue_analysis.engine import RevenueAnalysisEngine
 
 
+# ⚠️ 规范字母（config.BUDGET_CANONICAL_FROM_202606）：履约ID=G（Excel 物理列 J）、
+#    预算趋势=BU。DB 行键是规范字母，不是 Excel 物理列位。
+PERF_KEY, BUCKET_KEY = "G", "BU"
+
+
 def _row(pid, bu):
-    return {"J": pid, "BU": bu}
+    return {PERF_KEY: pid, BUCKET_KEY: bu}
 
 
 @pytest.fixture
