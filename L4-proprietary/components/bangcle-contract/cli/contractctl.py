@@ -372,7 +372,9 @@ def cmd_oa_project_mgmt(args) -> int:
     全程只读：不提交/不审批/不退回/不转发/不代派 PM。
     """
     from services.oa.enhance.pm.order import parse, PmAssetError
-    from services.oa.enhance.pm.ones_refs import find_reference_projects, RefsError
+    from services.oa.enhance.pm.ones_refs import (
+        find_reference_projects, find_reference_projects_v13, RefsError,
+    )
     from services.oa.enhance.pm.risk import assess
     from services.oa.enhance.pm.render import render_remark, render_markdown
     from services.oa.enhance.pm.approval_notes import collect
@@ -385,9 +387,13 @@ def cmd_oa_project_mgmt(args) -> int:
         print("❌", e)
         return 2
 
-    _progress("ONES 参考项目核查（只读，最终客户=%s）" % order.final_user)
+    # v1.3：916 走「全量履约义务实时查询 → 项目聚合」新链；815/820 维持 v1.2。
+    is_916 = order.workflow_id == "wf_916"
+    _progress("ONES 参考项目核查（只读，最终客户=%s%s）"
+              % (order.final_user, "｜v1.3 全量履约义务" if is_916 else ""))
     try:
-        refs, notes = find_reference_projects(
+        finder = find_reference_projects_v13 if is_916 else find_reference_projects
+        refs, notes = finder(
             final_user=order.final_user,
             customer=order.customer,
             product_codes=order.product_codes,
@@ -413,44 +419,70 @@ def cmd_oa_project_mgmt(args) -> int:
 
     risks = assess(order, refs, appr)
 
-    # v1.2 C5：按参考项目 PM 所属部门判定指派人（任立民/冯刚）。
-    # 企微通讯录不可用（850002/二进制缺失）→ assigner 为空 → 渲染层回退 C1，不伪造。
+    # ── 指派口径（v1.5：三条流程统一）─────────────────────────────
+    # 数据源：ONES 配置中心-组织架构 + 项目「项目负责人」(project.assign)。
+    #   · PM 属项目经理团队（大客户/南区/北区客户服务部、项目管理部）+ 南区 → 冯刚
+    #   · PM 属项目经理团队 + 其他客户服务序列 → 该 PM 负责
+    #   · PM 非项目经理团队 / 部门未收录 → 回退冯刚并显式留证
+    # 实证（Rex 2026-11-24 实批）：820 的 887618/887577 指张辉、887588 指程涛、
+    #   887594 引冯刚(素芹系口误但口径为项目负责人)、887581 指王文博、887636 指素芹，
+    #   与其引用项目的 project.assign **逐一吻合**。
     assigner = ""
     assigner_note = ""
-    pm_names = []
-    for r in refs:
-        if (r.pm or "").strip() and r.pm not in pm_names:
-            pm_names.append(r.pm)
-    if pm_names:
-        try:
-            from services.oa.enhance.pm.assigner import assigner_for
-            decided = []
-            for nm in pm_names:
-                who = assigner_for(nm)
-                if who and who not in decided:
-                    decided.append(who)
-            if len(decided) == 1:
-                assigner = decided[0]
-            elif decided:
-                assigner = decided[0]
-                assigner_note = "（参考项目 PM 分属多部门：%s，暂取首个；请人工确认）" % "、".join(decided)
-        except Exception as e:  # noqa: BLE001 - 分流失败不阻断，回退 C1
-            assigner = ""
-            assigner_note = "（部门分流不可用，已回退 C1：%s）" % e
+    pm_depts: list = []
+    pm_in_team = False
+    lead_ref = refs[0] if refs else None
+    lead_pm = (lead_ref.pm or "").strip() if lead_ref else ""
 
-    remark = render_remark(order, refs, risks, args.pm or "", assigner=assigner)
+    if True:
+        # v1.4（Rex 2026-11-24）：PM=项目「项目负责人」（build 已取 project.assign）；
+        #   PM 团队校验由 check_pm_team 写入 r.pm_in_team / r.pm_depts / r.pm_team_note。
+        if lead_pm:
+            pm_in_team = bool(getattr(lead_ref, "pm_in_team", False))
+            pm_depts = list(getattr(lead_ref, "pm_depts", []) or [])
+            note_txt = (getattr(lead_ref, "pm_team_note", "") or "").strip()
+            if pm_depts:
+                print("  PM 所属部门：%s｜%s" % (" / ".join(pm_depts), note_txt))
+            else:
+                print("  PM 所属部门：未取到｜%s" % note_txt)
+            if not pm_in_team:
+                # 非 PM 团队 / 部门未收录：不以其为指派依据 → 请冯刚安排（显式留证，不伪造）
+                assigner = "冯刚"
+                assigner_note = ("参考项目「项目负责人」%s 不在项目经理团队（%s），"
+                                 "不得作为指派依据 → 请冯刚安排项目经理，需人工确认实际 PM"
+                                 % (lead_pm, note_txt or "部门未取到"))
+            elif "南区客户服务部" in pm_depts:
+                assigner = "冯刚"
+            else:
+                # 非南区 PM 属项目经理团队 → 措辞「请<PM>负责」由渲染层 pm_in_team 分支产出；
+                #   assigner 留空避免渲染层误出「请<PM>安排项目经理」。
+                assigner = ""
+        else:
+            assigner = ""
+            assigner_note = "无参考项目 PM（OA 项目经理亦空），按 C1 兜底为冯刚；请人工确认"
+
+    # v1.5：三条流程渲染首段统一用**参考项目「项目负责人」**（project.assign）。
+    #   --pm 参数保留兼容（无参考项目时可用），但优先参考项目 PM。
+    render_pm = lead_pm or (args.pm or "")
+    remark = render_remark(order, refs, risks, render_pm,
+                           assigner=assigner, pm_depts=pm_depts,
+                           pm_in_team=pm_in_team)
     if assigner_note:
         print("  ⚠️", assigner_note)
     print()
     print(remark)
     print()
+    _lead_who = lead_pm if (pm_in_team and "南区客户服务部" not in pm_depts) else (assigner or "—")
     print("参考项目:", len(refs), "｜风险:", len(risks),
-          "｜指派人:", assigner or "（C1 口径）",
+          "｜指派人:", _lead_who,
+          "｜匹配层级:", ("v1.3" if is_916 else "v1.2"),
+          "｜PM口径: 项目负责人+团队校验",
           "｜757:", (appr.degraded if appr and appr.degraded else ("已核查" if appr else "不适用/无链接")))
 
     if args.out:
-        out_md = render_markdown(order, refs, risks, appr, args.pm or "",
-                                 missing=notes, assigner=assigner)
+        out_md = render_markdown(order, refs, risks, appr, render_pm,
+                                 missing=notes, assigner=assigner,
+                                 pm_depts=pm_depts, pm_in_team=pm_in_team)
         with open(args.out, "w", encoding="utf-8") as fh:
             fh.write(out_md)
         print("报告:", args.out)

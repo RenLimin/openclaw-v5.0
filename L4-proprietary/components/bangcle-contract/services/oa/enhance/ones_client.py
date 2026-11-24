@@ -120,6 +120,42 @@ def project_pm(uuid: str) -> tuple[str, str]:
     return "", ""
 
 
+# v1.4 PM 团队（Rex 2026-11-24 第1点：交付技术部等执行序列不属于项目经理团队）
+# 判定依据：ONES 配置中心-组织架构中「客户服务部序列 + 项目管理部」= 项目经理序列。
+# 实测（2026-11-24）：张燕兰/徐亚东/李韶倬/程涛/张辉/牛素芹/王文博=客户服务序列；
+#                  曲婷婷/孙环环=项目管理部；潘天功/张志超/魏晓欣/董见周=交付技术部（非 PM）。
+PM_TEAM_DEPARTMENTS = (
+    "大客户服务部", "南区客户服务部", "北区客户服务部", "项目管理部",
+)
+
+
+def project_pm_owner(uuid: str) -> tuple[str, str]:
+    """v1.4：参考项目「项目负责人」（Rex 2026-11-24 第2点）。
+
+    口径（页面实证 2026-11-24）：ONES 项目详情页「项目信息 → 项目负责人」
+    = GraphQL ``project.assign``（2087 页面显示「李韶倬」）。
+    ⚠️ 履约义务行上的 owner/assign（胡李鑫/魏晓欣/潘天功/张志超…）是**子任务执行人**，
+    不是项目经理；旧 project_pm 把它们当 PM 会取错（887728 曾误取潘天功）。
+
+    取数优先级：
+      ① ``project.assign``（项目负责人）→ 依据「项目-项目负责人（ONES 项目信息）」
+      ② 为空 → 回退旧口径 ``project_pm``（履约义务/项目记录），依据随旧口径
+
+    Returns: (姓名, 依据)；无则 ("", "")，不伪造。
+    """
+    mod = _load()
+    try:
+        r = mod.gql('query { project(key:"project-%s") { assign{name} } }' % uuid)
+        pd = (r.get("data") or {}).get("project") or {}
+        who = (pd.get("assign") or {}).get("name") or ""
+        if who and who not in ("管理员", "流程自动化"):
+            return who, "项目-项目负责人（ONES 项目信息，project.assign）"
+    except Exception:  # noqa: BLE001 - 查询失败走 fallback，不静默
+        pass
+    pm, basis = project_pm(uuid)
+    return pm, (basis + "（项目负责人字段为空，回退）") if pm else ("", "")
+
+
 def raw_dir() -> Path:
     """ONES 复用脚本的默认 raw 目录。"""
     return _load().RAW_DEFAULT
@@ -146,3 +182,18 @@ def search_projects(name_match: str) -> list[dict]:
     mod = _load()
     r = mod.gql('query { projects(filter:{name_match:"%s"}) { uuid name } }' % name_match)
     return (r.get("data") or {}).get("projects") or []
+
+def user_departments(name: str) -> list[str]:
+    """ONES 配置中心-组织架构：按姓名查所属部门名（只读，复用权威源脚本）。
+
+    口径 PRD §0.2d C11：仅「南区客户服务部」→ 请冯刚安排项目经理；其余 → 请 PM 本人。
+    ONES 未收录该人时返回空列表（调用方标待人工确认，不伪造部门）。
+    """
+    mod = _load()
+    return mod.user_departments(name)
+
+
+def search_obligations(keyword: str) -> list[dict]:
+    """跨项目检索任务（含所属项目/结项字段），调用方过滤聚合（PRD §0.2d C8）。"""
+    mod = _load()
+    return mod.search_obligations(keyword)

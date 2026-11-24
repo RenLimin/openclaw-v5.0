@@ -236,13 +236,27 @@ def test_select_drops_same_period_new_project():
 
 
 def test_select_one_per_type():
-    """同类型只取最相关 1 个（状态 rank → 命中产品数 → 编号）。"""
+    """v1.5：同类型最多取 2 个（默认）；**类型内部新鲜度优先于状态/命中数**。
+
+    校准自 Rex 实批：887610 引 3425/3426（2025-11）而非更早的可结项旧项；
+    887588 引 3519（2025-11）；887719 只引 3611（2025）不引 2854（2021）。
+    """
     refs = [
         _ref("SSXM-2026-0924-2598", "上半年结算-浙江农信", "已交付未验收", ["SP-A"]),
         _ref("SSXM-2026-0810-2066", "浙江农信签约项目", "已交付未验收", ["SP-A", "SP-B"]),
     ]
     out = _select(refs, "", [])
-    assert len(out) == 1 and out[0].code == "SSXM-2026-0810-2066"
+    assert [r.code for r in out] == ["SSXM-2026-0924-2598", "SSXM-2026-0810-2066"]
+
+
+def test_select_max_per_type_param():
+    """v1.5：max_per_type=1 时每类型仅取 1 个（仍为最新者）。"""
+    refs = [
+        _ref("SSXM-2026-0924-2598", "上半年结算-浙江农信", "已交付未验收", ["SP-A"]),
+        _ref("SSXM-2026-0810-2066", "浙江农信签约项目", "已交付未验收", ["SP-A", "SP-B"]),
+    ]
+    out = _select(refs, "", [], max_per_type=1)
+    assert len(out) == 1 and out[0].code == "SSXM-2026-0924-2598"
 
 
 def test_select_keeps_both_when_types_differ():
@@ -327,7 +341,9 @@ def test_c3_formal_contract_keeps_normal_render():
     """C3：正式合同（分类=0）不受框架口径影响。"""
     o = _order(wf="wf_916", pm="张梨", region_owner="任立民",
                contract_category="正式合同", contract_no="XSZS2611120890")
-    txt = render_remark(o, [], [], pm="张梨")
+    # v1.4：916 首段需 PM 团队校验；此处仅验证 C3（正式合同不受框架口径影响），
+    #       故显式给 pm_in_team=True 隔离 PM 口径变量。
+    txt = render_remark(o, [], [], pm="张梨", pm_in_team=True)
     assert txt.startswith("请张梨负责，参考")
     assert "框架合同" not in txt
 
@@ -399,8 +415,9 @@ def test_c2_closed_not_used_when_terminal_exists():
 
 
 def test_c2_closed_fallback_respects_type_dedup():
-    """兜底后仍按类型去重取 1（已结项 rank 最低，同类型只取 1）。"""
+    """兜底后仍按类型限量（v1.5：默认 2；max_per_type=1 时取 1）。"""
     refs = [_ref_closed("SSXM-2025-0825-2476", "已结项", matched=["A"]),
             _ref_closed("SSXM-2025-0827-2503", "已结项", matched=["A"])]
-    out = _select(list(refs), "", [])
+    assert len(_select(list(refs), "", [])) == 2
+    out = _select(list(refs), "", [], max_per_type=1)
     assert len(out) == 1
