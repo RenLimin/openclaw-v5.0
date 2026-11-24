@@ -51,14 +51,17 @@ def assess(
 
     # 1) 待分配 PM（v1.1 C1：区域负责人=冯刚 或 PM 非空 时首段已指派，不重复提示；
     #    仅当 PM 空 **且** 区域负责人也空（无法落到统一分配口径）才提示人工指派）
-    if not (order.pm or "").strip() and not (order.region_owner or "").strip():
+    # v1.3：916 指派由 ONES 组织架构（C11）决定，OA 两字段为空**不构成**未分配提示。
+    if order.workflow_id != "wf_916" \
+            and not (order.pm or "").strip() and not (order.region_owner or "").strip():
         risks.append(Risk(
             "pm_unassigned", "必注",
             "待分配项目经理（OA 项目经理与区域负责人字段均为空，需项目管理部指派）",
         ))
 
     # 2) 多项目隔离（同最终用户 + 同产品/服务 ≥2 项目）
-    if len(refs) >= 2:
+    #    v1.3：**仅 815 适用**（该校准源自 815 批注）；916 不校（未验证，避免噪音）。
+    if order.workflow_id != "wf_916" and len(refs) >= 2:
         codes = _dedup([r.code for r in refs])
         if len(codes) >= 2:
             shared = _shared_products(refs)
