@@ -1,7 +1,7 @@
 """测试：消息区结构化解析（基于真实 AX 采集 fixture）。
 
 数据源：tests/fixtures/session_project_dept.json（结构等价的合成 fixture，
-
+不含真实工作会话内容）。
 这些断言是**回归锚点**：企微升级改 AX 结构时，本文件应失败并提示适配。
 """
 import json

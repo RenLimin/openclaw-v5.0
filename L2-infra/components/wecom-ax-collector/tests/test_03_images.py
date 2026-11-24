@@ -1,6 +1,6 @@
 """测试：消息区图片分类 / 关联 / 跨会话复现（严格只读）。
 
-分类规则源自本机企微 5.0.13 实测（见 VERIFICATION-v1.0.md §6.2）：
+分类规则源自本机企微 5.0.13 实测（正式落地见 VERIFICATION-v1.0.md §7）：
   1) 右侧成员面板(x>=1300) → side_panel_ui
   2) 同一 sha 跨会话复现      → ui_reused（最强 UI 证据）
   3) AXDescription 命中 icon/member/gender/file/online/leave… → ui_icon

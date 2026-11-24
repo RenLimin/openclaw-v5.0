@@ -113,7 +113,7 @@ python3 -m pytest L2-infra/components/wecom-ax-collector/tests/
 
 ### 6.2 图片通道的更正（推翻 Phase 1 旧结论）
 - 旧结论「图片仅 U+FFFC 占位符、本体不可得」**不准确**：占位符在 `AXTextArea`，但消息区同级存在 `AXImage` 元素，其 **`AXImageData` 属性直接带真实 PNG 字节流**。
-- 实测提取（`/tmp/wecom_img_extract.swift`，纯只读）：可落盘成完整 PNG；2x retina（AX 122pt → 实图 240px）。
+- 实测提取（一次性探针脚本，纯只读）：可落盘成完整 PNG；2x retina（AX 122pt → 实图 240px）。
 - 跨 14 个会话按字节哈希去重：本轮可见大图均为 **UI 资产**（240x240 大表情、微信转发 logo、文件类型图标、成员状态图标），可由 `AXDescription`（如 `icon member online male`、`file pdf emphasized`）+ 尺寸 + 跨会话哈希稳定区分；**本轮样本中未出现真实聊天照片**，故「真实照片分辨率/是否缩略图」尚未验证，待出现时补测。
 - 含义：图片识别路线**可能无需截图/OCR 截屏**，直接从 AX 取 PNG 再送 OCR/VLM；但需先完成图片提取的正式只读子命令与真实照片定性。
 
@@ -150,9 +150,9 @@ python3 -m pytest L2-infra/components/wecom-ax-collector/tests/
 | 引擎 `images` 冒烟 | ✅ `read_only=True`，31 张（含重复），7 张唯一；二次运行 `written=0`（去重成立） |
 | `--only-message` | ✅ 31 → 1（滤掉右侧成员面板 16+ 张 32×32 图标） |
 | 图片链路 E2E | ✅ 第1轮 new=16 / images={total:1,content:1}；第2轮 new=0（幂等） |
-| 落盘净化 | ✅ 正式目录仅 `3ed19285…_240x240.png`，`_staging` 已清空，无 UI 资产残留 |
+| 落盘净化 | ✅ 正式目录仅 1 张 content 图（`<sha前16>_240x240.png`），`_staging` 已清空，无 UI 资产残留 |
 | 关闭模式回归 | ✅ `images_enabled=false` 时无 `images` 键、不触碰图片目录 |
-| 测试 | ✅ 全量 **35 passed / 1 skipped**（新增 `test_03_images.py` 19 用例） |
+| 测试 | ✅ 全量 **36 passed**（含 `test_03_images.py` 19 用例；只读守卫 `test_02_readonly_guard.py`） |
 
 ### 7.5 尚存的诚实边界（未夸大）
 - 本轮样本里被判为 `content` 的候选是 **240×240 / 23093B 的大表情**（跨 14 会话复现过的
