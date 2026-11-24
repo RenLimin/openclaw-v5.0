@@ -282,6 +282,63 @@ M/N = 「校验」，O = 「异常说明·未立项」，P = 「异常说明·�
 
 ---
 
+## 8. 七条拍板执行闭环 + Web UI 集成（2026-11-24 下午）
+
+### 8.1 D1–D7 执行结果
+
+| 项 | Rex 决定 | 落地证据 |
+|---|---|---|
+| D1 | A 接受差额，人工校准 | 值级终验：差异集合恰为 §4.2 的 15 格；汇总表 78 格零差异；不回改引擎 |
+| D2 | C 版式对齐（字体/颜色/行高等）；入库按 DB 格式 | `assets/golden_layout_202606.json` + `scripts/gen_ra_layout_spec.py`；合并 5/5、5/5、19→19 全对齐；行高 16/13/19 全对齐；打印 portrait/`$1:$3` 对齐；填充色 `FF2D74BB` 精确匹配。图例因 §4.3 删列不套列级版式（预期差异，代码注释留档） |
+| D3 | B 补快照 | `_ensure_snapshots()` 覆盖 `ra_caliber`/`ra_attribution`/`ra_alert` 三表，任一缺失即整体重算落盘 |
+| D4 | 规则照跑，不覆盖人工已核值，冲突进人工核实 | `auto_filled=9`/`pending=100` 不变；新增 `manual_review` + `context._audit`（rule_value/human_value 留痕）；实测冲突 3 行（考核扣款 2、结算差异 1） |
+| D5 | 继续建设 | P3 分桶引擎/P4/P5/终审设计文档列为下阶段（未启动） |
+| D6 | 重新授权 | `git fetch origin` 成功；凭据 scopes 含 `repo`/`workflow` |
+| D7 | 清僵尸进程 | `ps` 确认 probe2 无存活进程，tracker 中已 complete 并归档 |
+
+### 8.2 Web UI 集成（Rex 指示：命令行可出报告 + Web 端集成 + 解释跨期继承）
+
+**交付页面** `/revenue-analysis`（侧栏「确收分析」🧾）：
+
+- 账期选择 + `auto/read/regenerate` 模式；**异步 job + 实时进度条**（进度条铁律）
+- 六张统计卡：锁定/动态口径合计、两口径差异、自动归因数、待人工核实数、冲突标记数
+- 双口径汇总表 / 预算趋势 19 行 / 偏差归因（筛选全部·仅待人工·仅冲突）/ Q4 预警清单
+- 导出 Excel → job `output_path` → 按 `job_id` 下载（**限制本模块产物，防越权读取**）
+
+**新增 API**（10 个）：
+`/api/revenue-analysis/{periods, sources, generate, progress, export, download, summary, trend, attribution, alerts}`
+
+契约口径：
+- `summary/trend/attribution` 无数据 → **fail-closed 400**（PRD v1.1 红线，不伪造）
+- `alerts` 未生成/零预警均返回 `[]`——沿用 **P2 冻结契约**（`test_service_fail_closed`），「该账期确实无异常」是合法结果，由调用方结合 `/periods` 判断账期是否已生成
+
+### 8.3 过程中修复的两个真 bug
+
+| Bug | 根因 | 影响 | 修复 |
+|---|---|---|---|
+| **BDMS_DB 环境隔离失效** | `RevenueAnalysisService()` 传 `None` → `BaseEngine` 回退硬编码 `DATA_DIR/"bdms.db"`（忽略 `BDMS_DB`），而同进程 `_db.get_connection()` 用 env-aware `DB_PATH` | Web/定时任务设了 `BDMS_DB` 时 **job 表落 tmp 库、引擎算生产库**，两者分裂 → job 永远 running、fail-closed 误判有数据 | 服务构造器改为 env-aware，`meta_db_path` 同步传入 |
+| **download 端点 500** | `api.py` 模块级缺 `from pathlib import Path`，`ra_download` 在模块级用 `Path(...)` → `NameError` | 导出后无法下载 | 补模块级导入；新增两条回归测试（正常下载 + 跨模块产物拒绝 404） |
+
+### 8.4 「跨期继承分桶」释义（Rex 询问，答）
+
+定义见 DESIGN-DETAIL §4（Q3，Rex 已确认）。核心：**同一履约 ID，上期已判定的「预算趋势桶」，本期直接沿用；只有上期无值的行才跑本期 7 桶规则。**
+
+优先级：① 本期人工改判 > ② 跨期继承（按履约 ID 匹配上期 BU 列）> ③ 7 桶规则
+- 202606 实证：**8058/8062 行**逐行继承自 202605，仅 4 行人工改判（例：`XSZS2605180322`）
+- **fail-closed**：信号源（《交付月报》《上期差异表》《销售合同台账》）任一缺失 → 该行留空 + 提示，绝不推断伪造
+- 现状：`bucket_engine.py` **尚未新建**（P3，计划 §6 估时 2.5d）
+
+### 8.5 验证证据
+
+| 套件 | 结果 |
+|---|---|
+| `test_revenue_analysis_web_api.py`（真实 HTTP：uvicorn 子进程 + httpx + tmp DB） | 契约 12 passed；端到端（真实 202606 源导入→生成→导出→下载）**1 passed** |
+| `test_revenue_analysis_p2_trend_attribution.py` + web 契约 | **38 passed** |
+| `test_revenue_analysis_service.py` + web 契约 | **19 passed** |
+| 先前 P0+P3+validator+revenue / P1+service | 44 passed / 17 passed |
+
+---
+
 ## 7. 变更与提交记录
 
 | 时间 | 动作 |
@@ -290,3 +347,7 @@ M/N = 「校验」，O = 「异常说明·未立项」，P = 「异常说明·�
 | 2026-11-24 11:35 | 补 §2 测试（87 + 全仓 34）、§5 决策清单、§6 版式比对 |
 | 2026-11-24 13:50 | 按 Rex 要求：所有待拍板项改为**单元格级定位**（sheet + 行文字标识 + 单元格 + 表头名 + 并排值） |
 | 2026-11-24 13:52 | 提交 `1f4fdfa`（MD +208/-20）；D8 门禁阻塞因该 skill 已登记而解除，标记为已解除 |
+| 2026-11-24 16:05 | 提交 `1ae3f84`：D2 版式对齐 + D3 快照兜底 + D4 归因人工核实 + D1-D7 拍板固化 |
+| 2026-11-24 16:57 | 提交 `5c6dc91`：Web UI 集成（/revenue-analysis + 10 API）+ 修复 BDMS_DB 隔离失效与 download 500 |
+| 2026-11-24 17:04 | 提交 `26dcaf8`：alerts 契约回退为「空清单返回 []」（不覆盖 P2 冻结口径） |
+| 2026-11-24 17:1x | 补 §8：七条拍板闭环、Web UI 交付、两个真 bug 修复、跨期继承释义 |
