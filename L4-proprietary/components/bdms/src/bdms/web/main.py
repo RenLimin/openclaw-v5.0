@@ -91,6 +91,7 @@ templates.env.globals.update({
                 {"id": "revenue", "label": "确收汇总", "url": "/revenue", "icon": "💰"},
                 {"id": "revenue-compare", "label": "对比分析", "url": "/revenue/compare", "icon": "🔍"},
                 {"id": "forecast", "label": "收入预估", "url": "/forecast", "icon": "📈"},
+                {"id": "revenue-analysis", "label": "确收分析", "url": "/revenue-analysis", "icon": "🧾"},
             ],
         },
         {
@@ -146,6 +147,12 @@ async def page_revenue_compare(request: Request):
 @app.get("/forecast", response_class=HTMLResponse)
 async def page_forecast(request: Request):
     return _render(request, "forecast.html", {"active_page": "forecast"})
+
+
+@app.get("/revenue-analysis", response_class=HTMLResponse)
+async def page_revenue_analysis(request: Request):
+    return _render(request, "revenue_analysis.html",
+                   {"active_page": "revenue-analysis"})
 
 
 @app.get("/master-data", response_class=HTMLResponse)

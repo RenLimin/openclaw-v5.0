@@ -8,6 +8,7 @@
   /api/settings/*     系统设定
 """
 
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -660,6 +661,189 @@ async def settings_set(req: SettingUpdate):
     except ImportError:
         _db.upsert_settings({req.key: req.value})
         return {"ok": True, "key": req.key, "value": req.value}
+
+
+# ========== 7. 确收分析报告（revenue_analysis）==========
+
+class RARequest(BaseModel):
+    period: str
+    mode: str = "auto"
+
+
+@router.get("/revenue-analysis/periods")
+async def ra_periods():
+    """已登记账期（倒序）。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return {"periods": RevenueAnalysisService().list_periods()}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/revenue-analysis/sources/{period}")
+async def ra_sources(period: str):
+    """源文件可用性（fail-closed：缺失返回 False，不伪造）。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    resolved = normalize_month(period)
+    try:
+        return {"period": resolved,
+                "available": RevenueAnalysisService().sources_available(resolved)}
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/revenue-analysis/generate")
+async def ra_generate(req: RARequest):
+    """生成/读取确收分析数据（异步）→ job_id，前端轮询进度。"""
+    import threading
+    from bdms.core import db as _db
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+
+    period = normalize_month(req.period)
+    mode = req.mode or "auto"
+    if mode not in ("auto", "read", "regenerate"):
+        raise HTTPException(400, f"未知模式: {mode}")
+
+    conn = _db.get_connection()
+    try:
+        job_id = _db.create_job(conn, "revenue_analysis", period, mode)
+        conn.commit()
+    finally:
+        conn.close()
+
+    def _run():
+        try:
+            RevenueAnalysisService().generate_with_job(job_id, period, mode)
+        except Exception as e:
+            conn2 = _db.get_connection()
+            try:
+                _db.update_job_status(
+                    conn2, job_id, "failed", 0, message=str(e)[:500])
+                conn2.commit()
+            finally:
+                conn2.close()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"job_id": job_id, "period": period, "mode": mode,
+            "status": "running", "progress": 0, "message": "已提交，准备生成..."}
+
+
+@router.get("/revenue-analysis/progress/{job_id}")
+async def ra_progress(job_id: int):
+    conn = _db.get_connection()
+    try:
+        row = conn.execute("SELECT * FROM job WHERE id = ?", (job_id,)).fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return {"id": job_id, "status": "not_found"}
+    d = dict(row)
+    return {
+        "id": d["id"], "status": d["status"], "progress": d["progress"],
+        "message": d["message"], "step": None, "pct": d["progress"],
+        "output_path": d.get("output_path"),
+    }
+
+
+@router.post("/revenue-analysis/export")
+async def ra_export(req: RARequest):
+    """导出 Excel（异步）→ job_id，完成时 output_path 带下载链接。"""
+    import threading
+    from bdms.core import db as _db
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+
+    period = normalize_month(req.period)
+    conn = _db.get_connection()
+    try:
+        job_id = _db.create_job(conn, "revenue_analysis", period, "export")
+        conn.commit()
+    finally:
+        conn.close()
+
+    def _run():
+        try:
+            RevenueAnalysisService().export_with_job(job_id, period)
+        except Exception as e:
+            conn2 = _db.get_connection()
+            try:
+                _db.update_job_status(
+                    conn2, job_id, "failed", 0, message=str(e)[:500])
+                conn2.commit()
+            finally:
+                conn2.close()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"job_id": job_id, "period": period, "mode": "export",
+            "status": "running", "progress": 0, "message": "已提交，准备导出..."}
+
+
+@router.get("/revenue-analysis/download/{job_id}")
+async def ra_download(job_id: int):
+    """按 job_id 下载导出产物（只允许本模块产物）。"""
+    conn = _db.get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM job WHERE id = ? AND module = 'revenue_analysis'",
+            (job_id,),
+        ).fetchone()
+    finally:
+        conn.close()
+    if not row or not row["output_path"]:
+        raise HTTPException(404, "产物不存在或任务未完成")
+    path = Path(row["output_path"])
+    if not path.is_file():
+        raise HTTPException(404, f"文件已不存在: {path.name}")
+    return FileResponse(
+        path, filename=path.name,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@router.get("/revenue-analysis/summary/{period}")
+async def ra_summary(period: str):
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return RevenueAnalysisService().summary(normalize_month(period))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/revenue-analysis/trend/{period}")
+async def ra_trend(period: str):
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return {"period": normalize_month(period),
+                "rows": RevenueAnalysisService().trend(normalize_month(period))}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/revenue-analysis/attribution/{period}")
+async def ra_attribution(period: str):
+    """Q1 归因 + 待人工核实清单（含 D4 manual_review 冲突行）。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return RevenueAnalysisService().attribution(normalize_month(period))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/revenue-analysis/alerts/{period}")
+async def ra_alerts(period: str):
+    """Q4 预警清单。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return {"period": normalize_month(period),
+                "alerts": RevenueAnalysisService().alerts(normalize_month(period))}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 # ========== 健康检查 ==========

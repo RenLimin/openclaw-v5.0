@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+{% from "layout.html" import page_header with context %}
+{% from "components.html" import card, stat_card, dashboard_grid with context %}
+
+{% set page_title = '确收分析' %}
+
+{% block content %}
+{{ page_header(
+    title='确收分析',
+    subtitle='生成月度确收差异分析报告：双口径汇总、预算趋势、偏差归因与预警清单，支持导出 Excel'
+) }}
+
+{% call card(title="账期操作") %}
+<div class="form-row" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+  <div>
+    <label class="field-label">账期</label>
+    <select id="ra-period" class="input" style="min-width:160px;"></select>
+  </div>
+  <div>
+    <label class="field-label">模式</label>
+    <select id="ra-mode" class="input" style="width:150px;">
+      <option value="auto">auto（有则读）</option>
+      <option value="read">read（只读）</option>
+      <option value="regenerate">regenerate（重算）</option>
+    </select>
+  </div>
+  <button class="btn btn-primary" id="ra-gen-btn" onclick="doGenerate()">生成 / 读取</button>
+  <button class="btn" id="ra-exp-btn" onclick="doExport()">导出 Excel</button>
+  <div id="ra-src-flag" class="text-muted" style="font-size:.85rem;"></div>
+</div>
+
+<!-- 实时进度条（进度条铁律） -->
+<div id="ra-progress" style="display:none;margin-top:12px;">
+  <div style="display:flex;justify-content:space-between;font-size:.85rem;margin-bottom:4px;">
+    <span id="ra-progress-step" class="text-muted">准备中</span>
+    <strong id="ra-progress-pct">0%</strong>
+  </div>
+  <div class="progress-bar" style="height:10px;background:rgba(127,127,127,.15);border-radius:6px;overflow:hidden;">
+    <div id="ra-progress-fill" style="height:100%;width:0%;background:var(--c-primary,#2d74bb);transition:width .3s;"></div>
+  </div>
+  <div id="ra-progress-err" class="badge badge-danger" style="display:none;margin-top:8px;"></div>
+</div>
+<div id="ra-status" class="mt-3 text-muted"></div>
+{% endcall %}
+
+{% call dashboard_grid() %}
+  {{ stat_card('锁定口径合计', '<span id="ra-stat-locked">-</span>', '', '万元') }}
+  {{ stat_card('动态口径合计', '<span id="ra-stat-dynamic">-</span>', '', '万元') }}
+  {{ stat_card('两口径差异', '<span id="ra-stat-diff">-</span>', '', '万元') }}
+  {{ stat_card('自动归因', '<span id="ra-stat-auto">-</span>', '', '行') }}
+  {{ stat_card('待人工核实', '<span id="ra-stat-pending">-</span>', '', '行') }}
+  {{ stat_card('规则/人工冲突', '<span id="ra-stat-conflict">-</span>', '', '行，需人工核实') }}
+{% endcall %}
+
+{% call card(title="双口径汇总") %}
+<div id="ra-summary"></div>
+{% endcall %}
+
+{% call card(title="预算趋势分析（19 行）") %}
+<div id="ra-trend"></div>
+{% endcall %}
+
+{% call card(title="偏差归因") %}
+<div class="form-row" style="margin-bottom:8px;">
+  <label class="fw-600">过滤：</label>
+  <select id="ra-attr-filter" class="input" style="width:220px;" onchange="renderAttribution()">
+    <option value="">全部触发行</option>
+    <option value="pending">仅待人工</option>
+    <option value="conflict">仅规则/人工冲突</option>
+  </select>
+</div>
+<div id="ra-attribution"></div>
+{% endcall %}
+
+{% call card(title="Q4 预警清单") %}
+<div id="ra-alerts"></div>
+{% endcall %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let RA_PERIOD = '';
+let RA_ATTR = null;
+
+const fmtWan = v => (v == null || isNaN(v)) ? '-' : (v).toLocaleString('zh-CN',{maximumFractionDigits:2}) + ' 万';
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+
+function setProgress(step, pct) {
+  document.getElementById('ra-progress').style.display = 'block';
+  document.getElementById('ra-progress-step').textContent = step || '';
+  document.getElementById('ra-progress-pct').textContent = (pct || 0) + '%';
+  document.getElementById('ra-progress-fill').style.width = (pct || 0) + '%';
+}
+function hideProgress() { document.getElementById('ra-progress').style.display = 'none'; }
+function showErr(msg) {
+  const el = document.getElementById('ra-progress-err');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'inline-block';
+  document.getElementById('ra-progress-fill').style.background = 'var(--c-danger,#dc2626)';
+}
+
+function poll(jobId, onDone) {
+  const timer = setInterval(async () => {
+    try {
+      const r = await fetch('/api/revenue-analysis/progress/' + jobId);
+      const d = await r.json();
+      setProgress(d.message || '', d.progress || 0);
+      if (d.status === 'done') {
+        clearInterval(timer);
+        document.getElementById('ra-progress-fill').style.background = 'var(--c-success,#16a34a)';
+        onDone(d);
+      } else if (d.status === 'failed' || d.status === 'not_found') {
+        clearInterval(timer);
+        showErr(d.message || '任务失败');
+        enableBtns();
+      }
+    } catch (e) { /* 轮询偶发失败不停表 */ }
+  }, 800);
+}
+
+function enableBtns() {
+  document.getElementById('ra-gen-btn').disabled = false;
+  document.getElementById('ra-exp-btn').disabled = false;
+}
+
+async function loadPeriods() {
+  const r = await fetch('/api/revenue-analysis/periods');
+  const d = await r.json();
+  const sel = document.getElementById('ra-period');
+  const list = (d.periods || []).slice().sort().reverse();
+  sel.innerHTML = list.length
+    ? list.map(p => `<option value="${p}">${p.slice(0,4)}年${p.slice(4)}月</option>`).join('')
+    : '<option value="">无已登记账期</option>';
+  if (list.length) { RA_PERIOD = list[0]; checkSources(); }
+}
+
+async function checkSources() {
+  const flag = document.getElementById('ra-src-flag');
+  try {
+    const r = await fetch('/api/revenue-analysis/sources/' + encodeURIComponent(RA_PERIOD));
+    const d = await r.json();
+    flag.textContent = d.available ? '✅ 源文件就绪' : '⚠️ 源文件缺失（将 fail-closed）';
+  } catch (e) { flag.textContent = ''; }
+}
+
+async function doGenerate() {
+  const period = RA_PERIOD || document.getElementById('ra-period').value;
+  const mode = document.getElementById('ra-mode').value;
+  if (!period) return alert('请先选择账期');
+  document.getElementById('ra-gen-btn').disabled = true;
+  document.getElementById('ra-exp-btn').disabled = true;
+  document.getElementById('ra-progress-err').style.display = 'none';
+  setProgress('提交任务...', 2);
+  const r = await fetch('/api/revenue-analysis/generate', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({period, mode})
+  });
+  const d = await r.json();
+  if (!r.ok) { showErr(d.detail || '提交失败'); enableBtns(); return; }
+  poll(d.job_id, async () => {
+    enableBtns();
+    document.getElementById('ra-status').textContent = '✅ 数据就绪：' + (d.period || period);
+    await loadAll();
+  });
+}
+
+async function doExport() {
+  const period = RA_PERIOD || document.getElementById('ra-period').value;
+  if (!period) return alert('请先选择账期');
+  document.getElementById('ra-gen-btn').disabled = true;
+  document.getElementById('ra-exp-btn').disabled = true;
+  document.getElementById('ra-progress-err').style.display = 'none';
+  setProgress('提交导出...', 2);
+  const r = await fetch('/api/revenue-analysis/export', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({period, mode: 'auto'})
+  });
+  const d = await r.json();
+  if (!r.ok) { showErr(d.detail || '提交失败'); enableBtns(); return; }
+  poll(d.job_id, (jd) => {
+    enableBtns();
+    if (jd.output_path) {
+      document.getElementById('ra-status').innerHTML =
+        '✅ 导出完成：<a href="/api/revenue-analysis/download/' + jd.id + '" target="_blank">下载报告</a>';
+    }
+  });
+}
+
+async function loadAll() {
+  const p = RA_PERIOD;
+  if (!p) return;
+  await Promise.all([loadSummary(p), loadTrend(p), loadAttribution(p), loadAlerts(p)]);
+}
+
+async function loadSummary(p) {
+  const box = document.getElementById('ra-summary');
+  try {
+    const d = await (await fetch(`/api/revenue-analysis/summary/${p}`)).json();
+    const L = (d.locked||{}).total, D = (d.dynamic||{}).total, F = d.difference;
+    document.getElementById('ra-stat-locked').textContent = fmtWan(L);
+    document.getElementById('ra-stat-dynamic').textContent = fmtWan(D);
+    document.getElementById('ra-stat-diff').textContent = fmtWan(F);
+    let h = '<table class="table"><thead><tr><th>口径</th><th>合计</th></tr></thead><tbody>'
+      + `<tr><td>锁定预算</td><td>${fmtWan(L)}</td></tr>`
+      + `<tr><td>动态预估</td><td>${fmtWan(D)}</td></tr>`
+      + `<tr><td>差异</td><td>${fmtWan(F)}</td></tr></tbody></table>`;
+    box.innerHTML = h;
+  } catch (e) { box.innerHTML = '<div class="text-muted">暂无汇总数据</div>'; }
+}
+
+async function loadTrend(p) {
+  const box = document.getElementById('ra-trend');
+  try {
+    const d = await (await fetch(`/api/revenue-analysis/trend/${p}`)).json();
+    const rows = d.rows || [];
+    if (!rows.length) { box.innerHTML = '<div class="text-muted">暂无趋势数据</div>'; return; }
+    let h = '<div class="table-wrapper"><table class="table"><thead><tr><th>#</th><th>分类</th><th>标签</th><th>合计</th></tr></thead><tbody>';
+    for (const r of rows) {
+      h += `<tr><td>${esc(r.row_index)}</td><td>${esc(r.group_name || r.category || '')}</td>`
+         + `<td>${esc(r.label || r.trend_label || '')}</td><td>${fmtWan(r.total_amount)}</td></tr>`;
+    }
+    box.innerHTML = h + '</tbody></table></div>';
+  } catch (e) { box.innerHTML = '<div class="text-muted">暂无趋势数据</div>'; }
+}
+
+async function loadAttribution(p) {
+  try {
+    RA_ATTR = await (await fetch(`/api/revenue-analysis/attribution/${p}`)).json();
+    document.getElementById('ra-stat-auto').textContent = RA_ATTR.auto_filled;
+    document.getElementById('ra-stat-pending').textContent = RA_ATTR.pending;
+    const conflicts = (RA_ATTR.rows || []).filter(r => r.manual_review).length;
+    document.getElementById('ra-stat-conflict').textContent = conflicts;
+    renderAttribution();
+  } catch (e) {
+    document.getElementById('ra-attribution').innerHTML = '<div class="text-muted">暂无归因数据</div>';
+  }
+}
+
+function renderAttribution() {
+  const f = document.getElementById('ra-attr-filter').value;
+  const box = document.getElementById('ra-attribution');
+  if (!RA_ATTR || !RA_ATTR.rows) { box.innerHTML = '<div class="text-muted">暂无归因数据</div>'; return; }
+  let rows = RA_ATTR.rows;
+  if (f === 'pending') rows = rows.filter(r => !r.auto_filled);
+  if (f === 'conflict') rows = rows.filter(r => r.manual_review);
+  if (!rows.length) { box.innerHTML = '<div class="text-muted">该筛选下无数据</div>'; return; }
+  let h = '<div class="table-wrapper"><table class="table"><thead><tr>'
+      + '<th>履约ID</th><th>状态</th><th>原因</th><th>来源</th><th>人工核实</th></tr></thead><tbody>';
+  for (const r of rows.slice(0, 500)) {
+    const mark = r.manual_review ? '⚠️ 规则/人工冲突' : (r.auto_filled ? '自动' : '');
+    h += `<tr><td>${esc(r.perf_id)}</td><td>${esc(r.status_value)}</td>`
+       + `<td>${esc(r.reason_value)}</td><td>${r.auto_filled ? '规则' : '留空'}</td><td>${mark}</td></tr>`;
+  }
+  box.innerHTML = h + '</tbody></table></div>'
+    + (rows.length > 500 ? `<div class="text-muted mt-2">仅显示前 500 行，共 ${rows.length} 行</div>` : '');
+}
+
+async function loadAlerts(p) {
+  const box = document.getElementById('ra-alerts');
+  try {
+    const d = await (await fetch(`/api/revenue-analysis/alerts/${p}`)).json();
+    const a = d.alerts || [];
+    if (!a.length) { box.innerHTML = '<div class="text-muted">无预警</div>'; return; }
+    let h = '<div class="table-wrapper"><table class="table"><thead><tr><th>履约ID</th><th>类型</th><th>说明</th></tr></thead><tbody>';
+    for (const r of a.slice(0, 500)) {
+      h += `<tr><td>${esc(r.perf_id)}</td><td>${esc(r.alert_type || r.type || '')}</td>`
+         + `<td>${esc(r.message || r.description || '')}</td></tr>`;
+    }
+    box.innerHTML = h + '</tbody></table></div>';
+  } catch (e) { box.innerHTML = '<div class="text-muted">暂无预警数据</div>'; }
+}
+
+document.getElementById('ra-period').addEventListener('change', function () {
+  RA_PERIOD = this.value; checkSources(); loadAll();
+});
+document.addEventListener('DOMContentLoaded', loadPeriods);
+</script>
+{% endblock %}

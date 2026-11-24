@@ -27,10 +27,18 @@ class RevenueAnalysisService(BaseService):
     module_name = "revenue_analysis"
 
     def __init__(self, db_path: Optional[Path] = None):
-        self.engine = RevenueAnalysisEngine(db_path)
+        # 2026-11-24 修复：必须 env-aware。
+        # 旧实现传 None → BaseEngine 回退到硬编码 DATA_DIR/"bdms.db"（忽略 BDMS_DB），
+        # 而同进程内 _db.get_connection() 用的是 paths.DB_PATH（读 BDMS_DB）。
+        # 后果：Web/定时任务设了 BDMS_DB 时，job 表落 tmp 库、引擎算生产库，
+        # 两者分裂 —— 表现为 job 永远 running / fail-closed 误判有数据。
+        from bdms.core.paths import DB_PATH as _ENV_DB_PATH
+        resolved = Path(db_path) if db_path else _ENV_DB_PATH
+        self.engine = RevenueAnalysisEngine(resolved)
         self._last_snapshot_backfill: dict = {}
         # BaseService 组合模式：显式传 engine，meta_db 与 engine 同库
-        super().__init__(module_name=self.module_name, engine=self.engine)
+        super().__init__(module_name=self.module_name, engine=self.engine,
+                         meta_db_path=resolved)
 
     def generate(self, period: str, mode: str = MODE_AUTO) -> dict:
         """幂等生成/读取 + 快照兜底。
@@ -204,9 +212,20 @@ class RevenueAnalysisService(BaseService):
             conn.close()
 
     def alerts(self, period: str) -> list[dict]:
-        """Q4 预警清单（ra_alert）。"""
+        """Q4 预警清单（ra_alert）。
+
+        与 summary/trend/attribution 的区别：**零预警是合法结果**（该账期确实没有
+        需要预警的异常行），所以不能按「无数据」一律抛错。判定口径：
+          - 该账期从未 generate（ra_period 无登记）→ fail-closed，抛 ValueError；
+          - 已 generate 且 ra_alert 为空 → 返回 []。
+        """
         conn = _db.get_connection(self.engine.db_path)
         try:
+            registered = conn.execute(
+                "SELECT 1 FROM ra_period WHERE period = ?", (period,)
+            ).fetchone()
+            if not registered:
+                raise ValueError(f"{period} 无归因数据，请先 generate")
             rows = conn.execute(
                 "SELECT * FROM ra_alert WHERE period = ? ORDER BY id",
                 (period,),
@@ -220,6 +239,95 @@ class RevenueAnalysisService(BaseService):
             return out
         finally:
             conn.close()
+
+    # ─── 异步 job（Web UI 用） ───
+
+    def generate_with_job(self, job_id: int, period: str,
+                          mode: str = MODE_AUTO) -> dict:
+        """在已有 job 上下文中生成/读取数据，分步上报进度。
+
+        供 Web 异步调用：API 先 create_job 立即返回 job_id，后台线程调本方法。
+        刻意不走 BaseService.generate()——那条路径会自建 job，导致双 job。
+
+        进度条铁律（AGENTS.md）：导出/生成长任务必须分步上报。
+        """
+        from bdms.core import db as _db
+
+        def _progress(pct: int, msg: str) -> None:
+            c = _db.get_connection(self.meta_db_path)
+            try:
+                _db.update_job_status(c, job_id, "running", pct, msg)
+                c.commit()
+            finally:
+                c.close()
+
+        try:
+            self._ensure_ready()
+            has = self.engine.has_data(period)
+            if mode == MODE_READ and not has:
+                raise ValueError(
+                    f"{period} 无数据可读，请先用 auto/regenerate 生成")
+            if mode == MODE_REGENERATE:
+                action = "generated"
+            elif mode == MODE_READ:
+                action = "read"
+            else:
+                action = "read" if has else "generated"
+
+            if action == "read":
+                _progress(20, "步骤 1/3：读取历史数据...")
+                data = self.engine.load(period)
+                counts = {k: len(v) for k, v in data.items()}
+                _progress(85, "数据加载完成，补齐快照...")
+            else:
+                _progress(20, "步骤 1/3：加载源表...")
+                _progress(40, "步骤 2/3：计算 10 Sheet + 快照...")
+                computed = self.engine.compute(period)
+                _progress(75, "步骤 3/3：落盘...")
+                counts = self.engine.persist(
+                    period, computed,
+                    overwrite=(mode == MODE_REGENERATE or has))
+
+            total = sum(v for v in counts.values() if isinstance(v, (int, float)))
+            # D3 兜底：read 模式下若 ra_caliber/ra_attribution/ra_alert 缺失则补
+            self._ensure_snapshots(period)
+            self._finish_job(job_id, "done", 100, message=f"{action}: {total} 行")
+            return {
+                "month": period, "mode": mode, "action": action,
+                "sheets": counts, "job_id": job_id, "total_rows": total,
+            }
+        except Exception as e:
+            self._finish_job(job_id, "failed", 0, message=str(e)[:500])
+            raise
+
+    def export_with_job(self, job_id: int, period: str) -> Path:
+        """异步导出 Excel，进度上报 + output_path 回写 job。"""
+        from bdms.core import db as _db
+
+        def _progress(pct: int, msg: str) -> None:
+            c = _db.get_connection(self.meta_db_path)
+            try:
+                _db.update_job_status(c, job_id, "running", pct, msg)
+                c.commit()
+            finally:
+                c.close()
+
+        try:
+            _progress(5, "步骤 1/2：准备导出...")
+            target = self.export(period)
+            _progress(95, "步骤 2/2：写出 Excel...")
+            conn = _db.get_connection(self.meta_db_path)
+            try:
+                _db.update_job_status(conn, job_id, "done", 100,
+                                      message="导出完成",
+                                      output_path=str(target))
+                conn.commit()
+            finally:
+                conn.close()
+            return target
+        except Exception as e:
+            self._finish_job(job_id, "failed", 0, message=str(e)[:500])
+            raise
 
     # ─── 导出 ───
 
