@@ -28,6 +28,7 @@ class RevenueAnalysisService(BaseService):
 
     def __init__(self, db_path: Optional[Path] = None):
         self.engine = RevenueAnalysisEngine(db_path)
+        self._last_snapshot_backfill: dict = {}
         # BaseService 组合模式：显式传 engine，meta_db 与 engine 同库
         super().__init__(module_name=self.module_name, engine=self.engine)
 
@@ -43,17 +44,29 @@ class RevenueAnalysisService(BaseService):
         return r
 
     def _ensure_snapshots(self, period: str) -> None:
-        """若 ra_caliber 缺失（仅导入过宽表），补计算并落盘快照。"""
+        """快照兜底：ra_caliber / ra_attribution / ra_alert 任一缺失即补。
+
+        Rex 2026-11-24 拍板（D3）：generate() 重新生成时必须刷新 Q1 归因与
+        Q4 预警快照，不再只在 engine 主流程产生一次。
+        三张表同时补齐，保证同一账期内口径一致（同一次 compute 产物）。
+        """
         conn = _db.get_connection(self.engine.db_path)
         try:
-            n = conn.execute(
-                "SELECT COUNT(*) FROM ra_caliber WHERE period = ?", (period,)
-            ).fetchone()[0]
+            counts = {}
+            for tbl in ("ra_caliber", "ra_attribution", "ra_alert"):
+                try:
+                    counts[tbl] = conn.execute(
+                        f"SELECT COUNT(*) FROM {tbl} WHERE period = ?",
+                        (period,),
+                    ).fetchone()[0]
+                except Exception:
+                    counts[tbl] = 0
         finally:
             conn.close()
-        if n == 0:
+        if any(n == 0 for n in counts.values()):
             data = self.engine.compute(period)
             self.engine.persist(period, data, overwrite=True)
+            self._last_snapshot_backfill = counts
 
     # ─── 数据源 ───
 

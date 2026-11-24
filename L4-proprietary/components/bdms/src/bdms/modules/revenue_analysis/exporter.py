@@ -25,6 +25,11 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
+try:  # 版式规范（Rex 2026-11-24 D2 拍板：导出按 golden 格式对齐）
+    from importlib.resources import files as _res_files
+except ImportError:  # pragma: no cover
+    _res_files = None
+
 from bdms.core.paths import DB_PATH, output_path
 from bdms.modules.base import ExportError
 
@@ -45,6 +50,36 @@ BORDER_COLOR = "D9D9D9"      # 浅灰边框
 FMT_AMOUNT = "#,##0.00"
 FMT_RATE = "0.0000"
 FMT_INT = "#,##0"
+
+_LAYOUT_SPEC_NAME = "golden_layout_202606.json"
+_layout_cache: dict[str, Any] = {}
+
+
+def _load_layout_spec(period: str) -> dict | None:
+    """读取 golden 版式规范；仅 202606 有基准，其余账期返回 None。"""
+    if period != "202606":
+        return None
+    if period in _layout_cache:
+        return _layout_cache[period]
+    spec = None
+    try:
+        if _res_files is not None:
+            raw = _res_files("bdms.modules.revenue_analysis").joinpath(
+                f"assets/{_LAYOUT_SPEC_NAME}").read_text(encoding="utf-8")
+            spec = json.loads(raw)
+    except Exception:
+        spec = None
+    _layout_cache[period] = spec
+    return spec
+
+
+def _spec_sheet(spec: dict | None, name: str) -> dict:
+    if not spec:
+        return {}
+    sh = (spec.get("sheets") or {}).get(name, {})
+    if sh and "_header_rows" not in sh:
+        sh = {**sh, "_header_rows": spec.get("header_rows", 3)}
+    return sh
 
 # 预算趋势分析 17 列表头（§5.2）
 # 预算趋势分析 16 列表头（golden R1/R2/R3 三层，§5.2）
@@ -79,6 +114,81 @@ class RevenueAnalysisExporter:
 
     def __init__(self, db_path: Optional[Union[str, Path]] = None):
         self.db_path = Path(db_path) if db_path else DB_PATH
+        self._layout: dict | None = None
+        self._layout_period: str | None = None
+        self._cur_sheet: str = ""
+        self._style_cache: dict[tuple, Any] = {}
+
+    def _ensure_layout(self, period: str) -> dict | None:
+        """按需加载当前账期的 golden 版式规范（仅 202606）。"""
+        if period != self._layout_period:
+            self._layout = _load_layout_spec(period)
+            self._layout_period = period
+            self._style_cache = {}
+        return self._layout
+
+    def _style_of(self, spec_sheet: dict, row: int, col: int) -> dict:
+        """取单元格目标样式（列默认 + 填充覆盖）。
+
+        缓存粒度 = **列**（不是单元格）：大表百万格下若按 (列,行) 缓存会
+        产生百万个 Font/PatternFill 对象（实测 RSS 冲到 2.5GB）。列默认只
+        建一次；填充覆盖仅约数百处，按真实坐标点查后叠加。
+        """
+        letter = get_column_letter(col)
+        header_rows = int(spec_sheet.get("_header_rows") or 3)
+        use_hdr = row <= header_rows
+        ck = (self._cur_sheet, "h" if use_hdr else "d", letter)
+        hit = self._style_cache.get(ck)
+        if hit is None:
+            out: dict = {}
+            pool = ((spec_sheet.get("header_col_style") or {}) if use_hdr
+                    else (spec_sheet.get("col_style") or {}))
+            cs = pool.get(letter)
+            if cs:
+                f = cs.get("font")
+                if f:
+                    out["font"] = self._mk_font(f)
+                if cs.get("fill"):
+                    out["fill"] = self._mk_fill(cs["fill"])
+                al = cs.get("align")
+                if al:
+                    out["align"] = self._mk_align(al)
+            hit = out
+            self._style_cache[ck] = hit
+        out = hit
+        ov = (spec_sheet.get("filled") or {}).get(f"{row}{letter}")
+        if ov:
+            out = dict(hit)
+            if ov.get("fill"):
+                out["fill"] = self._mk_fill(ov["fill"])
+            if ov.get("font"):
+                out["font"] = self._mk_font(ov["font"])
+        return out
+
+    @staticmethod
+    def _mk_font(f: dict):
+        color = f.get("c")
+        if color and ":" in str(color):  # theme 色无法直接映射 → 跳过颜色
+            color = None
+        return Font(name=f.get("n") or FONT_NAME, size=f.get("s") or 10,
+                    bold=bool(f.get("b")), color=color)
+
+    @staticmethod
+    def _mk_fill(hexv):
+        """构造实心填充；归一为 FFRRGGBB（openpyxl 6 位会落 00 前缀）。"""
+        if not hexv or ":" in str(hexv):
+            return None
+        v = str(hexv).upper()
+        if len(v) == 6:
+            v = "FF" + v
+        elif len(v) == 8 and v.startswith("00"):
+            v = "FF" + v[2:]
+        return PatternFill(start_color=v, end_color=v, fill_type="solid")
+
+    @staticmethod
+    def _mk_align(a: dict):
+        return Alignment(horizontal=a.get("h"), vertical=a.get("v"),
+                         wrap_text=bool(a.get("w")))
 
     # ─── 主入口 ───
 
@@ -91,6 +201,7 @@ class RevenueAnalysisExporter:
                 wb = Workbook()
                 if wb.active:
                     wb.remove(wb.active)
+                self._ensure_layout(period)
                 self._write_all_sheets(wb, period, conn)
             finally:
                 conn.close()
@@ -124,16 +235,38 @@ class RevenueAnalysisExporter:
 
     def _write_all_sheets(self, wb: Workbook, period: str, conn: Any) -> None:
         # Sheet 顺序对齐 golden 人工报告（汇总 → 汇总分析 → 预算趋势 → ...）
-        self._write_summary(wb, period, conn)
-        self._write_summary_analysis(wb, period, conn)
-        self._write_trend(wb, period, conn)
-        self._write_sheet_rows(wb, period, conn, SHEET_DIFF)
-        self._write_budget(wb, period, conn)
-        self._write_draft(wb, period, conn)
-        self._write_sheet_rows(wb, period, conn, SHEET_RESTRUCTURE)
-        self._write_sheet_rows(wb, period, conn, SHEET_LEGEND)
-        self._write_sheet_rows(wb, period, conn, SHEET_MONTHLY_RECORD)
-        self._write_sheet_rows(wb, period, conn, SHEET_PERF_RECORD)
+        plan = (
+            (SHEET_SUMMARY, lambda: self._write_summary(wb, period, conn)),
+            (SHEET_SUMMARY_ANALYSIS,
+             lambda: self._write_summary_analysis(wb, period, conn)),
+            (SHEET_TREND, lambda: self._write_trend(wb, period, conn)),
+            (SHEET_DIFF,
+             lambda: self._write_sheet_rows(wb, period, conn, SHEET_DIFF)),
+            (SHEET_BUDGET, lambda: self._write_budget(wb, period, conn)),
+            (SHEET_DRAFT, lambda: self._write_draft(wb, period, conn)),
+            (SHEET_RESTRUCTURE,
+             lambda: self._write_sheet_rows(wb, period, conn, SHEET_RESTRUCTURE)),
+            (SHEET_LEGEND,
+             lambda: self._write_sheet_rows(wb, period, conn, SHEET_LEGEND)),
+            (SHEET_MONTHLY_RECORD,
+             lambda: self._write_sheet_rows(wb, period, conn, SHEET_MONTHLY_RECORD)),
+            (SHEET_PERF_RECORD,
+             lambda: self._write_sheet_rows(wb, period, conn, SHEET_PERF_RECORD)),
+        )
+        for name, fn in plan:
+            self._cur_sheet = name
+            fn()
+        self._cur_sheet = ""
+        # 版式收尾：按 golden 规范对齐列宽/行高/合并/冻结/打印/tab（D2-C）。
+        # 例外：图例已按 Rex 2026-11-23 §4.3 拍板删除 4 个全空重复列（D/H/K/N），
+        # 物理列位与 golden 不同，套用会错位 → 不应用其列级版式。
+        if self._layout:
+            for name in wb.sheetnames:
+                if name == SHEET_LEGEND[:31]:
+                    continue
+                self._cur_sheet = name
+                self._apply_layout_finish(wb[name], name)
+            self._cur_sheet = ""
 
     # ─── 宽表类 Sheet（预算执行表/底稿/差异/重拆/图例/月度/履约）───
 
@@ -173,6 +306,53 @@ class RevenueAnalysisExporter:
         # 列宽（采样前 200 行）
         self._autofit(ws, columns, rows, width_max=40)
         ws.freeze_panes = "D4" if sheet in (SHEET_BUDGET, SHEET_DRAFT) else "A2"
+
+    def _apply_layout_finish(self, ws: Any, name: str) -> None:
+        """按 golden 规范收尾：列宽/行高/合并/冻结/打印/tab（Rex D2 拍板）。
+
+        只应用结构性与视觉规则；数值已由各写入函数负责。
+        """
+        spec_sh = _spec_sheet(self._layout, name)
+        if not spec_sh:
+            return
+        for col_letter, w in (spec_sh.get("col_widths") or {}).items():
+            ws.column_dimensions[col_letter].width = w
+        for row_idx, h in (spec_sh.get("row_heights") or {}).items():
+            try:
+                ws.row_dimensions[int(row_idx)].height = h
+            except (ValueError, TypeError):
+                continue
+        for rng in spec_sh.get("merges") or []:
+            try:
+                ws.merge_cells(rng)
+            except Exception:
+                continue
+        pr = spec_sh.get("print") or {}
+        if pr.get("orient"):
+            ws.page_setup.orientation = pr["orient"]
+        if pr.get("paper") is not None:
+            ws.page_setup.paperSize = pr["paper"]
+        if pr.get("fitW") is not None:
+            ws.page_setup.fitToWidth = pr["fitW"]
+        if pr.get("fitH") is not None:
+            ws.page_setup.fitToHeight = pr["fitH"]
+        mar = {"left": pr.get("m_l"), "right": pr.get("m_r"),
+               "top": pr.get("m_t"), "bottom": pr.get("m_b")}
+        if any(v is not None for v in mar.values()):
+            cur = ws.page_margins
+            ws.page_margins.left = mar["left"] if mar["left"] is not None else cur.left
+            ws.page_margins.right = mar["right"] if mar["right"] is not None else cur.right
+            ws.page_margins.top = mar["top"] if mar["top"] is not None else cur.top
+            ws.page_margins.bottom = mar["bottom"] if mar["bottom"] is not None else cur.bottom
+        if pr.get("titles"):
+            ws.print_title_rows = pr["titles"]
+        if "freeze" in spec_sh:
+            ws.freeze_panes = spec_sh.get("freeze")
+        tab = spec_sh.get("tab")
+        if tab and ":" not in str(tab):
+            from openpyxl.styles.colors import Color as _Color
+            ws.sheet_properties.tabColor = _Color(rgb=f"FF{tab}"
+                                                  if len(str(tab)) == 6 else tab)
 
     def _header_map(self, sheet: str) -> dict[str, str]:
         """列字母 → 中文表头（预算执行表/底稿专用映射）。
@@ -489,6 +669,16 @@ class RevenueAnalysisExporter:
         cell.alignment = Alignment(horizontal="center", vertical="center",
                                    wrap_text=True)
         self._border(cell)
+        # Rex 2026-11-24 D2：表头按 golden 规范覆盖（字体/填充/对齐）
+        spec_sh = _spec_sheet(self._layout, self._cur_sheet)
+        if spec_sh:
+            st = self._style_of(spec_sh, row, col)
+            if st.get("font"):
+                cell.font = st["font"]
+            if st.get("fill"):
+                cell.fill = st["fill"]
+            if st.get("align"):
+                cell.alignment = st["align"]
 
     _DATE_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})(?: 00:00:00)?$")
     _TIME_RE = re.compile(r"^(\d{1,2}):(\d{2}):(\d{2})$")
@@ -526,6 +716,16 @@ class RevenueAnalysisExporter:
         elif isinstance(value, str):
             cell.alignment = Alignment(horizontal="left", vertical="center")
         self._border(cell)
+        # Rex 2026-11-24 D2：按 golden 版式覆盖字体/填充/对齐
+        spec_sh = _spec_sheet(self._layout, self._cur_sheet)
+        if spec_sh:
+            st = self._style_of(spec_sh, row, col)
+            if st.get("font"):
+                cell.font = st["font"]
+            if st.get("fill"):
+                cell.fill = st["fill"]
+            if st.get("align"):
+                cell.alignment = st["align"]
 
     def _border(self, cell: Any) -> None:
         thin = Side(border_style="thin", color=BORDER_COLOR)

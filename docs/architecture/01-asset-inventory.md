@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-22 10:51 UTC+08:00
+最后生成：2026-11-24 16:05 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -54,13 +54,13 @@
 
 ## L2 — 技能资产 (Skills)
 
-**总计** 116 个（可用 105）
+**总计** 117 个（可用 106）
 
 | 来源 | 数量 | 说明 |
 |---|---|---|
 | `openclaw-bundled` | 49 | OpenClaw 内置（随版本升级） |
 | `openclaw-custodian` | 4 | — |
-| `openclaw-extra` | 37 | 插件附带技能 |
+| `openclaw-extra` | 38 | 插件附带技能 |
 | `openclaw-managed` | 26 | 已安装的托管技能 |
 
 ### 自建技能（按层分布）
@@ -84,6 +84,7 @@
 | L3 通用业务 | `bangcle-project-retrospective` | Bangcle 项目复盘建议：业务目标是对项目或项目集（Program）做复盘，输出产品差异/优化空间与项目管理复盘（含责任方建议），... | `L3-business/skills/bangcle-project-retrospective` |
 | L3 通用业务 | `bangcle-project-summary` | Bangcle 项目信息汇总：业务目标是汇总项目交付实施情况，从 ONES 等系统汇总客户名下全部项目/产品/工作项/交付物/责任人，... | `L3-business/skills/bangcle-project-summary` |
 | L3 通用业务 | `contract-approval` | 销售合同审批工作流：起草、分级审批、风险扫描、合同生成、归档。基于《民法典》合同编 + CLM 7 阶段方法论。L3 纯逻辑核心，L4... | `L3-business/skills/contract-approval` |
+| L3 通用业务 | `customer-rectification-report` | 客户《项目复盘与整改报告》正式 Word 交付物编制：把客户现场反馈的 N 条问题，编制成固定六章四附件、逐条含整改措施/责任方/时限... | `L3-business/skills/customer-rectification-report` |
 | L2 基础设施 | `dag-orchestrator` | DAG 工作流编排器。将复杂任务分解为有向无环图（DAG），支持并行执行和变量传递。 | `L2-infra/skills/dag-orchestrator` |
 | L2 基础设施 | `meeting-minutes` | 把会议录音转写/速记提炼为结构化、可溯源、术语统一的正式纪要，支持会后材料合并与多格式交付。触发：整理会议纪要、会议记录、校订智能纪要... | `L2-infra/skills/meeting-minutes` |
 | L2 基础设施 | `model-scheduling` |  | `L2-infra/skills/model-scheduling` |
@@ -95,7 +96,7 @@
 | L2 基础设施 | `system-health-check` |  | `L2-infra/skills/system-health-check` |
 | L2 基础设施 | `web-ui-design` |  | `L2-infra/skills/web-ui-design` |
 
-_自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
+_自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 
 ## L2 — Agent 资产
 
@@ -294,8 +295,8 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `dcc1076` |
-| Commit 数 | 748 |
+| HEAD | `c21b873` |
+| Commit 数 | 763 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -310,7 +311,7 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 | `.deprecated` | 0 | 0 | 0 | `L2-infra/components/.deprecated` |
 | `ai-knowledge-base` | 93 | 29 | 13 | `L2-infra/components/ai-knowledge-base` |
 | `backup` | 0 | 0 | 0 | `L2-infra/components/backup` |
-| `browser-automation` | 0 | 0 | 0 | `L2-infra/components/browser-automation` |
+| `browser-automation` | 2 | 0 | 1 | `L2-infra/components/browser-automation` |
 | `config` | 9 | 0 | 4 | `L2-infra/components/config` |
 | `context-guardian` | 0 | 0 | 0 | `L2-infra/components/context-guardian` |
 | `context-management` | 5 | 0 | 1 | `L2-infra/components/context-management` |
@@ -334,6 +335,7 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 | `system-governor` | 20 | 0 | 6 | `L2-infra/components/system-governor` |
 | `tool-policy` | 0 | 0 | 0 | `L2-infra/components/tool-policy` |
 | `web-common` | 14 | 4 | 2 | `L2-infra/components/web-common` |
+| `wecom-ax-collector` | 4 | 0 | 1 | `L2-infra/components/wecom-ax-collector` |
 | `workspace-temp-cleanup` | 5 | 0 | 1 | `L2-infra/components/workspace-temp-cleanup` |
 
 ### L3 通用业务
@@ -354,14 +356,14 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
-| `bangcle-contract` | 110 | 17 | 3 | `L4-proprietary/components/bangcle-contract` |
-| `bangcle-ppt` | 33 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 186 | 12 | 29 | `L4-proprietary/components/bdms` |
-| `cissp-trainer` | 25 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
+| `bangcle-contract` | 115 | 20 | 3 | `L4-proprietary/components/bangcle-contract` |
+| `bangcle-ppt` | 32 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
+| `bdms` | 182 | 12 | 29 | `L4-proprietary/components/bdms` |
+| `cissp-trainer` | 24 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
-| `delivery-center` | 82 | 0 | 16 | `L4-proprietary/components/delivery-center` |
-| `fin-l4` | 58 | 0 | 14 | `L4-proprietary/components/fin-l4` |
-| `office-contract` | 15 | 0 | 3 | `L4-proprietary/components/office-contract` |
+| `delivery-center` | 81 | 0 | 16 | `L4-proprietary/components/delivery-center` |
+| `fin-l4` | 57 | 0 | 14 | `L4-proprietary/components/fin-l4` |
+| `office-contract` | 14 | 0 | 3 | `L4-proprietary/components/office-contract` |
 | `product-kb` | 15 | 14 | 3 | `L4-proprietary/components/product-kb` |
 | `revenue-recognition` | 21 | 0 | 0 | `L4-proprietary/components/revenue-recognition` |
 
@@ -370,7 +372,7 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 ## L2 / L3 / L4 已建设完成组件（自动登记）
 
 > 由 `gen_asset_inventory.discover_completed_components()` 全盘扫描，
-> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 44 个。
+> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 45 个。
 
 ### L2 基础设施
 
@@ -378,7 +380,7 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 |---|---|---|---|
 | AI Knowledge Base (ai-knowledge-base) | — | `L2-infra/components/ai-knowledge-base` | `VERIFICATION-P2-kinetic-v1.0.md`, `VERIFICATION-P1-identity-v1.0.md`, `OPERATIONS-v1.0.md` |
 | backup | — | `L2-infra/components/backup` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
-| browser-automation | — | `L2-infra/components/browser-automation` | `VERIFICATION-v1.0.md` |
+| browser-automation | — | `L2-infra/components/browser-automation` | `VERIFICATION-v2.0.md`, `VERIFICATION-v1.0.md` |
 | config | — | `L2-infra/components/config` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | context-guardian（修复版） | 文档：PRD-v1.0 / DESIGN-OUTLINE-v1.0 / DESIGN-DETAIL-v1.0 / ... | `L2-infra/components/context-guardian` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | context-management | — | `L2-infra/components/context-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
@@ -402,6 +404,7 @@ _自建技能总计: 27 个（L2: 10, L3: 6, L4: 11, 根目录: 0）_
 | system-governor | — | `L2-infra/components/system-governor` | `VERIFICATION-system-governor-v1.0.md`, `OPERATIONS-system-governor-v1.0.md` |
 | tool-policy | — | `L2-infra/components/tool-policy` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | 🧩 Web Common — L2 通用 Web UI 组件库 | 1. **零依赖**：仅 Jinja2 + FastAPI，不引入 React/Vue 等前端框架 | `L2-infra/components/web-common` | `OPERATIONS-v1.0.md`, `VERIFICATION-v2.0.md`, `VERIFICATION-v1.0.md` |
+| wecom-ax-collector | — | `L2-infra/components/wecom-ax-collector` | `VERIFICATION-v1.0.md` |
 | workspace-temp-cleanup | — | `L2-infra/components/workspace-temp-cleanup` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 ### L3 通用业务
 
@@ -454,13 +457,13 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 > 维护：`L2-infra/components/config/capability-registry/registry.yaml`
 > 门禁：pre-commit `--check --staged`（重复家族脚本命中即阻断并指出权威入口）
 
-**共 82 项能力**（更新于 2026-11-20）
+**共 84 项能力**（更新于 2026-11-24）
 
 | 能力 ID | 名称 | 层 | 权威入口 |
 |---|---|---|---|
 | `ai-knowledge-base` | AI 知识库（多 agent 实例 + 导入） | L2 | `python3 L2-infra/components/ai-knowledge-base/cli/main.py` |
 | `backup` | 备份（SQLite 加密 / 官方全量） | L2 | `bash L2-infra/components/backup/backup.sh --daily` |
-| `browser-automation` | 浏览器自动化基础设施（占位，能力在 delivery-center/oa-live） | L2 | `L2-infra/components/browser-automation/ (空占位目录，无独立入口；实际能力 = browser-isolated-chrome)` |
+| `browser-automation` | 浏览器自动化基础设施（隔离 Chrome 幂等管理） | L2 | `python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py ensure` |
 | `config` | 配置管理（快照/审计/hook 安装） | L2 | `bash L2-infra/components/config/config.sh apply` |
 | `context-guardian` | 上下文守护（插件） | L2 | `node --test L2-infra/components/context-guardian/tests/test_core.js` |
 | `context-management` | 上下文管理（窗口探测 / 子代理守护） | L2 | `python3 L2-infra/components/context-management/probe_context_window.py` |
@@ -485,6 +488,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `tool-policy` | 工具策略（审计 / 健康） | L2 | `bash L2-infra/components/tool-policy/tool_policy_audit.sh` |
 | `web-common` | Web 通用（FastAPI 应用基座） | L2 | `python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000` |
 | `workspace-temp-cleanup` | 工作区临时文件清理 | L2 | `python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py dry-run` |
+| `wecom-ax-collector` | 企业微信 macOS AX 采集（只读无障碍，零注入） | L2 | `python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/c...` |
 | `contract-approval` | 合同审批（L3 纯逻辑核心） | L3 | `python3 -c "from contract_approval import *; print('OK')"` |
 | `contract-management` | 合同管理（解析 / 审查 / 风险扫描 / 本体适配） | L3 | `python3 L3-business/components/contract-management/contract_management/contract_auditor.py` |
 | `delivery-management-framework` | 交付管理框架（DMS CLI） | L3 | `python3 L3-business/components/delivery-management-framework/dms_cli.py --help` |
@@ -527,6 +531,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `skill-bangcle-obligation-summary` | 履约义务汇总（skill） | L3 | `L3-business/skills/bangcle-obligation-summary/SKILL.md` |
 | `skill-bangcle-project-report` | 项目汇报材料（skill） | L3 | `L3-business/skills/bangcle-project-report/SKILL.md` |
 | `skill-bangcle-project-retrospective` | 项目复盘（skill） | L3 | `L3-business/skills/bangcle-project-retrospective/SKILL.md` |
+| `skill-customer-rectification-report` | 客户整改报告（项目复盘与整改报告 Word 正式件，skill） | L3 | `L3-business/skills/customer-rectification-report/SKILL.md` |
 | `skill-bangcle-project-summary` | 项目信息汇总（skill） | L3 | `L3-business/skills/bangcle-project-summary/SKILL.md` |
 | `skill-contract-approval` | 合同审批（skill） | L3 | `L3-business/skills/contract-approval/SKILL.md` |
 | `skill-bangcle-ppt` | Bangcle PPT 模板（skill） | L4 | `L4-proprietary/skills/bangcle-ppt/SKILL.md` |

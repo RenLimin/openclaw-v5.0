@@ -6,6 +6,11 @@
   AK(滞后未完成) > 0  或  AI(确收) < 0
   → 202606/202609 规范键：AF > 0  或  AD < 0
 
+Rex 2026-11-24 拍板（§15.4 决策 C）：**按规则执行**（BK/BL 由硬规则产出，
+不因源表人工值而改写），同时把「规则候选值 ≠ 源表人工已核值」的行显式标记
+manual_review 进人工核实清单，并在 context._audit 留存双方取值供审计。
+源表 BK/BL 仅作对照，不回写、不覆盖规则结果。
+
 硬规则（仅两条，其余一律留空 + 人工校验清单）：
   1. AR(消失备注) = "合同终止"        → BL = 客户原因-终止
   2. BF(履约项统计状态) = "3：交付异常" → BK = 差异确收（异常项目）
@@ -99,14 +104,15 @@ def compute_attribution(rows: list[dict]) -> dict[str, Any]:
           "pending": int,            # 留空待人工行数
           "rule_hits": {"rule1_terminate": int, "rule2_exception": int},
           "pair_violations": int,    # BK 非空 ⇔ BL 非空 违反数
+          "manual_conflicts": int,   # 规则值与源表人工值冲突、待人工核实行数
           "rows": [                  # 触发行明细
              {"perf_id", "contract_no", "category", "trigger_reason",
-              "status", "reason", "auto_filled", "context"}
+              "status", "reason", "auto_filled", "manual_review", "context"}
           ],
         }
     """
     out_rows: list[dict] = []
-    rule1 = rule2 = pair_violations = 0
+    rule1 = rule2 = pair_violations = manual_conflicts = 0
     skipped_agg = 0
 
     for r in rows:
@@ -122,10 +128,25 @@ def compute_attribution(rows: list[dict]) -> dict[str, Any]:
             rule1 += 1
         if "BF=" in "".join(hits):
             rule2 += 1
+        # Rex 2026-11-24：规则结果保持；与源表人工值（BK/BL）比对，
+        # 不一致 → 标记 manual_review 进人工核实清单（不改写规则结论）。
+        human_status = str(_get(r, "BK") or "").strip() or None
+        human_reason = str(_get(r, "BL") or "").strip() or None
+        conflict = bool(
+            (status and human_status and status != human_status)
+            or (reason and human_reason and reason != human_reason)
+        )
+        if conflict:
+            manual_conflicts += 1
         # 成对校验：任一非空而另一为空 → 违反
         if bool(status) != bool(reason):
             pair_violations += 1
         ctx = {k: _get(r, k) for k in _CONTEXT_KEYS if _get(r, k) is not None}
+        ctx["_audit"] = {
+            "manual_review": 1 if conflict else 0,
+            "rule_value": {"status": status, "reason": reason},
+            "human_value": {"status": human_status, "reason": human_reason},
+        }
         out_rows.append({
             "perf_id": _get(r, "E"),
             "contract_no": _get(r, "B"),
@@ -134,6 +155,7 @@ def compute_attribution(rows: list[dict]) -> dict[str, Any]:
             "status": status,
             "reason": reason,
             "auto_filled": 1 if (status or reason) else 0,
+            "manual_review": 1 if conflict else 0,
             "context": ctx,
         })
 
@@ -144,6 +166,7 @@ def compute_attribution(rows: list[dict]) -> dict[str, Any]:
         "pending": len(out_rows) - auto_filled,
         "rule_hits": {"rule1_terminate": rule1, "rule2_exception": rule2},
         "pair_violations": pair_violations,
+        "manual_conflicts": manual_conflicts,
         "skipped_aggregate_rows": skipped_agg,
         "rows": out_rows,
     }
