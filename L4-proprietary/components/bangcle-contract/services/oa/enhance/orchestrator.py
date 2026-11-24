@@ -121,6 +121,7 @@ def _build_contract_review(contract_text: Optional[str]) -> Dict[str, Any]:
         "risk_points": {"points": [], "summary": {}, "overall_risk": "unknown",
                         "degraded": [], "rule_set_version": ""},
         "degraded": [],
+        "warnings": [],
     }
     if not contract_text or not contract_text.strip():
         out["degraded"].append("NO_CONTRACT_TEXT")
@@ -135,6 +136,19 @@ def _build_contract_review(contract_text: Optional[str]) -> Dict[str, Any]:
         rp = rpt.build_risk_points(dig)
         out["clauses"] = cl
         out["risk_points"] = rp
+
+        # L4 侧容错（不改 L3）：实测 L3 `parse_contract` 主体抽取存在串用——
+        # party_a 与 party_b 完全相同（地址/邮箱/银行信息被复制到双方）。
+        # 该字段不影响风险点结论，但会误导人工，故显式标注、交人工核对。
+        pa, pb = cl.get("party_a") or {}, cl.get("party_b") or {}
+        _shared = [k for k in ("address", "email", "bank", "account")
+                   if pa.get(k) and pa.get(k) == pb.get(k)]
+        if pa and pb and pa.get("name") != pb.get("name") and _shared:
+            out["warnings"].append(
+                "主体字段疑似串用（L3 抽取限制）：甲方/乙方 %s 字段相同=%r；"
+                "仅作参考，须人工以原文核对" % (
+                    "/".join(_shared),
+                    {k: (pa.get(k) or "")[:40] for k in _shared}))
         if rp.get("degraded"):
             out["degraded"].extend(rp["degraded"])
         if cl.get("stats", {}).get("missing_required"):
@@ -195,6 +209,8 @@ def _render_contract_review_md(request_id: str, cr: Dict[str, Any],
     lines += ["## 3. 质量信号", ""]
     lines.append("- 整体风险：%s" % rp.get("overall_risk", "unknown"))
     lines.append("- 汇总：%s" % json.dumps(rp.get("summary") or {}, ensure_ascii=False))
+    for w in (cr.get("warnings") or []):
+        lines.append("- ⚠️ 抽取质量提示：%s" % w)
     if dg:
         lines.append("- ⚠️ 数据源降级：%s（结论可能过期，需人工复核）" % "、".join(dg))
     else:

@@ -228,3 +228,18 @@ def test_remark_r1_degrade_reason_exposed(form):
                                   "projects": []}, {})
     assert "原因：ones_project_not_found" in md
     assert "数据源降级" in md
+
+
+def test_build_contract_review_flags_party_field_mixing():
+    """L3 主体字段串用（party_a==party_b）时 L4 必须显式标注（不掩盖、不修正）。"""
+    from services.oa.enhance.orchestrator import _build_contract_review
+
+    if not CONTRACT_TXT.exists():
+        pytest.skip("缺 886377 contract.txt")
+    text = CONTRACT_TXT.read_text(encoding="utf-8", errors="replace")
+    cr = _build_contract_review(text)
+    assert cr["warnings"], "实测样本应触发主体串用提示"
+    assert "主体字段疑似串用" in cr["warnings"][0]
+    # 只标注不篡改：不修改 party_a/party_b 原值
+    pa, pb = cr["clauses"]["party_a"], cr["clauses"]["party_b"]
+    assert pa.get("name") != pb.get("name")
