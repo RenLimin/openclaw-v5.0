@@ -110,6 +110,24 @@ def _read_contract_text(path: Optional[Path]) -> Optional[str]:
     return None
 
 
+def _party_mixing_warnings(pa: Dict[str, Any], pb: Dict[str, Any]) -> list:
+    """检测主体字段跨方串用（防御性：L3 修好前会命中，修好后应为空）。
+
+    口径：名称不同但 address/email/bank/account 任一字段两方同值 → 判定疑似串用。
+    L4 只标注不修正（L4→L3 反向依赖禁止），交人工以原文核对。
+    """
+    if not pa or not pb or pa.get("name") == pb.get("name"):
+        return []
+    shared = [k for k in ("address", "email", "bank", "account")
+              if pa.get(k) and pa.get(k) == pb.get(k)]
+    if not shared:
+        return []
+    return ["主体字段疑似串用（上游抽取限制）：甲方/乙方 %s 字段相同=%r；"
+            "仅作参考，须人工以原文核对" % (
+                "/".join(shared),
+                {k: (pa.get(k) or "")[:40] for k in shared})]
+
+
 def _build_contract_review(contract_text: Optional[str]) -> Dict[str, Any]:
     """合同原文 → 条款拆解 + 风险点（L3 受控库，只读纯计算）。
 
@@ -137,18 +155,8 @@ def _build_contract_review(contract_text: Optional[str]) -> Dict[str, Any]:
         out["clauses"] = cl
         out["risk_points"] = rp
 
-        # L4 侧容错（不改 L3）：实测 L3 `parse_contract` 主体抽取存在串用——
-        # party_a 与 party_b 完全相同（地址/邮箱/银行信息被复制到双方）。
-        # 该字段不影响风险点结论，但会误导人工，故显式标注、交人工核对。
-        pa, pb = cl.get("party_a") or {}, cl.get("party_b") or {}
-        _shared = [k for k in ("address", "email", "bank", "account")
-                   if pa.get(k) and pa.get(k) == pb.get(k)]
-        if pa and pb and pa.get("name") != pb.get("name") and _shared:
-            out["warnings"].append(
-                "主体字段疑似串用（L3 抽取限制）：甲方/乙方 %s 字段相同=%r；"
-                "仅作参考，须人工以原文核对" % (
-                    "/".join(_shared),
-                    {k: (pa.get(k) or "")[:40] for k in _shared}))
+        out["warnings"].extend(_party_mixing_warnings(cl.get("party_a") or {},
+                                                      cl.get("party_b") or {}))
         if rp.get("degraded"):
             out["degraded"].extend(rp["degraded"])
         if cl.get("stats", {}).get("missing_required"):

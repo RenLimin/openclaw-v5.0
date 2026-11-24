@@ -84,3 +84,4 @@ python3 -m pytest L3-business/components/contract-management/tests/test_purity.p
 | 日期 | 版本 | 变更 |
 |---|---|---|
 | 2026-10-27 | v1.0 | 初版 |
+| 2026-11-24 | v1.1 | 主体抽取按方归属修复；回归见 VERIFICATION-v1.1 |

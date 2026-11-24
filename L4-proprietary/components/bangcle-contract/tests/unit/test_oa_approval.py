@@ -230,16 +230,29 @@ def test_remark_r1_degrade_reason_exposed(form):
     assert "数据源降级" in md
 
 
-def test_build_contract_review_flags_party_field_mixing():
-    """L3 主体字段串用（party_a==party_b）时 L4 必须显式标注（不掩盖、不修正）。"""
+def test_party_mixing_warning_function():
+    """告警函数：构造串用样本必须命中；正常样本不命中（防御性保留）。"""
+    from services.oa.enhance.orchestrator import _party_mixing_warnings
+
+    same = {"name": "A公司", "address": "同址", "bank": "同行"}
+    warn = _party_mixing_warnings(same, dict(same, name="B公司"))
+    assert warn and "主体字段疑似串用" in warn[0]
+    # 正常样本：两方地址不同 → 无告警
+    clean_a = {"name": "A公司", "address": "上海路1号"}
+    clean_b = {"name": "B公司", "address": "北京路2号"}
+    assert _party_mixing_warnings(clean_a, clean_b) == []
+    # 名称相同不算串用
+    assert _party_mixing_warnings(same, same) == []
+
+
+def test_real_sample_886377_no_party_mixing_after_l3_fix():
+    """L3 v1.1 修复后，886377 不应再触发主体串用告警（回归锁定）。"""
     from services.oa.enhance.orchestrator import _build_contract_review
 
     if not CONTRACT_TXT.exists():
         pytest.skip("缺 886377 contract.txt")
     text = CONTRACT_TXT.read_text(encoding="utf-8", errors="replace")
     cr = _build_contract_review(text)
-    assert cr["warnings"], "实测样本应触发主体串用提示"
-    assert "主体字段疑似串用" in cr["warnings"][0]
-    # 只标注不篡改：不修改 party_a/party_b 原值
+    assert not [w for w in (cr["warnings"] or []) if "串用" in w], cr["warnings"]
     pa, pb = cr["clauses"]["party_a"], cr["clauses"]["party_b"]
-    assert pa.get("name") != pb.get("name")
+    assert pa.get("address") != pb.get("address"), "甲乙方地址应分属"

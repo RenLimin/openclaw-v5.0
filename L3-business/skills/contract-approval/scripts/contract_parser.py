@@ -209,59 +209,189 @@ def parse_contract(text: str) -> ParsedContract:
     return parsed
 
 
-def _extract_party_info(text: str, party_label: str) -> dict:
-    """提取一方主体信息"""
-    info = {}
+# ============================================================
+# 主体信息抽取（v1.1 重写：按方归属，禁止跨方串用）
+# ------------------------------------------------------------
+# v1.0 缺陷：地址/邮箱/开户行/账号按「全文首个匹配」赋值，且甲乙方共用同一规则，
+# 同一值被复制给双方（真实样本 886377 复现：party_a == party_b，银行账号实为乙方）。
+# v1.1 口径：
+#   1) 双列表格行（含 `|` 且成对「字段：值」单元）按列归属：首列→甲方(需方)，
+#      次列→乙方(供方)；出现顺序相反时按标签实际位置纠正；
+#   2) 其余字段按「与本方标签最近提及距离」归属；与其他方并列（距离相等）时
+#      **不归属**——缺失优于错误；
+#   3) 邮箱仅取 ASCII 本地部分，剥离中文前缀（如「向huijuan.lin@…」）；
+#   4) 地址值做卫生过滤（空值 / 含「电子邮箱」等串行了文字的候选丢弃）。
+# ============================================================
 
-    # 名称
-    name_patterns = [
-        rf'{party_label}[（(][^）)]*[）)][：:]\s*([\u4e00-\u9fa5（）\(\)]+?)(?:\s{{2,}}|\n|地址)',
-        rf'{party_label}[：:]\s*([\u4e00-\u9fa5（）\(\)]+?)(?:\s{{2,}}|\n|地址)',
-    ]
-    for pat in name_patterns:
-        m = re.search(pat, text)
+_PARTY_ALIASES = {
+    "甲方": ("甲方", "需方"),
+    "乙方": ("乙方", "供方"),
+}
+
+_PARTY_FIELD_PATTERNS = [
+    ("address", r"地址[：:]\s*([^|\n]+)"),
+    ("zip", r"邮编[：:]\s*(\d{6})"),
+    ("phone", r"(?:联系电话|电话)[：:]\s*(\d[\d\-]+)"),
+    ("email", r"([A-Za-z0-9._+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})"),
+    ("credit_code", r"统一社会信用代码[：:]\s*([0-9A-Z]{18})"),
+    ("bank", r"开户行[：:]\s*([^|\n]+)"),
+    ("account", r"账号[：:]\s*(\d+)"),
+]
+
+
+def _party_mention_lines(lines, aliases):
+    """返回命中别名集合的行号列表。"""
+    return [i for i, ln in enumerate(lines) if any(a in ln for a in aliases)]
+
+
+def _nearest_distance(idx, hits):
+    if not hits:
+        return None
+    return min(abs(idx - h) for h in hits)
+
+
+_ROW_FIELD_LABELS = ["联系电话", "需方", "供方", "地址", "邮编", "联系人",
+                     "传真", "电话"]
+
+
+def _row_cells(line):
+    """解析一行中的「标签：值」单元序列。
+
+    兼容两种版式：
+      1) 管道分隔（txt/OCR 导出）：`地址： | A | 地址： | B`
+      2) 空格连排（docx 表格提取，无 |）：`地址： A 地址： B`
+    """
+    cells = [c.strip() for c in line.split("|")]
+    out, i = [], 0
+    while i < len(cells) - 1:
+        m = re.match(r"^([\u4e00-\u9fa5]{1,8})[：:]$", cells[i])
         if m:
-            info["name"] = m.group(1).strip()
-            break
+            out.append((m.group(1), cells[i + 1].strip()))
+            i += 2
+        else:
+            i += 1
+    if out:
+        return out
+    # 无管道：按标签重复出现顺序切分
+    labels = "|".join(re.escape(x) for x in _ROW_FIELD_LABELS)
+    pat = re.compile(r"(%s)\s*[：:]\s*" % labels)
+    hits = list(pat.finditer(line))
+    res = []
+    for idx, h in enumerate(hits):
+        end = hits[idx + 1].start() if idx + 1 < len(hits) else len(line)
+        res.append((h.group(1), line[h.end():end].strip()))
+    return res
 
-    # 地址
-    addr_match = re.search(rf'地址[：:]\s*(.+?)(?:\n|邮编)', text)
-    if addr_match:
-        info["address"] = addr_match.group(1).strip()
+def _clean_value(key, value):
+    """候选值卫生过滤：返回清洗后的值，无效返回 ''。"""
+    v = (value or "").strip()
+    if not v:
+        return ""
+    if key == "address":
+        # 串行了后续文字的 OCR 脏值（如「…年授权产品电子邮箱/地址：」）
+        if "电子邮箱" in v or v.count("：") >= 2:
+            return ""
+        if len(v) > 60:
+            return ""
+    return v
 
-    # 邮编
-    zip_match = re.search(r'邮编[：:]\s*(\d{6})', text)
-    if zip_match:
-        info["zip"] = zip_match.group(1)
 
-    # 电话
-    phone_match = re.search(r'联系电话[：:]\s*(\d[\d\-]+)', text)
-    if phone_match:
-        info["phone"] = phone_match.group(1)
+def _extract_party_name(text, party_label, aliases):
+    """名称：优先签字页 `甲方：公司`，其次 `公司（以下简称"甲方"）`。"""
+    for al in aliases:
+        m = re.search(rf"^\s*{al}\s*[：:]\s*([一-龥A-Za-z0-9（）()]+?)\s*$",
+                      text, re.M)
+        if m:
+            return m.group(1).strip()
+    for al in aliases:
+        m = re.search(rf"([一-龥A-Za-z0-9（）()]+?)（以下简称[\"“]?{al}[\"”]?）", text)
+        if m:
+            return m.group(1).strip()
+    return ""
 
-    # 邮箱
-    email_match = re.search(r'([\w.+-]+@[\w-]+\.[\w]+)', text)
-    if email_match:
-        info["email"] = email_match.group(1)
 
-    # 统一社会信用代码
-    credit_match = re.search(r'统一社会信用代码[：:]\s*(\d+)', text)
-    if credit_match:
-        info["credit_code"] = credit_match.group(1)
+def _extract_party_info(text: str, party_label: str) -> dict:
+    """提取一方主体信息（v1.1：按方归属，绝不把其他方的值复制到本方）。"""
+    info = {}
+    lines = text.split("\n")
+    self_alias = _PARTY_ALIASES.get(party_label, (party_label,))
+    other_label = "乙方" if party_label == "甲方" else "甲方"
+    other_alias = _PARTY_ALIASES.get(other_label, (other_label,))
+    self_hits = _party_mention_lines(lines, self_alias)
+    other_hits = _party_mention_lines(lines, other_alias)
 
-    # 开户行
-    bank_match = re.search(r'开户行[：:]\s*(.+?)(?:\n|账号)', text)
-    if bank_match:
-        info["bank"] = bank_match.group(1).strip()
+    # 1) 名称
+    info["name"] = _extract_party_name(text, party_label, self_alias)
 
-    # 账号
-    account_match = re.search(r'账号[：:]\s*(\d+)', text)
-    if account_match:
-        info["account"] = account_match.group(1)
+    # 2) 双列表格行：按列归属（需方/供方 或同名字段两列）
+    #    列序由「需方/供方」标签行推断：需方(甲方)在前 → ["甲方","乙方"]。
+    _col_order = None
+    for idx, line in enumerate(lines):
+        pairs = _row_cells(line)
+        if not pairs:
+            continue
+        has_pipe = "|" in line
+        same_pair = len(pairs) >= 2 and pairs[0][0] == pairs[1][0]
+        has_supply_labels = any(lbl in ("需方", "供方") for lbl, _ in pairs)
+        if not has_pipe and not same_pair and not has_supply_labels:
+            # 无管道的正文散行（如「甲方指定地址：」）：不做列切分，交给距离归属
+            continue
+        # 需方/供方 行 → 名称
+        for label, value in pairs:
+            if label in ("需方", "供方"):
+                target = "甲方" if label == "需方" else "乙方"
+                if target == party_label and value and not info.get("name"):
+                    info["name"] = value
+        # 同名字段两列 → 按列序分配
+        if len(pairs) >= 2 and pairs[0][0] == pairs[1][0]:
+            field = pairs[0][0]
+            keymap = {"地址": "address", "邮编": "zip", "电话": "phone",
+                      "联系电话": "phone", "联系人": "contact"}
+            key = keymap.get(field)
+            if not key:
+                continue
+            vals = [p[1] for p in pairs[:2]]
+            if _col_order is None:
+                head = "\n".join(lines[max(0, idx - 6):idx])
+                p_need = head.rfind("需方")
+                p_supply = head.rfind("供方")
+                if p_supply != -1 and p_need != -1:
+                    # 文本中出现更早的一方 = 首列
+                    _col_order = ["甲方", "乙方"] if p_need < p_supply else ["乙方", "甲方"]
+                else:
+                    _col_order = ["甲方", "乙方"]
+            mine = vals[0] if _col_order[0] == party_label else vals[1]
+            mine = _clean_value(key, mine)
+            if mine and not info.get(key):
+                info[key] = mine
+
+    # 3) 单值字段：最近提及距离归属；并列则不归属
+    for key, pat in _PARTY_FIELD_PATTERNS:
+        if info.get(key):
+            continue
+        best = None
+        for m_idx, ln in enumerate(lines):
+            m = re.search(pat, ln)
+            if not m:
+                continue
+            val = _clean_value(key, m.group(1))
+            if not val:
+                continue
+            d_self = _nearest_distance(m_idx, self_hits)
+            d_other = _nearest_distance(m_idx, other_hits)
+            if d_self is None:
+                if d_other is None:  # 双方都无提及 → 退化场景，允许全局首配
+                    best = val if best is None else best
+                continue
+            if d_other is not None and d_other <= d_self:
+                continue  # 更近/等于他方 → 不归本方（并列=不归属）
+            if d_self > 8:
+                continue  # 离本方太远，不可信
+            best = val if best is None else best
+        if best:
+            info[key] = best
 
     return info
-
-
 
 
 def _normalize_ocr_text(text: str) -> str:
