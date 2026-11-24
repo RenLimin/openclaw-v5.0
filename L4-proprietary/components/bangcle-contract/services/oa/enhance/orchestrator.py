@@ -47,6 +47,7 @@ class ApprovalResult:
     checks: List[CheckResult] = field(default_factory=list)
     r1: Dict[str, Any] = field(default_factory=dict)
     r2: Dict[str, Any] = field(default_factory=dict)
+    history_delivery: Dict[str, Any] = field(default_factory=dict)
     remark: str = ""
     degraded: List[str] = field(default_factory=list)
     error: Optional[str] = None
@@ -58,6 +59,7 @@ class ApprovalResult:
             "checks": [c.to_dict() for c in self.checks],
             "r1": self.r1,
             "r2": self.r2,
+            "history_delivery": self.history_delivery,
             "remark": self.remark,
             "degraded": self.degraded,
             "error": self.error,
@@ -161,6 +163,7 @@ def run_approval(
             )
             res.r1 = enhanced["r1"]
             res.r2 = enhanced["r2"]
+            res.history_delivery = enhanced.get("history_delivery") or {}
             res.degraded = enhanced.get("degraded") or []
 
             # 4) 固定核查（L1 表单 + L2 原文）
@@ -169,7 +172,9 @@ def run_approval(
             res.checks = run_fixed_checks(form, body, ctext)
 
             # 5) 标准备注
-            res.remark = render_remark(form, res.checks, res.r1, res.r2, degraded=res.degraded)
+            res.remark = render_remark(form, res.checks, res.r1, res.r2,
+                                       degraded=res.degraded,
+                                       history_delivery=res.history_delivery)
             (out_dir / ("remark-%s.md" % rid)).write_text(res.remark, encoding="utf-8")
         except OrderFormError as exc:
             res.error = "OrderFormError: %s" % exc

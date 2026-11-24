@@ -71,6 +71,33 @@ def parse_body_fields(body_text: str) -> Dict[str, str]:
     return out
 
 
+_CONTRACT_NO_RE = re.compile(r"(XSZS\d{8}\d+(?:[A-Z0-9-]*)?)")
+
+
+def extract_contract_no(body_text: str, contract_name: str = "") -> tuple:
+    """提取合同编号：表单字段优先，合同名称回退。
+
+    返回 ``(值, 来源)``；来源 ∈ {form, contract_name, none}。
+
+    背景（P3）：实测 887756 表单「合同编号！」为空，但合同名称含
+    `20261106-01KP` 类编号 —— 仅凭表单判缺失会产生误报。回退命中须在
+    evidence 注明来源（可审计）。
+    """
+    fields = parse_body_fields(body_text)
+    v = (fields.get("合同编号！") or fields.get("合同编号") or "").strip()
+    if v and v not in ("【空】", "-", "/"):
+        return v, "form"
+    name = (contract_name or "").strip()
+    m = _CONTRACT_NO_RE.search(name or "")
+    if not m:
+        # 非 XSZS 前缀的松散编号（如「…-01KP-…」）也记录，但标来源为 name_loose
+        m2 = re.search(r"(\d{8}-[A-Z0-9]{2,})", name or "")
+        if m2:
+            return m2.group(1), "contract_name_loose"
+        return "", "none"
+    return m.group(1), "contract_name"
+
+
 def _manual(check_id: str, message: str) -> CheckResult:
     return CheckResult(check_id=check_id, level="manual", message=message,
                        evidence="未提供合同原文", source="none")
@@ -94,16 +121,22 @@ def run_fixed_checks(
     fields = parse_body_fields(body_text)
     results: List[CheckResult] = []
 
-    # ---- L1-a 合同编号 ----
-    contract_no = (fields.get("合同编号！") or fields.get("合同编号") or "").strip()
+    # ---- L1-a 合同编号（表单优先，合同名回退；来源入 evidence）----
+    contract_no, cn_source = extract_contract_no(
+        body_text, getattr(form, "contract_name", "") or "")
     if contract_no:
+        label = {"form": "表单", "contract_name": "合同名称回退",
+                 "contract_name_loose": "合同名称（松散编号）"}.get(cn_source, cn_source)
         results.append(CheckResult(
-            "contract_no_missing", "pass", "合同编号已填写",
-            evidence=contract_no, source="form"))
+            "contract_no_missing", "pass",
+            "合同编号已明确（来源：%s）" % label,
+            evidence="%s=%s（来源 %s）" % (
+                "合同编号", contract_no, cn_source),
+            source=cn_source))
     else:
         results.append(CheckResult(
-            "contract_no_missing", "block", "合同编号缺失（表单与正文均空）",
-            evidence="合同编号！=【空】", source="form"))
+            "contract_no_missing", "block", "合同编号缺失（表单与合同名称均未检出）",
+            evidence="合同编号！=【空】且合同名称无编号", source="none"))
 
     # ---- L1-b 服务期 ----
     start = (fields.get("服务开始日期") or fields.get("合同起始日期") or "").strip()

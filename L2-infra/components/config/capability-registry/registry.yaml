@@ -16,7 +16,7 @@
 #   - entry 必须是**可直接调用**的路径/命令，禁止写「见文档」这类不可执行指针
 
 version: 1
-updated: 2026-11-23
+updated: 2026-11-24
 
 # ── 重复建设高危目录（门禁扫描范围） ──
 high_risk_dirs:
@@ -387,7 +387,10 @@ capabilities:
       - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py --help"
       - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-fetch --oa-billid <id>"
       - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-project-mgmt --requestid <rid> --workflow wf_916|wf_815|wf_820"
-    notes: "合同正文权威来源=OA；review --oa-billid 直查"
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-approval --raw-dir tmp/oa-pif/raw --out-dir <dir>"
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py clauses --file <contract.txt|docx|pdf> [--out <json>]"
+      - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py history-delivery --contract-no <XSZS…> [--end-user <name>] [--out <json>]"
+    notes: "合同正文权威来源=OA；review --oa-billid 直查；条款拆解/风险点复用 L3 受控库（CHECK_RULES），法条不外造；R1b 历史交付盘点走 BDMS dr_sheet_row 快照只读（未收录≠正常）"
     supersedes: []
 
   - id: bangcle-ppt

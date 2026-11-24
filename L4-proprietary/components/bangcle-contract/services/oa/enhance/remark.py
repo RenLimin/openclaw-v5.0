@@ -53,6 +53,7 @@ def render_remark(
     r2: Optional[Dict[str, Any]] = None,
     *,
     degraded: Optional[List[str]] = None,
+    history_delivery: Optional[Dict[str, Any]] = None,
 ) -> str:
     """渲染标准审批备注。
 
@@ -60,10 +61,13 @@ def render_remark(
         form: 已解析 OA 单据。
         checks: 固定核查项结果。
         r1/r2: 增强核查结果 dict（``runner.run_enhance`` 产物）；可空。
-        degraded: 降级项列表（R1/R2 skipped）。
+        degraded: 降级项列表（R1/R2/R1b skipped）。
+        history_delivery: R1b 历史交付盘点 dict（``history_delivery.check_history_delivery``
+            产物）；可空。Rex 2026-11-24：履约义务重点=盘点历史交付问题。
     """
     r1 = r1 or {}
     r2 = r2 or {}
+    hd = history_delivery or {}
     degraded = degraded or []
 
     blocks = [c for c in checks if c.level == "block"]
@@ -108,12 +112,33 @@ def render_remark(
             r2v = "%s（概算 %s / 本单 %s）" % (r2v, te, ta)
     lines.append("R2 概算一致性：%s" % r2v)
 
+    # R1b 历史签约项目/合同交付问题盘点（BDMS 快照，只读）
+    hdv = hd.get("verdict") or ""
+    if not hdv:
+        pass
+    elif hdv == "未收录":
+        lines.append("R1b 历史交付盘点：未收录（BDMS 快照无该合同/用户记录，"
+                     "不作为「无异常」结论，请人工核对）")
+    elif hdv == "正常":
+        lines.append("R1b 历史交付盘点：正常（已收录 %s 行，未见交付/验收异常）"
+                     % hd.get("matched_rows", "?"))
+    else:
+        issues = hd.get("issues") or []
+        lines.append("R1b 历史交付盘点：%s（命中 %s 行 / 风险点 %d 条）"
+                     % (hdv, hd.get("matched_rows", "?"), len(issues)))
+        for i, it in enumerate(issues[:3], 1):
+            lines.append("%d. [%s] %s — %s" % (
+                i, it.get("level", ""), it.get("issue_type", ""),
+                (it.get("detail") or it.get("status") or "-").replace("\n", " ")[:80]))
+        if len(issues) > 3:
+            lines.append("…另有 %d 条（见 approval-summary.json）" % (len(issues) - 3))
+
     if degraded:
         lines.append("⚠️ 数据源降级：%s（%s）可能过期，以上结论绑定 requestid + 读取时间。"
                      % ("/".join(degraded), "/".join(degraded)))
 
     # ADR-035 应答契约脚注（fail-closed 门禁：时间戳 + 溯源链）
-    lines += _evidence_footer(form, r1, r2, degraded=degraded)
+    lines += _evidence_footer(form, r1, r2, degraded=degraded, history_delivery=hd)
     return "\n".join(lines)
 
 
@@ -129,6 +154,7 @@ def _evidence_footer(
     *,
     degraded: Optional[List[str]] = None,
     date_str: Optional[str] = None,
+    history_delivery: Optional[Dict[str, Any]] = None,
 ) -> List[str]:
     """ADR-035 应答契约脚注：证据时间戳 + minimal trace 溯源链。
 
@@ -138,6 +164,7 @@ def _evidence_footer(
     """
     r1 = r1 or {}
     r2 = r2 or {}
+    hd = history_delivery or {}
     degraded = [d.lower() for d in (degraded or [])]
     d = date_str or _DATE
     rid = form.request_id
@@ -149,6 +176,9 @@ def _evidence_footer(
         "R1 ONES GraphQL 实时（读取时点 %s）→ 履约义务判定" % (r1.get("queried_at") or d),
         "R2 OA 概算卡片 billid %s 只读 → 概算一致性判定" % billid,
     ]
+    if hd:
+        chain.append("R1b BDMS dr_sheet_row 快照（读取时点 %s）→ 历史交付问题盘点=%s"
+                     % (_DATE, hd.get("verdict", "未知")))
 
     stamps = ["【已验证 %s｜OA 单据 %s】合同名称/金额/服务期/合同编号" % (d, rid)]
 
@@ -168,5 +198,11 @@ def _evidence_footer(
     if "r2" in degraded:
         r2_line += "（⚠️ 数据源降级，不伪造）"
     stamps.append(r2_line)
+    if hd:
+        hb = "【已验证 %s｜BDMS 快照】R1b 历史交付盘点=%s（命中 %s 行）" % (
+            _DATE, hd.get("verdict", "未知"), hd.get("matched_rows", "?"))
+        if "r1b" in degraded:
+            hb += "（⚠️ 数据源降级/未收录，不伪造为「无异常」）"
+        stamps.append(hb)
 
     return ["", "---", "> 溯源链：" + "；".join(chain), "> " + "；".join(stamps)]

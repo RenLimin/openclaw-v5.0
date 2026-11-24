@@ -23,6 +23,8 @@ from . import extract_items as ext
 from . import risk as rsk
 from . import kb_match as kbm
 from . import report as rep
+from . import clause_extract as cex
+from . import risk_points as rpt
 from .models import ReviewReport
 
 
@@ -97,6 +99,40 @@ class ReviewService:
             action="kb_matched", operator="pipeline", detail=satisfaction,
         )
 
+        # 6b 条款拆解（L3 contract_parser，Rex 2026-11-24 需求）
+        clause_data: Dict[str, Any] = {"clauses": [], "missing_required": [],
+                                       "unsupported_categories": [], "stats": {}}
+        try:
+            clause_data = cex.extract_clauses(digitized.full_text)
+            self.repo.append_audit_log(
+                action="clauses_extracted", operator="pipeline",
+                detail="extracted=%d missing_required=%d" % (
+                    clause_data["stats"].get("extracted", 0),
+                    clause_data["stats"].get("missing_required", 0)),
+            )
+        except cex.ClauseExtractError as exc:
+            self.repo.append_audit_log(
+                action="clause_extract_failed", operator="pipeline", detail=str(exc),
+            )
+
+        # 6c 风险点视图（L3 规则 + 条款缺失合并，主视角）
+        rp_data: Dict[str, Any] = {"points": [], "summary": {},
+                                   "overall_risk": "unknown", "degraded": []}
+        try:
+            rp_data = rpt.build_risk_points(digitized)
+            self.repo.append_audit_log(
+                action="risk_points_built", operator="pipeline",
+                detail="points=%d overall=%s" % (
+                    len(rp_data.get("points", [])), rp_data.get("overall_risk")),
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.repo.append_audit_log(
+                action="risk_points_failed", operator="pipeline", detail=str(exc),
+            )
+
+        clauses_section = _render_clauses_section(clause_data)
+        risk_points_section = _render_risk_points_section(rp_data)
+
         report = ReviewReport(
             review_id=review_id,
             loaded=ingested,
@@ -108,7 +144,11 @@ class ReviewService:
             matches=kb.items,
             no_line_items=no_line_items,
             satisfaction=satisfaction,
+            clauses=clause_data.get("clauses", []),
+            risk_points=rp_data,
             created_at=created_at,
+            clauses_section=clauses_section,
+            risk_points_section=risk_points_section,
         )
 
         # 7 渲染（主仓库 API：build_markdown / build_excel）
@@ -122,6 +162,8 @@ class ReviewService:
                     risk=risk, kb=kb, out_path=md_path,
                     ocr_method=digitized.method,
                     ocr_confidence=digitized.ocr_confidence,
+                    clauses_section=clauses_section,
+                    risk_points_section=risk_points_section,
                 )
                 report.report_md_path = md_path
             if "xlsx" in formats:
@@ -157,3 +199,46 @@ class ReviewService:
 
     def close(self):
         self.repo.close()
+
+
+
+def _render_clauses_section(clause_data: Dict[str, Any]) -> str:
+    """条款拆解章节（Markdown）。"""
+    stats = clause_data.get("stats") or {}
+    lines = [
+        "## 条款拆解",
+        "",
+        "抽取条款类别：%d / %d（必备 %d，缺失 %d）；未实现提取器的类别 %d 个不参与缺失判定。"
+        % (stats.get("extracted", 0), stats.get("categories_total", 0),
+           stats.get("required_total", 0), stats.get("missing_required", 0),
+           len(clause_data.get("unsupported_categories") or [])),
+        "",
+        rep._clauses_table_md(clause_data.get("clauses") or []),
+    ]
+    missing = clause_data.get("missing_required") or []
+    if missing:
+        lines += ["必备条款缺失："]
+        for i, m in enumerate(missing, 1):
+            lines.append("%d. %s（%s）— %s" % (i, m.get("category"), m.get("law", "-"),
+                                              m.get("description", "")))
+    return "\n".join(lines)
+
+
+def _render_risk_points_section(rp_data: Dict[str, Any]) -> str:
+    """风险点章节（Markdown，主视角）。"""
+    summary = rp_data.get("summary") or {}
+    degraded = rp_data.get("degraded") or []
+    lines = [
+        "## 风险点",
+        "",
+        "综合：**%s**　风险点 %d 条（high %d / medium %d / low %d；缺失条款 %d）"
+        % (rp_data.get("overall_risk", "未知"), len(rp_data.get("points") or []),
+           summary.get("high", 0), summary.get("medium", 0),
+           summary.get("low", 0), summary.get("missing", 0)),
+        "",
+        rep._risk_points_table_md(rp_data.get("points") or []),
+        "> 证据为原文片段；法条依据仅来自 L3 受控库。低置信/漏抽需人工复核。",
+    ]
+    if degraded:
+        lines += ["", "> ⚠️ 降级：" + "；".join(str(d) for d in degraded)]
+    return "\n".join(lines)

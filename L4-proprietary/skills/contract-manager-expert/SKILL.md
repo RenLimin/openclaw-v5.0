@@ -31,6 +31,8 @@ metadata:
 | OA 销售合同审核流程（requestid 单据 / 审批链 / AI 小助手意见，只读） | **本技能**（复用 `bangcle-contract/services/oa` 的 `CubeClient`/`ApprovalLogReader`，与 P4.4 对账同链路；固定核查：**履约义务（ONES 实时）**+**概算一致性（允许超，仅提醒）**，落点 `services/oa/enhance/`） | L4 | 流程结构固化见 `docs/knowledge-base/oa-contract-review-workflow.md`；写操作一律人工闸 |
 | **项目实施管理流程（wf_916 销售合同下单 / wf_815 提前实施 / wf_820 PoC）「分配项目经理」节点批注建议** → **本技能**（`contractctl oa-project-mgmt`，落点 `services/oa/enhance/pm/`；链＝三流程字段解析→ONES 参考项目→风险注→三段式批注；916 额外核查「合同审批流程→」757 异常备注） | L4 | 输入 OA requestid → 输出可粘贴批注（请XX负责+参考项目编号/状态/授权期限+风险注）；口径 KB `EXP-20261112-001`；**只读**，写操作人工闸 |
 | **触发词「处理OA销售合同审批」** → 发现 757 待办并出**标准审批备注** | **本技能**（`contractctl oa-approval`，落点 `services/oa/enhance/orchestrator.py`；链＝发现待办→捕获→R1/R2→固定核查→标准备注） | L4 | 自动发现 workflowid=757 待办（列表口径）；合同原文可选（缺失则 L2 核查转人工）；**只读**，写操作人工闸 |
+| **条款拆解 / 风险点识别**（合同全文 → 类别·法条·摘要·问题·建议 + required 缺失） | **本技能**（`contractctl clauses --file <docx\|txt\|pdf>`；落点 `contract_review/clause_extract.py` + `risk_points.py`，复用 L3 `contract_parser`/`CHECK_RULES`） | L4→L3 | 纯确定性规则，不外发原文、不造法条；每条风险挂原文证据；无提取器类别不计入缺失 |
+| **历史签约项目/合同交付问题盘点**（异常项目 / 应交未交 / 应验未验 / 验收异常） | **本技能**（`contractctl history-delivery --contract-no <XSZS…> [--end-user <名>]`；落点 `services/oa/enhance/history_delivery.py`） | L4→L4(bdms 数据) | 数据源 BDMS `dr_sheet_row` 快照只读；四态 fail-closed：**查无记录=未收录≠正常**；结果自动并入 757 备注 R1b 段 |
 | 销售合同审批工作流（OCR 识别/条款拆解/分级审批/Excel·Word 生成） | `contract-approval`（SCA-001） | L3 | 通用审批框架能力 |
 | 通用合同纯逻辑（状态机/风险规则库/分级审批/金额工具/OA 连接器抽象） | `contract-management`（CLM-GEN-001） | L3 | 框架/代码层能力，L4 合同审查的规则与法条来源（CHECK_RULES） |
 | 企业 Office 销售合同审批全流程（起草→审批→归档） | `office-contract`（OFC-001） | L4 | Office 场景的合同审批专有实例 |
@@ -46,6 +48,8 @@ metadata:
 | 合同审查 + 走正式审批归档 | bangcle-contract（审查结论）→ contract-approval / office-contract（审批流与归档） |
 | **项目实施管理批注建议**（916/815/820） | `oa_workflow_ones.py --capture <rid>`（OA 单落盘）→ `contractctl oa-project-mgmt --requestid <rid> --workflow wf_916\|wf_815\|wf_820 [--pm <名>]`（三流程解析 → ONES 参考项目（状态+授权期限）→ 风险注 → 三段式批注）；916 自动追加 757 异常备注（无权限降级不伪造）；**只读** |
 | **触发词「处理OA销售合同审批」**（757 全流程） | `contractctl oa-approval`（自动发现 757 待办 → 逐张 `oa_workflow_ones.py --capture` → `oa-enhance` R1/R2 → 固定核查 → **标准审批备注**）；可加 `--requestid <rid>` 指定单据、`--contract-file <docx/txt>` 提供合同原文；**只读**，写操作人工闸 |
+| **合同全文风险体检**（条款 + 风险点） | `contractctl clauses --file <合同.docx>`（L3 受控库条款拆解 + 风险点，含必备条款缺失）→ 或 `review --file <合同>` 出完整 md/xlsx 报告（含风险点章节） |
+| **历史交付问题盘点** | `contractctl history-delivery --contract-no <XSZS…>`（BDMS 快照：异常项目/交付异常/应验未验/验收异常） |
 
 ## 二、合同智能审查流程（核心职责）
 
@@ -61,6 +65,12 @@ python3 cli/contractctl.py review --file <合同.pdf|docx|扫描件> --format xl
 # 3) 从泛微 OA 拉合同审查（需先建会话）
 python3 cli/contractctl.py oa-login            # IAM 换票，耗一次 IMAP 验证码
 python3 cli/contractctl.py review --oa-billid <billid>
+
+# 3b) 条款拆解 + 风险点（合同全文；复用 L3 受控规则库）
+python3 cli/contractctl.py clauses --file <合同.docx|txt|pdf> [--out clauses.json]
+
+# 3c) 历史交付问题盘点（BDMS 快照，只读）
+python3 cli/contractctl.py history-delivery --contract-no XSZS2609200704
 
 # 4) 取审查记录
 python3 cli/contractctl.py report <review_id>

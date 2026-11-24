@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 from .oa_form import OrderForm, OrderFormError, parse_order_form
 from .ones_obigation import R1Result, ObligationError, check_obligations
 from .estimate import R2Result, check_estimate
+from .history_delivery import HistoryDeliveryError, check_history_delivery
 from .verdict import render_enhance
 
 
@@ -68,12 +69,30 @@ def run_enhance(
         if r2.skipped:
             degraded.append("R2")
 
+    # R1b：历史签约项目/合同交付问题盘点（BDMS 快照，只读）
+    hd: Dict[str, Any] = {}
+    try:
+        from .checks import extract_contract_no
+        body = raw_dir / request_id / "body.txt"
+        body_text = body.read_text(encoding="utf-8", errors="replace") if body.exists() else ""
+        cno, _src = extract_contract_no(body_text, form.contract_name or "")
+        dres = check_history_delivery(contract_no=cno, end_user=form.end_user or "")
+        hd = dres.to_dict()
+        if dres.verdict == "未收录":
+            degraded.append("R1b")
+    except HistoryDeliveryError as exc:
+        hd = {"verdict": "未知", "issues": [], "missing": ["history_delivery: %s" % exc],
+              "queried_at": "", "data_source": "BDMS dr_sheet_row（202606 快照，只读）",
+              "match_basis": "", "matched_rows": 0}
+        degraded.append("R1b")
+
     md = render_enhance(form, r1, r2)
     return {
         "request_id": request_id,
         "form": form.to_dict(),
         "r1": r1.to_dict(),
         "r2": r2.to_dict(),
+        "history_delivery": hd,
         "markdown": md,
         "degraded": degraded,
     }

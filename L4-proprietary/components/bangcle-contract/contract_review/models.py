@@ -53,7 +53,11 @@ class ReviewReport:
     matches: List[ItemMatchResult] = field(default_factory=list)
     no_line_items: bool = False
     satisfaction: str = "partial"
+    clauses: List[Any] = field(default_factory=list)
+    risk_points: Dict[str, Any] = field(default_factory=dict)
     created_at: str = ""
+    clauses_section: str = ""
+    risk_points_section: str = ""
     report_md_path: str = ""
     report_xlsx_path: str = ""
     repo_review_id: int = 0   # 主仓库 Repository 持久化后的整型 id

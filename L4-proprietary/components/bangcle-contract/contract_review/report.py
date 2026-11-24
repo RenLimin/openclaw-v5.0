@@ -69,16 +69,58 @@ def _kb_table_md(kb: KbReview) -> str:
     return "\n".join(lines) + "\n"
 
 
+_STATUS_LABEL_MD = {"pass": "通过", "warning": "提示",
+                    "fail": "不通过", "missing": "条款缺失"}
+
+
+def _clauses_table_md(clauses: List[Dict[str, Any]]) -> str:
+    """条款拆解表（类别/法条/摘要/问题）。"""
+    if not clauses:
+        return "> 未抽到条款（原文为空或数字化失败，不伪造）。\n"
+    lines = [
+        "| 条款类别 | 法条 | 摘要 | 问题 |",
+        "|---|---|---|---|",
+    ]
+    for c in clauses:
+        issues = "；".join(c.get("issues") or []) or "-"
+        summary = (c.get("summary") or "").replace("\n", " ")[:80] or "-"
+        lines.append("| %s | %s | %s | %s |" % (
+            c.get("category", ""), c.get("law", "") or "-", summary, issues))
+    return "\n".join(lines) + "\n"
+
+
+def _risk_points_table_md(points: List[Dict[str, Any]]) -> str:
+    """风险点表（级别/状态/证据/建议）—— 主视角。"""
+    if not points:
+        return "> 无风险点（原文为空时不出结论）。\n"
+    lines = [
+        "| 来源 | 编号 | 类别 | 检查项 | 级别 | 状态 | 法条 | 证据 | 建议 |",
+        "|---|---|---|---|---|---|---|---|---|",
+    ]
+    for p in points:
+        ev = (p.get("evidence") or "").replace("\n", " ")[:60] or "-"
+        sg = (p.get("suggestion") or "").replace("\n", " ")[:40] or "-"
+        lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            p.get("source", ""), p.get("rule_id", ""), p.get("category", ""),
+            p.get("item", ""), p.get("level", ""), _STATUS_LABEL_MD.get(p.get("status"), p.get("status", "")),
+            p.get("law", "") or "-", ev, sg))
+    return "\n".join(lines) + "\n"
+
+
 def build_markdown(*, contract_ref: str, source: str,
                    risk: Dict[str, Any], kb: KbReview,
                    ocr_method: Optional[str] = None,
                    ocr_confidence: Optional[float] = None,
-                   enhance_section: Optional[str] = None) -> str:
+                   enhance_section: Optional[str] = None,
+                   clauses_section: Optional[str] = None,
+                   risk_points_section: Optional[str] = None) -> str:
     """构建 Markdown 报告全文（纯函数，返回字符串）。
 
     Args:
         enhance_section: 可选的「增强核查」章节（`services/oa/enhance` 产出），
             插入在「产品/服务参照」与「免责声明」之间；None 时报告结构与旧版一致。
+        clauses_section / risk_points_section: 可选的「条款拆解」「风险点」章节
+            （L3 受控库，Rex 2026-11-24 需求）；None 时保持旧结构（向后兼容）。
     """
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     md = [
@@ -103,6 +145,10 @@ def build_markdown(*, contract_ref: str, source: str,
             md += ["OCR 置信度：%.2f" % ocr_confidence, ""]
     md += [_risk_table_md(risk.get("findings", [])), ""]
     md += ["## 二、产品/服务参照", "", _kb_table_md(kb), ""]
+    if clauses_section:
+        md += [clauses_section, ""]
+    if risk_points_section:
+        md += [risk_points_section, ""]
     if enhance_section:
         md += [enhance_section, ""]
     md += ["## 三、免责声明", "", DISCLAIMER, ""]
@@ -169,12 +215,16 @@ def write_markdown(*, contract_ref: str, source: str,
                    risk: Dict[str, Any], kb: KbReview, out_path: str,
                    ocr_method: Optional[str] = None,
                    ocr_confidence: Optional[float] = None,
-                   enhance_section: Optional[str] = None) -> str:
+                   enhance_section: Optional[str] = None,
+                   clauses_section: Optional[str] = None,
+                   risk_points_section: Optional[str] = None) -> str:
     """写 Markdown 报告到文件，返回落盘路径。"""
     md = build_markdown(contract_ref=contract_ref, source=source,
                         risk=risk, kb=kb, ocr_method=ocr_method,
                         ocr_confidence=ocr_confidence,
-                        enhance_section=enhance_section)
+                        enhance_section=enhance_section,
+                        clauses_section=clauses_section,
+                        risk_points_section=risk_points_section)
     out_path = os.path.abspath(out_path)
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:

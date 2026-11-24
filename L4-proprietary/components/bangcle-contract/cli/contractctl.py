@@ -7,6 +7,8 @@
   init-db
   oa-login
   oa-project-mgmt --requestid <rid> --workflow wf_916|wf_815|wf_820  （项目实施管理批注建议，只读）
+  clauses --file <path>           （条款拆解：L3 受控库，含必备条款缺失）
+  history-delivery --contract-no <no> [--end-user <name>]  （历史交付问题盘点，BDMS 快照只读）
   ontology register/submit/approve/reject/status/proposals  （Contract Ontology Bridge）
 
 分步进度：>10s 操作打印当前步骤（进度条铁律）。
@@ -222,6 +224,108 @@ def cmd_oa_enhance(args) -> int:
     print("  R2 概算一致 :", r2.get("verdict"), ("(skipped: %s)" % r2.get("skipped")) if r2.get("skipped") else "")
     print("  降级项      :", result["degraded"] or "无")
     print("  报告        :", out_md)
+    return 0
+
+
+def _read_text_arg(path: str) -> str:
+    """读合同原文（txt/docx/pdf），失败抛 RuntimeError（由调用方转清晰错误）。"""
+    p = Path(path)
+    if not p.exists():
+        raise RuntimeError("文件不存在: %s" % path)
+    suffix = p.suffix.lower()
+    if suffix in (".txt", ".md"):
+        return p.read_text(encoding="utf-8", errors="replace")
+    from contract_review.digitize import digitize
+    dt = digitize(str(p), file_type=suffix.lstrip("."))
+    return dt.full_text or ""
+
+
+def cmd_clauses(args) -> int:
+    """条款拆解（L3 contract_parser）：输出结构化条款清单 + 必备条款缺失。"""
+    from contract_review.clause_extract import extract_clauses, ClauseExtractError
+
+    try:
+        text = _read_text_arg(args.file)
+    except RuntimeError as exc:
+        print("❌", exc)
+        return 2
+
+    _progress("条款拆解（L3 contract_parser）")
+    try:
+        data = extract_clauses(text)
+    except ClauseExtractError as exc:
+        print("❌", exc)
+        return 2
+
+    print("✅ 条款拆解完成")
+    print("  标题     :", data.get("title") or "【未取到】")
+    print("  条款类别 : %d/%d（必备 %d，缺失 %d）"
+          % (data["stats"]["extracted"], data["stats"]["categories_total"],
+             data["stats"]["required_total"], data["stats"]["missing_required"]))
+    if data.get("party_a"):
+        print("  甲方     :", data["party_a"].get("名称") or data["party_a"])
+    if data.get("party_b"):
+        print("  乙方     :", data["party_b"].get("名称") or data["party_b"])
+
+    for c in data.get("clauses") or []:
+        flag = "⚠️" if c.get("issues") else "  "
+        print("  %s [%s] %s｜%s" % (flag, c.get("category"), c.get("law") or "-",
+                                    (c.get("summary") or "")[:60]))
+        for it in c.get("issues") or []:
+            print("        问题：%s" % it)
+
+    if data.get("missing_required"):
+        print("必备条款缺失（warn，需人工复核）：")
+        for i, m in enumerate(data["missing_required"], 1):
+            print("  %d. %s（%s）— %s" % (i, m["category"], m.get("law") or "-",
+                                          m.get("description", "")))
+    if data.get("unsupported_categories"):
+        print("无提取器的类别（不参与缺失判定）：%s"
+              % "、".join(data["unsupported_categories"]))
+
+    if args.out:
+        out = os.path.abspath(args.out)
+        os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+        with open(out, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=2)
+        print("  JSON     :", out)
+    return 0
+
+
+def cmd_history_delivery(args) -> int:
+    """历史签约项目/合同交付问题盘点（BDMS 快照，只读）。"""
+    from services.oa.enhance.history_delivery import (
+        check_history_delivery, HistoryDeliveryError,
+    )
+
+    _progress("历史交付盘点（BDMS dr_sheet_row 快照）")
+    try:
+        res = check_history_delivery(
+            contract_no=args.contract_no or "", end_user=args.end_user or "")
+    except HistoryDeliveryError as exc:
+        print("❌", exc)
+        return 2
+
+    d = res.to_dict()
+    print("✅ 历史交付盘点完成")
+    print("  判定     :", d["verdict"])
+    print("  匹配口径 :", d["match_basis"] or "（无键）")
+    print("  命中行数 :", d["matched_rows"])
+    print("  风险点   :", len(d["issues"]))
+    for i, it in enumerate((d["issues"] or [])[:10], 1):
+        print("  %d. [%s][%s] %s｜%s｜%s" % (
+            i, it["level"], it["sheet"], it["issue_type"],
+            it["end_user"] or "-", (it["detail"] or it["status"] or "-")[:60]))
+    if len(d["issues"]) > 10:
+        print("  …另有 %d 条" % (len(d["issues"]) - 10))
+    for m in d.get("missing") or []:
+        print("  ⚠️", m)
+    if args.out:
+        out = os.path.abspath(args.out)
+        os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+        with open(out, "w", encoding="utf-8") as fh:
+            json.dump(d, fh, ensure_ascii=False, indent=2)
+        print("  JSON     :", out)
     return 0
 
 
@@ -515,6 +619,23 @@ def main(argv=None) -> int:
     p_pm.add_argument("--pm", default="", help="指定 PM 姓名（可空，空则用 OA 字段/待分配）")
     p_pm.add_argument("--out", default=None, help="Markdown 报告输出路径（可空）")
     p_pm.set_defaults(func=cmd_oa_project_mgmt)
+
+    p_clauses = sub.add_parser(
+        "clauses",
+        help="条款拆解（L3 contract_parser）：类别/法条/摘要/原文/问题/建议 + 必备条款缺失",
+    )
+    p_clauses.add_argument("--file", required=True, help="合同原文（docx/pdf/txt）")
+    p_clauses.add_argument("--out", default=None, help="JSON 输出路径（可空）")
+    p_clauses.set_defaults(func=cmd_clauses)
+
+    p_hd = sub.add_parser(
+        "history-delivery",
+        help="历史签约项目/合同交付问题盘点（BDMS 快照，只读；异常项目/应交未交/应验未验/验收异常）",
+    )
+    p_hd.add_argument("--contract-no", default="", help="合同编号（XSZS…，优先）")
+    p_hd.add_argument("--end-user", default="", help="最终用户名称（合同编号缺失时兜底）")
+    p_hd.add_argument("--out", default=None, help="JSON 输出路径（可空）")
+    p_hd.set_defaults(func=cmd_history_delivery)
 
     # --- ontology 子命令（Contract Ontology Bridge） ---
     p_ont = sub.add_parser("ontology", help="合同运营对象（Proposal Gate）")
