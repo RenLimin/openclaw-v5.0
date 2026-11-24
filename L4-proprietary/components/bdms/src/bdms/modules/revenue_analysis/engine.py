@@ -1702,6 +1702,158 @@ class RevenueAnalysisEngine(BaseEngine):
                             ensure_ascii=False)),
             )
 
+    # ─── Q3 跨期继承（DESIGN-DETAIL v1.1 §4）───
+
+    BUCKET_COL = "BU"          # 「预算趋势」列（两期表头一致，r2/r3 实证）
+    PERF_ID_COL = "J"          # 履约ID 列（§10.1 列位表 + r3 表头实证）
+
+    def _prev_period(self, period: str) -> Optional[str]:
+        """账期回退一格：202606 → 202605（跨年 202601 → 202512）。"""
+        y, m = int(period[:4]), int(period[4:])
+        if m == 1:
+            return f"{y - 1}12"
+        return f"{y}{m - 1:02d}"
+
+    def inherit_previous_buckets(self, period: str,
+                                  manual_override: Optional[dict] = None) -> dict:
+        """Q3 跨期继承：按「履约 ID」沿用上期 BU 桶值（本期人工改判优先）。
+
+        优先级（§4.1）：① 本期人工改判 > ② 跨期继承 > ③ 留空待 §3 规则引擎
+        fail-closed（§4.2）：上期/本期数据缺失一律报错，**不推断、不伪造**。
+
+        Returns:
+            {period, prev, total, inherited, overridden, manual_override,
+             blank, rows_scanned, duplicate_rows, prev_unique,
+             missing_prev_ids:[...], result:{perf_id: bucket}}
+            total = 唯一履约ID 数 = inherited + overridden + blank。
+        """
+        prev = self._prev_period(period)
+
+        cur_rows = self._load_sheet_rows(period, SHEET_BUDGET)
+        prev_rows = self._load_sheet_rows(prev, SHEET_BUDGET)
+        if not cur_rows:
+            raise ImportError_(f"{period} 预算执行表缺失，无法继承")
+        if not prev_rows:
+            raise ImportError_(
+                f"《上期差异表》{prev} 缺失，Q3 继承源不可用（fail-closed，不伪造）")
+
+        def clean(v: Any) -> str:
+            return "" if v is None else str(v).strip()
+
+        # 上期：履约ID → BU 桶值（只记非空）
+        prev_map: dict[str, str] = {}
+        for r in prev_rows:
+            pid = clean(r.get(self.PERF_ID_COL))
+            bu = clean(r.get(self.BUCKET_COL))
+            if pid and bu and pid not in prev_map:
+                prev_map[pid] = bu
+
+        override = {str(k).strip(): str(v).strip()
+                    for k, v in (manual_override or {}).items()}
+
+        # 本期按「履约ID」聚合：同 ID 多行（明细级重复）时取首个非空 BU，
+        # 行数单独计数供审计，保证 total 与三个分类计数自洽。
+        cur_vals: dict[str, str] = {}
+        cur_order: list[str] = []
+        rows_scanned = 0
+        duplicate_rows = 0
+        for r in cur_rows:
+            pid = clean(r.get(self.PERF_ID_COL))
+            if not pid:
+                continue
+            rows_scanned += 1
+            if pid in cur_vals:
+                duplicate_rows += 1
+            else:
+                cur_vals[pid] = ""
+                cur_order.append(pid)
+            v = clean(r.get(self.BUCKET_COL))
+            if v and not cur_vals[pid]:
+                cur_vals[pid] = v
+
+        result: dict[str, str] = {}
+        inherited = overridden = blank = manual_override_n = 0
+        missing_prev_ids: list[str] = []
+
+        for pid in cur_order:
+            # 口径（DESIGN-DETAIL §4.1）：
+            #   ① 显式人工改判（外部传入，最高优先）
+            #   ② 上期有值 → 继承（优先级高于重算）
+            #   ③ 否则留空 → §3 分桶规则引擎
+            # 注意：本期 BU 列是上一轮生成+复核的**产出物**，不作为判定输入
+            # （否则形成循环论证）；仅用于事后的 agree/disagree 审计。
+            if pid in override and override[pid]:
+                result[pid] = override[pid]
+                overridden += 1
+                manual_override_n += 1
+            elif pid in prev_map:
+                result[pid] = prev_map[pid]
+                inherited += 1
+            else:
+                blank += 1
+                missing_prev_ids.append(pid)
+
+        # 事后审计：计算结果 vs 本期源表现存 BU（不参与判定）
+        agree = disagree = 0
+        disagree_samples: list[tuple] = []
+        for pid, b in result.items():
+            src = cur_vals.get(pid, "")
+            if not src:
+                continue
+            if b == src:
+                agree += 1
+            else:
+                disagree += 1
+                if len(disagree_samples) < 10:
+                    disagree_samples.append({"perf_id": pid,
+                                             "computed": b, "source": src})
+
+        return {
+            "period": period, "prev": prev, "total": len(cur_order),
+            "inherited": inherited, "overridden": overridden,
+            "manual_override": manual_override_n, "blank": blank,
+            "rows_scanned": rows_scanned, "duplicate_rows": duplicate_rows,
+            "prev_unique": len(prev_map),
+            "audit_vs_source": {"agree": agree, "disagree": disagree,
+                                "samples": disagree_samples},
+            "missing_prev_ids": sorted(set(missing_prev_ids)),
+            "result": result,
+        }
+
+    def persist_buckets(self, period: str, result: dict) -> dict:
+        """把分桶结果落 ra_bucket（bucket_source 记录来源，供下一期再读）。"""
+        rows = result.get("result") or {}
+        inherited = result.get("inherited") or 0
+        source = (f"inherit:{result.get('prev')}" if inherited
+                  else "inherit:none")
+        conn = _db.get_connection(self.db_path)
+        try:
+            conn.execute(
+                "DELETE FROM ra_bucket WHERE period = ?", (period,))
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            for pid, bucket in rows.items():
+                conn.execute(
+                    """INSERT OR REPLACE INTO ra_bucket
+                       (period, perf_id, budget_trend, bucket_source, created_at)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (period, pid, bucket, source, now))
+            conn.commit()
+        finally:
+            conn.close()
+        return {"written": len(rows), "source": source}
+
+    def load_buckets(self, period: str) -> dict[str, str]:
+        """读取本账期已落库的分桶结果（perf_id → budget_trend）。"""
+        conn = _db.get_connection(self.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT perf_id, budget_trend FROM ra_bucket WHERE period = ?",
+                (period,),
+            ).fetchall()
+            return {r["perf_id"]: r["budget_trend"] for r in rows}
+        finally:
+            conn.close()
+
     def has_data(self, period: str) -> bool:
         conn = _db.get_connection(self.db_path)
         try:
