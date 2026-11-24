@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from datetime import datetime
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -48,6 +49,8 @@ class ApprovalResult:
     r1: Dict[str, Any] = field(default_factory=dict)
     r2: Dict[str, Any] = field(default_factory=dict)
     history_delivery: Dict[str, Any] = field(default_factory=dict)
+    clauses: Dict[str, Any] = field(default_factory=dict)
+    risk_points: Dict[str, Any] = field(default_factory=dict)
     remark: str = ""
     degraded: List[str] = field(default_factory=list)
     error: Optional[str] = None
@@ -60,6 +63,8 @@ class ApprovalResult:
             "r1": self.r1,
             "r2": self.r2,
             "history_delivery": self.history_delivery,
+            "clauses": self.clauses,
+            "risk_points": self.risk_points,
             "remark": self.remark,
             "degraded": self.degraded,
             "error": self.error,
@@ -103,6 +108,109 @@ def _read_contract_text(path: Optional[Path]) -> Optional[str]:
         except Exception:  # noqa: BLE001
             return None
     return None
+
+
+def _build_contract_review(contract_text: Optional[str]) -> Dict[str, Any]:
+    """合同原文 → 条款拆解 + 风险点（L3 受控库，只读纯计算）。
+
+    失败不中断主链：返回空结构 + ``degraded`` 原因（fail-closed）。
+    """
+    out: Dict[str, Any] = {
+        "clauses": {"clauses": [], "missing_required": [],
+                    "unsupported_categories": [], "stats": {}},
+        "risk_points": {"points": [], "summary": {}, "overall_risk": "unknown",
+                        "degraded": [], "rule_set_version": ""},
+        "degraded": [],
+    }
+    if not contract_text or not contract_text.strip():
+        out["degraded"].append("NO_CONTRACT_TEXT")
+        return out
+    try:
+        from contract_review.digitize import DigitizedText
+        from contract_review import clause_extract as cex
+        from contract_review import risk_points as rpt
+
+        dig = DigitizedText(full_text=contract_text, method="txt")
+        cl = cex.extract_clauses(contract_text)
+        rp = rpt.build_risk_points(dig)
+        out["clauses"] = cl
+        out["risk_points"] = rp
+        if rp.get("degraded"):
+            out["degraded"].extend(rp["degraded"])
+        if cl.get("stats", {}).get("missing_required"):
+            # 条款缺失不阻断审批，仅提示（low/missing）
+            pass
+    except Exception as exc:  # noqa: BLE001 — 单张失败不中断整批
+        out["degraded"].append("CONTRACT_REVIEW: %s: %s" % (type(exc).__name__, exc))
+    return out
+
+
+def _render_contract_review_md(request_id: str, cr: Dict[str, Any],
+                               contract_ref: str) -> str:
+    """合同全文条款/风险点 Markdown 产物（含 ADR-035 溯源与质量信号）。"""
+    from contract_review import report as rep
+
+    clauses = cr.get("clauses") or {}
+    rp = cr.get("risk_points") or {}
+    _today = datetime.now().strftime("%Y-%m-%d")
+    lines = [
+        "# 合同全文审查（条款拆解 + 风险点）— %s" % request_id,
+        "",
+        "> 生成：%s；契约版本：ADR-035；归属：OA workflowid=757 单据 %s；"
+        "数据基准：合同原文（用户提供）＋ L3 contract-management CHECK_RULES"
+        "（rule_set=%s）" % (_today, request_id, rp.get("rule_set_version") or "未知"),
+        "",
+        "## 0. 溯源链",
+        "- 来源：合同原文 `%s`（本地文件，不外发）" % contract_ref,
+        "- 规则：L3 `contract_parser`（28 类条款）/ `risk_engine`（22 条 CHECK_RULES）"
+        "＋ 必备条款缺失维度",
+        "- 结论：条款 %s 类；风险点 %s 条（overall=%s）" % (
+            (clauses.get("stats") or {}).get("extracted", "?"),
+            len(rp.get("points") or []), rp.get("overall_risk", "unknown")),
+        "",
+        "## 1. 条款拆解",
+        "",
+        "### 1.1 已抽出条款",
+        "",
+        rep._clauses_table_md(clauses.get("clauses") or []),
+        "",
+        "### 1.2 必备条款缺失",
+        "",
+    ]
+    missing = clauses.get("missing_required") or []
+    if missing:
+        lines.append("| 类别 | 法条 | 说明 |")
+        lines.append("|---|---|---|")
+        for m in missing:
+            lines.append("| %s | %s | %s |" % (
+                m.get("category", ""), m.get("law", "") or "-",
+                m.get("description", "")))
+    else:
+        lines.append("> 未发现必备条款缺失（无提取器的类别不计入，见 §1.3）。")
+    lines += ["", "### 1.3 未覆盖类别（无提取器，不参与缺失判定）", ""]
+    uns = clauses.get("unsupported_categories") or []
+    lines.append("> %s" % ("、".join(uns) if uns else "（无）"))
+    lines += ["", "## 2. 风险点", "", rep._risk_points_table_md(rp.get("points") or []), ""]
+    dg = cr.get("degraded") or []
+    lines += ["## 3. 质量信号", ""]
+    lines.append("- 整体风险：%s" % rp.get("overall_risk", "unknown"))
+    lines.append("- 汇总：%s" % json.dumps(rp.get("summary") or {}, ensure_ascii=False))
+    if dg:
+        lines.append("- ⚠️ 数据源降级：%s（结论可能过期，需人工复核）" % "、".join(dg))
+    else:
+        lines.append("- 数据源状态：全部可用，结论可复现")
+    lines.append("- 法条均回溯 L3 受控库；条款缺失统一 low/missing，不阻断审批。")
+    # ADR-035 时间戳（fail-closed 门禁要求）
+    lines += [
+        "",
+        "> 【已验证 %s｜L3 contract-management 受控规则库】条款拆解 %s 类／"
+        "风险点 %d 条（overall=%s，rule_set=%s）；证据=合同原文本地文件"
+        "（不外发）。" % (
+            _today, (clauses.get("stats") or {}).get("extracted", "?"),
+            len(rp.get("points") or []), rp.get("overall_risk", "unknown"),
+            rp.get("rule_set_version") or "未知"),
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def run_approval(
@@ -171,10 +279,26 @@ def run_approval(
             ctext = _read_contract_text(contract_file)
             res.checks = run_fixed_checks(form, body, ctext)
 
+            # 4b) 合同原文 → 条款拆解 + 风险点（Rex 2026-11-24：757 --contract-file 场景）
+            cr = _build_contract_review(ctext)
+            res.clauses = cr.get("clauses") or {}
+            res.risk_points = cr.get("risk_points") or {}
+            if cr.get("degraded"):
+                res.degraded = sorted(set(res.degraded) | set(cr["degraded"]))
+            if ctext:
+                contract_ref = str(contract_file)
+                (out_dir / ("contract-review-%s.md" % rid)).write_text(
+                    _render_contract_review_md(rid, cr, contract_ref), encoding="utf-8")
+                with open(out_dir / ("clauses-%s.json" % rid), "w", encoding="utf-8") as fh:
+                    json.dump({"request_id": rid, **cr}, fh, ensure_ascii=False, indent=2)
+
             # 5) 标准备注
             res.remark = render_remark(form, res.checks, res.r1, res.r2,
                                        degraded=res.degraded,
-                                       history_delivery=res.history_delivery)
+                                       history_delivery=res.history_delivery,
+                                       clauses=res.clauses,
+                                       risk_points=res.risk_points,
+                                       contract_text=bool(ctext))
             (out_dir / ("remark-%s.md" % rid)).write_text(res.remark, encoding="utf-8")
         except OrderFormError as exc:
             res.error = "OrderFormError: %s" % exc
@@ -188,6 +312,13 @@ def run_approval(
         "warn": sum(1 for r in results if any(c.level == "warn" for c in r.checks)),
         "manual": sum(1 for r in results if any(c.level == "manual" for c in r.checks)),
         "error": sum(1 for r in results if r.error),
+        "risk_high": sum(1 for r in results
+                         if (r.risk_points or {}).get("overall_risk") == "high"),
+        "risk_medium": sum(1 for r in results
+                           if (r.risk_points or {}).get("overall_risk") == "medium"),
+        "risk_low": sum(1 for r in results
+                        if (r.risk_points or {}).get("overall_risk") == "low"),
+        "with_contract_text": sum(1 for r in results if r.clauses),
     }
     payload = {
         "todos": [t.to_dict() for t in todos],

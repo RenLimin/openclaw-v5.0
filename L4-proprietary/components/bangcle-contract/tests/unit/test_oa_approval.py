@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from services.oa.enhance.checks import run_fixed_checks
+from services.oa.enhance.checks import CheckResult, run_fixed_checks
 from services.oa.enhance.oa_form import OrderForm, parse_order_form
 from services.oa.enhance.remark import derive_verdict, render_remark
 from services.oa.enhance.todo import discover_todos
@@ -143,3 +143,88 @@ def test_end_to_end_real_886377():
     assert "R1 履约义务：" in r["remark"]
     assert "R2 概算一致性：" in r["remark"]
     assert (out_dir / "remark-886377.md").exists()
+
+
+# ── R3：合同原文 → 条款拆解 + 风险点（Rex 2026-11-24）──────────────
+
+def test_build_contract_review_without_text():
+    """无原文 → 空结构 + NO_CONTRACT_TEXT 降级（不伪造）。"""
+    from services.oa.enhance.orchestrator import _build_contract_review
+
+    cr = _build_contract_review(None)
+    assert cr["clauses"]["clauses"] == []
+    assert cr["risk_points"]["overall_risk"] == "unknown"
+    assert "NO_CONTRACT_TEXT" in cr["degraded"]
+
+    cr2 = _build_contract_review("   ")
+    assert "NO_CONTRACT_TEXT" in cr2["degraded"]
+
+
+def test_build_contract_review_real_sample():
+    """真实 886377 合同原文 → 条款拆解 + 风险点非空且法条回溯 L3。"""
+    from services.oa.enhance.orchestrator import _build_contract_review
+
+    if not CONTRACT_TXT.exists():
+        pytest.skip("缺 886377 contract.txt")
+    text = CONTRACT_TXT.read_text(encoding="utf-8", errors="replace")
+    cr = _build_contract_review(text)
+
+    st = cr["clauses"]["stats"]
+    assert st["extracted"] > 0
+    assert cr["clauses"]["missing_required"], "必备缺失应被检出"
+    # 无提取器的类别不得计入缺失
+    uns = set(cr["clauses"]["unsupported_categories"])
+    miss = {m["category"] for m in cr["clauses"]["missing_required"]}
+    assert not (uns & miss)
+
+    pts = cr["risk_points"]["points"]
+    assert pts, "应有风险点"
+    for p in pts:
+        if p["source"] == "CLAUSE_MISSING":
+            assert p["level"] == "low" and p["status"] == "missing"
+        else:
+            assert p["source"] == "L3_CHECK_RULES"
+
+
+def test_remark_r3_section_and_contract_gate(form):
+    """备注含 R3 段；全文审查 md 过 ADR-035 门禁。"""
+    from services.oa.enhance.orchestrator import (
+        _build_contract_review, _render_contract_review_md,
+    )
+
+    if not CONTRACT_TXT.exists():
+        pytest.skip("缺 886377 contract.txt")
+    text = CONTRACT_TXT.read_text(encoding="utf-8", errors="replace")
+    cr = _build_contract_review(text)
+
+    md = render_remark(form, [CheckResult("x", "pass", "ok")], {"verdict": "正常",
+                      "queried_at": "2026-11-24"}, {"verdict": "一致"},
+                      clauses=cr["clauses"], risk_points=cr["risk_points"],
+                      contract_text=True)
+    assert "R3 合同全文风险点：" in md
+    assert "contract-review-%s.md" % form.request_id in md
+    assert "【已验证 2026-" in md
+
+    # 无原文时不出 R3 结论，只转人工
+    md2 = render_remark(form, [], {}, {}, contract_text=False)
+    assert "R3 合同全文条款/风险点：未执行" in md2
+
+    # 全文审查 md 过 ADR-035
+    import subprocess, sys, tempfile
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "contract-review-test.md"
+        path.write_text(_render_contract_review_md(
+            "TEST-1", cr, str(CONTRACT_TXT)), encoding="utf-8")
+        r = subprocess.run([sys.executable,
+                            "/Users/bangcle/.openclaw/workspace/L2-infra/prompts/tools/check_answer_contract.py",
+                            str(path)], capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout + r.stderr
+
+
+def test_remark_r1_degrade_reason_exposed(form):
+    """R1=未知 时必须透出原因（P5：不把 project_not_found 藏进 missing）。"""
+    md = render_remark(form, [], {"verdict": "未知", "queried_at": "2026-11-24",
+                                  "missing": ["ones_project_not_found: SSXM-1-1"],
+                                  "projects": []}, {})
+    assert "原因：ones_project_not_found" in md
+    assert "数据源降级" in md

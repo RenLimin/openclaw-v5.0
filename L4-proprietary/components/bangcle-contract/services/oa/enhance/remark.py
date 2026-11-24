@@ -54,6 +54,9 @@ def render_remark(
     *,
     degraded: Optional[List[str]] = None,
     history_delivery: Optional[Dict[str, Any]] = None,
+    clauses: Optional[Dict[str, Any]] = None,
+    risk_points: Optional[Dict[str, Any]] = None,
+    contract_text: bool = False,
 ) -> str:
     """渲染标准审批备注。
 
@@ -64,10 +67,15 @@ def render_remark(
         degraded: 降级项列表（R1/R2/R1b skipped）。
         history_delivery: R1b 历史交付盘点 dict（``history_delivery.check_history_delivery``
             产物）；可空。Rex 2026-11-24：履约义务重点=盘点历史交付问题。
+        clauses: 条款拆解 dict（``orchestrator._build_contract_review`` 产物）；
+            与 ``risk_points`` 同批产出。``contract_text=False`` 时不出该段（转人工）。
+            Rex 2026-11-24：757 --contract-file 场景必须展示全文条款与风险点。
     """
     r1 = r1 or {}
     r2 = r2 or {}
     hd = history_delivery or {}
+    cl = clauses or {}
+    rp = risk_points or {}
     degraded = degraded or []
 
     blocks = [c for c in checks if c.level == "block"]
@@ -102,6 +110,11 @@ def render_remark(
     r1v = r1.get("verdict") or "未知"
     r1q = r1.get("queried_at") or _DATE
     lines.append("R1 履约义务：%s（ONES 实时 %s）" % (r1v, r1q))
+    if r1v == "未知":
+        _r1_reasons = [m for m in (r1.get("missing") or []) if m]
+        if _r1_reasons:
+            lines.append("   └ 原因：%s（数据源降级，非「无风险」）"
+                         % "；".join(_r1_reasons)[:200])
     r2v = r2.get("verdict") or "未知"
     if r2.get("skipped"):
         r2v = "%s（skipped: %s）" % (r2v, r2.get("skipped"))
@@ -133,12 +146,40 @@ def render_remark(
         if len(issues) > 3:
             lines.append("…另有 %d 条（见 approval-summary.json）" % (len(issues) - 3))
 
+    # R3 合同全文条款/风险点（仅提供原文时）
+    if contract_text and (cl or rp):
+        _stats = cl.get("stats") or {}
+        _pts = rp.get("points") or []
+        _hi = [x for x in _pts if x.get("level") == "high"]
+        _mid = [x for x in _pts if x.get("level") == "medium"]
+        lines.append("R3 合同全文风险点：%s（条款 %s/%s 类｜风险 %d 条：高%d/中%d/低%d｜"
+                     "必备缺失 %d）" % (
+                         rp.get("overall_risk", "unknown"),
+                         _stats.get("extracted", 0), _stats.get("categories_total", 0),
+                         len(_pts), len(_hi), len(_mid),
+                         sum(1 for x in _pts if x.get("level") == "low"),
+                         _stats.get("missing_required", 0)))
+        for i, x in enumerate((_hi + _mid)[:3], 1):
+            lines.append("%d. [%s] %s — %s" % (
+                i, x.get("level", ""), x.get("category") or x.get("item", ""),
+                (x.get("evidence") or "").replace("\n", " ")[:80]))
+        lines.append("   （完整条款表+风险点见 contract-review-%s.md）"
+                     % form.request_id)
+    elif not contract_text:
+        lines.append("R3 合同全文条款/风险点：未执行（未提供合同原文，转人工）")
+
     if degraded:
-        lines.append("⚠️ 数据源降级：%s（%s）可能过期，以上结论绑定 requestid + 读取时间。"
-                     % ("/".join(degraded), "/".join(degraded)))
+        _dg_label = {
+            "R1": "ONES 实时", "R1b": "BDMS 快照", "R2": "OA 概算卡片",
+            "NO_CONTRACT_TEXT": "合同原文未提供",
+        }
+        _dg_names = [("%s=%s" % (d, _dg_label.get(d, d))) for d in degraded]
+        lines.append("⚠️ 数据源降级：%s；以上结论绑定 requestid + 读取时间，需人工复核。"
+                     % "、".join(_dg_names))
 
     # ADR-035 应答契约脚注（fail-closed 门禁：时间戳 + 溯源链）
-    lines += _evidence_footer(form, r1, r2, degraded=degraded, history_delivery=hd)
+    lines += _evidence_footer(form, r1, r2, degraded=degraded, history_delivery=hd,
+                              clauses=cl, risk_points=rp, contract_text=contract_text)
     return "\n".join(lines)
 
 
@@ -155,6 +196,9 @@ def _evidence_footer(
     degraded: Optional[List[str]] = None,
     date_str: Optional[str] = None,
     history_delivery: Optional[Dict[str, Any]] = None,
+    clauses: Optional[Dict[str, Any]] = None,
+    risk_points: Optional[Dict[str, Any]] = None,
+    contract_text: bool = False,
 ) -> List[str]:
     """ADR-035 应答契约脚注：证据时间戳 + minimal trace 溯源链。
 
@@ -165,6 +209,8 @@ def _evidence_footer(
     r1 = r1 or {}
     r2 = r2 or {}
     hd = history_delivery or {}
+    cl = clauses or {}
+    rp = risk_points or {}
     degraded = [d.lower() for d in (degraded or [])]
     d = date_str or _DATE
     rid = form.request_id
@@ -179,6 +225,11 @@ def _evidence_footer(
     if hd:
         chain.append("R1b BDMS dr_sheet_row 快照（读取时点 %s）→ 历史交付问题盘点=%s"
                      % (_DATE, hd.get("verdict", "未知")))
+    if contract_text and (cl or rp):
+        chain.append("R3 合同原文（用户提供，本地不外发）→ L3 contract_parser/CHECK_RULES"
+                     "（rule_set=%s）→ 条款拆解+风险点（overall=%s）"
+                     % (rp.get("rule_set_version") or "未知",
+                        rp.get("overall_risk", "unknown")))
 
     stamps = ["【已验证 %s｜OA 单据 %s】合同名称/金额/服务期/合同编号" % (d, rid)]
 
@@ -204,5 +255,12 @@ def _evidence_footer(
         if "r1b" in degraded:
             hb += "（⚠️ 数据源降级/未收录，不伪造为「无异常」）"
         stamps.append(hb)
+
+    if contract_text and (cl or rp):
+        stamps.append("【已验证 %s｜L3 受控规则库】R3 条款=%s 类／风险点=%d（overall=%s，"
+                      "rule_set=%s）" % (
+                          _DATE, (cl.get("stats") or {}).get("extracted", 0),
+                          len(rp.get("points") or []), rp.get("overall_risk", "unknown"),
+                          rp.get("rule_set_version") or "未知"))
 
     return ["", "---", "> 溯源链：" + "；".join(chain), "> " + "；".join(stamps)]

@@ -2,7 +2,7 @@
 
 - 组件：`L4-proprietary/components/bangcle-contract`
 - 日期：2026-11-24
-- 结论：**PASS**（AC1–AC9 全部达成；无门禁违例）
+- 结论：**PASS**（AC1–AC9 全部达成；ADR-035 门禁 remark/报告双 PASS；无降级误判）
 
 ## 验收标准与证据（对应 PRD §5 AC1–AC9）
 
@@ -16,7 +16,10 @@
 | AC6 | P3 编号回退消误报 | `checks.extract_contract_no`；887756 类（表单空+合同名含 `20261106-01KP`）→ `('20261106-01KP','contract_name_loose')`，不再判 block | ✅ |
 | AC7 | 757 备注合并 R1b 且过 ADR-035 门禁 | `remark-887770.md` / `remark-887756.md` 各 4 处时间戳标注，`check_answer_contract.py` 均 **PASS** | ✅ |
 | AC8 | 新增 CLI 子命令可执行、注册表已登记 | `contractctl clauses|history-delivery --help` 正常；registry `--validate` 通过；`--coverage` 74/74=100% | ✅ |
-| AC9 | 全量单元测试通过 | `pytest tests/unit/ -q` → **362 passed, 1 skipped**（新增 `test_contract_intelligence.py` 20 例） | ✅ |
+| AC9 | 全量单元测试通过 | `pytest tests/unit/ -q` → **365 passed, 3 skipped**（含 `test_contract_intelligence.py` 20 例 + R3 接线 4 例） | ✅ |
+| AC10 | 757 `--contract-file` 场景出条款/风险点产物，备注带 R3 段且过 ADR-035 | 真实 886377 端到端：`remark-886377.md` + `contract-review-886377.md` 均 **PASS**（后者为 report 信封，首版 BLOCK 已修） | ✅ |
+| AC11 | R1=未知 时透出降级原因（不藏进 missing） | `remark.py` 正文加「└ 原因：…（数据源降级，非『无风险』）」；887770/887756 实测输出 `project_not_found`/`ones_project_not_found` | ✅ |
+| AC12 | 无原文时不出 R3 结论，只转人工 | 887770/887756 实测「R3 合同全文条款/风险点：未执行（未提供合同原文，转人工）」 | ✅ |
 
 ## 真实单据回归（只读，未做任何 OA 写操作）
 
@@ -24,7 +27,9 @@
 |---|---|---|---|
 | 887770 | 退回补充（block：合同编号缺失） | 退回补充（block 仍在，编号确实缺失；R1b=未收录显式降级） | 合同名无编号 → 正确维持 block |
 | 887756 | 退回补充（block：合同编号缺失） | **退回补充（待原文）** | P3 修复生效：合同名回退命中，误报消除；仅剩 L2 三项转人工 |
-| 886377 | — | 条款拆解 10/29、风险点 5 条 | 真实合同全文链路可用 |
+| 886377 | — | 条款拆解 10/29、风险点 5 条、必备缺失 4；备注 R3 段 + 全文审查 md 均过门禁 | 真实合同全文链路闭环（`--contract-file`） |
+| 887770 | 退回补充（block：合同编号缺失） | 同结论；R1 原因透出=`project_not_found`；R3=未执行 | 编号确实缺失，block 维持 |
+| 887756 | 退回补充（block：合同编号缺失） | **退回补充（待原文）**；R1 原因=`ones_project_not_found` | P3 回退生效，误报消除 |
 
 > ⚠️ 887770 的 R1=`未知`（ONES `project_not_found`）与 R1b=`未收录` 均为数据源降级，备注已显式标注，未当作「无风险」。
 
@@ -35,7 +40,16 @@
 - R1b 数据基准为 BDMS `dr_sheet_row` 202606 快照；跨期数据需更新快照后再跑。
 - 条款缺失统一 `low/missing`，不阻断审批（仅提示人工复核）。
 
-## 变更清单
+## 变更清单（第二轮：757 --contract-file 接线）
+
+- 新增 `orchestrator._build_contract_review()` / `_render_contract_review_md()`；
+  `ApprovalResult` 增 `clauses`/`risk_points`；summary 增 risk_* 统计。
+- `remark.render_remark` 增 `clauses`/`risk_points`/`contract_text` 入参与 R3 段；
+  R1=未知 增加降级原因行；降级行改为具名（`R1=ONES 实时`）。
+- `tests/unit/test_oa_approval.py` 增 4 例（含 ADR-035 子进程门禁复验）。
+- 产物：`remark-<rid>.md`、`contract-review-<rid>.md`、`clauses-<rid>.json`、`approval-summary.json`。
+
+## 变更清单（第一轮）
 
 新增：`contract_review/clause_extract.py`、`contract_review/risk_points.py`、`services/oa/enhance/history_delivery.py`、`tests/unit/test_contract_intelligence.py`、本 PRD 与本文档。
 修改：`contract_review/{models,pipeline,report}.py`、`services/oa/enhance/{checks,runner,orchestrator,remark}.py`、`cli/contractctl.py`、`capability-registry/registry.yaml`、`skills/contract-manager-expert/SKILL.md`。
