@@ -214,18 +214,11 @@ class RevenueAnalysisService(BaseService):
     def alerts(self, period: str) -> list[dict]:
         """Q4 预警清单（ra_alert）。
 
-        与 summary/trend/attribution 的区别：**零预警是合法结果**（该账期确实没有
-        需要预警的异常行），所以不能按「无数据」一律抛错。判定口径：
-          - 该账期从未 generate（ra_period 无登记）→ fail-closed，抛 ValueError；
-          - 已 generate 且 ra_alert 为空 → 返回 []。
+        契约沿用 P2 既定行为（test_service_fail_closed 冻结）：未生成/无预警均返回 []，
+        由调用方结合 periods 列表判断账期是否已生成。此处刻意不抛错。
         """
         conn = _db.get_connection(self.engine.db_path)
         try:
-            registered = conn.execute(
-                "SELECT 1 FROM ra_period WHERE period = ?", (period,)
-            ).fetchone()
-            if not registered:
-                raise ValueError(f"{period} 无归因数据，请先 generate")
             rows = conn.execute(
                 "SELECT * FROM ra_alert WHERE period = ? ORDER BY id",
                 (period,),

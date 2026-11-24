@@ -115,12 +115,25 @@ def test_periods_empty_returns_list(server):
     assert isinstance(d["periods"], list)
 
 
-@pytest.mark.parametrize("ep", ["summary", "trend", "attribution", "alerts"])
+@pytest.mark.parametrize("ep", ["summary", "trend", "attribution"])
 def test_no_data_fail_closed(server, ep):
-    """PRD v1.1 红线：无数据显式报错，不伪造。"""
+    """PRD v1.1 红线：无数据显式报错，不伪造（alerts 例外，见下）。"""
     client, _ = server
     r = client.get(f"/api/revenue-analysis/{ep}/202606")
     assert r.status_code == 400, f"{ep} 应 400，实际 {r.status_code}"
+
+
+def test_alerts_empty_is_legal_result(server):
+    """P2 既定契约（test_service_fail_closed 冻结）：未生成/零预警均返回 []。
+
+    与 summary/trend/attribution 不同，alerts 不抛错——「该账期确实无异常」
+    是合法结果；调用方应结合 /periods 判断账期是否已生成。
+    此处刻意保持与冻结口径一致，不擅自改语义。
+    """
+    client, _ = server
+    r = client.get("/api/revenue-analysis/alerts/202606")
+    assert r.status_code == 200
+    assert r.json()["alerts"] == []
 
 
 def test_progress_not_found(server):
