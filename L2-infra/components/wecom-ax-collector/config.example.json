@@ -1,0 +1,17 @@
+{
+  "interval_seconds": 3.0,
+  "mode": "current",
+  "sessions": ["示例部门群A"],
+  "max_retries": 5,
+  "backoff_base": 1.0,
+  "jsonl_path": "data/wecom_messages.jsonl",
+  "state_path": "data/.seen_ids.json",
+  "webhook_url": null,
+  "engine_path": "engine/wecom_ax_engine",
+  "include_items": false,
+
+  "_images_comment": "images_enabled=true 时提取消息区 AXImage.AXImageData（严格只读）；image_dir 落盘仅保留疑似真实聊天图片，UI 资产自动清除；image_catalog 记录 sha 跨会话复现用于 UI 判定",
+  "images_enabled": false,
+  "image_dir": "data/images",
+  "image_catalog": "data/.image_catalog.json"
+}

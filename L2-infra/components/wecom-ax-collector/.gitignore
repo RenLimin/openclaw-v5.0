@@ -1,0 +1,14 @@
+# 运行期数据（含真实对话内容，禁止入库）
+data/
+*.jsonl
+.seen_ids.json
+
+# 编译产物
+engine/wecom_ax_engine
+*.o
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/

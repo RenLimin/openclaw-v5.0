@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-24 16:57 UTC+08:00
+最后生成：2026-11-24 17:55 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -295,8 +295,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `7e8ae09` |
-| Commit 数 | 765 |
+| HEAD | `9e7e6ee` |
+| Commit 数 | 772 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -335,7 +335,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `system-governor` | 20 | 0 | 6 | `L2-infra/components/system-governor` |
 | `tool-policy` | 0 | 0 | 0 | `L2-infra/components/tool-policy` |
 | `web-common` | 14 | 4 | 2 | `L2-infra/components/web-common` |
-| `wecom-ax-collector` | 5 | 0 | 2 | `L2-infra/components/wecom-ax-collector` |
+| `wecom-ax-collector` | 7 | 0 | 3 | `L2-infra/components/wecom-ax-collector` |
 | `workspace-temp-cleanup` | 5 | 0 | 1 | `L2-infra/components/workspace-temp-cleanup` |
 
 ### L3 通用业务
@@ -343,7 +343,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `contract-approval` | 0 | 0 | 0 | `L3-business/components/contract-approval` |
-| `contract-management` | 27 | 6 | 10 | `L3-business/components/contract-management` |
+| `contract-management` | 28 | 9 | 11 | `L3-business/components/contract-management` |
 | `delivery-management-framework` | 40 | 0 | 10 | `L3-business/components/delivery-management-framework` |
 | `dms-framework` | 50 | 0 | 17 | `L3-business/components/dms-framework` |
 | `finance-engine` | 51 | 0 | 12 | `L3-business/components/finance-engine` |
@@ -358,7 +358,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
 | `bangcle-contract` | 115 | 21 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 32 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 183 | 12 | 30 | `L4-proprietary/components/bdms` |
+| `bdms` | 184 | 12 | 31 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 24 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 81 | 0 | 16 | `L4-proprietary/components/delivery-center` |
@@ -411,7 +411,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 名称 | 描述 | 路径 | 完成证据 |
 |---|---|---|---|
 | contract-approval | 1. 合同扫描件 → OCR 识别 | `L3-business/components/contract-approval` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
-| contract-management | — | `L3-business/components/contract-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| contract-management | — | `L3-business/components/contract-management` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md`, `VERIFICATION-v1.1.md` |
 | delivery-management-framework | — | `L3-business/components/delivery-management-framework` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | DMS-Framework | L3 通用交付管理框架 — 框架引擎 + 通用模块 + 知识库 + L4 继承机制。 | `L3-business/components/dms-framework` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | Finance Engine — L3 通用理财引擎 | L3 通用业务层组件：纯函数式理财计算引擎，不持有数据、不访问 DB、不做持久化。 | `L3-business/components/finance-engine` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |

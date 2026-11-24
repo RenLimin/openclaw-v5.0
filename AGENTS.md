@@ -556,3 +556,19 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - 主仓 hook（`pre-commit`）会 auto-add，**严格只提交本任务内容仍须用隔离临时 index**
   （`GIT_INDEX_FILE=$TMPIDX git read-tree/write-tree/commit-tree` + `update-ref` 守卫）。
 <!-- observed: 2026-11-18 | status: active -->
+
+## 已登录客户端只读红线（gateway-owner 2026-11-24 明令，最高优先级）
+
+> 通过本机已登录的**企业微信 / 微信**（及同类 IM 客户端）做 AX/GUI/自动化时，
+> **严格只读不写**。这是 owner 当面下的硬红线。
+
+- **Never** 通过 AX/模拟输入等任何方式向企微/微信**发送消息**或触发发送（回车、点发送按钮、`AXUIElementPerformAction`）。
+- **Never** 合成鼠标点击/键盘事件（`CGEvent`/`CGEventSource`/`.post(tap:)`），
+  也不得 `AXUIElementSetAttributeValue` 给输入框写值、不得模拟键入/粘贴/切换会话/开关任何 UI。
+- **Always** 只允许 `AXUIElementCopyAttributeValue` 系列**只读 Get**；切会话由**人工手动**操作，程序不得代点。
+- 唯一允许的网络出口（如 webhook 导出到**自有**端点）默认必须关闭（`webhook_url=null`），且方向只能是「读出」，绝不是向 IM 写入。
+- 机器门禁：`L2-infra/components/wecom-ax-collector/tests/test_02_readonly_guard.py`
+  静态扫描引擎源码，出现任何点击/键盘/设值/PerformAction API 即测试失败。
+  新增/修改该引擎必须保持此守卫通过；例外须 owner 书面授权，且不得放宽默认。
+- 适用范围：企业微信、微信，以及任何用 owner 真实身份登录的 IM/社交客户端。
+<!-- observed: 2026-11-24 | status: active -->

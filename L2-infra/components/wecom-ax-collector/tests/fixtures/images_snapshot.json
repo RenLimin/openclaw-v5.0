@@ -1,0 +1,22 @@
+{
+  "window" : "企业微信",
+  "image_count" : 1,
+  "note" : "strict-read-only: 仅读取当前打开会话内 AXImage.AXImageData",
+  "pid" : 0,
+  "read_only" : true,
+  "images" : [
+    {
+      "h" : 122,
+      "x" : 868.5,
+      "i" : 0,
+      "sha256" : "3ed19285863d0e8cc7a45cfae2d26d489c027b604598706c0e9c670ccbb7300f",
+      "embed" : "",
+      "w" : 122,
+      "y" : 402,
+      "bytes" : 23093,
+      "desc" : "",
+      "dims" : "240x240"
+    }
+  ],
+  "written" : 0
+}

@@ -305,6 +305,19 @@ capabilities:
     notes: "实删进废纸篓；默认 dry-run"
     supersedes: []
 
+  - id: wecom-ax-collector
+    name: 企业微信 macOS AX 采集（只读无障碍，零注入）
+    layer: L2
+    interfaces: [wecom, ax, accessibility, collector, macos, message, 会话, 群消息]
+    entry:
+      - "python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/components/wecom-ax-collector/config.example.json --check"
+      - "python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/components/wecom-ax-collector/config.example.json --list"
+      - "python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/components/wecom-ax-collector/config.example.json --once"
+      - "python3 -m pytest L2-infra/components/wecom-ax-collector/tests/"
+      - "L2-infra/components/wecom-ax-collector/engine/wecom_ax_engine images --only-message --out /tmp/wecom_imgs"
+    notes: "Swift 引擎(engine/wecom_ax_engine)直调 macOS Accessibility C API 【严格只读】采集，不注入/不改客户端；已物理移除一切点击/键盘/设值/PerformAction 能力（owner 2026-11-24 红线），守卫测试 tests/test_02_readonly_guard.py。前置：终端辅助功能权限 + 企业微信已登录。输出 JSONL(msg_id/content_hash 幂等)，只读当前人工打开会话、不自动切换。Phase 2 图片：子命令 images 从 AXImage.AXImageData 直出 PNG(sha256/尺寸)，scripts/wecom_images.py 四重分类(侧栏/跨会话复现/描述签名/极小图)→仅 content 落盘并关联消息；真实聊天照片分辨率待验。语音/视频本体未证；历史需滚动加载。设计 docs/research/DESIGN-wecom-ax-collector-phase1.md，验收 VERIFICATION-v1.0.md §7"
+    supersedes: []
+
   # ══════════ L3 通用业务组件 ══════════
   - id: contract-approval
     name: 合同审批（L3 纯逻辑核心）
@@ -719,6 +732,17 @@ capabilities:
     interfaces: [project, retrospective, skill]
     entry:
       - "L3-business/skills/bangcle-project-retrospective/SKILL.md"
+    supersedes: []
+
+  - id: skill-customer-rectification-report
+    name: 客户整改报告（项目复盘与整改报告 Word 正式件，skill）
+    layer: L3
+    interfaces: [project, rectification, report, word, skill]
+    entry:
+      - "L3-business/skills/customer-rectification-report/SKILL.md"
+      - "python3 L3-business/skills/customer-rectification-report/scripts/build_docx.py"
+      - "python3 L3-business/skills/customer-rectification-report/scripts/validate_report.py"
+    notes: "面向客户的整改承诺正式 Word：六章四附件、整改表四必填、行动-明细日期一致性门禁、内部/对外双版与 ONES 脱敏 fail-closed"
     supersedes: []
 
   - id: skill-bangcle-project-summary
