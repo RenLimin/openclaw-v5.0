@@ -46,6 +46,30 @@
 - R9 漂移按 §7.3 保留计算值 + routing_audit
 - BQ/BU/BV 不写死；BU→BV 以 `图例!L:M` VLOOKUP 为准
 
+## 4.5 P3 分桶引擎 · 切片1 进度（2026-11-24，已闭环）
+
+| 项 | 内容 |
+|---|---|
+| 口径依据 | `DESIGN-DETAIL-REVENUE-ANALYSIS-v1.1.md` §4.1 / §4.2 |
+| 落地位置 | `engine.py` 新增 4 方法：`_prev_period` / `inherit_previous_buckets` / `persist_buckets` / `load_buckets`（**未新建 bucket_engine.py**，复用既有避免重复建设） |
+| 优先级 | ① 显式人工改判 > ② 上期有值则继承 > ③ 留空待 §3 规则引擎 |
+| fail-closed | 本期/上期《预算执行表》任一缺失 → `ImportError_`，不推断不伪造 |
+| 关键设计 | **本期 BU 列为产出物，不作判定输入**（否则循环论证）；降级为 `audit_vs_source` 审计字段 |
+| 计数 | 键级自洽 `total = inherited + overridden + blank`；同 ID 多行去重（`duplicate_rows`） |
+| 列位实证 | `J`=履约ID、`BU`=预算趋势（r2/r3 表头，202605/202606 一致） |
+
+**真实数据验证**（临时库导入 202605+202606）：
+`inherited=1192 overridden=0 blank=0`，`audit_vs_source` 一致 1192 / 不一致 0；落库+回读 1192。
+
+**测试**：`tests/test_revenue_analysis_p3_bucket_inherit.py` 11 passed
+（含 fail-closed 两例、冷启动语义、优先级顺序、落库回读、账期跨年）。
+
+**提交**：`fe033b9`（2 文件 +261/-0）
+
+**下一片待办**：③ 留空行的 §3 七桶规则引擎（`bucket_engine` 真正算法层），以及 P4/P5、终审设计文档。
+
+---
+
 ## 5. 验证命令（恢复后先跑）
 ```bash
 cd /Users/bangcle/.openclaw/workspace/L4-proprietary/components/bdms
