@@ -94,10 +94,10 @@ python3 -m pytest L2-infra/components/wecom-ax-collector/tests/
 
 ## 五、下一步（Phase 2 候选）
 
-1. **常驻引擎**：消除冷启动，把切换时延从 ~6s 压到 <1s（A4 转正）。
+1. **常驻引擎**：消除冷启动，把切换时延从 ~6s 压到 <1s（A4 已取消，只读红线后不再切会话）。
 2. **发送者补齐**：评估截图 OCR/VLM 叠加气泡左右判断，或对单人主导会话启用继承。
 3. **滚动回溯**：按需加载历史消息（带速率限制）。
-4. **崩溃演练**：kill -9 + 半写 JSONL 恢复（A6 转正）。
+4. ~~崩溃演练：kill -9 + 半写 JSONL 恢复~~ → ✅ **已完成，见 §8**。
 5. **存储后端**：SQLite / 向量库，供摘要、告警、RAG 消费。
 
 ---
@@ -161,3 +161,40 @@ python3 -m pytest L2-infra/components/wecom-ax-collector/tests/
   需出现真实照片时用本引擎复测，并由 OCR/VLM 定性后再下结论。
 - 图片本体提取不依赖截屏权限；但 OCR/VLM 识别属下一步（复用 `ocr-digitalization` /
   `arkcli`），本阶段只做采集与分类。
+
+---
+
+## 八、A6 崩溃安全（2026-11-24，owner 指示补全）
+
+### 8.1 问题
+原 `JsonlSink` 是裸追加：`kill -9` / 断电会把最后一行写一半，下游按行解析即崩。
+另 `.seen_ids.json` 若被写坏，原实现会静默降级为空集——无告警。
+
+### 8.2 实现（scripts/wecom_collector.py）
+- **`JsonlSink.repair(path)`**：静态方法，把残缺尾行截断回最后一个换行；空文件/正常结尾返回 0，
+  **只截断、不重写历史内容**。
+- **初始化即自愈**：构造时先 repair 已有文件，记录 `repaired_bytes`。
+- **写入前尾检**：每次 `emit` 前检查末字节是否为 `\n`，发现残缺立即修复再续写。
+- **fsync**：`flush()` + `os.fsync()`，保证记录真落盘后才算成功（默认开启）。
+- **CLI `--recover`**：单独修复模式，输出 `beforeB → afterB（丢弃半写尾行 NB）`，不采集。
+- **语义声明（at-least-once）**：若在「已写盘、未保存已见集」之间被杀，重启会重复输出该消息；
+  采集器取「宁可重复、不可丢失」，由下游按 `msg_id` / `content_hash` 幂等去重。
+
+### 8.3 验收证据（真实 kill -9，非 mock）
+| 用例 | 结果 |
+|---|---|
+| `test_repair_no_file/empty_and_clean` | ✅ 无副作用 |
+| `test_repair_truncates_partial_tail` | ✅ 坏尾行剔除、好行不连带删 |
+| `test_repair_no_newline_single_line` | ✅ 整行丢弃（无换行=无完整记录） |
+| `test_sink_selfheals_before_append` | ✅ 追加前自动清半行，新记录紧跟其后 |
+| `test_cli_recover` | ✅ `--recover` rc=0，产物恰为完整行 |
+| **`test_real_kill9_leaves_partial_line_then_recovers`** | ✅ **真起子进程、握手式确认半写状态后 SIGKILL**；repair 后历史零丢失、顺序不变，续写干净 |
+| `test_seen_store_corrupt_recovers` | ✅ 坏 JSON 降级为空集且不崩 |
+
+- 真实 kill -9 用例连续 3 次运行稳定通过（非时序碰巧）。
+- 测试编写中实测到两个反直觉事实并写入设计约束：
+  1) 小缓冲区单次 `write()` 基本原子——**必须显式分两段写同一条记录**才能复现半写；
+  2) 生成子进程源码曾自身缺闭合引号导致全部行非法 JSON——已修，教训：崩溃演练的 fixture 本身要先能解析。
+
+### 8.4 本轮测试总量
+全量 **44 passed**（含只读守卫、图片分类、崩溃安全）。

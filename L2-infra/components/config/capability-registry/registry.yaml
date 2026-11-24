@@ -315,7 +315,8 @@ capabilities:
       - "python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/components/wecom-ax-collector/config.example.json --once"
       - "python3 -m pytest L2-infra/components/wecom-ax-collector/tests/"
       - "L2-infra/components/wecom-ax-collector/engine/wecom_ax_engine images --only-message --out /tmp/wecom_imgs"
-    notes: "Swift 引擎(engine/wecom_ax_engine)直调 macOS Accessibility C API 【严格只读】采集，不注入/不改客户端；已物理移除一切点击/键盘/设值/PerformAction 能力（owner 2026-11-24 红线），守卫测试 tests/test_02_readonly_guard.py。前置：终端辅助功能权限 + 企业微信已登录。输出 JSONL(msg_id/content_hash 幂等)，只读当前人工打开会话、不自动切换。Phase 2 图片：子命令 images 从 AXImage.AXImageData 直出 PNG(sha256/尺寸)，scripts/wecom_images.py 四重分类(侧栏/跨会话复现/描述签名/极小图)→仅 content 落盘并关联消息；真实聊天照片分辨率待验。语音/视频本体未证；历史需滚动加载。设计 docs/research/DESIGN-wecom-ax-collector-phase1.md，验收 VERIFICATION-v1.0.md §7"
+      - "python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/components/wecom-ax-collector/config.example.json --recover"
+    notes: "Swift 引擎(engine/wecom_ax_engine)直调 macOS Accessibility C API 【严格只读】采集，不注入/不改客户端；已物理移除一切点击/键盘/设值/PerformAction 能力（owner 2026-11-24 红线），守卫测试 tests/test_02_readonly_guard.py。前置：终端辅助功能权限 + 企业微信已登录。输出 JSONL(msg_id/content_hash 幂等)，只读当前人工打开会话、不自动切换。Phase 2 图片：子命令 images 从 AXImage.AXImageData 直出 PNG(sha256/尺寸)，scripts/wecom_images.py 四重分类(侧栏/跨会话复现/描述签名/极小图)→仅 content 落盘并关联消息；真实聊天照片分辨率待验。A6 崩溃安全：JsonlSink repair 截断半写尾行 + fsync，CLI --recover，真 kill -9 演练 tests/test_04_crash_safety.py；语义 at-least-once，下游按 msg_id/content_hash 去重。语音/视频本体未证；历史需滚动加载。设计 docs/research/DESIGN-wecom-ax-collector-phase1.md，验收 VERIFICATION-v1.0.md §7~§8"
     supersedes: []
 
   # ══════════ L3 通用业务组件 ══════════

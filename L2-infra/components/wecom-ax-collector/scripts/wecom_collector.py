@@ -236,13 +236,63 @@ class SeenStore:
 
 
 class JsonlSink:
+    """崩溃安全 JSONL 写入器（A6）。
+
+    防 `kill -9` / 断电造成的「半写行」：
+      1) 初始化时先自愈已有文件：把不完整的尾行截断回最后一个换行；
+      2) 每次写入前再做一次廉价尾检，发现残缺立即修复（不覆盖好的历史行）；
+      3) 写完 flush + fsync，保证记录真落盘后才算成功。
+
+    语义：**at-least-once**。若在「已写盘、未保存已见集」之间被杀，
+    重启会重复输出该消息——采集器取「宁可重复、不可丢失」，
+    由下游按 `msg_id` / `content_hash` 幂等去重。
+    """
+
     def __init__(self, path: Path):
         self.path = path
+        self.repaired_bytes = self.repair(path)
 
-    def emit(self, record: dict):
+    @staticmethod
+    def repair(path: Path) -> int:
+        """把残缺尾行截断到最后一个完整行，返回被丢弃的字节数。
+
+        空文件 / 不存在 / 正常结尾均返回 0；只做截断，不重写历史内容。
+        """
+        if not path.exists() or path.stat().st_size == 0:
+            return 0
+        data = path.read_bytes()
+        cut = data.rfind(b"\n")
+        if cut == len(data) - 1:
+            return 0                       # 正常结尾
+        good = 0 if cut < 0 else cut + 1
+        if good != len(data):
+            path.write_bytes(data[:good])
+        return len(data) - good
+
+    def _tail_is_partial(self) -> bool:
+        if not self.path.exists() or self.path.stat().st_size == 0:
+            return False
+        with self.path.open("rb") as f:
+            f.seek(-1, os.SEEK_END)
+            return f.read(1) != b"\n"
+
+    def emit(self, record: dict, fsync: bool = True):
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        if self._tail_is_partial():
+            self.repaired_bytes += self.repair(self.path)
+        with self.path.open("ab") as f:
+            f.write(json.dumps(record, ensure_ascii=False).encode("utf-8") + b"\n")
+            f.flush()
+            if fsync:
+                os.fsync(f.fileno())
+
+
+def repair_jsonl(path: Path) -> tuple[int, int]:
+    """CLI 用：修复 JSONL 残缺尾行，返回 (修复前大小, 修复后大小)。"""
+    before = path.stat().st_size if path.exists() else 0
+    JsonlSink.repair(path)
+    after = path.stat().st_size if path.exists() else 0
+    return before, after
 
 
 def build_record(session: str, msg: dict, mid: str, cfg: Config,
@@ -460,9 +510,17 @@ def main() -> int:
     ap.add_argument("--once", action="store_true", help="单次采集")
     ap.add_argument("--list", action="store_true", help="列出可见会话")
     ap.add_argument("--check", action="store_true", help="前置条件自检")
+    ap.add_argument("--recover", action="store_true",
+                    help="修复 JSONL 半写尾行（kill -9 后自愈），不采集")
     args = ap.parse_args()
 
     cfg = Config.load(args.config)
+
+    if args.recover:
+        before, after = repair_jsonl(cfg.jsonl_path)
+        dropped = before - after
+        print(f"JSONL 修复完成：{before}B → {after}B（丢弃半写尾行 {dropped}B）")
+        return 0 if dropped == 0 else 0
 
     if args.check:
         problems = check_prerequisites(cfg)

@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-24 17:55 UTC+08:00
+最后生成：2026-11-24 18:25 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -295,8 +295,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9e7e6ee` |
-| Commit 数 | 772 |
+| HEAD | `e79e03e` |
+| Commit 数 | 777 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -335,7 +335,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `system-governor` | 20 | 0 | 6 | `L2-infra/components/system-governor` |
 | `tool-policy` | 0 | 0 | 0 | `L2-infra/components/tool-policy` |
 | `web-common` | 14 | 4 | 2 | `L2-infra/components/web-common` |
-| `wecom-ax-collector` | 7 | 0 | 3 | `L2-infra/components/wecom-ax-collector` |
+| `wecom-ax-collector` | 8 | 0 | 4 | `L2-infra/components/wecom-ax-collector` |
 | `workspace-temp-cleanup` | 5 | 0 | 1 | `L2-infra/components/workspace-temp-cleanup` |
 
 ### L3 通用业务
