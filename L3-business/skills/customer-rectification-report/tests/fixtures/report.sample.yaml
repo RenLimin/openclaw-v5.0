@@ -1,0 +1,65 @@
+meta:
+  client_full: "示例城市商业银行股份有限公司"
+  vendor_full: "北京示例安全科技有限公司"
+  title: "项目复盘与整改报告"
+  subtitle: "问题整改 · 服务承诺 · 实施计划"
+  dept: "安服中心"
+  date: "2026-11-24"
+  version: "V1.0"
+  classification: "内部"
+  trigger_meeting: "2026-11-20 现场沟通"
+  issue_count: 6
+  program_manager: "项目集经理（示例）"
+
+contracts:
+  - {no: "HT-001", name: "移动威胁感知服务", amount: "100,000", period: "2026-01-01 ~ 2026-12-31"}
+  - {no: "HT-002", name: "安全加固服务", amount: "200,000", period: "2026-03-01 ~ 2027-02-28"}
+
+issues:
+  - {id: 1, group: deliver, cat: "计划管理", question: "项目计划未覆盖全生命周期", action: "推行全生命周期计划，每周核对、延期提前预警", owner: "交付中心", due: "2026-11-22 ~ 2026-11-27", acceptance: "计划可查、节点准时", ref: "附件1", ones: ""}
+  - {id: 2, group: deliver, cat: "交付质量", question: "交付材料不全", action: "建立交付物清单，大版本全套、小版本变更清单", owner: "产研中心", due: "2026-11-28 ~ 2026-12-19", acceptance: "按清单 100% 齐备", ref: "附件2", ones: ""}
+  - {id: 3, group: deliver, cat: "高优先级", question: "某机型偶发崩溃", action: "列为最高优先级专项定位修复", owner: "产研中心", due: "已完成", acceptance: "指定机型复现崩溃清零", ref: "", ones: ""}
+  - {id: 4, group: tech, cat: "漏洞响应", question: "安全漏洞分析不及时", action: "安全漏洞当日响应、当日完成分析", owner: "安服中心、产研中心", due: "2026-11-24", acceptance: "监管类漏洞当日闭环", ref: "", ones: "ON-100001（内部跟踪）"}
+  - {id: 5, group: tech, cat: "威胁感知", question: "新型黑产工具检测滞后", action: "以当前版本为基线补齐检测能力", owner: "产研中心（监测线）", due: "2026-11-24起按照问题工单按日跟进", acceptance: "所列工具可检测并经验证", ref: "", ones: "https://ones.example.com/task/ON-100002"}
+  - {id: 6, group: tech, cat: "合规专业", question: "检测专业度不足", action: "重建检测基线，重新提供专家并入场", owner: "合规产品与解决方案部", due: "2026-11-27", acceptance: "检测点经贵司确认", ref: "", ones: "ON-100003"}
+
+mechanism:
+  - "项目集统筹：统一问题台账、工单、版本基线与对外口径。"
+  - "工单与应急通道：应急通道加共享台账，问题一一对应工单、全程可追溯。"
+  - "服务级别 SLA：遵守约定的 7×24；最高优先级 5 分钟响应、8 小时内解决。"
+  - "版本与变更：大版本全套文档并全量回归，小版本给变更清单，变更经贵司书面确认。"
+  - "质量门禁：文档三审制。"
+  - "计划与沟通：每周核对，预计延期提前预警；安全风险主动通报。"
+
+phases:
+  - {stage: "应急整改", window: "2026-11-22 ~ 2026-11-27", focus: "应急通道、SLA 执行、A/B 角到位、在途问题时间确认"}
+  - {stage: "短期固化", window: "2026-11-28 ~ 2026-12-19", focus: "合同义务拆解、工单全覆盖、版本基线与配套文档"}
+
+actions:
+  - {"no": 1, action: "项目集机制、应急通道与 A/B 角到位", owner: "项目集经理、产研中心", due: "2026-11-27"}
+  - {"no": 2, action: "执行 SLA，最高优先级 5 分钟响应、8 小时解决", owner: "安服、产研、交付中心", due: "2026-11-27 起"}
+  - {"no": 3, action: "版本基线及配套交付文档到位", owner: "产研中心", due: "2026-12-19"}
+
+deliverables:
+  - {type: "大版本发布", name: "需求规格说明书、架构与接口设计", requirement: "大版本立项与设计阶段全套，评审后基线化"}
+  - {type: "大版本发布", name: "部署包、配置、授权证书、源代码", requirement: "可独立部署、可安装验证、可回滚"}
+  - {type: "小版本 / 缺陷修复", name: "发布说明、变更清单", requirement: "说明更新内容与升级方式，经贵司书面确认"}
+  - {type: "小版本 / 缺陷修复", name: "测试案例、回归范围、回滚方案", requirement: "仅回归受影响范围，明确回滚触发条件"}
+  - {type: "周期性 / 专项服务", name: "渠道监测报告", requirement: "按周期提交并归档"}
+  - {type: "周期性 / 专项服务", name: "应急预案、风险事件通报记录", requirement: "与附件 4 主动通报机制配套，发现即通报"}
+
+ab_roles:
+  - {domain: "移动威胁感知（监测线）", a: "监测主责工程师", b: "监测备援工程师", lead: "监测线职能负责人"}
+  - {domain: "安全加固", a: "加固主责工程师", b: "加固备援工程师", lead: "加固线职能负责人"}
+
+notify:
+  - {stage: "发现与定级", trigger: "监测、工单或贵司反馈发现问题", action: "登记入库并定级", sla: "发现即登记", owner: "产研中心"}
+  - {stage: "预警告知", trigger: "发现安全缺陷、漏洞", action: "履行预警告知并同步处置建议", sla: "按 SLA", owner: "安服中心、产研中心"}
+  - {stage: "处置闭环", trigger: "已通报风险", action: "处置、整改、复测并跟踪关闭", sla: "最高 5 分钟响应 / 8 小时解决", owner: "产研中心"}
+  - {stage: "周度主动同步", trigger: "每周固定节奏", action: "邮件主动同步进展与风险", sla: "每周五 19:00 前", owner: "项目经理"}
+
+annex1_fields:
+  - {field: "变更编号", content: "CR-项目-序号"}
+  - {field: "变更类型", content: "新功能 / 缺陷修复 / 配置调整"}
+  - {field: "影响范围", content: "产品、模块、机型、版本"}
+  - {field: "风险与回滚", content: "风险点、回滚方案与触发条件"}

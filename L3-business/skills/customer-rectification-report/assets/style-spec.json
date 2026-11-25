@@ -1,0 +1,30 @@
+{
+  "fonts": {
+    "eastAsia_allowed": ["宋体", "黑体"],
+    "ascii": "Times New Roman",
+    "hAnsi": "Times New Roman",
+    "cs": "Times New Roman"
+  },
+  "sizes_pt": {
+    "cover_title": 26,
+    "cover_subtitle": 22,
+    "h1": 13,
+    "h2": 11,
+    "body": 10.5,
+    "table": 9,
+    "wide_table": [8, 9],
+    "cover_table": 10.5,
+    "note": 9,
+    "signature": 11,
+    "allowed_half_values": [16, 18, 21, 22, 26, 44, 52]
+  },
+  "page": { "wide_table_min_cols": 8, "wide_orientation": "landscape", "body_orientation": "portrait" },
+  "issue_columns": ["编号", "类别", "贵司问题", "整改措施", "责任方", "完成时限", "验收标准"],
+  "issue_last_col_internal": "ONES 对应",
+  "issue_last_col_external": "参考",
+  "deliverable_types": ["大版本发布", "小版本", "周期性"],
+  "banned_terms": ["甲方", "附录", "格式化表格", "待指定", "待定", "尽快", "技术复盘确定"],
+  "external_banned_patterns": ["ones.bangcle.com", "XSZS\\d{8}", "SSXM-\\d{4}-\\d{4}-\\d{4}", "#?\\b39\\d{4}\\b"],
+  "footer_slogan": "稳如泰山",
+  "due_whitelist_regex": "^(已完成|\\d{4}-\\d{2}-\\d{2}(\\s*[~～-]\\s*\\d{4}-\\d{2}-\\d{2})?(\\s*起)?(\\s*按[日周])?(跟进)?|\\d{4}-\\d{2}-\\d{2}\\s*起.*跟进|跟进中)$"
+}
