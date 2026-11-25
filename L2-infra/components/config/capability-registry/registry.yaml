@@ -79,9 +79,10 @@ capabilities:
       - "bash L2-infra/components/config/config.sh apply"
       - "bash L2-infra/components/config/config.sh audit"
       - "bash L2-infra/components/config/install-hooks.sh"
+      - "python3 L2-infra/components/config/safe_commit.py"
     health:
       - "bash L2-infra/components/config/install-hooks.sh --check"
-    notes: "install-hooks.sh 安装 pre-commit/pre-push；--check 校验一致性"
+    notes: "install-hooks.sh 安装 pre-commit/pre-push；--check 校验一致性；safe_commit.py = 统一安全提交器（隔离临时 index + plumbing + 门禁预检，见 docs/conventions/commit-and-config.md §7）"
     supersedes: []
 
   - id: context-guardian

@@ -232,13 +232,31 @@ bash L2-infra/components/credentials/credentials.sh github-sync
 - Always 换机/换 clone 后先跑 `github-sync`，再 push
 - Never 删/绕过 pre-push hook（绕过 = 回到「push 时才发现没登录」）
 
-## 7. 变更历史
+## 7. 统一安全提交规则（2026-11-25 owner 指示重立）
+
+**权威工具**：`L2-infra/components/config/safe_commit.py`。
+隔离临时 index + plumbing，内置门禁预检；不碰共享 `.git/index`，不自动 push。
+
+```bash
+# 试运行（只看会提什么）
+python3 L2-infra/components/config/safe_commit.py --paths <路径...> --dry-run
+
+# 正式提交（逐条显式列路径；消息较长用文件）
+python3 L2-infra/components/config/safe_commit.py \
+    --paths L2-infra/components/x/SKILL.md docs/y.md \
+    --message-file /tmp/msg.txt
+```
+
+- Always 本仓（`~/.openclaw/workspace`）提交走该工具；**Never 裸 `git commit`**。
+- Never `git add -- $FILES`（zsh 不对无引号变量分词，会静默失败、产出空提交）。
+- Always 提交后核对 `git show --stat` 非空且清单与预期一致。
+- Always 新增/变更资产后重生成 `docs/architecture/01-asset-inventory.md` 并过 `--check`，同批提交。
+- pre-flight 含明文凭据扫描 + registry 自校验；不过则禁止提交。
+- 背景与事故见 AGENTS.md「统一安全提交规则」与「pre-commit hook auto-add 污染」节。
+
+## 8. 变更历史
 
 - 2026-08-22: 创建。起因是 compaction 配置静默丢失事故 + Rex 要求统一 commit 规则
 - 2026-10-28: 新增 §4 凭据存储与提交规范（filter-repo 清历史后建立防泄密机制）
 - 2026-11-20: 新增 §6 GitHub 凭据链路（SSOT + 自检脚本 + push 前检查）
-
-## 6. 变更历史
-
-- 2026-08-22: 创建。起因是 compaction 配置静默丢失事故 + Rex 要求统一 commit 规则
-- 2026-10-28: 新增 §4 凭据存储与提交规范（filter-repo 清历史后建立防泄密机制）
+- 2026-11-25: 新增 §7 统一安全提交规则（owner 指示重立；safe_commit.py 落地）

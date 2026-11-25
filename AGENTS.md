@@ -485,6 +485,25 @@ This is a starting point. Add your own conventions, style, and rules as you figu
 - Always `git read-tree "$NEW"` 同步共享 index 前**必须先 `unset GIT_INDEX_FILE`**，否则只更新临时 index，共享 index 落后一个提交 → 工作区显示假 `D`/`MM`（磁盘文件完好，勿 `checkout` 还原）。
 <!-- observed: 2026-11-18 | status: active -->
 
+## 统一安全提交规则（2026-11-25 owner 指示重立）
+
+**权威工具**：`L2-infra/components/config/safe_commit.py`（隔离临时 index + plumbing，内置门禁预检）。
+
+- Always 本仓（`~/.openclaw/workspace`）提交一律走该工具：`--paths <逐条显式列出>`。
+- Never 裸 `git commit`；Never `git add -- $FILES`（zsh 不对无引号变量分词）；Never 依赖共享 `.git/index`。
+- Always 一个逻辑变更 = 一个 commit，提交信息用 Conventional Commits（`docs/conventions/commit-and-config.md` §1）；
+  消息较长时写 `--message-file`，避免 shell 转义。
+- Always 提交后核对 `git show --stat` **非空且清单与预期一致**（工具已内建对账，不一致即报错）。
+- Always 新增/变更资产或组件后，重生成 `docs/architecture/01-asset-inventory.md` 并过 `--check`，
+  与 registry 改动同批提交（工具 `--skip-preflight` 仅限明确知情时使用）。
+- Pre-flight 含：明文凭据扫描 + registry 自校验（entry 路径存在性）。二者不过则禁止提交。
+- push 由 owner 单独决定；`pre-push` hook 负责 GitHub 凭据链路门禁（不因本次提交而自动推送）。
+
+**跨机仓库口径**：仅代提交 owner 自有仓库（如 `RenLimin/openclaw-v5.0`）；
+第三方上游 fork（CosyVoice / rvc / facefusion 等）不代提交其 `.venv/`、`assets/` 等运行产物；
+备份仓（`~/backups/openclaw-auto`、`~/openclaw-backup-*`）与 sandbox 副本不做提交流程。
+<!-- observed: 2026-11-25 | status: active -->
+
 ## 会话清理红线（事故 2026-11-11，FB：未归档空闲会话被批量剪枝）
 - **手动归档的唯一权威信号 = `archivedAt` 非空**（通常伴 `archiveReason=manual`/`stale-dashboard`）。
   `status=done/failed` 只是「一轮跑完待输入」的**正常空闲态，绝不是可清除信号**。
