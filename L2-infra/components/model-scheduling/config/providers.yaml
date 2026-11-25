@@ -49,11 +49,11 @@ providers:
     api_type: "openai-completions"
     auth_type: "bearer"
     api_key_ref: "deepseek"
-    enabled: true
+    enabled: false  # 2026-11-25 owner 授权：余额耗尽(HTTP 402)暂停调用，充值后改回 true
     health_check:
       endpoint: "/models"
       timeout_ms: 5000
     rate_limit:
       requests_per_minute: 30
       tokens_per_minute: 50000
-    notes: "DeepSeek 官方 API,外部推理兜底"
+    notes: "DeepSeek 官方 API,外部推理兜底；402 余额不足暂停中(2026-11-25)"

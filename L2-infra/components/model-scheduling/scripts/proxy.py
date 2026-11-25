@@ -218,6 +218,23 @@ def _get_provider_health(provider_id: str) -> str:
             return status
     return ""
 
+def _provider_block_reason(provider_id: str, providers_config: dict) -> str | None:
+    """provider 级不可用原因；None 表示可尝试。
+
+    与 fallback 链准入口径保持一致（enabled + 健康状态），避免两处逻辑漂移。
+    2026-11-25: 手动指定模型的路径此前完全绕过该检查，导致余额耗尽的 provider
+    仍被反复直撞 402（deepseek 当日两次均属此类）。
+    """
+    provs = (providers_config or {}).get("providers", {}) or {}
+    pconf = {k.lower(): v for k, v in provs.items()}.get(str(provider_id).lower(), {})
+    if not pconf.get("enabled", False):
+        return "provider 已禁用"
+    health = _get_provider_health(provider_id)
+    if health in ("unreachable", "exhausted"):
+        return f"provider 健康状态 {health}"
+    return None
+
+
 # ─── 模型选择(返回 chain 列表) ───
 def estimate_tokens(request: dict) -> int:
     """粗估请求 token 数（中文 ~1.5 字/token，英文 ~4 字符/token）。"""
@@ -644,13 +661,21 @@ class ProxyHandler:
             if target:
                 provider_id = target.get("provider", "")
                 provider_conf = providers_config.get("providers", {}).get(provider_id, {})
-                logger.info(f"手动路由: {user_model} (provider: {provider_id})")
-                async with self.gate.gate(provider_id, est, providers_config):
-                    success, status_code, result = await self._forward_once(
-                        request, target, provider_conf, stream, writer)
-                if success:
-                    return
-                logger.warning(f"手动模型 {user_model} 失败({status_code})，回退到自动路由")
+                # v1.2：手动指定也要过 provider 级准入——与 fallback 链同口径
+                # （enabled + 健康状态）。此前此处完全绕过，余额耗尽的 provider
+                # 仍被反复直撞 402（deepseek 11-25 两次均属此类）。
+                block_reason = _provider_block_reason(provider_id, providers_config)
+                if block_reason or target.get("status") != "active":
+                    why = block_reason or f"模型状态 {target.get('status')}"
+                    logger.warning(f"手动路由被拒: {user_model} → {why}；转自动路由")
+                else:
+                    logger.info(f"手动路由: {user_model} (provider: {provider_id})")
+                    async with self.gate.gate(provider_id, est, providers_config):
+                        success, status_code, result = await self._forward_once(
+                            request, target, provider_conf, stream, writer)
+                    if success:
+                        return
+                    logger.warning(f"手动模型 {user_model} 失败({status_code})，回退到自动路由")
 
         # 自动路由(上下文感知: 大请求自动路由到大 ctx 模型)
         if est > 200000:
