@@ -5,6 +5,9 @@ data/reports/
 data/tmp/
 data/cache/
 
+# 临时产物（真实合同号/审批原文，禁止入库）
+tmp/
+
 # 构建/测试
 __pycache__/
 *.pyc
