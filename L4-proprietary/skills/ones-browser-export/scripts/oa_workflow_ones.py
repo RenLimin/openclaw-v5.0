@@ -201,6 +201,36 @@ def _spans(text: str) -> list[tuple[str, str, str]]:
             return hits
     return []
 
+# ---------- 组织架构 / 全量义务检索（v1.3，只读）----------
+def user_departments(name: str) -> list[str]:
+    """ONES 配置中心-组织架构：按姓名查所属部门名（只读）。
+
+    实证（2026-11-24）：已验证可按姓名命中部门；示例名一律脱敏为「员工A/员工B=示例部门甲」等合成占位（不写真实人员姓名）。未收录返回空列表（调用方标待人工确认，不伪造）。
+    """
+    r = gql('query { users(filter:{name_match:"%s"}) { name departments{name} } }' % name)
+    out: list[str] = []
+    for u in (r.get("data") or {}).get("users") or []:
+        if u.get("name") != name:
+            continue
+        for d in u.get("departments") or []:
+            nm = d.get("name")
+            if nm and nm not in out:
+                out.append(nm)
+    return out
+
+
+def search_obligations(keyword: str) -> list[dict]:
+    """按关键词**跨项目**检索任务（含所属项目与结项字段），调用方自行过滤/聚合。
+
+    口径（PRD §0.2d C8）：检索词命中履约义务名即可定位到项目——项目名常不含客户名
+    （实证 887726：projects(name_match="黄河财产保险")=0，但义务名含该客户）。
+    """
+    q = ('query { tasks(filter:{name_match:"%s"}) { number name status{name} owner{name} '
+         'assign{name} issueType{name} project{name uuid} _Gvi8gt9w{value} } }' % keyword)
+    r = gql(q)
+    return (r.get("data") or {}).get("tasks") or []
+
+
 def license_period(tasks: list[dict]) -> tuple[str, str]:
     """从【云端】license/授权/维保任务描述取授权区间；返回(规范化区间, 证据号)。
 
