@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-25 13:13 UTC+08:00
+最后生成：2026-11-25 14:08 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -295,8 +295,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `62bd3b2` |
-| Commit 数 | 787 |
+| HEAD | `d5476a2` |
+| Commit 数 | 788 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -322,7 +322,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `logs` | 3 | 0 | 0 | `L2-infra/components/logs` |
 | `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
 | `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |
-| `model-scheduling` | 19 | 0 | 5 | `L2-infra/components/model-scheduling` |
+| `model-scheduling` | 22 | 0 | 7 | `L2-infra/components/model-scheduling` |
 | `observability` | 12 | 0 | 3 | `L2-infra/components/observability` |
 | `ocr-digitalization` | 24 | 0 | 7 | `L2-infra/components/ocr-digitalization` |
 | `office-generation` | 16 | 0 | 6 | `L2-infra/components/office-generation` |
@@ -391,7 +391,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | logs | ✅ 已实现（聚合器核心可用）；日志查询 DSL、轮转策略为演进方向，尚未实现。 | `L2-infra/components/logs` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | maintenance | 返回退出码 0 = 健康，非 0 = 存在问题。 | `L2-infra/components/maintenance` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | memory-embedding — 内存嵌入计算组件 | 模型不可用时自动降级到 MockEmbedder（基于文本哈希的伪向量），保证系统可用但检索质量下降。 | `L2-infra/components/memory-embedding` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
-| model-scheduling — 智能模型调度组件 | 综合模型/供应商调度系统。参考 9router / OpenRouter / Portkey 业界最佳实践。 | `L2-infra/components/model-scheduling` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md`, `VERIFICATION-v1.1.md` |
+| model-scheduling — 智能模型调度组件 | 综合模型/供应商调度系统。参考 9router / OpenRouter / Portkey 业界最佳实践。 | `L2-infra/components/model-scheduling` | `VERIFICATION-v1.2-throttle.md`, `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | observability | — | `L2-infra/components/observability` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | ocr-digitalization — OCR 文档数字化组件 | 1. **表格结构还原**：接入 PP-Structure，识别表格行列并输出结构化数据 | `L2-infra/components/ocr-digitalization` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | office-generation | — | `L2-infra/components/office-generation` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
@@ -474,7 +474,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `logs` | 日志收集（骨架，由 observability 代理） | L2 | `L2-infra/components/logs/ (骨架；日志收集走 observability)` |
 | `maintenance` | 维护（记忆维护 / 仓库健康） | L2 | `bash L2-infra/scripts/maintenance/memory_maintenance.sh` |
 | `memory-embedding` | 记忆与嵌入（openclaw memory） | L2 | `openclaw memory search <关键词>` |
-| `model-scheduling` | 模型调度（配额 / 恢复 / 路由） | L2 | `python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail` |
+| `model-scheduling` | 模型调度（配额 / 恢复 / 路由 / 错峰限流） | L2 | `python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail` |
 | `observability` | 可观测性（网关看门狗） | L2 | `bash L2-infra/components/observability/gateway_watchdog.sh` |
 | `ocr-digitalization` | OCR 文档数字化（扫描件/图片 → 文本 + 签名印章检测） | L2 | `python3 L2-infra/components/ocr-digitalization/scripts/ocr_main.py --help` |
 | `office-generation` | Office 文档生成（Excel / PPT / Word） | L2 | `python3 -c "from office_engine import OfficeDocument; print('OK')"  # 库接口，工作目录需含 L2-infra/com...` |

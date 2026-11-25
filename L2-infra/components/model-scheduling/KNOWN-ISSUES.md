@@ -1,12 +1,13 @@
 # Known Issues — model-scheduling
 
-> 只记录，不修复。供后续排期与主会话修改参考。
-> 建立：2026-11-24 · 状态：待 Rex 主会话处理
+> 建立：2026-11-24 · 更新：2026-11-25
+> KI-01 / KI-02 **已修复**（v1.1 throttle，见 DESIGN-DETAIL-v1.1-throttle.md 与 VERIFICATION-v1.2-throttle.md）
+> 本文件保留为历史记录与归因依据。
 > 复现命令均相对本组件目录（`/Users/bangcle/.openclaw/workspace/L2-infra/components/model-scheduling`）。
 
 ---
 
-## KI-01 缺少跨会话并发错峰机制（高）
+## KI-01 缺少跨会话并发错峰机制（高）— ✅ 已修复 2026-11-25
 
 **现象**：多个 agent 会话同时运行时，模型请求同时打向 provider，无任何全局限速/排队。
 
@@ -30,15 +31,27 @@ done
 
 **建议方向（未实施）**：在 proxy 层加全局信号量 + 请求间隔 jitter + RPM/TPM 上限；作用于跨会话，而非单会话内。
 
+**已实现（2026-11-25）**：`scripts/throttle.py` 的 `GlobalGate`
+- per-provider RPM + TPM 双令牌桶（参数复用 `providers.yaml.rate_limit`，此前配置存在但无人读取）
+- 全局并发信号量 `max_concurrent_chat`
+- 平滑最小间隔 + jitter（锁内执行，避免出口重新扎堆）
+- 失败开放：`throttle.enabled=false` 或缺段即热更新旁路，行为退回 v1.0
+- 接入点：`_handle_chat` 手动路由与 fallback 循环每次尝试均过闸门
+
 ---
 
-## KI-02 突发限流的就地重试会放大并发（中）
+## KI-02 突发限流的就地重试会放大并发（中）— ✅ 已修复 2026-11-25
 
 **现象**：429 + `RequestBurstTooFast` 时选择「不隔离 provider、就地退让重试」。理由是「隔离 provider 反而扩大故障」——该判断在**低并发**下成立，在**多会话高并发**下相反：重试即叠加压力。
 
 **证据**：`scripts/proxy.py` 429 分支注释（`# 429+RequestBurstTooFast → 不标记（突发限流,短暂退让即可,隔离 provider 反而扩大故障）`）。
 
 **建议**：与 KI-01 一并评估，重试策略需感知当前全局并发度；高并发时应改为延迟/排队，而非立即重试。
+
+**已实现（2026-11-25）**：`GlobalGate.burst_backoff_seconds()`
+- 仅当 `inflight/inflight_ratio ≥ threshold` 才退让，低并发维持 v1.0 的「不隔离 provider」行为
+- 退让时长按 ratio 在 `[base_seconds, max_seconds]` 线性插值
+- 调用点：429 + `RequestBurstTooFast` 分支，日志显式记录 inflight 与退让时长
 
 ---
 

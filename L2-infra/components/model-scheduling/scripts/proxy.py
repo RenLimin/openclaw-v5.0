@@ -17,6 +17,7 @@ import aiohttp
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from config_watcher import ConfigWatcher
+from throttle import GlobalGate
 
 logging.basicConfig(
     level=logging.INFO,
@@ -434,6 +435,8 @@ class ProxyHandler:
         self.session = aiohttp.ClientSession(
             connector=aiohttp.TCPConnector(limit=10)
         )
+        # v1.1：跨会话错峰闸门（KI-01/KI-02）。配置缺失/关闭即旁路，行为退回 v1.0
+        self.gate = GlobalGate(watcher.get("routing.yaml"), watcher.get("providers.yaml"))
 
     def _mark_provider_failure(self, provider_id: str, status_code: int):
         """运行时失败反馈：连续 3 次网络/5xx 失败 → 标记 unreachable（写入 usage.json）。
@@ -627,6 +630,8 @@ class ProxyHandler:
         messages = request.get("messages", [])
         stream = request.get("stream", False)
         task_type = classify_task(messages)
+        # v1.1：输入 token 估算提前——手动路由与自动路由的准入都要用
+        est = estimate_tokens(request)
 
         # P1 修复: 用户手动指定模型时优先使用(不覆盖)
         user_model = request.get("model", "")
@@ -640,13 +645,14 @@ class ProxyHandler:
                 provider_id = target.get("provider", "")
                 provider_conf = providers_config.get("providers", {}).get(provider_id, {})
                 logger.info(f"手动路由: {user_model} (provider: {provider_id})")
-                success, status_code, result = await self._forward_once(request, target, provider_conf, stream, writer)
+                async with self.gate.gate(provider_id, est, providers_config):
+                    success, status_code, result = await self._forward_once(
+                        request, target, provider_conf, stream, writer)
                 if success:
                     return
                 logger.warning(f"手动模型 {user_model} 失败({status_code})，回退到自动路由")
 
         # 自动路由(上下文感知: 大请求自动路由到大 ctx 模型)
-        est = estimate_tokens(request)
         if est > 200000:
             logger.info(f"大上下文请求: 估算 ~{est} tokens, 启用上下文感知路由")
         chain = build_fallback_chain(task_type, est)
@@ -667,7 +673,12 @@ class ProxyHandler:
                 logger.warning(f"Fallback #{idx}: 切换到 {model['id']} (provider: {provider_id}) [前一个失败: {last_status}]")
                 fallback_path.append(model["id"])
             
-            success, status_code, result = await self._forward_once(request, model, provider_conf, stream, writer)
+            # 热更新：providers/routing 变更后刷新桶参数（无需重启）
+            self.gate.refresh_providers(providers_config)
+
+            async with self.gate.gate(provider_id, est, providers_config):
+                success, status_code, result = await self._forward_once(
+                    request, model, provider_conf, stream, writer)
             
             if success:
                 self._mark_provider_success(provider_id)
@@ -691,6 +702,14 @@ class ProxyHandler:
                     _write_provider_health(provider_id, "exhausted", "429 配额耗尽 (proxy 运行时标记)")
                 else:
                     logger.info(f"Provider {provider_id} 429 限流(非配额耗尽), 不标记 exhausted")
+                    # v1.1 KI-02：高并发时就地重试会叠加压力 → 感知 inflight 后退让再继续
+                    backoff = self.gate.burst_backoff_seconds()
+                    if backoff > 0:
+                        logger.warning(
+                            f"突发限流 + 高并发(inflight={self.gate.inflight()}, "
+                            f"{self.gate.inflight_ratio():.0%}) → 退让 {backoff}s 后再 fallback"
+                        )
+                        await asyncio.sleep(backoff)
             # 4xx 中只有 401/403 不可重试(鉴权问题,换 provider 也没用)
             # 402(余额不足)、429(限流/配额)、404(模型不存在) → 继续 fallback
             if status_code in (401, 403):
@@ -715,8 +734,11 @@ class ProxyHandler:
         api_key = get_api_key(model["provider"])
 
         if not api_key:
-            await self._send_error(500, f"Cannot get API key for {model['provider']}", writer)
-            return
+            msg = f"Cannot get API key for {model['provider']}"
+            await self._send_error(500, msg, writer)
+            # 必须返回三元组：否则调用方 `success, status_code, result = ...` 解包
+            # None 会抛 TypeError，被外层 catch 成「请求处理失败」而无法 fallback
+            return False, 500, msg
 
         url = f"{base_url}/chat/completions"
         # 消息格式转换: OpenClaw content 数组 → provider 期望格式

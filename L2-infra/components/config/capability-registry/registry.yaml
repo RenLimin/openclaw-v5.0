@@ -177,12 +177,16 @@ capabilities:
     supersedes: []
 
   - id: model-scheduling
-    name: 模型调度（配额 / 恢复 / 路由）
+    name: 模型调度（配额 / 恢复 / 路由 / 错峰限流）
     layer: L2
-    interfaces: [model, scheduling, quota, restore, routing]
+    interfaces: [model, scheduling, quota, restore, routing, throttle, rate-limit]
     entry:
       - "python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail"
       - "bash L2-infra/components/model-scheduling/setup.sh"
+      - "python3 L2-infra/components/model-scheduling/scripts/proxy.py --help"
+    docs:
+      - "L2-infra/components/model-scheduling/DESIGN-DETAIL-v1.1-throttle.md"
+      - "L2-infra/components/model-scheduling/VERIFICATION-v1.2-throttle.md"
     supersedes: []
 
   - id: observability

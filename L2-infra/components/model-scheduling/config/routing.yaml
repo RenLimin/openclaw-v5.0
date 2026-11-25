@@ -106,3 +106,16 @@ task_routing:
 usage_thresholds:
   daily_token_limit: 1000000
   monthly_cost_limit: 50
+
+# ── v1.1 跨会话错峰与突发限流治理（KI-01/KI-02）──────────────────────
+# 设计: DESIGN-DETAIL-v1.1-throttle.md ｜ 关闭即热更新旁路，无需重启
+throttle:
+  enabled: true
+  max_concurrent_chat: 16        # 全局并发闸门（chat in-flight 上限）
+  min_interval_seconds: 0.2      # 平滑最小发送间隔（锁内执行，避免出口扎堆）
+  jitter_ratio: 0.25             # 抖动比例：uniform(0, min_interval * ratio)
+  burst_backoff:                 # KI-02：突发限流时按当前并发度退让
+    enabled: true
+    inflight_ratio_threshold: 0.7
+    base_seconds: 1.0
+    max_seconds: 10.0
