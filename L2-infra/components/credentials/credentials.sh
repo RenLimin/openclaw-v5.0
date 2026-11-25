@@ -232,7 +232,12 @@ cmd_check() {
 # GitHub 凭据链路同步（SSOT: ~/.openclaw/secrets/github.token）
 # --------------------------------------------------------------------------
 cmd_github_sync() {
-    local script="${REPO_ROOT}/L2-infra/components/credentials/github_credential_sync.py"
+    # 同步脚本与本文件同目录。不用 REPO_ROOT 拼接：REPO_ROOT 实为上溯两层
+    # （→ L2-infra/components，见顶部定义），再拼 "L2-infra/components/..." 会重复
+    # 一层路径，导致「未找到同步脚本」误报（事故 2026-11-25）。
+    local self_dir
+    self_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local script="${self_dir}/github_credential_sync.py"
     if [[ ! -f "$script" ]]; then
         log_err "未找到同步脚本: $script"
         return 1
