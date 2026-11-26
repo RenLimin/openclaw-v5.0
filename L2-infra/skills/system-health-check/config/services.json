@@ -24,10 +24,10 @@
         }
       },
       "fix": {
-        "command": "openclaw gateway restart",
+        "command": "/bin/bash /Users/bangcle/.openclaw/workspace/L2-infra/components/gateway-safety/scripts/safe_restart.sh",
         "cooldown_seconds": 30,
         "max_attempts": 2,
-        "label": "重启 Gateway (openclaw gateway restart)"
+        "label": "重启 Gateway（经 pre-restart guard，禁止裸调 openclaw gateway restart）"
       },
       "dependencies": []
     },
@@ -69,25 +69,25 @@
       "checks": {
         "l1_health_endpoint": {
           "type": "http",
-          "url": "http://127.0.0.1:8787/health",
+          "url": "http://127.0.0.1:8000/api/health",
           "expect_status": [200],
-          "expect_contains": "\"ok\"",
+          "expect_contains": "\"status\":\"ok\"",
           "timeout": 5,
-          "label": "BDMS /health 端点响应"
+          "label": "BDMS /api/health 端点响应"
         },
         "l2_homepage": {
           "type": "http",
-          "url": "http://127.0.0.1:8787/",
+          "url": "http://127.0.0.1:8000/",
           "expect_status": [200],
           "timeout": 10,
           "label": "BDMS 首页 HTTP 200"
         }
       },
       "fix": {
-        "command": "pkill -f 'bdmsctl serve' 2>/dev/null; sleep 2; cd /Users/bangcle/.openclaw/workspace && nohup python3 -m delivery_center.v2.cli.bdmsctl serve --port 8787 > /tmp/bdms-web-restart.log 2>&1 &",
+        "command": "/bin/launchctl kickstart -k gui/$(id -u)/com.bdms.server",
         "cooldown_seconds": 15,
         "max_attempts": 2,
-        "label": "重启 BDMS uvicorn 进程 (pkill + nohup 启动)"
+        "label": "重启 BDMS（launchd com.bdms.server；旧 pkill+nohup 方案已废弃——那会绕过 launchd 产生孤儿进程）"
       },
       "dependencies": []
     },
@@ -96,27 +96,34 @@
       "description": "本地向量嵌入服务（llama-server，用于 memory_search 语义检索）",
       "category": "infra",
       "priority": "high",
+      "lifecycle": "on_demand",
       "checks": {
         "l1_health_endpoint": {
-          "type": "http",
-          "url": "http://127.0.0.1:60600/health",
-          "expect_status": [200],
-          "expect_contains": "\"ok\"",
-          "timeout": 5,
-          "label": "Embedding 服务 /health 端点"
+          "type": "command",
+          "command": "P=$(pgrep -f 'llama-server.*--embeddings' | head -1); URL=$([ -n \"$P\" ] && lsof -nP -p \"$P\" -a -iTCP -sTCP:LISTEN 2>/dev/null | awk 'NR==2{print \"http://\"$9}'); [ -n \"$URL\" ] && curl -s -m 5 \"$URL/health\" | grep -q '\"status\":\"ok\"'",
+          "timeout": 10,
+          "label": "Embedding 服务 /health 端点（动态端口运行时发现）"
         },
         "l2_embedding_request": {
           "type": "command",
-          "command": "curl -s -m 10 -X POST http://127.0.0.1:60600/v1/embeddings -H 'Content-Type: application/json' -d '{\"input\":\"health check test\",\"model\":\"embeddinggemma-300m-qat-q8_0\"}' 2>&1",
+          "command": "P=$(pgrep -f 'llama-server.*--embeddings' | head -1); URL=$([ -n \"$P\" ] && lsof -nP -p \"$P\" -a -iTCP -sTCP:LISTEN 2>/dev/null | awk 'NR==2{print \"http://\"$9}'); [ -n \"$URL\" ] && curl -s -m 10 -X POST \"$URL/v1/embeddings\" -H 'Content-Type: application/json' -d '{\"input\":\"health check test\",\"model\":\"embeddinggemma-300m-qat-q8_0\"}' | grep -q '\"data\"'",
           "expect_contains": "\"data\"",
           "timeout": 15,
-          "label": "embeddings API 实际调用测试"
+          "label": "embeddings API 实际调用测试（动态端口运行时发现）"
         }
       },
+      "manager": {
+        "type": "http",
+        "url": "http://127.0.0.1:18789/",
+        "expect_status": [200, 302],
+        "timeout": 5,
+        "label": "管理方 Gateway 健康（能拉起即视为可恢复）"
+      },
       "fix": {
+        "command": "openclaw memory index --force",
         "cooldown_seconds": 30,
         "max_attempts": 1,
-        "label": "重启 llama-cpp embedding 服务 (pkill + nohup 启动)"
+        "label": "重建 memory 索引以触发 gateway 按需拉起 embedding 服务（idleStopMs=600000 空闲即停，属设计行为；禁止 pkill+nohup 手工拉起）"
       },
       "dependencies": []
     }

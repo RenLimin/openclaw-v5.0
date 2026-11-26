@@ -20,13 +20,13 @@
       "workspace": "/Users/bangcle/.openclaw/workspace",
       "compaction": {
         "mode": "safeguard",
-        "keepRecentTokens": 40000,
-        "maxActiveTranscriptBytes": "1mb",
+        "keepRecentTokens": 30000,
+        "maxActiveTranscriptBytes": "500kb",
         "midTurnPrecheck": {
           "enabled": true
         },
         "memoryFlush": {
-          "model": "longcat/LongCat-2.0",
+          "model": "coding-plan-2/doubao-seed-2-1-turbo",
           "softThresholdTokens": "<REDACTED>",
           "forceFlushTranscriptBytes": "100kb"
         },
@@ -34,10 +34,10 @@
           "maxRetries": 3
         },
         "thinkingLevel": "off",
-        "model": "coding-plan/doubao-seed-2-1-turbo",
+        "model": "coding-plan-2/doubao-seed-2-1-turbo",
         "notifyUser": true,
         "enabled": true,
-        "timeoutSeconds": 300
+        "timeoutSeconds": 600
       },
       "contextPruning": {
         "mode": "cache-ttl",
@@ -71,7 +71,7 @@
       "bootstrapMaxChars": 12000,
       "contextInjection": "continuation-skip",
       "contextLimits": {
-        "postCompactionMaxChars": 30000
+        "postCompactionMaxChars": 40000
       }
     },
     "entries": {
@@ -82,9 +82,11 @@
         "model": {
           "primary": "model-scheduling/auto",
           "fallbacks": [
-            "model-scheduling/auto",
+            "coding-plan/doubao-seed-2-1-turbo",
             "coding-plan/deepseek-v4-flash-ga-260731",
-            "coding-plan/doubao-seed-code-preview-251028"
+            "coding-plan/doubao-seed-code-preview-251028",
+            "deepseek/deepseek-chat",
+            "longcat/LongCat-2.0"
           ]
         },
         "heartbeat": {
@@ -508,6 +510,195 @@
             "api": "openai-completions"
           }
         ]
+      },
+      "coding-plan-2": {
+        "baseUrl": "https://ark.cn-beijing.volces.com/api/coding/v3",
+        "api": "openai-completions",
+        "apiKey": {
+          "source": "store",
+          "provider": "default",
+          "id": "CODING_PLAN_API_KEY_2"
+        },
+        "models": [
+          {
+            "id": "doubao-seed-2-1-turbo",
+            "name": "doubao-seed-2-1-turbo",
+            "input": [
+              "text",
+              "image",
+              "video"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 262144,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "doubao-seed-2-0-lite-260215",
+            "name": "doubao-seed-2-0-lite",
+            "input": [
+              "text",
+              "image",
+              "video"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 131072,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "doubao-seed-code-preview-251028",
+            "name": "doubao-seed-code",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 131072,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "doubao-seed-2-0-pro-260215",
+            "name": "doubao-seed-2-0-pro",
+            "input": [
+              "text",
+              "image",
+              "video"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 131072,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "doubao-seed-2-1-pro-260628",
+            "name": "doubao-seed-2-1-pro",
+            "input": [
+              "text",
+              "image",
+              "video"
+            ],
+            "contextWindow": 262144,
+            "maxTokens": 262144,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "deepseek-v4-1-flash-260910",
+            "name": "deepseek-v4-1-flash",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131072,
+            "maxTokens": 8192,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "deepseek-v4-flash-ga-260731",
+            "name": "deepseek-v4-flash-ga",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 1048576,
+            "maxTokens": 8192,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "glm-5-3-flash-260828",
+            "name": "glm-5-3-flash",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131072,
+            "maxTokens": 8192,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "qwen3-8b-20250429",
+            "name": "qwen3-8b",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131072,
+            "maxTokens": 8192,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          },
+          {
+            "id": "qwen3-32b-20250429",
+            "name": "qwen3-32b",
+            "input": [
+              "text"
+            ],
+            "contextWindow": 131072,
+            "maxTokens": 8192,
+            "reasoning": false,
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "api": "openai-completions"
+          }
+        ]
       }
     },
     "mode": "merge"
@@ -598,14 +789,15 @@
       }
     },
     "exec": {
-      "host": "gateway"
+      "host": "gateway",
+      "notifyOnExit": false
     }
   },
   "wizard": {
-    "lastRunAt": "2026-09-01T13:26:26.724Z",
+    "lastRunAt": "2026-11-11T04:29:35.719Z",
     "lastRunCommand": "doctor",
     "lastRunMode": "local",
-    "lastRunVersion": "2026.8.1",
+    "lastRunVersion": "2026.9.8",
     "securityAcknowledgedAt": "2026-09-10T04:07:50.149Z"
   },
   "plugins": {
@@ -626,7 +818,10 @@
         }
       },
       "wecom-openclaw-plugin": {
-        "enabled": true
+        "enabled": true,
+        "hooks": {
+          "allowConversationAccess": true
+        }
       },
       "llama-cpp": {
         "enabled": true
@@ -636,14 +831,43 @@
       },
       "context-guardian": {
         "enabled": true,
+        "hooks": {
+          "allowConversationAccess": true
+        },
         "config": {
-          "effectiveContextWindow": 196608
+          "effectiveContextWindow": 196608,
+          "microCompactMaxChars": 3000,
+          "warnThreshold": 0.3,
+          "debug": false,
+          "compactionThreshold": 0.45,
+          "maxToolResultChars": 8000,
+          "autoLimitExecOutput": true,
+          "execMaxLines": 200,
+          "baseOverheadTokens": "<REDACTED>",
+          "perTurnOverheadTokens": "<REDACTED>",
+          "compactionCooldownMs": 60000,
+          "microCompactEnabled": true,
+          "microCompactPreserveEditTools": true
         }
+      },
+      "session-boundary-guard": {
+        "enabled": true,
+        "config": {
+          "mode": "approve",
+          "allowTargets": [],
+          "debug": false
+        }
+      },
+      "deepseek": {
+        "enabled": true
       }
     },
     "enabled": true,
     "load": {
-      "paths": []
+      "paths": [
+        "/Users/bangcle/.openclaw/workspace/L2-infra/components/session-boundary-guard",
+        "/Users/bangcle/.openclaw/workspace/L2-infra/components/context-guardian"
+      ]
     },
     "allow": [
       "llama-cpp",
@@ -652,7 +876,9 @@
       "wecom-openclaw-plugin",
       "memory-core",
       "openclaw-weixin",
-      "context-guardian"
+      "context-guardian",
+      "session-boundary-guard",
+      "deepseek"
     ]
   },
   "secrets": {
@@ -695,9 +921,7 @@
         }
       },
       "rememberAcrossConversations": false,
-      "local": {
-        "modelPath": "/Users/bangcle/.openclaw/models/llama.cpp/hf_ggml-org_embeddinggemma-300m-qat-Q8_0.gguf"
-      }
+      "local": {}
     }
   },
   "commands": {
@@ -707,7 +931,8 @@
   },
   "session": {
     "maintenance": {
-      "pruneAfter": "48h"
+      "pruneAfter": "48h",
+      "mode": "warn"
     }
   },
   "bindings": [
@@ -728,7 +953,12 @@
         "session:agent:main:dashboard:4e7162d1-e85a-4f5a-8e35-895ba432c6ac",
         "session:agent:main:dashboard:2bea653c-3421-4250-9eb1-1f78a558c8f0",
         "session:agent:main:dashboard:84c8cbb2-4bfc-43f8-bc10-64a5b24a1e2b",
-        "session:agent:main:dashboard:262a91a7-53a5-4bd9-baad-65a19ba42373"
+        "session:agent:main:dashboard:262a91a7-53a5-4bd9-baad-65a19ba42373",
+        "session:agent:main:dashboard:48d98782-a7ca-4239-9f84-9d76da62f89f",
+        "session:agent:main:dashboard:b1a5a482-9ecc-4913-9804-90a4411b2c14",
+        "session:agent:main:dashboard:d520070d-e979-4002-8a68-50a9a15ebb0f",
+        "session:agent:main:dashboard:51dbbc65-97f5-4022-a466-d99e7b1f4615",
+        "session:agent:main:dashboard:c9f1fb78-9c44-48f6-8412-500163af523e"
       ]
     }
   },

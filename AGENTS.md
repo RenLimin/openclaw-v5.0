@@ -44,6 +44,24 @@ This folder is home. Treat it that way.
 - Always 会话任务收尾若新增/变更组件或资产，必须**显式**重生成资产清单并确认新能力入册（`python3 L2-infra/components/config/gen_asset_inventory.py`），不依赖 pre-commit 是否触发；`--check` 报「无漂移」前须先确认输出无「数据源不可用」降级行，否则该结论无效。
 <!-- observed: 2026-11-19 | status: active -->
 
+## LaunchAgent PATH 声明红线（事故 2026-11-25）
+- 现象：`ai.openclaw.colima-check` / `ai.openclaw.daily-summary` 在 launchd 下 exit=1，日志 `FileNotFoundError: 'colima'/'openclaw'`；两任务实际**长期没在跑**而无人知晓。
+- 根因一：launchd 裸环境 PATH 不含 `/opt/homebrew/bin`，plist 里 `source ~/.zshenv` 无效——**该文件只 export API key，根本没有 PATH**。
+- 根因二：即使 PATH 正确，`~/.openclaw/tmp/agent-cli/openclaw` 这类临时路径也不可靠；必须用 `/opt/homebrew/bin/openclaw`。
+- Always 每个 `ai.openclaw.*.plist` **必须显式声明** `EnvironmentVariables.PATH=/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`（由 OpenClaw service-env wrapper 托管的 gateway 除外，其 `.env` 含 `export PATH=`）。
+- Never 在 plist 里靠 `source ~/.zshenv` / `source ~/.zshrc` 获取 PATH——登录 shell 初始化在 launchd 下不保证生效。
+- Always 脚本内调外部 CLI 一律绝对路径（`/opt/homebrew/bin/openclaw` 等），或 `shutil.which` + 候选绝对路径兜底。
+- 门禁：`scheduler-guard/audit.py` 新增 plist 卫生检查（缺 PATH / 引用失效路径即报），且 `--json` 与报告模式均非零退出；回归测试 `tests/test_plist_hygiene.py`（7 用例）。
+<!-- observed: 2026-11-25 | status: active -->
+
+## 检测器口径单一事实源红线（事故 2026-11-25）
+- 现象：健康检查把 5 个已有设计文档的组件（`DESIGN-OUTLINE-*` / `docs/DESIGN-*`）误报为缺失，还把 `.deprecated` 算进组件清单；而 pre-commit 门禁放行——两套口径不一致，监控长期说谎。
+- 根因：`health_check.py` 自行实现「只查根级 `DESIGN.md`」，与 `capability_registry._asset_docs`（递归 docs/、前缀 DESIGN/PRD/SKILL、排除缓存/废弃）不同。
+- Always 资产文档判定统一复用 `capability_registry._asset_docs()`，禁止各处自造匹配规则；判定逻辑改动必须同步两侧。
+- Always 服务健康注册表的 URL/端口/fix 命令以**实测**为准，不得沿用旧稿；按需服务（如 llama.cpp embedding，idleStopMs 空闲即停）必须标 `lifecycle: on_demand` + `manager` 探针，判 standby 而非 failed。
+- 门禁：`system-health-check` 的设计文档检查已改为调用 registry；`services.json` 已对齐实测端口（BDMS `:8000/api/health`）与运行时端口发现。
+<!-- observed: 2026-11-25 | status: active -->
+
 ## task_tracker 并发竞态红线（事故 2026-11-10）
 - task_tracker 用**单一全局** `memory/current-task.md`，多会话并行时会互相覆盖；`complete`/`update` **不校验 task_id**。
 - Always 调 `complete` 前先读 `current-task.md` 的 `task_id`，确认是自己的任务；不一致（被并行线占用）→ **绝不 complete/update**，改用独立记录或等 Rex。

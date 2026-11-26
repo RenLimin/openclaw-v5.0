@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-25 14:42 UTC+08:00
+最后生成：2026-11-26 11:46 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -295,8 +295,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `fcf7673` |
-| Commit 数 | 790 |
+| HEAD | `3604b91` |
+| Commit 数 | 791 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -312,7 +312,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `ai-knowledge-base` | 93 | 29 | 13 | `L2-infra/components/ai-knowledge-base` |
 | `backup` | 0 | 0 | 0 | `L2-infra/components/backup` |
 | `browser-automation` | 2 | 0 | 1 | `L2-infra/components/browser-automation` |
-| `config` | 10 | 0 | 4 | `L2-infra/components/config` |
+| `config` | 13 | 0 | 6 | `L2-infra/components/config` |
 | `context-guardian` | 0 | 0 | 0 | `L2-infra/components/context-guardian` |
 | `context-management` | 5 | 0 | 1 | `L2-infra/components/context-management` |
 | `credentials` | 6 | 0 | 3 | `L2-infra/components/credentials` |
@@ -328,7 +328,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `office-generation` | 16 | 0 | 6 | `L2-infra/components/office-generation` |
 | `persistence` | 8 | 0 | 1 | `L2-infra/components/persistence` |
 | `sandbox` | 9 | 0 | 1 | `L2-infra/components/sandbox` |
-| `scheduler-guard` | 1 | 0 | 0 | `L2-infra/components/scheduler-guard` |
+| `scheduler-guard` | 3 | 0 | 1 | `L2-infra/components/scheduler-guard` |
 | `session-boundary-guard` | 0 | 0 | 0 | `L2-infra/components/session-boundary-guard` |
 | `session-isolation` | 17 | 0 | 6 | `L2-infra/components/session-isolation` |
 | `session-recovery` | 13 | 0 | 5 | `L2-infra/components/session-recovery` |

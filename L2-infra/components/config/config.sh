@@ -15,15 +15,32 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 CONFIG_FILE="${HOME}/.openclaw/openclaw.json"
 SNAPSHOT="${REPO_ROOT}/config-snapshots/openclaw.json"
+
+# 组件迁移后的真实脚本位置。
+# 禁止再写 scripts/xxx 这类旧布局相对路径——那会让 audit 静默跳过检查、
+# 或把「脚本不存在」误报成「发现凭据」（事故 2026-11-25）。
+SCAN_SECRETS="$SCRIPT_DIR/../credentials/scan_secrets.sh"
+INSTALL_HOOKS="$SCRIPT_DIR/install-hooks.sh"
+PROBE_CONTEXT_WINDOW="$SCRIPT_DIR/../../context-management/probe_context_window.py"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 log_ok()   { echo -e "${GREEN}✅${NC} $*"; }
 log_warn() { echo -e "${YELLOW}⚠️${NC} $*"; }
 log_err()  { echo -e "${RED}❌${NC} $*"; }
 log_step() { echo -e "${BLUE}▶${NC} $*"; }
+
+# 依赖脚本缺失必须显式报错并计入 problems，禁止静默跳过检查项
+_need_script() {
+    local p="$1" label="$2"
+    if [[ ! -e "$p" ]]; then
+        log_err "${label}缺失: $p（组件迁移后引用未同步？）"
+        return 1
+    fi
+}
 
 cd "$REPO_ROOT"
 
@@ -79,13 +96,13 @@ cmd_audit() {
 
     # 4. hook 漂移（P4）
     log_step "git hooks"
-    if [[ -f scripts/install-hooks.sh ]]; then
-        if bash scripts/install-hooks.sh --check >/dev/null 2>&1; then
-            log_ok "hooks 已安装且与 canonical 版本一致"
-        else
-            log_warn "hooks 未安装或已漂移 — 运行: bash scripts/install-hooks.sh"
-            problems=$((problems + 1))
-        fi
+    if [[ ! -e "$INSTALL_HOOKS" ]]; then
+        _need_script "$INSTALL_HOOKS" "hook 安装器" || problems=$((problems + 1))
+    elif bash "$INSTALL_HOOKS" --check >/dev/null 2>&1; then
+        log_ok "hooks 已安装且与 canonical 版本一致"
+    else
+        log_warn "hooks 未安装或已漂移 — 运行: bash scripts/config.sh apply（或 install-hooks.sh）"
+        problems=$((problems + 1))
     fi
     echo ""
 
@@ -140,7 +157,10 @@ PY
     # 7. 凭据泄漏扫描（有 staged 内容时）
     if [[ -n "$(git diff --cached --name-only 2>/dev/null)" ]]; then
         log_step "凭据泄漏扫描 (staged)"
-        if bash scripts/scan_secrets.sh >/dev/null 2>&1; then
+        if [[ ! -e "$SCAN_SECRETS" ]]; then
+            # 与「发现凭据」严格区分：工具缺失是缺陷，不是凭据告警
+            _need_script "$SCAN_SECRETS" "凭据扫描器" || problems=$((problems + 1))
+        elif bash "$SCAN_SECRETS" >/dev/null 2>&1; then
             log_ok "staged 改动无凭据泄漏"
         else
             log_err "staged 改动含疑似凭据 — 运行: bash scripts/config.sh scan"
@@ -300,7 +320,8 @@ cmd_probe() {
     local model="${1:?用法: $0 probe <model-id> [token-count]}"
     local ntok="${2:-10}"
     log_step "实测 $model @ ~${ntok} tokens"
-    python3 scripts/probe_context_window.py "$model" "$ntok"
+    _need_script "$PROBE_CONTEXT_WINDOW" "probe 脚本" || return 1
+    python3 "$PROBE_CONTEXT_WINDOW" "$model" "$ntok"
     echo ""
     echo "提示: 二分探边界。400 + 'context window exceeded' = 真边界；"
     echo "      429 AccountRateLimitExceeded = 频率限制，等 60~75s 重试。"
@@ -321,7 +342,9 @@ main() {
         diff)     cmd_diff "$@" ;;
         apply)    cmd_apply "$@" ;;
         probe)    cmd_probe "$@" ;;
-        scan)     bash scripts/scan_secrets.sh "$@" ;;
+        scan)
+            _need_script "$SCAN_SECRETS" "凭据扫描器" || return 1
+            bash "$SCAN_SECRETS" "$@" ;;
         ""|-h|--help|help) usage ;;
         *) log_err "未知命令: $cmd"; echo ""; usage; return 1 ;;
     esac

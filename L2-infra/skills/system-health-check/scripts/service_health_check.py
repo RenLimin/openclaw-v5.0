@@ -121,7 +121,10 @@ class ServiceChecker:
         self.report = {
             "timestamp": datetime.now(TZ).isoformat(),
             "services": {},
-            "summary": {"total": 0, "healthy": 0, "degraded": 0, "failed": 0, "fixed": 0}
+            # standby = 按需服务（如 llama.cpp embedding）因 idleStop 正常停止；
+            # 它不是故障，而是设计行为，必须与 failed 区分开，否则监控会长期误报。
+            "summary": {"total": 0, "healthy": 0, "degraded": 0, "failed": 0,
+                         "fixed": 0, "standby": 0}
         }
 
     def check_service(self, service_id):
@@ -178,6 +181,19 @@ class ServiceChecker:
             svc_result["overall"] = "degraded"
         else:
             svc_result["overall"] = "failed"
+
+        # ── 按需服务（lifecycle=on_demand）特判 ────────────────────────────
+        # 这类服务由管理方按需拉起、空闲即停（如 llama.cpp embedding 的
+        # idleStopMs=600000）。检测时"没在跑"往往就是正常状态，
+        # 直接报 failed 会造成长期静默误报。判据：管理方本身健康 → standby。
+        lifecycle = svc_cfg.get("lifecycle", "always_on")
+        if svc_result["overall"] == "failed" and lifecycle == "on_demand":
+            if self._manager_ok(svc_cfg):
+                svc_result["overall"] = "standby"
+                svc_result["standby_reason"] = (
+                    "按需服务未运行（idleStop 空闲停止，设计行为）；"
+                    "管理方健康，可随时按需拉起"
+                )
 
         # 自动修复
         if self.fix and svc_result["overall"] in ("degraded", "failed"):
@@ -257,6 +273,19 @@ class ServiceChecker:
         else:
             return False, f"未知检测类型: {ctype}", 0
 
+    def _manager_ok(self, svc_cfg):
+        """按需服务的管理方是否健康。用于区分「预期空闲」与「真的坏了」。
+
+        配置形如：
+          "manager": {"type": "http", "url": "...", "expect_status": [200]}
+        """
+        mgr = svc_cfg.get("manager")
+        if not mgr:
+            # 无显式 manager 配置时，保守判为不 standby（保持原有 failed 语义）
+            return False
+        ok, _, _ = self._run_check(mgr)
+        return bool(ok)
+
     def _try_fix(self, service_id, svc_cfg):
         """尝试修复服务，返回 (success, detail)"""
         fix_cfg = svc_cfg.get("fix")
@@ -327,6 +356,8 @@ class ServiceChecker:
                 self.report["summary"]["healthy"] += 1
             elif status == "degraded":
                 self.report["summary"]["degraded"] += 1
+            elif status == "standby":
+                self.report["summary"]["standby"] += 1
             elif status == "failed":
                 self.report["summary"]["failed"] += 1
 
@@ -343,7 +374,8 @@ def print_human(report, brief=False):
     print("=" * 50)
     print(f"🕐  检测时间: {report['timestamp']}")
     print(f"📋  服务总数: {s['total']}")
-    print(f"   ✅  健康: {s['healthy']}  ⚠️  降级: {s['degraded']}  ❌ 失败: {s['failed']}  🔧 已修复: {s['fixed']}")
+    print(f"   ✅  健康: {s['healthy']}  ⚠️  降级: {s['degraded']}  ❌ 失败: {s['failed']}  "
+          f"⏸️  待机: {s['standby']}  🔧 已修复: {s['fixed']}")
     print()
 
     if brief:
@@ -353,6 +385,7 @@ def print_human(report, brief=False):
         status_icon = {
             "healthy": "✅",
             "degraded": "⚠️ ",
+            "standby": "⏸️ ",
             "failed": "❌"
         }.get(svc["overall"], "❓")
 
@@ -371,6 +404,9 @@ def print_human(report, brief=False):
                 re_icon = "✅" if check["recheck_status"] == "pass" else "❌"
                 print(f"  │     ↳ 修复后重测: {re_icon} {check.get('recheck_detail', '')}")
 
+        if svc.get("overall") == "standby" and svc.get("standby_reason"):
+            print(f"   ⏸️  待机原因: {svc['standby_reason']}")
+
         if svc.get("fix_attempted") and svc.get("fix_result"):
             fr = svc["fix_result"]
             icon = "✅" if fr["success"] else "❌"
@@ -380,9 +416,11 @@ def print_human(report, brief=False):
 
     # 总结
     if s["failed"] == 0 and s["degraded"] == 0:
-        print("🎉 所有服务运行正常！")
+        tail = f"（另有 {s['standby']} 个按需服务处于待机，属正常）" if s["standby"] else ""
+        print(f"🎉 所有服务运行正常！{tail}")
     else:
-        print(f"⚠️  存在异常服务：{s['failed']} 个失败，{s['degraded']} 个降级")
+        print(f"⚠️  存在异常服务：{s['failed']} 个失败，{s['degraded']} 个降级"
+              + (f"，{s['standby']} 个待机" if s["standby"] else ""))
     print()
 
 

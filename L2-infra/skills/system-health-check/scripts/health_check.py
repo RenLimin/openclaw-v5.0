@@ -19,6 +19,18 @@ from datetime import datetime, timezone, timedelta
 WORKSPACE = Path(__file__).resolve().parents[4]  # scripts/ → system-health-check/ → skills/ → L2-infra/ → workspace/
 TZ = timezone(timedelta(hours=8))
 
+# 复用能力注册表的资产文档判定（单一事实源）。
+# 背景（事故 2026-11-25）：本脚本原先只查根级 DESIGN.md，导致
+#   ① 放在 docs/ 或命名为 DESIGN-DETAIL-*/DESIGN-OUTLINE-* 的文档被误判缺失；
+#   ② 把 .deprecated 这类非资产隐藏目录算进组件清单；
+# 而 pre-commit 门禁（capability_registry --require-design）用的是另一套递归+前缀规则。
+# 两套口径不一致 → 健康检查长期误报，门禁却放行。这里统一到 registry 的实现。
+try:
+    sys.path.insert(0, str(WORKSPACE / "L2-infra" / "components" / "config" / "capability-registry"))
+    import capability_registry as _capreg
+except Exception:
+    _capreg = None
+
 # ─── 工具函数 ───
 
 def run_cmd(cmd, timeout=30, cwd=None):
@@ -141,22 +153,32 @@ class HealthCheck:
             self.add("components", "l2-dir", "fail", "L2 components dir missing")
             return
 
-        components = [d.name for d in l2_dir.iterdir() if d.is_dir()]
+        components = [d for d in l2_dir.iterdir()
+                      if d.is_dir() and not d.name.startswith((".", "__"))]
         self.add("components", "l2-count", "pass", f"{len(components)} components")
 
-        # 检查每个组件是否有 DESIGN.md
+        # 设计文档判定：与 capability_registry._asset_docs 完全同口径
+        # （递归 docs/、前缀 DESIGN/PRD/SKILL、排除缓存与废弃目录）
         missing_design = []
         for comp in components:
-            design = l2_dir / comp / "DESIGN.md"
-            if not design.exists():
-                missing_design.append(comp)
+            if _capreg is not None:
+                docs = _capreg._asset_docs(comp)
+                has_design = bool(docs.get("design"))
+            else:
+                # 兜底：本地前缀匹配（仅当 registry 不可导入时）
+                has_design = any(
+                    fn.upper().startswith(("DESIGN", "PRD", "SKILL"))
+                    for fn in os.listdir(comp) if (comp / fn).is_file()
+                )
+            if not has_design:
+                missing_design.append(comp.name)
 
         if missing_design:
             self.add("components", "design-docs", "warn",
-                    f"missing DESIGN.md: {', '.join(missing_design)}")
+                    f"missing design doc: {', '.join(missing_design)}")
         else:
             self.add("components", "design-docs", "pass",
-                    f"all {len(components)} components have DESIGN.md")
+                    f"all {len(components)} components have design doc")
 
     def check_cron(self):
         """检查 Cron 任务状态"""
@@ -240,14 +262,21 @@ class HealthCheck:
             self.add("git", "branch", "pass", out.strip())
 
         # 工作区是否干净
-        rc, out, _ = run_cmd("git status --short")
-        if rc == 0:
-            if not out.strip():
-                self.add("git", "working-tree", "pass", "clean")
-            else:
-                files = len(out.strip().split("\n"))
-                self.add("git", "working-tree", "warn",
-                        f"{files} uncommitted files")
+        # 口径：用隔离临时 index（免疫共享 .git/index 被并行会话写花造成的假警，
+        # 见 AGENTS.md §共享 index 过期；2026-11-25 实测 272 假警即此因）
+        try:
+            sys.path.insert(0, str(WORKSPACE / "L2-infra" / "components" / "config"))
+            from git_tree_status import working_tree_counts, format_summary
+            counts = working_tree_counts(WORKSPACE)
+        except Exception as e:  # noqa: BLE001 - 降级而非崩溃
+            counts = {"error": str(e)}
+        if counts.get("error"):
+            self.add("git", "working-tree", "warn", f"状态不可用：{counts['error']}")
+        elif counts["total"] == 0:
+            self.add("git", "working-tree", "pass", "clean")
+        else:
+            self.add("git", "working-tree", "warn",
+                    f"{counts['total']} uncommitted files（{format_summary(counts)}）")
 
         # 与远程同步
         rc, out, _ = run_cmd("git fetch origin 2>&1 && git status -sb 2>&1")

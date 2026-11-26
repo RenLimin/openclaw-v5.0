@@ -1036,22 +1036,23 @@ def _p3_skeleton_components() -> dict:
 
 
 def _p4_untracked_uncommitted() -> dict:
-    """P4 未跟踪/未提交：git status 计数超阈值告警。"""
-    rc, out, _ = run("git status --porcelain", timeout=30, cwd=WORKSPACE)
-    if rc != 0:
-        return check("P4 未跟踪/未提交", "✅", "git status 不可用")
-    untracked = 0
-    uncommitted = 0
-    samples: list[str] = []
-    for line in out.splitlines():
-        if not line.strip():
-            continue
-        if line.startswith("??"):
-            untracked += 1
-        else:
-            uncommitted += 1
-        if len(samples) < 5:
-            samples.append(line.strip())
+    """P4 未跟踪/未提交：计数超阈值告警。
+
+    口径：用隔离临时 index（git_tree_status），免疫共享 `.git/index` 被并行会话
+    写花造成的假警（事故 2026-11-25：此处曾报「未跟踪 50 / 未提交 197」实为污染）。
+    """
+    try:
+        sys.path.insert(0, str(WORKSPACE / "L2-infra" / "components" / "config"))
+        from git_tree_status import working_tree_counts
+        counts = working_tree_counts(WORKSPACE)
+    except Exception as e:  # noqa: BLE001 - 降级而非崩溃
+        return check("P4 未跟踪/未提交", "⚠️", f"状态读取失败: {e}")
+    if counts.get("error"):
+        return check("P4 未跟踪/未提交", "⚠️", counts["error"])
+
+    untracked = counts["untracked"]
+    uncommitted = counts["modified"] + counts["staged"]
+    samples = counts.get("samples", [])[:5]
     th = ASSET_CONSISTENCY_THRESHOLDS
     if untracked <= th["untracked_max"] and uncommitted <= th["uncommitted_max"]:
         return check("P4 未跟踪/未提交", "✅",

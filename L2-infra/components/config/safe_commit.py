@@ -103,10 +103,15 @@ def main() -> int:
     paths = [str(Path(p).relative_to(repo)) if Path(p).is_absolute() else p
              for p in args.paths]
 
-    # 0) 路径存在性
-    missing = [p for p in paths if not (repo / p).exists()]
+    # 0) 路径有效性：工作树存在，或在 HEAD 中已跟踪（= 本次提交的删除）
+    #     事故 2026-11-26：原实现要求磁盘必须存在，导致合法的「删除文件」无法提交；
+    #     而 git add 对已删路径实测 rc=0、正确产出 staged D。故改为二者其一即可。
+    head_paths = set(sh(["git", "ls-tree", "-r", "--name-only", "HEAD"],
+                         cwd=repo).stdout.split())
+    missing = [p for p in paths
+               if not (repo / p).exists() and p not in head_paths]
     if missing:
-        print("❌ 路径不存在：")
+        print("❌ 路径不存在（且不在 HEAD 中，非删除操作）：")
         for p in missing:
             print("   ", p)
         return 2
