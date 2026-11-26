@@ -116,6 +116,40 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 存量资产的探针仍以 `--validate`（全量执行所有已登记 `health:`）为准，两者互补：
 `--require-health` 管「新增必须有」，`--validate` 管「已登记的必须真的能跑」。
 
+### 3.6 资产枚举口径单一事实源（`enumerate_assets`）
+
+**事故（2026-11-25/26）**：`health_check.py` 自造 L2 组件枚举、`system_full_audit.py §3`
+裸 `iterdir()` 数 L4 组件、`_discover_assets()` 又一套 `.`/`__` 前缀规则——**三套口径**。
+后果：`.deprecated` 被算成组件（旧审计数 12 个 L4，实际 10 个）、设计文档误报缺失，
+监控长期说谎而无人察觉。
+
+**解**：唯一公共 API `enumerate_assets(kind=None, root=None)`（返回 `[(layer, kind, Path)]`），
+所有「盘点有哪些资产」的场景强制走它：
+
+| 调用方 | 用法 | 不可用时的行为 |
+|---|---|---|
+| `_discover_assets()` | 转形状（目录名列表） | —（内部实现即调它） |
+| `health_check.check_components()` | `_iter_asset_dirs()` + `_asset_docs()` | **显式 skip**，不降级 |
+| `system_full_audit §3` | `enumerate_assets("components", root=WORKSPACE)` | 降级并标注「iterdir(降级)」 |
+| `--coverage` / `--lifecycle` | `_discover_assets()` | — |
+
+排除规则集中为 `ASSET_EXCLUDED_NAMES = {.git, node_modules, __pycache__, .pytest_cache,
+.mypy_cache, .deprecated, dist}`，由 `is_real_asset_dir()` 统一判定。
+> 历史缺陷：常量定义了却无人引用（`_iter_asset_dirs` 只查 `.`/`__` 前缀），
+> 导致 `node_modules` 混入——已由回归测试锁定（防再次分叉）。
+
+### 3.7 范围豁免（`scope_exemptions`）
+
+**问题**：`L1_runtime/components/{agent-registry,context-bus,error-handler,telemetry}`
+在磁盘存在且有 DESIGN/VERIFICATION，但从未登记进 registry，长期被后续会话当作「未登记缺口」重复排查。
+
+**定位**：不是漏登记，而是层级契约（ADR-202608-001）——L1 = OpenClaw 基座 + 运行时适配层，
+不可修改、无对外可调用能力，故不产生 capability 条目。
+
+**解**：`registry.yaml` 显式声明 `scope_exemptions`（path + reason），并在 `--coverage` /
+`--lifecycle` 输出中**显性列出**，使边界可见而非隐缺口。豁免路径必须真实存在且写明理由
+（回归测试强制），不得留空绕过。
+
 ## 5. 依赖
 
 | 依赖 | 说明 |
@@ -133,11 +167,12 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 
 ## 7. 测试
 
-`L2-infra/components/config/tests/test_capability_registry.py`（26 用例）：
+`L2-infra/components/config/tests/test_capability_registry.py`（33 用例）：
 加载 / 精确查询 / 别名查询 / 全能力 entry 可执行性 / 三类重复脚本识别与建议准确性 /
 白名单 / 非 py 忽略 / supersedes 登记 / 覆盖率 100% / 无重复 id /
 `--validate` 孤儿检测（构造坏路径 + 不可执行指针）/ `--lifecycle` 新增资产判定与阻断 /
-`_asset_docs` 递归（docs/ 子目录文档可被识别，防根级误报）。
+`_asset_docs` 递归（docs/ 子目录文档可被识别，防根级误报）/
+**`enumerate_assets` 口径锁**（噪声目录排除、kind/layer 过滤、默认 root、豁免清单真实性与显性输出）。
 
 ## 8. 演进
 
@@ -160,3 +195,4 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | 2026-11-20 | 全量闭环：71 个资产设计/验收文档 71/71（补 5 DESIGN + 29 VERIFICATION）；`_asset_docs` 递归识别 docs/ 子目录，消除根级误报 |
 | 2026-11-23 | 可调用性探针门禁：registry 新增可选 `health:` 字段；`--validate` 执行探针（超时/非零退出 fail-closed，`--skip-health` 逃生阀）；已登记 3 条（browser-automation / config / skill-system-health-check）。动因：entry 路径存在 ≠ 能力可用（browser-automation 无启动器的实证缺口） |
 | 2026-11-23 | 探针改为**新增资产默认强制**：新增字段 `health_exempt`（显式豁免理由）；`--lifecycle --require-health` 阻断无探针/无豁免的新资产；pre-commit step 8 同步启用。可选 → 默认强制，消除「靠自觉」缺口 |
+| 2026-11-26 | **资产枚举口径收敛**：新增公共 API `enumerate_assets(kind, root)` + `is_real_asset_dir()` + `ASSET_EXCLUDED_NAMES`；`health_check` / `system_full_audit §3` / `_discover_assets` 全部改为调用它，删除各自 iterdir 口径；修复 `ASSET_EXCLUDED_NAMES` 定义未被引用的缺陷（`node_modules` 混入）。新增 `scope_exemptions`（4 条 L1 豁免，ADR-202608-001）并在 `--coverage`/`--lifecycle` 显性列出 |

@@ -393,3 +393,95 @@ def test_capability_health_exempt_field_parses():
     cap = cr.Capability(id="x", name="X", layer="L2", health_exempt="无稳定入口")
     assert cap.health_exempt == "无稳定入口"
     assert cap.health == []
+
+# ── 口径单一事实源（enumerate_assets）回归 ──
+# 事故 2026-11-25/26：health_check 与 system_full_audit 各自 iterdir 判定，
+# 导致 .deprecated 被计入组件、design 文档误判。此处锁定公共 API 行为。
+
+def _fake_asset_root(tmp_path):
+    """造一个含真实/隐藏/缓存/废弃目录的假仓库根。"""
+    root = tmp_path / "ws"
+    for rel in ("L2-infra/components/real-comp",
+                "L2-infra/skills/real-skill",
+                "L4-proprietary/components/legacy"):
+        (root / rel).mkdir(parents=True)
+    # 应被排除的噪声目录
+    (root / "L2-infra/components/.deprecated").mkdir()
+    (root / "L2-infra/components/node_modules").mkdir()
+    (root / "L2-infra/components/__pycache__").mkdir()
+    (root / "L2-infra/components/.git").mkdir()
+    (root / "L2-infra/components/.hidden").mkdir()
+    return root
+
+
+def test_is_real_asset_dir_semantics(tmp_path):
+    root = _fake_asset_root(tmp_path)
+    c = root / "L2-infra/components"
+    assert cr.is_real_asset_dir(c / "real-comp")
+    for bad in ("node_modules", "__pycache__", ".git", ".hidden"):
+        assert not cr.is_real_asset_dir(c / bad), bad
+
+
+def test_enumerate_assets_excludes_noise(tmp_path):
+    """核心锁：枚举结果不含 .deprecated/node_modules/__pycache__/.git/隐藏目录。"""
+    rows = cr.enumerate_assets(root=_fake_asset_root(tmp_path))
+    names = [d.name for _, _, d in rows]
+    assert "real-comp" in names and "real-skill" in names
+    for noise in ("node_modules", "__pycache__", ".git", ".hidden"):
+        assert noise not in names, f"噪声目录混入: {noise}"
+
+
+def test_enumerate_assets_layer_and_kind_filter(tmp_path):
+    root = _fake_asset_root(tmp_path)
+    rows = cr.enumerate_assets(root=root)
+    layers = {l for l, _, _ in rows}
+    kinds = {k for _, k, _ in rows}
+    assert layers == {"L2-infra", "L4-proprietary"}          # 只扫 L2/L3/L4，无 L1
+    assert kinds == {"components", "skills"}
+    comps = [d.name for _, k, d in cr.enumerate_assets("components", root=root)]
+    assert "real-comp" in comps and "legacy" in comps and "real-skill" not in comps
+
+
+def test_discover_assets_single_source_of_truth(tmp_path):
+    """_discover_assets 必须与 enumerate_assets 同口径（防再次分叉）。"""
+    root = _fake_asset_root(tmp_path)
+    disc = cr._discover_assets(root=root)
+    rows = cr.enumerate_assets(root=root)
+    assert disc["components"] == sorted({d.name for _, k, d in rows if k == "components"})
+    assert disc["skills"] == sorted({d.name for _, k, d in rows if k == "skills"})
+    assert ".deprecated" not in disc["components"]
+
+
+def test_default_root_is_repo_root():
+    """不传 root 时默认扫描真实仓库根（REPO_ROOT），且口径与显式传参一致。"""
+    rows = cr.enumerate_assets()
+    names = {d.name for _, k, d in rows if k == "components"}
+    assert {"config", "credentials"} <= names
+    # 与显式 root 结果一致（同口径）
+    assert {d.name for _, _, d in cr.enumerate_assets(root=cr.REPO_ROOT)} == \
+           {d.name for _, _, d in rows}
+
+
+def test_scope_exemptions_declared_and_on_disk(reg):
+    """豁免清单非空、路径真实存在（防写不存在路径绕过门禁）。"""
+    ex = reg.scope_exemptions
+    assert ex, "scope_exemptions 未加载"
+    for x in ex:
+        assert (cr.REPO_ROOT / x["path"]).is_dir(), f"豁免路径不存在: {x['path']}"
+        assert (x.get("reason") or "").strip(), f"豁免缺理由: {x['path']}"
+
+
+def test_coverage_reports_exemptions(reg, capsys):
+    """--coverage 必须显性列出范围豁免（否则后续会话当缺口重复排查）。"""
+    rc = cr.cmd_coverage(type("A", (), {"json": False})(), reg)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "范围豁免" in out
+    assert any(x["path"].split("/")[-1] in out for x in reg.scope_exemptions)
+
+
+def test_lifecycle_reports_exemptions(reg, capsys):
+    rc = cr.cmd_lifecycle(type("A", (), {"new_only": False, "require_design": True})(), reg)
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "范围豁免" in out

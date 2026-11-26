@@ -271,27 +271,19 @@ def cmd_explain(args, reg: Registry) -> int:
 
 # ── 覆盖率校验：所有组件/skill 是否都已登记 ──
 
-def _discover_assets() -> dict[str, list[str]]:
-    """扫描仓库内的组件与 skill 目录。
+def _discover_assets(root: Path | None = None) -> dict[str, list[str]]:
+    """扫描资产目录名，**口径唯一来源是 enumerate_assets()**。
 
-    只扫 L2/L3/L4 三层，排除 .git/node_modules/__pycache__/.pytest_cache。
-    返回 {"components": [...], "skills": [...]}（相对仓库根的目录名）。
+    历史问题：本函数曾自造 iterdir() 匹配规则（只看 . 开头），与
+    enumerate_assets() 的 ASSET_EXCLUDED_NAMES（含 .deprecated）不一致——
+    这正是「两套口径长期说谎」的病根（事故 2026-11-25/26）。现仅做形状转换。
+    返回 {"components": [...], "skills": [...]}（目录名，已排序去重）。
     """
-    out = {"components": [], "skills": []}
-    for layer in ("L2-infra", "L3-business", "L4-proprietary"):
-        cdir = REPO_ROOT / layer / "components"
-        sdir = REPO_ROOT / layer / "skills"
-        if cdir.is_dir():
-            out["components"].extend(
-                sorted(p.name for p in cdir.iterdir()
-                       if p.is_dir() and not p.name.startswith((".", "__")))
-            )
-        if sdir.is_dir():
-            out["skills"].extend(
-                sorted(p.name for p in sdir.iterdir()
-                       if p.is_dir() and not p.name.startswith((".", "__")))
-            )
-    return out
+    rows = enumerate_assets(root=root)
+    return {
+        kind: sorted({d.name for _, k, d in rows if k == kind})
+        for kind in ("components", "skills")
+    }
 
 
 def _registered_names(reg: Registry) -> set[str]:
@@ -328,6 +320,13 @@ def cmd_coverage(args, reg: Registry) -> int:
     print(f"能力覆盖率: {covered}/{total} ({pct:.1f}%)")
     print(f"  组件 {len(assets['components'])} 个 / skill {len(assets['skills'])} 个")
     print(f"  注册表能力条目: {len(reg.capabilities)}")
+    # 显性声明范围边界：L1 运行时适配层不参与能力登记（ADR-202608-001）。
+    # 不列出来，后续会话会把这 4 个目录当「未登记缺口」重复排查。
+    if reg.scope_exemptions:
+        print(f"  范围豁免（不参与登记口径）: {len(reg.scope_exemptions)}")
+        for x in reg.scope_exemptions:
+            reason = (x.get("reason") or "").strip()
+            print(f"     ↳ {x.get('path')}：{reason}" if reason else f"     ↳ {x.get('path')}")
 
     if unreg_comp or unreg_skill:
         print()
@@ -488,7 +487,7 @@ def _iter_asset_dirs(root: Path | None = None) -> list[tuple[str, str, Path]]:
             if not base.is_dir():
                 continue
             for d in sorted(base.iterdir()):
-                if d.is_dir() and not d.name.startswith((".", "__")):
+                if is_real_asset_dir(d):
                     out.append((layer, kind, d))
     return out
 
@@ -503,8 +502,14 @@ ASSET_EXCLUDED_NAMES = (".git", "node_modules", "__pycache__", ".pytest_cache",
 
 
 def is_real_asset_dir(p: Path) -> bool:
-    """是否为「真实资产目录」（排除隐藏/缓存/废弃）。"""
-    return p.is_dir() and not p.name.startswith((".", "__"))
+    """是否为「真实资产目录」。
+
+    判定必须过 ASSET_EXCLUDED_NAMES——此前只查 `.`/`__` 前缀，导致
+    node_modules/dist 等被算成资产（常量定义了却无人引用 = 两套口径）。
+    """
+    return (p.is_dir()
+            and not p.name.startswith((".", "__"))
+            and p.name not in ASSET_EXCLUDED_NAMES)
 
 
 def enumerate_assets(kind: str | None = None, root: Path | None = None) -> list[tuple[str, str, Path]]:
@@ -567,6 +572,9 @@ def cmd_lifecycle(args, reg: Registry) -> int:
     print(f"资产生命周期检查（{len(rows)} 个资产，模式={'新增' if new_only else '全量'}）")
     print(f"  设计/调研文档: {len(rows) - len(no_design)}/{len(rows)}")
     print(f"  验收文档: {len(rows) - len(no_verify)}/{len(rows)}")
+    # 显性声明豁免范围，避免把 L1 适配层误判为「缺文档」。
+    if reg.scope_exemptions:
+        print(f"  范围豁免（不计入上述分母）: {len(reg.scope_exemptions)}")
 
     if no_design:
         print()
