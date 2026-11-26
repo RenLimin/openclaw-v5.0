@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-26 15:36 UTC+08:00
+最后生成：2026-11-26 21:28 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -164,6 +164,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 名称 | 启用 | 调度 | 目标 | 投递 |
 |---|---|---|---|---|
 | Memory Dreaming Promotion | ✅ | cron `0 3 * * *` | `isolated` | — |
+| compaction-gate-fix | ✅ | 每 900s | `isolated` | wecom/1313 |
 | daily-inspection-detail | ✅ | cron `0 9 * * *` | `isolated` | wecom/1313 |
 | oa-reconcile-daily (P4.4) | ✅ | cron `30 9 * * *` | `isolated` | last |
 | quota-restore-check | ✅ | 每 7200s | `isolated` | wecom/1313 |
@@ -295,8 +296,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `0645303` |
-| Commit 数 | 795 |
+| HEAD | `3eec5ca` |
+| Commit 数 | 799 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

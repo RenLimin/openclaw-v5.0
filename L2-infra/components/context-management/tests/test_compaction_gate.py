@@ -4,10 +4,14 @@
 覆盖：
 1. 干净日志 → ok(rc=0)
 2. 窗口内失败达阈值且无成功补偿 → alert(rc=1)
-3. 失败后有成功补偿 → ok(rc=0)
+3. 失败后窗口内有成功补偿 → ok(rc=0)（2026-11-26 修复：补偿判定此前形同虚设）
 4. 失败数达 2×阈值 → critical(rc=2)
 5. safeguard 截断事件被统计但不单独升级状态
 6. --fix 对告警会话发起 compact（stub 掉 subprocess）
+7. state 落盘全局成功（修复 remember_success 死代码）
+8. --exclude 跳过前台会话（agent:main:main）
+9. --fix-cooldown-minutes 冷却期内不重复 fix
+10. --silent-ok 空输出（供 automation 投递抑制）
 """
 
 import contextlib
@@ -100,9 +104,8 @@ def test_recovery_after_failure_is_ok(tmp_path):
         ],
     )
     rc, out = _run(mod, log, tmp_path)
-    # 成功行无 sessionKey，只推进全局兜底；此处验证「有成功即不判 critical」。
-    assert rc in (0, 1), out
-    assert "critical" not in out.lower() or rc != 2
+    # 成功晚于最近失败 → 已补偿 → ok（修复前此断言只能接受 rc in (0,1)）。
+    assert rc == 0, out
 
 
 def test_double_threshold_is_critical(tmp_path):
@@ -174,6 +177,101 @@ class _MonkeyPatch:
     def undo(self):
         for target, name, old in reversed(self._undo):
             setattr(target, name, old)
+
+
+def test_state_persists_global_success(tmp_path):
+    """修复死代码：窗口内成功必须落盘 state（此前 remember_success 从未被调用）。"""
+    mod = _load()
+    now = datetime.now(TZ8)
+    log = tmp_path / "gw.log"
+    _write_log(log, [_ok_line(_iso(now - timedelta(minutes=5)))])
+    _run(mod, log, tmp_path)
+    state_path = tmp_path / "compaction-gate-state.json"
+    assert state_path.exists(), "state 文件应已落盘"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    assert "*global*" in state["last_success"]
+
+
+def test_fix_excludes_main_session(tmp_path, monkeypatch=None):
+    """--exclude 必须跳过前台会话：只修 dashboard，不碰 agent:main:main。"""
+    mod = _load()
+    now = datetime.now(TZ8)
+    log = tmp_path / "gw.log"
+    _write_log(
+        log,
+        [
+            _diag(_iso(now - timedelta(minutes=30)), "agent:main:main", "cmp-m1"),
+            _diag(_iso(now - timedelta(minutes=20)), "agent:main:main", "cmp-m2"),
+            _diag(_iso(now - timedelta(minutes=15)), "agent:main:dashboard:x", "cmp-d1"),
+            _diag(_iso(now - timedelta(minutes=5)), "agent:main:dashboard:x", "cmp-d2"),
+        ],
+    )
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+
+        class R:
+            returncode = 0
+            stdout = "ok"
+            stderr = ""
+
+        return R()
+
+    monkeypatch = monkeypatch or _MonkeyPatch()
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    _run(mod, log, tmp_path, "--fix", "--exclude", "agent:main:main")
+    compacted = [c for c in calls if "compact" in c]
+    assert len(compacted) == 1, calls
+    assert any("agent:main:dashboard:x" in c for c in compacted[0]), compacted
+    assert "--agent" in compacted[0] and "main" in compacted[0], compacted
+    monkeypatch.undo()
+
+
+def test_fix_cooldown_blocks_rerun(tmp_path, monkeypatch=None):
+    """冷却期内不得对同一会话重复 fix（fix 失败也记录尝试，防止反复打）。"""
+    mod = _load()
+    now = datetime.now(TZ8)
+    log = tmp_path / "gw.log"
+    _write_log(
+        log,
+        [
+            _diag(_iso(now - timedelta(minutes=30)), "agent:main:dashboard:x", "cmp-d1"),
+            _diag(_iso(now - timedelta(minutes=20)), "agent:main:dashboard:x", "cmp-d2"),
+        ],
+    )
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+
+        class R:
+            returncode = 1
+            stdout = ""
+            stderr = "compact failed"
+
+        return R()
+
+    monkeypatch = monkeypatch or _MonkeyPatch()
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    _run(mod, log, tmp_path, "--fix")
+    assert len([c for c in calls if "compact" in c]) == 1
+    _run(mod, log, tmp_path, "--fix")
+    assert len([c for c in calls if "compact" in c]) == 1, "冷却期内不得重复 fix"
+    monkeypatch.undo()
+
+
+def test_silent_ok_suppresses_output(tmp_path):
+    """--silent-ok：ok 且无修复动作时零输出（automation 空输出抑制投递）。"""
+    mod = _load()
+    now = datetime.now(TZ8)
+    log = tmp_path / "gw.log"
+    _write_log(log, [_ok_line(_iso(now - timedelta(minutes=5)))])
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = mod.main(["--log", str(log), "--state-dir", str(tmp_path), "--silent-ok"])
+    assert rc == 0
+    assert buf.getvalue().strip() == ""
 
 
 if __name__ == "__main__":

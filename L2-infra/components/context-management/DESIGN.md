@@ -208,9 +208,10 @@ python3 L2-infra/components/context-management/probe_context_window.py \
 | 维度 | 决策 |
 |---|---|
 | 默认动作 | **只读**：解析日志尾部（字节上限，不全量读 77MB+），输出结构化报告 + 退出码 |
-| 判定 | 窗口内 failed ≥ threshold 且期间无成功补偿 → alert(rc=1)；≥ 2×threshold → critical(rc=2) |
-| 恢复动作 | `--fix` 显式 opt-in，调用 `openclaw sessions compact <key>`（走绝对路径） |
-| 状态 | `logs/compaction-gate-state.json` 记住各会话最后成功时刻，供跨运行判定「失败后是否已恢复」 |
+| 判定 | 窗口内 failed ≥ threshold 且**无成功补偿** → alert(rc=1)；≥ 2×threshold → critical(rc=2)。成功补偿 = 任一成功时刻晚于该会话最近一次失败（2026-11-26 修复：原实现从不写 state，补偿判定形同虚设） |
+| 恢复动作 | `--fix` 调用 `openclaw sessions compact <key>`（绝对路径）；自动执行由 automation `compaction-gate-fix` 承担——**排除 `agent:main:main`**（前台会话不自动压）、60min 冷却、单轮上限 2 会话 |
+| 状态 | `logs/compaction-gate-state.json` 落盘生效：记录全局最后成功时刻与各会话最近 fix 尝试；2026-11-26 修复 `remember_success` 从未被调用 |
+| 告警送达 | rc 映射进 `health_check.py`（compaction 类目：ok→pass / alert→warn / critical→fail）；automation announce 直送 wecom（空输出自动抑制投递） |
 | 不做 | 不改 gateway 配置/进程；不代替调度层；不写任何远端 |
 
 ### 9.3 退出码语义
@@ -224,10 +225,15 @@ python3 L2-infra/components/context-management/probe_context_window.py \
 ### 9.4 调度落地
 
 由 `LaunchAgent/ai.openclaw.compaction-gate.plist` 每 15min 运行一次（只读模式）。
+自动修复与告警送达由 automation `compaction-gate-fix`（每 15min，isolated command）承担：
+`compaction_gate.py --fix --exclude agent:main:main --silent-ok`，announce → wecom；
+`--silent-ok` 使 ok 且无修复动作时零输出，automation 依「空输出抑制投递」不打扰。
 告警经 scheduler-guard `manifest.yaml` 登记核对，确保「脚本写好且真被调度」。
+健康检查（`health_check.py`）新增 compaction 类目探针，把 rc 映射进健康面。
 
 ### 9.5 变更记录
 
 | 日期 | 变更 |
 |---|---|
 | 2026-11-26 | 新增 compaction_gate.py + tests/test_compaction_gate.py（6 用例全过）；实跑抓到并修复 `tail_text` 首行 off-by-one |
+| 2026-11-26 | 断链修复：state 落盘生效（`remember_success` 此前从未被调用）；成功补偿判定落地；`--exclude`/`--fix-cooldown-minutes`/`--max-fix-per-run`/`--silent-ok`；health_check 增 compaction 探针；automation `compaction-gate-fix` 承担自动修复+送达；回归测试 6 → 10 |

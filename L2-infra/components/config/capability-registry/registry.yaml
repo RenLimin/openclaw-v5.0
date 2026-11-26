@@ -121,7 +121,7 @@ capabilities:
       - "python3 L2-infra/components/context-management/probe_context_window.py"
       - "python3 L2-infra/components/context-management/subagent_ctx_guard.py"
       - "python3 L2-infra/components/context-management/compaction_gate.py"
-    notes: "compaction_gate.py 由 LaunchAgent ai.openclaw.compaction-gate 每 15min 只读巡检"
+    notes: "compaction_gate.py 由 LaunchAgent ai.openclaw.compaction-gate 每 15min 只读巡检；自动修复与告警送达由 automation compaction-gate-fix 承担（排除 agent:main:main，60min 冷却，单轮≤2 会话）"
     supersedes: []
 
   - id: credentials

@@ -372,6 +372,42 @@ class HealthCheck:
         else:
             self.add("git", "remote-sync", "pass", "in sync with origin")
 
+    def check_compaction(self):
+        """压缩健康门禁（compaction_gate）：把读巡检结果接入健康面。
+
+        链路背景（2026-11-26）：gateway.log 里 auto-compaction 静默失败
+        （mode=safeguard 失败后不自动续跑），gate 每 15min 巡检给出
+        rc=0 ok / rc=1 alert / rc=2 critical，但此前 launchd 不消费退出码、
+        日志无消费者 → 告警到不了决策点。这里把 rc 映射成健康项；
+        自动修复与送达由 automation compaction-gate-fix 承担。
+        """
+        gate = WORKSPACE / "L2-infra" / "components" / "context-management" / "compaction_gate.py"
+        if not gate.exists():
+            self.add("compaction", "gate-script", "fail", "compaction_gate.py 缺失")
+            return
+        rc, out, err = run_cmd(f"{sys.executable} {gate} --json", timeout=60)
+        if rc == 2 and "日志不存在" in err:
+            self.add("compaction", "gate-status", "skip", "gateway.log 不可读")
+            return
+        try:
+            payload = json.loads(out)
+        except json.JSONDecodeError:
+            self.add("compaction", "gate-status", "warn",
+                     f"gate 输出不可解析: {err[:120]}")
+            return
+        overall = payload.get("overall", "?")
+        detail = (
+            f"窗口{payload.get('window_minutes')}min 阈值{payload.get('threshold')} "
+            f"截断{len(payload.get('truncation_events', []))}次 "
+            f"会话{len(payload.get('sessions', []))}个"
+        )
+        if overall == "ok":
+            self.add("compaction", "gate-status", "pass", detail)
+        elif overall == "alert":
+            self.add("compaction", "gate-status", "warn", f"alert: {detail}")
+        else:
+            self.add("compaction", "gate-status", "fail", f"critical: {detail}")
+
     # ─── 运行所有检查 ───
 
     def run_all(self, skip_categories=None, only_categories=None):
@@ -383,6 +419,7 @@ class HealthCheck:
             ("channels", self.check_channels),
             ("model-scheduling", self.check_model_scheduling),
             ("components", self.check_components),
+            ("compaction", self.check_compaction),
             ("cron", self.check_cron),
             ("tests", self.check_tests),
             ("secrets", self.check_secrets),
