@@ -179,6 +179,21 @@ class RevenueAnalysisEngine(BaseEngine):
         # Q1 归因 + Q4 预警（DESIGN v1.1 §2/§5）：纯计算，随 compute 一起返回
         data["attribution"] = compute_attribution(budget_rows)
         data["alerts"] = build_alerts(budget_rows, data["attribution"])
+        # Q2 分桶（DESIGN v1.1 §3/§4）：先尝试跨期继承，留空行再跑规则
+        # fail-closed：上期表缺失 → 跳过继承，直接进规则
+        try:
+            inh = self.inherit_previous_buckets(period)
+        except Exception:
+            inh = None  # 上期不可用时降级为空集，走规则冷启动
+        # 先落继承值
+        if inh and inh["total"] > 0:
+            self.persist_buckets(period, inh)
+        # 再用规则填留空行（不覆盖已继承/人工值）
+        rules = self.apply_bucket_rules(period)
+        data["bucket_result"] = {
+            "inherit": inh,
+            "rules": rules,
+        }
         return data
 
     # ─── Sheet 3: 汇总 ───
@@ -1500,8 +1515,8 @@ class RevenueAnalysisEngine(BaseEngine):
         try:
             counts: dict[str, int] = {}
             for sheet, rows in data.items():
-                if sheet in ("attribution", "alerts"):
-                    continue  # Q1/Q4 结构化结果由 _persist_attribution/_persist_alerts 落盘
+                if sheet in ("attribution", "alerts", "bucket_result"):
+                    continue  # Q1/Q4/Q2-Q3 结构化结果由各自专用 persist 方法落盘
                 if sheet == SHEET_TREND:
                     # 趋势行是 dict 列表，转成列结构
                     fields = [k for k in rows[0].keys()] if rows else []

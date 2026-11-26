@@ -846,6 +846,19 @@ async def ra_alerts(period: str):
         raise HTTPException(500, str(e))
 
 
+@router.get("/revenue-analysis/buckets/{period}")
+async def ra_buckets(period: str):
+    """Q2/Q3 分桶结果（预算填报/预算趋势 + 来源分布）。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return {"period": normalize_month(period),
+                "buckets": RevenueAnalysisService().buckets(normalize_month(period))}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 # ========== 健康检查 ==========
 
 @router.get("/health")

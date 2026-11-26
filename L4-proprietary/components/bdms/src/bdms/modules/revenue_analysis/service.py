@@ -233,6 +233,38 @@ class RevenueAnalysisService(BaseService):
         finally:
             conn.close()
 
+    def buckets(self, period: str) -> dict:
+        """Q2/Q3 分桶结果（ra_bucket）。
+
+        返回：total/inherited/overridden/blank + rules 分布 + 详细列表（分页前 200）。
+        fail-closed：未生成/无数据 → 返回空结构（与 alerts 一致，便于前端渲染）。
+        """
+        conn = _db.get_connection(self.engine.db_path)
+        try:
+            rows = conn.execute(
+                """SELECT perf_id, budget_fill, budget_trend, bucket_source,
+                          matched_oa, matched_ones, week_status, created_at
+                   FROM ra_bucket WHERE period = ? ORDER BY perf_id""",
+                (period,),
+            ).fetchall()
+        finally:
+            conn.close()
+        if not rows:
+            return {"total": 0, "items": []}
+        items = [dict(r) for r in rows]
+        # 统计分布
+        from collections import Counter
+        bt = Counter(r["budget_trend"] or "(空)" for r in items)
+        bf = Counter(r["budget_fill"] or "(空)" for r in items)
+        src = Counter(r["bucket_source"] or "" for r in items)
+        return {
+            "total": len(items),
+            "budget_trend_dist": dict(bt),
+            "budget_fill_dist": dict(bf),
+            "source_dist": dict(src),
+            "items": items[:200],  # 预览前 200 条
+        }
+
     # ─── 异步 job（Web UI 用） ───
 
     def generate_with_job(self, job_id: int, period: str,
