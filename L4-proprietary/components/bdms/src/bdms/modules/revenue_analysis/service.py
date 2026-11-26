@@ -265,6 +265,14 @@ class RevenueAnalysisService(BaseService):
             "items": items[:200],  # 预览前 200 条
         }
 
+    def annual_targets(self) -> list[dict]:
+        """Q8 年度目标列表（ra_annual_target）。"""
+        return self.engine.list_annual_targets()
+
+    def set_annual_target(self, year: int, amount_wan: float) -> dict:
+        """Q8 设置年度目标（upsert）。"""
+        return self.engine.set_annual_target(year, amount_wan)
+
     # ─── 异步 job（Web UI 用） ───
 
     def generate_with_job(self, job_id: int, period: str,

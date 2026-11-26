@@ -455,6 +455,8 @@ class RevenueAnalysisEngine(BaseEngine):
                                 period: str = "") -> list[list[Any]]:
         """汇总分析 64×50（golden 202606 完整结构复刻）。
 
+        §8.2 年度目标：优先读 ra_annual_target（人工维护），缺失回退 config 常量。
+
         布局（golden 逐格实证，0 基索引）：
           A 块 (1..11): 期间/新签合同额/新签预计/实际/完成率/递延预计/实际/完成率/合计预计/实际/完成率
           B 块 (14..29): 合同类别/Y26销售/确收/确收度/比重/预计/预计确收度/Y25销售/确收/确收度/比重/预计/预计确收度/销售增长率/确收增长率/确收度增长
@@ -735,22 +737,33 @@ class RevenueAnalysisEngine(BaseEngine):
         out[i][37] = rate(y25_new_plan, y25_new_contract)
         out[i][38] = rate(y25_new_actual, y25_new_contract)
 
+        # ── 年度目标（§8.2）：DB 优先，缺省回退 config（保证 golden 不飘）──
+        target_contract = SUMMARY_TARGET_CONTRACT
+        target_plan = SUMMARY_TARGET_PLAN
+        try:
+            year = int(period[:4]) if period and len(period) >= 4 and period[:4].isdigit() else 2026
+            t = self.get_annual_target(year)
+            if t is not None:
+                target_contract = t
+        except Exception:
+            pass  # schema 缺失/查询失败 → 静默回退默认值
+
         # ── r21 年度目标（A + C）──
         i = 20
         out[i][1] = "年度目标"
-        out[i][2] = SUMMARY_TARGET_CONTRACT
+        out[i][2] = target_contract
         out[i][5] = SUMMARY_TARGET_RATES[CATEGORY_NEW]
         out[i][8] = SUMMARY_TARGET_RATES[CATEGORY_DEFERRED]
         out[i][11] = SUMMARY_TARGET_RATES["合计"]
         out[i][32] = "年度目标"
-        out[i][33] = SUMMARY_TARGET_CONTRACT
-        out[i][34] = SUMMARY_TARGET_PLAN
+        out[i][33] = target_contract
+        out[i][34] = target_plan
 
         # ── r22 差距（C）──
         i = 21
         out[i][32] = "差距"
-        out[i][33] = round(SUMMARY_TARGET_CONTRACT - wan(ct), 4)
-        out[i][34] = round(SUMMARY_TARGET_PLAN - wan(pnT), 4)
+        out[i][33] = round(target_contract - wan(ct), 4)
+        out[i][34] = round(target_plan - wan(pnT), 4)
 
         # ── r24-r32 履约维度（golden 实证：从 C 列(col2) 起，A/B 空）──
         i = 23
@@ -813,7 +826,7 @@ class RevenueAnalysisEngine(BaseEngine):
         out[58][1] = "合计"
         out[59][1] = "确收度"
         out[60][1] = "年度目标"
-        out[60][2] = SUMMARY_TARGET_CONTRACT
+        out[60][2] = target_contract
         for g in range(10):
             base = 2 + g * 4
             if g == 0:
@@ -2076,6 +2089,58 @@ class RevenueAnalysisEngine(BaseEngine):
         return {"period": period, "year": y, "total": len(order),
                 "newly_bucketed": len(results), "stats": stats,
                 "unresolved": unresolved, "results": results}
+
+    # ─── Q8 年度目标（§8.2） ───
+
+    def get_annual_target(self, year: int) -> float | None:
+        """年度目标（新签合同额，万元）。表缺失/未设置 → None。"""
+        from bdms.core import db as _db
+        conn = _db.get_connection(self.db_path)
+        try:
+            row = conn.execute(
+                "SELECT amount_wan FROM ra_annual_target WHERE year = ?",
+                (year,),
+            ).fetchone()
+            return float(row["amount_wan"]) if row else None
+        except Exception:
+            return None
+        finally:
+            conn.close()
+
+    def set_annual_target(self, year: int, amount_wan: float) -> dict:
+        """设置年度目标（upsert）。返回 {"year", "amount_wan"}。"""
+        from datetime import datetime
+        from bdms.core import db as _db
+        conn = _db.get_connection(self.db_path)
+        try:
+            conn.execute(
+                """INSERT INTO ra_annual_target (year, amount_wan, updated_at)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(year) DO UPDATE SET
+                       amount_wan = excluded.amount_wan,
+                       updated_at = excluded.updated_at""",
+                (year, float(amount_wan),
+                 datetime.now().isoformat(timespec="seconds")),
+            )
+            conn.commit()
+            return {"year": year, "amount_wan": float(amount_wan)}
+        finally:
+            conn.close()
+
+    def list_annual_targets(self) -> list[dict]:
+        """列出所有已设置的年度目标。"""
+        from bdms.core import db as _db
+        conn = _db.get_connection(self.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT year, amount_wan, updated_at FROM ra_annual_target "
+                "ORDER BY year"
+            ).fetchall()
+            return [dict(r) for r in rows]
+        except Exception:
+            return []
+        finally:
+            conn.close()
 
     def has_data(self, period: str) -> bool:
         conn = _db.get_connection(self.db_path)

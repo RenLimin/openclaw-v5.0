@@ -859,6 +859,30 @@ async def ra_buckets(period: str):
         raise HTTPException(500, str(e))
 
 
+@router.get("/revenue-analysis/annual-targets")
+async def ra_annual_targets():
+    """Q8 年度目标列表（人工维护）。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return {"targets": RevenueAnalysisService().annual_targets()}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.post("/revenue-analysis/annual-targets")
+async def ra_annual_targets_set(req: dict):
+    """Q8 设置年度目标：{"year": 2026, "amount_wan": 23000.0}。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    year = req.get("year")
+    amount = req.get("amount_wan")
+    if not isinstance(year, int) or not isinstance(amount, (int, float)):
+        raise HTTPException(400, "year(int) 与 amount_wan(数字) 必填")
+    try:
+        return RevenueAnalysisService().set_annual_target(year, amount)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 # ========== 健康检查 ==========
 
 @router.get("/health")
