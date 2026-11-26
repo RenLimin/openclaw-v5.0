@@ -192,11 +192,13 @@ capabilities:
     supersedes: []
 
   - id: observability
-    name: 可观测性（网关看门狗）
+    name: 可观测性（网关看门狗 / channel 恢复 / 网络定责探针）
     layer: L2
-    interfaces: [observability, watchdog, gateway, monitor]
+    interfaces: [observability, watchdog, gateway, monitor, channel, network, probe]
     entry:
       - "bash L2-infra/components/observability/gateway_watchdog.sh"
+      - "python3 L2-infra/components/observability/scripts/net_probe.py"
+    notes: "net_probe.py 由 LaunchAgent ai.openclaw.net-probe 每 15min 只读采样，异常才落盘 incident"
     supersedes: []
 
   - id: ocr-digitalization

@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-26 15:02 UTC+08:00
+最后生成：2026-11-26 15:36 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -295,8 +295,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9b38696` |
-| Commit 数 | 793 |
+| HEAD | `0645303` |
+| Commit 数 | 795 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -323,7 +323,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
 | `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |
 | `model-scheduling` | 23 | 0 | 8 | `L2-infra/components/model-scheduling` |
-| `observability` | 12 | 0 | 3 | `L2-infra/components/observability` |
+| `observability` | 14 | 0 | 4 | `L2-infra/components/observability` |
 | `ocr-digitalization` | 24 | 0 | 7 | `L2-infra/components/ocr-digitalization` |
 | `office-generation` | 16 | 0 | 6 | `L2-infra/components/office-generation` |
 | `persistence` | 8 | 0 | 1 | `L2-infra/components/persistence` |
@@ -475,7 +475,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `maintenance` | 维护（记忆维护 / 仓库健康） | L2 | `bash L2-infra/scripts/maintenance/memory_maintenance.sh` |
 | `memory-embedding` | 记忆与嵌入（openclaw memory） | L2 | `openclaw memory search <关键词>` |
 | `model-scheduling` | 模型调度（配额 / 恢复 / 路由 / 错峰限流） | L2 | `python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail` |
-| `observability` | 可观测性（网关看门狗） | L2 | `bash L2-infra/components/observability/gateway_watchdog.sh` |
+| `observability` | 可观测性（网关看门狗 / channel 恢复 / 网络定责探针） | L2 | `bash L2-infra/components/observability/gateway_watchdog.sh` |
 | `ocr-digitalization` | OCR 文档数字化（扫描件/图片 → 文本 + 签名印章检测） | L2 | `python3 L2-infra/components/ocr-digitalization/scripts/ocr_main.py --help` |
 | `office-generation` | Office 文档生成（Excel / PPT / Word） | L2 | `python3 -c "from office_engine import OfficeDocument; print('OK')"  # 库接口，工作目录需含 L2-infra/com...` |
 | `persistence` | 持久化（SQLite 迁移 / schema） | L2 | `python3 -c "import L2-infra.components.persistence.migration as m; print('OK')"  # 或 python3 ...` |

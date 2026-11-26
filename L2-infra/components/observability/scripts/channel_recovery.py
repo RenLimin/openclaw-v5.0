@@ -404,7 +404,9 @@ def decide_action(state: dict, decision: str, status: dict | None, now: float) -
     if _account_intentionally_stopped(state, status, now):
         return "skip", "channel stopped after last auth (intentional)"
 
-    day = datetime.now(CST).strftime("%Y-%m-%d")
+    # 注入 now（与本函数其余时间判定一致，不再用墙钟）——否则跨日计数
+    # 在测试/回放中不可复现（2026-11-26 修复：既有两用例因写死 NOW 常挂）。
+    day = datetime.fromtimestamp(now, CST).strftime("%Y-%m-%d")
     if state.get("light_day") != day:
         state["light_day"] = day
         state["light_count"] = 0

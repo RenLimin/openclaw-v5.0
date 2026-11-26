@@ -158,3 +158,59 @@ provider API ──→ provider-health-check.py ──→ memory/YYYY-MM-DD.md
 | 2026-08-24 | agent_observer.py 首版（会话快照 + 每日摘要） |
 | 2026-08-24 | gateway_watchdog.sh 首版（进程存活 + 端口检查） |
 | 2026-08-24 | cron 脚本首版（provider-health-check + daily-summary-delivery） |
+
+---
+
+## 10. 通道网络定责探针（net_probe.py，2026-11-26 增补）
+
+### 10.1 问题与证据缺口
+
+wecom 稳定性审计（`/tmp/wecom-stability-report.md`，2026-11-26）判定主因为
+「整机/出口网络路径周期性瞬断」，非域名污染、非插件单点 bug。但触发层未定案：
+
+| 候选 | 依据 |
+|---|---|
+| (a) 本机代理/隧道 | 环境存在 `HTTP_PROXY=HTTPS_PROXY=http://127.0.0.1:7897`；Node fetch / 原生 WS 默认**不经**代理直连，但系统网络栈或代理软件切节点会造成瞬时 DNS+TCP 中断 |
+| (b) 内网 DNS 首跳抖动 | `scutil --dns` 首跳 `172.16.6.3/.4`；`getaddrinfo` 失败即 ENOTFOUND，插件无备用解析 |
+| (c) macOS 网络栈/睡眠唤醒残留 | 今日无 Sleep/Wake 记录（仅 DisplayWake），历史确有案例 |
+
+审计证据缺口（§8）：故障已自愈，**未捕获异常时段的实时 DNS/握手样本** → 无法定案。
+
+### 10.2 目标 / 非目标
+
+**目标**：在**下一次故障窗口**留下定向采集，把 (a)/(b)/(c) 从推测变为实证。
+
+**非目标**：不改 gateway/插件源码；不做恢复动作（恢复归 `channel_recovery.py`）；
+不常驻高频探测（避免重连风暴同类副作用）。
+
+### 10.3 采集项（每轮 3 类，全部只读）
+
+| 类别 | 采集 | 判据价值 |
+|---|---|---|
+| DNS | 5 个 resolver × `dig +time=1 +tries=1`（默认/172.16.6.3/.4/223.5.5.5/119.29.29.29），记耗时与答案 | 哪个 resolver 挂 → (a) vs (b) |
+| TCP/TLS | 直连 IP:443 + TLS 握手耗时；代理 7897 端口连通性 | 直连挂+代理活 → (a) 嫌疑大 |
+| 对照 | 非腾讯域名同时刻探测 | 同时失败 → 共享出口；只腾讯失败 → 疑 (b)/服务端 |
+
+### 10.4 事件触发式落盘
+
+常态每 15min 采样**只写内存态**，不写盘；检测到异常（任一项失败）时把完整样本写入
+`logs/net-probe-incidents.jsonl`。理由：故障窗口罕见，全量写盘会淹没 71MB gateway.log。
+
+### 10.5 退出码
+
+| rc | 含义 |
+|---|---|
+| 0 | 本轮全部正常 |
+| 1 | 检出异常（已落盘 incident） |
+| 2 | 脚本自身错误（工具缺失等） |
+
+### 10.6 调度
+
+`LaunchAgent/ai.openclaw.net-probe.plist` 每 15min 一次，`PATH` 显式声明
+（AGENTS.md §LaunchAgent PATH 红线）。仅在异常时才有可观测量。
+
+### 10.7 变更记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-11-26 | 新增 net_probe.py + tests/test_net_probe.py；wecom 审计建议 §7.A.2 落地 |
