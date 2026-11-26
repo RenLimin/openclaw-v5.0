@@ -194,6 +194,14 @@ class ServiceChecker:
                     "按需服务未运行（idleStop 空闲停止，设计行为）；"
                     "管理方健康，可随时按需拉起"
                 )
+                # 子探针在待机态下没有判别力：服务本就没在跑，判它 fail 只会
+                # 造成长期静默误报（历史事故 2026-11-26：父探针已正确判 standby，
+                # 子探针却逐条渲染成 ❌）。保留探针定义（服务真跑起来时仍要验
+                # 业务路径），但待机态统一折叠为 skip。
+                for chk in svc_result["checks"].values():
+                    if chk["status"] == "fail":
+                        chk["status"] = "skip"
+                        chk["detail"] = "按需服务待机中，探针跳过（服务未运行属设计行为）"
 
         # 自动修复
         if self.fix and svc_result["overall"] in ("degraded", "failed"):
