@@ -33,6 +33,70 @@ except Exception:
 
 # ─── 工具函数 ───
 
+def resolve_openclaw_bin():
+    """外部 CLI 一律绝对路径（AGENTS.md §LaunchAgent PATH 红线，兜底候选）。"""
+    import shutil
+    for cand in (shutil.which("openclaw"), "/opt/homebrew/bin/openclaw",
+                 str(Path.home() / ".openclaw" / "tmp" / "agent-cli" / "openclaw")):
+        if cand and Path(cand).exists():
+            return cand
+    return "openclaw"
+
+
+def parse_gateway_call_json(out):
+    """解析 `openclaw gateway call ...` 输出中的 JSON。
+
+    该命令会在 JSON 前打印一行 `Gateway call: <method>`，故按首个 `{` 起 raw_decode。
+    解析失败返回 None（调用方据此降级为 skip，不误报）。
+    """
+    idx = (out or "").find("{")
+    if idx < 0:
+        return None
+    try:
+        obj, _ = json.JSONDecoder().raw_decode(out[idx:])
+        return obj
+    except (json.JSONDecodeError, ValueError):
+        return None
+
+
+def runtime_channel_probes(payload, channels=("wecom", "openclaw-weixin")):
+    """把运行时通道状态转成探针结果 [(name, status, detail)]。
+
+    事故（2026-11-26，wecom 稳定性审计）：原 wecom-status 只看
+    `openclaw channels list` 的静态配置态，断开 1 小时仍报 pass——
+    监控口径漏掉运行时连接。这里改用 `gateway call channels.status` 的
+    running / lastError 判据。
+
+    保守语义：
+    - RPC 不可用（payload=None）→ skip，不误报；
+    - 已配置且 running=true 且 lastError=null → pass；
+    - running=false 或 lastError 非空 → fail。
+    """
+    if payload is None:
+        return [("channels-runtime", "skip", "运行时状态 RPC 不可用（不据此判定）")]
+    states = payload.get("channels") or {}
+    results = []
+    for ch in channels:
+        st = states.get(ch)
+        if st is None:
+            results.append((f"{ch}-runtime", "warn", "运行时状态中无该通道"))
+            continue
+        if not st.get("configured"):
+            results.append((f"{ch}-runtime", "warn", "未配置"))
+            continue
+        err = st.get("lastError")
+        running = st.get("running")
+        if running is False:
+            results.append((f"{ch}-runtime", "fail", "configured 但 running=false"))
+        elif err:
+            results.append((f"{ch}-runtime", "fail", f"lastError={err}"))
+        else:
+            started = st.get("lastStartAt")
+            extra = f", lastStartAt={started}" if started else ""
+            results.append((f"{ch}-runtime", "pass", f"running=true{extra}"))
+    return results
+
+
 def run_cmd(cmd, timeout=30, cwd=None):
     """运行命令，返回 (returncode, stdout, stderr)"""
     try:
@@ -103,11 +167,18 @@ class HealthCheck:
             return
         self.add("channels", "channel-list", "pass")
 
-        # WeCom 必须正常
+        # WeCom 静态配置态（配置口径，保留）
         if "WeCom" in out and "configured" in out:
             self.add("channels", "wecom-status", "pass", "configured & enabled")
         else:
             self.add("channels", "wecom-status", "warn", "WeCom not configured")
+
+        # 运行时连接态（连接口径，2026-11-26 补：静态配置无法反映断连）
+        rc, out, err = run_cmd(f'{resolve_openclaw_bin()} gateway call channels.status 2>&1',
+                               timeout=30)
+        payload = parse_gateway_call_json(out) if rc == 0 else None
+        for name, status, detail in runtime_channel_probes(payload):
+            self.add("channels", name, status, detail)
 
     def check_model_scheduling(self):
         """检查模型调度服务"""
