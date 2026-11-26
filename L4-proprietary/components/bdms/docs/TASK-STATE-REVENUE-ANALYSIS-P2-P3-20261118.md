@@ -110,6 +110,42 @@ DB 行键是**规范字母**（`config.BUDGET_CANONICAL_FROM_202606` 投影表�
 
 **下一片待办**：P4 / P5、终审设计文档。
 
+### 4.5.2 切片3-5 + P5 闭环（2026-11-26，D5 剩余全部完成）
+
+**切片3：§3 分桶接入 service/API/CLI 主流程（`7a1072f`）**
+
+| 层 | 落地 |
+|---|---|
+| engine | `compute()` 集成 Q3 继承 + §3 规则（fail-closed：上期缺失降级冷启动）；`persist` 跳过 `bucket_result` |
+| service | `buckets()`：读 ra_bucket 返分布 + 前 200 条预览 |
+| API | `GET /revenue-analysis/buckets/{period}` |
+| CLI | `revenue-analysis buckets` |
+
+真实源验证：generate 后 8071 条（8062 继承 + 9 rule:at_contract_terminated）；合同消失 54 / 本年度 5870 / 未来 1766 / 已下单未交付 358，与设计口径一致；read 模式幂等。
+
+**切片4：Q8 年度目标维护（`e66672d`）**
+
+engine 新增 `get/set/list_annual_targets`（ra_annual_target upsert）；`_build_summary_analysis` r21/r22/r60 目标值 **DB 优先，缺省回退 config**（23000/13340，golden 不飘）。service/API（GET/POST annual-targets）/CLI 全接。真实源验证：未设值 23000/13340 不变；设 25000 → r21/r60 读 DB；upsert 更新；2027 独立并存。单测 5 passed。
+
+**切片5：Q6/Q7 台账时序快照（`033b09d`）**
+
+engine 新增 `persist/load/list_ledger_snapshot`：ra_snapshot (period, snapshot_type) 唯一 upsert（幂等）；月度/履约汇总记录随 generate 自动落盘（§7.1）；上一统计期无快照 → warnings 缺月告警，不推断不伪造；历史行不回写（§7.2）。service/API（snapshots/{period}、snapshot-periods）/CLI 全接。真实源验证：202605 落盘 254+120 行；202606 连续无告警；冷启动缺月告警。单测 7 passed。
+
+**P5：汇总分析 64×50 + Q5 同比区（`8f64317` 单测）**
+
+实证：64 行 × 50 列结构完整；同比区 B 块（Y26/Y25 销售确收、增长率、确收度增长）5 指标就位；产线展开 12 行；年度目标 r21/r22 差距自动算。单测 5 passed（结构 + 同比列位 + 目标 DB 优先）。
+
+**D5 全量回归**：64 passed（inherit 11 + rules 17 + golden 5 + p3 14 + annual 5 + snapshot 7 + p5 5）。
+
+**D5 状态**：切片1-5 + P5 全部完成 → **P3/P4/P5 建设闭环**。
+
+**遗留（非阻塞，需 Rex 决策）**：
+1. §3.3「之前年度已确收」Rex 未给规则 → BQ 侧该桶不自动产出（留空人工）
+2. §3 ②③④ 桶依赖 OA+ONES 信号，RA 模块未接线 → fail-closed 跳过
+3. D1 15 格统计口径差异、D4 3 行人工核实仍待业务侧
+4. 生产库 202605 导入与正式 uvicorn 重启（按运维流程）
+
+
 ---
 
 ## 5. 验证命令（恢复后先跑）
