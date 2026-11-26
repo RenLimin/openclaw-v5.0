@@ -868,6 +868,27 @@ async def ra_annual_targets():
     except Exception as e:
         raise HTTPException(500, str(e))
 
+@router.get("/revenue-analysis/snapshots/{period}")
+async def ra_snapshots(period: str):
+    """Q6/Q7 台账时序快照（月度汇总记录 + 履约汇总记录）。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return RevenueAnalysisService().ledger_snapshot(normalize_month(period))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@router.get("/revenue-analysis/snapshot-periods")
+async def ra_snapshot_periods():
+    """Q6 已登记台账快照的账期（缺月连续性检查）。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return {"periods": RevenueAnalysisService().snapshot_periods()}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
 
 @router.post("/revenue-analysis/annual-targets")
 async def ra_annual_targets_set(req: dict):

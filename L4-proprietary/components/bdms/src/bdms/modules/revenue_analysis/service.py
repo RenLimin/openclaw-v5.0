@@ -49,6 +49,14 @@ class RevenueAnalysisService(BaseService):
         """
         r = super().generate(period, mode)
         self._ensure_snapshots(period)
+        # Q6/Q7（§7.1）：生成后自动 upsert 当期台账快照（月度/履约汇总记录）
+        try:
+            data = self.engine.compute(period)
+            self.engine.persist_ledger_snapshot(period, data)
+            r["ledger_snapshot"] = {"period": period, "written": 2}
+        except Exception as e:
+            # 快照失败不阻断生成主流程，记 warning 供前端提示
+            r["ledger_snapshot"] = {"period": period, "error": str(e)}
         return r
 
     def _ensure_snapshots(self, period: str) -> None:
@@ -272,6 +280,20 @@ class RevenueAnalysisService(BaseService):
     def set_annual_target(self, year: int, amount_wan: float) -> dict:
         """Q8 设置年度目标（upsert）。"""
         return self.engine.set_annual_target(year, amount_wan)
+
+    def ledger_snapshot(self, period: str) -> dict:
+        """Q6/Q7 台账快照（月度汇总记录 + 履约汇总记录）。"""
+        snap = self.engine.load_ledger_snapshot(period)
+        if snap is None:
+            return {"period": period, "has_snapshot": False,
+                    "monthly_record": [], "perf_record": []}
+        return {"period": period, "has_snapshot": True,
+                "monthly_record": snap.get("monthly_record") or [],
+                "perf_record": snap.get("perf_record") or []}
+
+    def snapshot_periods(self) -> list[str]:
+        """已登记台账快照的账期（Q6 连续性检查用）。"""
+        return self.engine.list_snapshot_periods()
 
     # ─── 异步 job（Web UI 用） ───
 

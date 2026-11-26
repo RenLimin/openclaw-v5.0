@@ -172,6 +172,12 @@ def cmd_revenue_analysis(args) -> int:
         else:
             _print_json(svc.annual_targets())
         return 0
+    if args.action == "snapshots":
+        if args.period:
+            _print_json(svc.ledger_snapshot(args.period))
+        else:
+            _print_json({"periods": svc.snapshot_periods()})
+        return 0
     return 1
 
 
@@ -276,7 +282,8 @@ def build_parser() -> argparse.ArgumentParser:
     rva = sub.add_parser("revenue-analysis", help="确收分析报告")
     rva.add_argument("action", choices=["import", "generate", "export",
                                         "summary", "caliber", "trend",
-                                        "buckets", "annual-targets"])
+                                        "buckets", "annual-targets",
+                                        "snapshots"])
     rva.add_argument("period", nargs="?", default=None)
     rva.add_argument("--source", default=None)
     rva.add_argument("--mode", default="auto",

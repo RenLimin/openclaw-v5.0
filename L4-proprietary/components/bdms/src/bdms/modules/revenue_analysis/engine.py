@@ -2142,6 +2142,98 @@ class RevenueAnalysisEngine(BaseEngine):
         finally:
             conn.close()
 
+    # ─── Q6/Q7 台账时序快照（§7.1/§7.2） ───
+
+    def persist_ledger_snapshot(self, period: str, data: dict) -> dict:
+        """生成后自动 upsert 当期台账快照到 ra_snapshot。
+
+        §7.1：每次生成报告后自动补充快照（月度汇总记录 + 履约汇总记录）。
+        §7.2：台账按快照保存、不覆盖历史；(统计期间, 快照类型) 唯一 upsert，
+              历史统计期的行不回写（快照不可变），重述只影响当期。
+        §7.1 缺月不静默：上一统计期非连续 → 返回 warning（不抛错）。
+        """
+        import json as _json
+        from datetime import datetime
+        from bdms.core import db as _db
+
+        snap_types = ("monthly_record", "perf_record")
+        payload = {
+            "monthly_record": data.get(SHEET_MONTHLY_RECORD) or [],
+            "perf_record": data.get(SHEET_PERF_RECORD) or [],
+        }
+        written = 0
+        conn = _db.get_connection(self.db_path)
+        try:
+            for t in snap_types:
+                conn.execute(
+                    """INSERT INTO ra_snapshot (period, snapshot_type, data, created_at)
+                       VALUES (?, ?, ?, ?)
+                       ON CONFLICT(period, snapshot_type) DO UPDATE SET
+                           data = excluded.data,
+                           created_at = excluded.created_at""",
+                    (period, t, _json.dumps(payload[t], ensure_ascii=False),
+                     datetime.now().isoformat(timespec="seconds")),
+                )
+                written += 1
+            conn.commit()
+        finally:
+            conn.close()
+
+        # §7.1 缺月不静默：检查上一统计期是否已登记快照
+        warnings = []
+        prev = self._prev_period(period)
+        if prev:
+            conn = _db.get_connection(self.db_path)
+            try:
+                cnt = conn.execute(
+                    "SELECT COUNT(*) FROM ra_snapshot WHERE period = ?",
+                    (prev,),
+                ).fetchone()[0]
+                if cnt == 0:
+                    warnings.append(
+                        f"上一统计期 {prev} 无台账快照（非连续）；"
+                        "历史缺月需人工月报导入，系统不推断")
+            finally:
+                conn.close()
+
+        return {"written": written, "period": period,
+                 "snapshot_types": list(snap_types), "warnings": warnings}
+
+    def load_ledger_snapshot(self, period: str) -> dict | None:
+        """回读当期台账快照。无 → None。"""
+        import json as _json
+        from bdms.core import db as _db
+        conn = _db.get_connection(self.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT snapshot_type, data FROM ra_snapshot WHERE period = ?",
+                (period,),
+            ).fetchall()
+            if not rows:
+                return None
+            out = {}
+            for r in rows:
+                out[r["snapshot_type"]] = _json.loads(r["data"])
+            return out
+        except Exception:
+            return None
+        finally:
+            conn.close()
+
+    def list_snapshot_periods(self) -> list[str]:
+        """已登记台账快照的账期（去重，升序）——供缺月连续性检查。"""
+        from bdms.core import db as _db
+        conn = _db.get_connection(self.db_path)
+        try:
+            rows = conn.execute(
+                "SELECT DISTINCT period FROM ra_snapshot ORDER BY period"
+            ).fetchall()
+            return [r["period"] for r in rows]
+        except Exception:
+            return []
+        finally:
+            conn.close()
+
     def has_data(self, period: str) -> bool:
         conn = _db.get_connection(self.db_path)
         try:
