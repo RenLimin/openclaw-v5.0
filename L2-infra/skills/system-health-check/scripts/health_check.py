@@ -218,38 +218,52 @@ class HealthCheck:
                 self.add("model-scheduling", f"config-{f}", "fail", f"{f} missing")
 
     def check_components(self):
-        """检查 L2 组件完整性"""
-        l2_dir = WORKSPACE / "L2-infra" / "components"
-        if not l2_dir.exists():
-            self.add("components", "l2-dir", "fail", "L2 components dir missing")
+        """检查资产文档完整性。
+
+        口径单一事实源 = capability_registry（见文件头说明）。这里只做**调用方**，
+        不再自造枚举/匹配规则；registry 不可导入时显式 skip，避免降级成第二套口径。
+        """
+        if _capreg is None:
+            self.add("components", "asset-docs", "skip",
+                     "capability_registry 不可导入（无法判定，不据此报缺）")
             return
 
-        components = [d for d in l2_dir.iterdir()
-                      if d.is_dir() and not d.name.startswith((".", "__"))]
-        self.add("components", "l2-count", "pass", f"{len(components)} components")
+        try:
+            rows = list(_capreg._iter_asset_dirs())
+        except Exception as e:  # noqa: BLE001 - 降级而非崩溃
+            self.add("components", "asset-docs", "skip", f"资产枚举失败：{e}")
+            return
 
-        # 设计文档判定：与 capability_registry._asset_docs 完全同口径
-        # （递归 docs/、前缀 DESIGN/PRD/SKILL、排除缓存与废弃目录）
-        missing_design = []
-        for comp in components:
-            if _capreg is not None:
-                docs = _capreg._asset_docs(comp)
-                has_design = bool(docs.get("design"))
-            else:
-                # 兜底：本地前缀匹配（仅当 registry 不可导入时）
-                has_design = any(
-                    fn.upper().startswith(("DESIGN", "PRD", "SKILL"))
-                    for fn in os.listdir(comp) if (comp / fn).is_file()
-                )
-            if not has_design:
-                missing_design.append(comp.name)
+        total = len(rows)
+        missing_design, missing_verify = [], []
+        for layer, kind, d in rows:
+            info = _capreg._asset_docs(d)
+            key = f"{layer}/{kind}/{d.name}"
+            if not info.get("design"):
+                missing_design.append(key)
+            if not info.get("verify"):
+                missing_verify.append(key)
+
+        # 豁免范围（L1 适配层）：非缺口，显性标注
+        exempt = [x for x in getattr(_capreg.load_registry(), "scope_exemptions", [])]
 
         if missing_design:
             self.add("components", "design-docs", "warn",
-                    f"missing design doc: {', '.join(missing_design)}")
+                     f"missing design doc: {', '.join(missing_design)}")
         else:
             self.add("components", "design-docs", "pass",
-                    f"all {len(components)} components have design doc")
+                     f"all {total} assets have design doc")
+
+        if missing_verify:
+            self.add("components", "verification-docs", "warn",
+                     f"{len(missing_verify)}/{total} 缺验收文档: {', '.join(missing_verify[:5])}")
+        else:
+            self.add("components", "verification-docs", "pass",
+                     f"all {total} assets have verification doc")
+
+        if exempt:
+            self.add("components", "scope-exemptions", "pass",
+                     f"{len(exempt)} 个显式豁免: {', '.join(x['path'].split('/')[-1] for x in exempt)}")
 
     def check_cron(self):
         """检查 Cron 任务状态"""

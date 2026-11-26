@@ -56,6 +56,16 @@ MANUAL_ARCHIVE_REASON = "manual"
 ASSET_INVENTORY_DOC = DOCS_DIR / "01-asset-inventory.md"
 ASSET_GENERATOR = WORKSPACE / "L2-infra" / "components" / "config" / "gen_asset_inventory.py"
 
+# 资产枚举单一事实源：capability_registry（见 AGENTS.md §检测器口径单一事实源红线）。
+# 背景（事故 2026-11-25/26）：本文件 §3 原先用裸 iterdir() 数 L4 组件，把 .deprecated
+# 隐藏目录算进「组件清单」；与 registry 的排除规则（隐藏/缓存/废弃）不一致，监控长期说谎。
+# 修法：统一调用 registry.enumerate_assets()，一处定义口径；不可导入时降级并显式标注。
+try:
+    sys.path.insert(0, str(WORKSPACE / "L2-infra" / "components" / "config" / "capability-registry"))
+    import capability_registry as _capreg
+except Exception:  # noqa: BLE001 - 降级而非崩溃
+    _capreg = None
+
 # 验证路径存在（对齐 L3/L4 分层后的目录结构，ADR-026）
 assert WORKSPACE.exists(), f"WORKSPACE 不存在: {WORKSPACE}"
 assert DOCS_DIR.exists(), f"DOCS_DIR 不存在: {DOCS_DIR}"
@@ -269,23 +279,34 @@ def audit_assets() -> list[dict]:
         results.append(check("L2 DESIGN.md", "⚠️", f"目录不存在: {design_dir}"))
 
     # L4 Python files（对齐分层后的 components 目录，ADR-026）
+    # 枚举走 registry 单一事实源（排除 .deprecated 等隐藏/缓存目录）；
+    # 仅在 registry 不可导入时降级为本地 iterdir，并明确标注口径已降级。
     if L4_COMPONENTS.exists():
-        count = sum(
-            1
-            for comp in L4_COMPONENTS.iterdir()
-            if comp.is_dir()
-            for _ in comp.rglob("*.py")
-        )
-        comps = sorted(c.name for c in L4_COMPONENTS.iterdir() if c.is_dir())
-        results.append(check("L4 Python files", "✅", f"{count} 个文件 · 组件: {', '.join(comps)}"))
+        if _capreg is not None:
+            l4_dirs = [d for layer, kind, d in _capreg.enumerate_assets("components", root=WORKSPACE)
+                       if layer == "L4-proprietary"]
+            source = "registry"
+        else:
+            l4_dirs = [c for c in L4_COMPONENTS.iterdir()
+                       if c.is_dir() and not c.name.startswith((".", "__"))]
+            source = "iterdir(降级)"
+        count = sum(len(list(comp.rglob("*.py"))) for comp in l4_dirs)
+        comps = sorted(c.name for c in l4_dirs)
+        results.append(check("L4 Python files", "✅",
+                            f"{count} 个文件 · {len(comps)} 组件({source}): {', '.join(comps)}"))
     else:
         results.append(check("L4 Python files", "⚠️", f"目录不存在: {L4_COMPONENTS}"))
 
     # 配置文件（各组件 config 目录，含深层 v1/v2）
+    if _capreg is not None:
+        cfg_roots = [d for layer, kind, d in _capreg.enumerate_assets("components", root=WORKSPACE)
+                     if layer == "L4-proprietary"]
+    else:
+        cfg_roots = [c for c in L4_COMPONENTS.iterdir()
+                     if c.is_dir() and not c.name.startswith((".", "__"))] if L4_COMPONENTS.exists() else []
     config_count = sum(
         len(list(cfg_dir.glob("*.json")))
-        for comp in L4_COMPONENTS.iterdir()
-        if comp.is_dir()
+        for comp in cfg_roots
         for cfg_dir in comp.rglob("config")
         if cfg_dir.is_dir()
     )
@@ -1040,9 +1061,17 @@ def _p4_untracked_uncommitted() -> dict:
 
     口径：用隔离临时 index（git_tree_status），免疫共享 `.git/index` 被并行会话
     写花造成的假警（事故 2026-11-25：此处曾报「未跟踪 50 / 未提交 197」实为污染）。
+
+    非 git 环境（隔离测试/外部目录）：无适用对象 → ✅ 不误报（保持旧契约，
+    回归修复 2026-11-26：原实现在此情形下降级为 ⚠️，与测试契约冲突）。
+    仓库内读取失败：仍是缺陷，报 ⚠️（不静默吞错）。
     """
+    if not (WORKSPACE / ".git").exists():
+        return check("P4 未跟踪/未提交", "✅", "非 git 仓库，不适用")
     try:
-        sys.path.insert(0, str(WORKSPACE / "L2-infra" / "components" / "config"))
+        cfg_dir = WORKSPACE / "L2-infra" / "components" / "config"
+        if cfg_dir.is_dir() and str(cfg_dir) not in sys.path:
+            sys.path.insert(0, str(cfg_dir))
         from git_tree_status import working_tree_counts
         counts = working_tree_counts(WORKSPACE)
     except Exception as e:  # noqa: BLE001 - 降级而非崩溃

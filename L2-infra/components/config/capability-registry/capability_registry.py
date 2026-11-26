@@ -73,6 +73,9 @@ class Registry:
     duplicate_family_patterns: list[str]
     capabilities: list[Capability]
     allow: list[dict]
+    # 显式豁免登记的范围（如 L1 运行时适配层）：不参与覆盖率/生命周期口径，
+    # 但在报告中显性声明，避免后续会话把边界当缺口重复排查。
+    scope_exemptions: list[dict] = field(default_factory=list)
 
 
 def load_registry(path: Path = REGISTRY) -> Registry:
@@ -88,6 +91,7 @@ def load_registry(path: Path = REGISTRY) -> Registry:
         duplicate_family_patterns=list(raw.get("duplicate_family_patterns", [])),
         capabilities=caps,
         allow=list(raw.get("allow", [])),
+        scope_exemptions=list(raw.get("scope_exemptions", [])),
     )
 
 
@@ -475,17 +479,40 @@ def _asset_docs(asset_dir: Path) -> dict:
     return {"design": design, "verify": verify}
 
 
-def _iter_asset_dirs() -> list[tuple[str, str, Path]]:
+def _iter_asset_dirs(root: Path | None = None) -> list[tuple[str, str, Path]]:
+    base_root = root or REPO_ROOT
     out = []
     for layer in ("L2-infra", "L3-business", "L4-proprietary"):
         for kind in ("components", "skills"):
-            base = REPO_ROOT / layer / kind
+            base = base_root / layer / kind
             if not base.is_dir():
                 continue
             for d in sorted(base.iterdir()):
                 if d.is_dir() and not d.name.startswith((".", "__")):
                     out.append((layer, kind, d))
     return out
+
+
+# ── 对外公共枚举 API（单一事实源）──
+#
+# 任何「盘点有哪些资产」的场景（健康检查、全量审计、覆盖率、生命周期）都必须走这里，
+# 禁止各脚本自造 iterdir/glob 匹配规则（事故 2026-11-25：health_check 与本表两套
+# 口径导致长期误报；2026-11-26：system_full_audit §3 裸 iterdir 又把 .deprecated 算进组件）。
+ASSET_EXCLUDED_NAMES = (".git", "node_modules", "__pycache__", ".pytest_cache",
+                       ".mypy_cache", ".deprecated", "dist")
+
+
+def is_real_asset_dir(p: Path) -> bool:
+    """是否为「真实资产目录」（排除隐藏/缓存/废弃）。"""
+    return p.is_dir() and not p.name.startswith((".", "__"))
+
+
+def enumerate_assets(kind: str | None = None, root: Path | None = None) -> list[tuple[str, str, Path]]:
+    """返回 [(layer, kind, Path)]；kind ∈ {'components', 'skills'} 或 None=全部。
+
+    root：扫描根（默认仓库根）；调用方（如隔离测试/审计脚本）可显式指定。
+    """
+    return [x for x in _iter_asset_dirs(root) if kind is None or x[1] == kind]
 
 
 def _new_asset_dirs() -> set[str]:

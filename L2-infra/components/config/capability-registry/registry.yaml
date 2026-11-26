@@ -24,6 +24,25 @@ high_risk_dirs:
   - "L4-proprietary/components/delivery-center/scripts"
   - "tmp"
 
+# ── 登记范围豁免：显式声明「不纳入能力登记」的区域 ──
+#
+# 背景（2026-11-26 资产全盘核对）：L1_runtime/components/{agent-registry,
+# context-bus,error-handler,telemetry} 在磁盘存在且有 DESIGN/VERIFICATION，
+# 但从未登记进 registry —— 长期被后续会话当作「未登记缺口」重复排查。
+#
+# 定位不是漏登记，而是层级契约（ADR-202608-001）：L1 = OpenClaw 基座 +
+# 运行时适配层，不可修改、不对外提供可调用能力，故不产生 capability 条目。
+# 此处显式声明，使 --coverage / --lifecycle 报告将其列为「已知豁免」而非缺口。
+scope_exemptions:
+  - path: L1_runtime/components/agent-registry
+    reason: L1 运行时适配层（不可修改、无对外能力）；健康判定走 health_check components 类
+  - path: L1_runtime/components/context-bus
+    reason: L1 运行时适配层（不可修改、无对外能力）
+  - path: L1_runtime/components/error-handler
+    reason: L1 运行时适配层（不可修改、无对外能力）
+  - path: L1_runtime/components/telemetry
+    reason: L1 运行时适配层（不可修改、无对外能力）
+
 # 重复家族文件名正则（新建即触发门禁，除非已登记在 allow）
 duplicate_family_patterns:
   - '(re_?export|export|refetch|auto_refetch)[a-z0-9_]*ones'
