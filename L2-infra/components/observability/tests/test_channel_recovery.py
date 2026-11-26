@@ -32,16 +32,18 @@ def _ts(dt: datetime) -> float:
 # 环境注入
 # --------------------------------------------------------------------------
 
-def test_ensure_env_injects_homebrew_path():
-    os.environ["PATH"] = "/usr/gnu/bin:/usr/local/bin:/bin:/usr/bin"
+def test_ensure_env_injects_homebrew_path(monkeypatch):
+    # 必须用 monkeypatch：直接改全局 os.environ["PATH"] 会污染同进程后续测试
+    # （实测：credentials/test_credentials_sh_wrapper 因找不到 bash 而失败）。
+    monkeypatch.setenv("PATH", "/usr/gnu/bin:/usr/local/bin:/bin:/usr/bin")
     env = cr.ensure_env()
     parts = env["PATH"].split(":")
     assert parts[0] == "/opt/homebrew/bin"
     assert parts[1] == "/opt/homebrew/sbin"
 
 
-def test_ensure_env_preserves_existing_path():
-    os.environ["PATH"] = "/Users/x/bin:/usr/bin"
+def test_ensure_env_preserves_existing_path(monkeypatch):
+    monkeypatch.setenv("PATH", "/Users/x/bin:/usr/bin")
     env = cr.ensure_env()
     assert "/Users/x/bin" in env["PATH"].split(":")
     assert "/usr/bin" in env["PATH"].split(":")
