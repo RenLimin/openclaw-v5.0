@@ -182,3 +182,52 @@ python3 L2-infra/components/context-management/probe_context_window.py \
 |---|---|
 | 2026-08-22 | 首版：subagent_ctx_guard.py + probe_context_window.py |
 | 2026-08-23 | 多模型 ctx 配置 + openclaw.json 动态读取 |
+
+---
+
+## 9. 压缩健康门禁（compaction_gate.py，2026-11-26 增补）
+
+### 9.1 问题与证据
+
+自动压缩失败时 OpenClaw 的行为是**静默中断且当轮不自动续跑**（`mode=safeguard`：
+宁可放弃压缩也不丢历史）。gateway.log 实证：
+
+```
+[agent/embedded] context-engine compaction failed errorMessage="Session maintenance yielded to a foreground turn"
+[agent/embedded] [compaction-diag] end ... outcome=failed reason=unknown detail=Session_maintenance_yielded_to_a_foreground_turn
+[compaction-safeguard] Compaction safeguard: finalized artifact truncated; loss=preserved-turn-head,summary-tail,suffix-head
+```
+
+统计口径：`compaction-diag` 累计 `outcome=failed/error` 600+ 条，而
+`auto-compaction succeeded` 仅个位数——**失败是常态，成功是少数**。
+既有 `auto_recovery.py` 只按 token 使用率判定（实测长期 30%），无法发现这类
+「没到阈值但已静默失败」的中断。
+
+### 9.2 职责边界（保守设计）
+
+| 维度 | 决策 |
+|---|---|
+| 默认动作 | **只读**：解析日志尾部（字节上限，不全量读 77MB+），输出结构化报告 + 退出码 |
+| 判定 | 窗口内 failed ≥ threshold 且期间无成功补偿 → alert(rc=1)；≥ 2×threshold → critical(rc=2) |
+| 恢复动作 | `--fix` 显式 opt-in，调用 `openclaw sessions compact <key>`（走绝对路径） |
+| 状态 | `logs/compaction-gate-state.json` 记住各会话最后成功时刻，供跨运行判定「失败后是否已恢复」 |
+| 不做 | 不改 gateway 配置/进程；不代替调度层；不写任何远端 |
+
+### 9.3 退出码语义
+
+| rc | 含义 |
+|---|---|
+| 0 | ok（无失败，或失败后已有成功补偿） |
+| 1 | alert（失败达阈值，任务有静默中断风险） |
+| 2 | critical（失败 ≥ 2×阈值）或脚本自身错误 |
+
+### 9.4 调度落地
+
+由 `LaunchAgent/ai.openclaw.compaction-gate.plist` 每 15min 运行一次（只读模式）。
+告警经 scheduler-guard `manifest.yaml` 登记核对，确保「脚本写好且真被调度」。
+
+### 9.5 变更记录
+
+| 日期 | 变更 |
+|---|---|
+| 2026-11-26 | 新增 compaction_gate.py + tests/test_compaction_gate.py（6 用例全过）；实跑抓到并修复 `tail_text` 首行 off-by-one |

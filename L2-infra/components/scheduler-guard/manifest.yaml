@@ -87,3 +87,8 @@ entries:
   status: manual_only
   note: cron_retry.sh 是 check_and_retry.py --apply 的包装，后者已由 ai.openclaw.session-recovery
     调度（每10min），无需重复调度
+- script: /Users/bangcle/.openclaw/workspace/L2-infra/components/context-management/compaction_gate.py
+  plist: /Users/bangcle/Library/LaunchAgents/ai.openclaw.compaction-gate.plist
+  schedule: 每 15min
+  status: scheduled
+  note: 2026-11-26 补齐调度落地——压缩健康门禁（只读检测 auto-compaction 静默失败，告警 rc=1/critical rc=2）

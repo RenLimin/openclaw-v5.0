@@ -95,12 +95,14 @@ capabilities:
     supersedes: []
 
   - id: context-management
-    name: 上下文管理（窗口探测 / 子代理守护）
+    name: 上下文管理（窗口探测 / 子代理守护 / 压缩健康门禁）
     layer: L2
-    interfaces: [context, window, probe, subagent, guard]
+    interfaces: [context, window, probe, subagent, guard, compaction]
     entry:
       - "python3 L2-infra/components/context-management/probe_context_window.py"
       - "python3 L2-infra/components/context-management/subagent_ctx_guard.py"
+      - "python3 L2-infra/components/context-management/compaction_gate.py"
+    notes: "compaction_gate.py 由 LaunchAgent ai.openclaw.compaction-gate 每 15min 只读巡检"
     supersedes: []
 
   - id: credentials

@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-26 11:46 UTC+08:00
+最后生成：2026-11-26 15:02 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -295,8 +295,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `3604b91` |
-| Commit 数 | 791 |
+| HEAD | `9b38696` |
+| Commit 数 | 793 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -314,7 +314,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `browser-automation` | 2 | 0 | 1 | `L2-infra/components/browser-automation` |
 | `config` | 13 | 0 | 6 | `L2-infra/components/config` |
 | `context-guardian` | 0 | 0 | 0 | `L2-infra/components/context-guardian` |
-| `context-management` | 5 | 0 | 1 | `L2-infra/components/context-management` |
+| `context-management` | 7 | 0 | 2 | `L2-infra/components/context-management` |
 | `credentials` | 6 | 0 | 3 | `L2-infra/components/credentials` |
 | `delivery-quality` | 2 | 0 | 0 | `L2-infra/components/delivery-quality` |
 | `gateway-safety` | 4 | 0 | 1 | `L2-infra/components/gateway-safety` |
@@ -466,7 +466,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `browser-automation` | 浏览器自动化基础设施（隔离 Chrome 幂等管理） | L2 | `python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py ensure` |
 | `config` | 配置管理（快照/审计/hook 安装） | L2 | `bash L2-infra/components/config/config.sh apply` |
 | `context-guardian` | 上下文守护（插件） | L2 | `node --test L2-infra/components/context-guardian/tests/test_core.js` |
-| `context-management` | 上下文管理（窗口探测 / 子代理守护） | L2 | `python3 L2-infra/components/context-management/probe_context_window.py` |
+| `context-management` | 上下文管理（窗口探测 / 子代理守护 / 压缩健康门禁） | L2 | `python3 L2-infra/components/context-management/probe_context_window.py` |
 | `credentials` | 凭据管理（扫描 / 审计 / GitHub 同步） | L2 | `bash L2-infra/components/credentials/credentials.sh audit` |
 | `delivery-quality` | 交付质量反馈（记录 / 评审） | L2 | `python3 L2-infra/components/delivery-quality/record.py --domain <d> --dimension <d> --severit...` |
 | `gateway-safety` | 网关安全（安全重启 / 预检守卫） | L2 | `bash L2-infra/components/gateway-safety/scripts/safe_restart.sh` |
