@@ -12,7 +12,7 @@
 
 | 字段 | 值 |
 |---|---|
-| 文档版本 | 6.0 (2026-10-30 — ADR-035：Agent Prompt 规则体系（P0-P3 纵切层）与应答契约治理，新增 §4 Prompt 治理行 + §8 ADR-035 + §12 变更) |
+| 文档版本 | 6.1 (2026-11-27 — ADR-037：能力路由与编排层并入 L2 `capability-router`；L0-gateway 正式移交运行时原生通道并归档为参考设计，§3.1 状态更新 + §8 ADR-037 + §12 变更) |
 | 文档状态 | active |
 | 运行时 cron | 1 active (Memory Dreaming Promotion) + 2 disabled (Heartbeat/Skill Review) |
 | 决策状态 | 5 层架构已锁定(ADR-012); 32 份 ADR accepted; L3 全部资产 5 件套完成; L4 组件已上线（见 §4 资产清单）; Prompt 规则体系 P0-P3 纵切层已定(ADR-035) |
@@ -196,7 +196,7 @@ L0 包含两个同级子层：
 | 子层 | 目录 | 职责 | 状态 |
 |---|---|---|---|
 | **L0 Install**（安装侧） | `L0-install/` | 运行时选型、安装流水线、契约测试、部署清单 | 🚧 部分就绪 |
-| **L0 Gateway**（网关侧） | `L0-gateway/` | 消息接入、认证鉴权、会话管理、消息路由 | 📐 骨架阶段 |
+| **L0 Gateway**（网关侧） | `L0-gateway/` | 消息接入、认证鉴权、会话管理、消息路由 | 📋 架构预留（参考设计；已移交运行时原生通道，ADR-037 / Rex 2026-11-27） |
 
 > L0 Install 管"怎么装"，L0 Gateway 管"消息怎么进出"。两者同属 L0 系统外层，但职责正交。
 
@@ -216,13 +216,15 @@ L0 包含两个同级子层：
 
 **职责**: 系统的流量入口与出口，负责所有外部通道的接入、认证、会话生命周期管理与消息路由。
 
+> **状态变更（ADR-037，2026-11-27）**：以上职责自即日起由**运行时原生通道**承担（§3.2.3 映射表逐条列明：通道接入 / 凭据管理 / 沙箱隔离 / 会话生命周期均为 ✅）。`L0-gateway/` 三组件**归档为参考设计**（骨架代码保留，不进入生产链路），仅在未来引入无原生通道能力的新运行时按本设计启用。本节设计内容继续有效，作为参考实现。
+
 **架构模式**: 管道-过滤器。每条入站消息经过处理链：认证 → 限流 → 协议转换 → 路由 → 会话绑定 → L1 Agent。
 
 | 组件 | 目录 | 职责 | 状态 |
 |---|---|---|---|
-| auth-gateway | `L0-gateway/components/auth-gateway/` | 身份认证（签名/Token/API Key）、接入授权、速率限制、审计日志 | 📐 骨架 |
-| channel-router | `L0-gateway/components/channel-router/` | 入站接收、协议转换、路由分发、出站投递、通道注册 | 📐 骨架 |
-| session-manager | `L0-gateway/components/session-manager/` | 会话创建/查找/恢复/状态流转（active→idle→archived→deleted） | 📐 骨架 |
+| auth-gateway | `L0-gateway/components/auth-gateway/` | 身份认证（签名/Token/API Key）、接入授权、速率限制、审计日志 | 📋 架构预留 |
+| channel-router | `L0-gateway/components/channel-router/` | 入站接收、协议转换、路由分发、出站投递、通道注册 | 📋 架构预留 |
+| session-manager | `L0-gateway/components/session-manager/` | 会话创建/查找/恢复/状态流转（active→idle→archived→deleted） | 📋 架构预留 |
 
 **入站流程**:
 ```
@@ -1279,6 +1281,7 @@ L4 专有业务
 | ADR-026 | L3 家庭及个人理财通用框架(FIN) | 高 | ✅ accepted (2026-09-03) |
 | ADR-028 | L0 系统安装层（注册表+流水线+契约验证） | 高 | 📋 proposed (2026-09-07) |
 | ADR-035 | Agent Prompt 规则体系（P0-P3 纵切层）与应答契约治理 | 高 | ✅ accepted (2026-10-30) |
+| ADR-037 | 能力路由与编排层（并入 L2 `capability-router`）+ L0-gateway 移交运行时原生通道 | 高 | ✅ accepted (2026-11-27，原编号 ADR-202611-036 因跨目录撞号改 037) |
 
 ---
 
@@ -1386,6 +1389,7 @@ L4 专有业务
 
 | 日期 | 版本 | 变更 |
 |---|---|---|
+| 2026-11-27 | **6.1** | **能力路由与编排层 + L0-gateway 处置（ADR-037，Rex 拍板）**：① 新增 L2 基础设施组件 `capability-router`（模块：index_builder / intent / retriever / injector / planner / dag_bridge / registry_client；复用 `dag-orchestrator` 引擎不自建，降级回退现状），PRD + DESIGN-OUTLINE + ADR 三件套已出；② **L0-gateway 三组件正式移交运行时原生通道**（原生优先铁律 §1.3；§3.2.3 映射表逐条 ✅），归档为参考设计，§3.1.1 / §3.1.2 状态由 📐 骨架 → 📋 架构预留，骨架代码保留；③ ADR 原编号 ADR-202611-036 与 `docs/knowledge-base/.../ADR-202611-036-session-boundary-guard.md` 撞号，按 §10.1 递增序号规范改为 **ADR-037**；④ 新增 §8 ADR-037 行、§12 本行。 |
 | 2026-10-30 | **6.0** | **Agent Prompt 规则体系（ADR-035）**：① 确立 Prompt 规则为贯穿 L0~L4 的正交纵切层，内部 P0 身份宪法 / P1 通用应答契约 / P2 域应答契约 / P3 能力技能四级；② 明确「规则即代码」与「规则即指令」边界（22 条 CHECK_RULES 等确定性规则留代码层，证据/维度/定级等约束进 P1/P2）；③ 新增 P1 spec（L2-infra/prompts/answer-spec-base.md）+ P2 三域 spec（L3-business/prompts/project-answer-spec.md、contract-answer-spec.md；L4-proprietary/prompts/product-answer-spec.md）；④ 9 个 skill（4 项目子 skill + contract-approval + product-kb + 3 入口）补「应答规范」强制引用；⑤ 新增 §4 Prompt 治理行、§8 ADR-035、§12 本行；资产清单补 Prompt 资产分类。 |
 | 2026-10-30 | **5.9** | **L4 专家统一入口命名约定（方案 A）**：§7.4.1 明确——`*-manager-expert` / `*-expert` 类**统一入口属于 skill**（`L4-proprietary/skills/`），与 `L4-proprietary/components/` 下 Bangcle 专有组件区分，**不强制 `bangcle-` 前缀**，以业务角色命名即可；PME-001 `product-manager-expert`、CME-001 `contract-manager-expert`、PJME-001 `bangcle-project-manager-expert` 三种写法均合规，不重命名、不动引用。解决三入口前缀不统一的历史疑问。 |
 | 2026-10-29 | **5.8** | **INFRA-CLN-001 建设完成转已上线**：① 实现 `tempcleanctl`（4 子命令 dry-run/clean/list/verify + 退出码 0/1/2/3；识别器/判定器/报告器/执行器；fail-closed：未标记不删、只 trash 禁 rm、trash 缺失中止、越界拒绝、symlink 不跟随）；② 13 个测试全绿（真实文件系统 + 真实 trash + 黄金基准）；③ 注册 cron isolated 每日 03:30 `clean --yes`，实删 announce WeCom 1313，无删除静默；④ `verify` 自检接入错误扫描（每 30m）；⑤ 立 **ADR-034**。 |

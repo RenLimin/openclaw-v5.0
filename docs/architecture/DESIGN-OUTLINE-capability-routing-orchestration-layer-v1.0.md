@@ -145,6 +145,8 @@ L2-infra/components/capability-router/
 
 **建议 A**，理由与 ADR 一致（原生优先 + 不重复建设 + 消除悬空态）。本层设计**不依赖**该决策落地，可并行推进。
 
+> **决策落地（2026-11-27）**：Rex 拍板取 A。`L0-gateway/README.md` / `DESIGN.md` 已改 📋 架构预留（参考设计），`00-system-architecture.md` §3.1.1 / §3.1.2 状态行同步、§8 ADR-037、§12 v6.1 登记。本层 v1.0 与 L0-gateway 零耦合，不受影响。
+
 ---
 
 ## 5. 运行时无关性保障（G-5）
@@ -212,6 +214,10 @@ CapabilityRecord（运行时中立）
 
 ---
 
-## 9. 待 Rex 拍板的开放问题
+## 9. 开放问题（Q-1/Q-2 已决）
 
-见 PRD §8 Q-1 ~ Q-5，其中 **Q-1（L0-gateway 处置）** 与本文件 §4 直接对应，**Q-2（基准集定标人）** 阻塞 M-1/M-2 验收。
+| # | 问题 | 状态 |
+|---|---|---|
+| Q-1 | L0-gateway 处置 | ✅ 已决（Rex 2026-11-27）：取 A 移交 + 归档参考设计，ADR-037 已 accepted |
+| Q-2 | 基准集 20 条定标人 | ✅ 已决：Rex 本人定标；文档 `docs/architecture/intent-benchmark-20-定标说明.md` 待填备注 |
+| Q-3 ~ Q-5 | k 动态 / extraDirs 摘除 / agent-registry 持久化 | 本期按建议（固定 k=5 / 不动 openclaw.json / 内存态接受），v1.1 再评 |

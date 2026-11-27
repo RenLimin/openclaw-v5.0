@@ -1,8 +1,8 @@
-# ADR-036：能力路由与编排层（Capability Routing & Orchestration Layer）
+# ADR-037：能力路由与编排层（Capability Routing & Orchestration Layer）
 
-> 状态：**proposed**
+> 状态：**accepted**（2026-11-27 Rex 拍板；原编号 ADR-202611-036，因与 `docs/knowledge-base/by-category/project-experience/adr/ADR-202611-036-session-boundary-guard.md` 撞号，按 `00-system-architecture.md` §10.1「ADR 递增序号」规范改为 037）
 > 日期：2026-11-27
-> 决策人：Rex（待拍板）
+> 决策人：Rex
 > 提案人：Lane D
 
 ## 背景
@@ -108,9 +108,9 @@ S-1 语义检索 / S-2 学习式排序 / S-3 多运行时路由 / S-4 trace 贯�
 
 ---
 
-## 专门一节：L0-gateway 处置建议
+## 专门一节：L0-gateway 处置（已决）
 
-> 对应 PRD 开放问题 Q-1、DESIGN-OUTLINE §4。
+> 对应 PRD 开放问题 Q-1、DESIGN-OUTLINE §4。**Rex 2026-11-27 拍板：采纳 A —— 正式移交运行时原生通道 + 归档为参考设计。**
 
 ### 现状
 
@@ -134,9 +134,12 @@ S-1 语义检索 / S-2 学习式排序 / S-3 多运行时路由 / S-4 trace 贯�
 
 **无运行期耦合**。本层的路由发生在 **agent 会话内的 prompt 组装阶段**（出站方向），L0-gateway 处理的是 **入站认证/限流/路由**，两者正交。唯一潜在交集是「按会话类型调整注入量」，属 v1.1 自适应范畴（Q-3），本期明确不做。
 
-### 执行前提
+### 执行记录（2026-11-27 已落地）
 
-移交动作涉及 `L0-gateway/README.md` / `DESIGN.md` 状态标记与 `00-system-architecture.md` §3.1 表格，**须 Rex 单独确认后由 Lane 执行**，本 ADR 提案阶段不动这些文件。
+- `L0-gateway/README.md` / `DESIGN.md` 状态标记改为 📋 架构预留（参考设计）
+- `00-system-architecture.md` §3.1.1 / §3.1.2 状态行同步，§12 变更历史登记一行
+- `docs/architecture/01-asset-inventory.md` 重生成入册
+- 三组件骨架代码保留（未删），作为未来非 OpenClaw 运行时的接入层参考实现
 
 ---
 
