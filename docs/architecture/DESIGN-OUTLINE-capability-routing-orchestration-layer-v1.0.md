@@ -219,5 +219,5 @@ CapabilityRecord（运行时中立）
 | # | 问题 | 状态 |
 |---|---|---|
 | Q-1 | L0-gateway 处置 | ✅ 已决（Rex 2026-11-27）：取 A 移交 + 归档参考设计，ADR-037 已 accepted |
-| Q-2 | 基准集 20 条定标人 | ✅ 已决：Rex 本人定标；文档 `docs/architecture/intent-benchmark-20-定标说明.md` 待填备注 |
+| Q-2 | 基准集 20 条定标人 | ✅ 已决：Rex 本人定标；文档 `docs/architecture/intent-benchmark-20-calibration.md` 待填备注 |
 | Q-3 ~ Q-5 | k 动态 / extraDirs 摘除 / agent-registry 持久化 | 本期按建议（固定 k=5 / 不动 openclaw.json / 内存态接受），v1.1 再评 |
