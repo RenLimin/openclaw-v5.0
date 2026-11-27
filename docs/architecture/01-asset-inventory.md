@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-27 13:22 UTC+08:00
+最后生成：2026-11-27 14:32 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -296,8 +296,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `9e75159` |
-| Commit 数 | 811 |
+| HEAD | `d18a877` |
+| Commit 数 | 814 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -345,7 +345,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `contract-approval` | 0 | 0 | 0 | `L3-business/components/contract-approval` |
-| `contract-management` | 28 | 9 | 11 | `L3-business/components/contract-management` |
+| `contract-management` | 29 | 9 | 12 | `L3-business/components/contract-management` |
 | `delivery-management-framework` | 40 | 0 | 10 | `L3-business/components/delivery-management-framework` |
 | `dms-framework` | 50 | 0 | 17 | `L3-business/components/dms-framework` |
 | `finance-engine` | 51 | 0 | 12 | `L3-business/components/finance-engine` |
@@ -358,9 +358,9 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 组件 | Python 模块 | 文档 | 测试 | 路径 |
 |---|---|---|---|---|
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
-| `bangcle-contract` | 115 | 21 | 3 | `L4-proprietary/components/bangcle-contract` |
+| `bangcle-contract` | 117 | 22 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 32 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 189 | 12 | 36 | `L4-proprietary/components/bdms` |
+| `bdms` | 190 | 12 | 37 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 24 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 81 | 0 | 16 | `L4-proprietary/components/delivery-center` |
@@ -424,7 +424,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 
 | 名称 | 描述 | 路径 | 完成证据 |
 |---|---|---|---|
-| bangcle-contract | — | `L4-proprietary/components/bangcle-contract` | `VERIFICATION-oa-project-management-asset-v1.0.md`, `OPERATIONS-v1.0.md`, `VERIFICATION-mvp-v1.0.md` |
+| bangcle-contract | — | `L4-proprietary/components/bangcle-contract` | `VERIFICATION-oa-project-management-asset-v1.0.md`, `OPERATIONS-v1.0.md`, `VERIFICATION-oa-attachment-auto-v1.0.md` |
 | Bangcle PPT 模板系统 | 基于梆梆安全官方 VI 规范的 PPT 模板生成系统，提供 DSL + 模板引擎 + 34 个预置模板，一键生成符... | `L4-proprietary/components/bangcle-ppt` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | BDMS — Bangcle 交付管理系统 | — | `L4-proprietary/components/bdms` | `VERIFICATION-REVENUE-ANALYSIS-v1.0.md`, `VERIFICATION-REVENUE-FORECAST-v1.0.md`, `VERIFICATION-v2.1.md` |
 | CISSP Trainer — CISSP 学习系统 v2 | 1. **安全基础入门** — 域 1、2 达到 50% 掌握度 | `L4-proprietary/components/cissp-trainer` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
