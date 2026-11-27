@@ -17,6 +17,7 @@ L2 基础设施层 — 标准化健康检查流程。
 修订：2026-11-10 — 新增第 10 节「已归档会话检测」+ --purge-archived（留痕 manifest + 名称释放校验）
                     + --restore-help（解压 .deleted.zst 归档）。
 修订：2026-11-12 — 新增第 12 节「资产一致性检测」（v1.1，六探针纯只读）。
+修订：2026-11-27 — §12 新增 P7 能力域重叠探针（registry domain 聚合，v1.2 七探针）。
 """
 
 import argparse
@@ -55,6 +56,8 @@ MANUAL_ARCHIVE_REASON = "manual"
 # 已建资产自动登记（2026-11-10 新增）
 ASSET_INVENTORY_DOC = DOCS_DIR / "01-asset-inventory.md"
 ASSET_GENERATOR = WORKSPACE / "L2-infra" / "components" / "config" / "gen_asset_inventory.py"
+# P7 输入：能力注册表（只读 yaml，不 import capability_registry 包以免耦合）。
+CAPABILITY_REGISTRY_YAML = WORKSPACE / "L2-infra" / "components" / "config" / "capability-registry" / "registry.yaml"
 
 # 资产枚举单一事实源：capability_registry（见 AGENTS.md §检测器口径单一事实源红线）。
 # 背景（事故 2026-11-25/26）：本文件 §3 原先用裸 iterdir() 数 L4 组件，把 .deprecated
@@ -870,13 +873,15 @@ def audit_asset_registration(auto_register: bool = True) -> list[dict]:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 12. 资产一致性检测（v1.1，2026-11-12）
-# 六探针纯只读：不写文件、不 git 变更、不删除。
+# 12. 资产一致性检测（v1.2，2026-11-27）
+# 七探针纯只读：不写文件、不 git 变更、不删除。
 # ═══════════════════════════════════════════════════════════════════════
 ASSET_CONSISTENCY_THRESHOLDS = {
     "untracked_max": 10,         # P4 未跟踪文件告警阈值
     "uncommitted_max": 3,        # P4 未提交变更告警阈值
     "duplicate_min_bytes": 1024,  # P6 忽略 <1KB 的重复（如图标缓存）
+    "domain_overlap_report_max": 5,      # P7 报告的能力域数上限（超出折叠计数）
+    "domain_overlap_candidates_max": 6,  # P7 每域展示的候选数上限
 }
 
 _COMPONENT_BASES = [
@@ -1201,11 +1206,160 @@ def _p6_duplicate_assets() -> dict:
     return check("P6 重复资产", "⚠️", f"同内容重复 {len(dups)} 组: " + "; ".join(dups[:5]))
 
 
+# ── P7 能力域重叠（v1.2，2026-11-27） ─────────────────────────────────
+# 定位：P6 是字节级（同 sha256）；P7 是能力域级，抓「同域多入口」的功能重叠。
+# 输入：capability-registry/registry.yaml（只读 yaml，不 import 该包以免耦合）。
+# 判据（保守）：仅当**同一能力域**下 ≥2 个不同能力的 entry 指向**不同物理路径**才报；
+# 「组件 + 其 skill 镜像」按 id 前缀合并视为同一能力，不误报。
+# 优雅降级：registry 无 domain 字段 / 文件不可读 → ✅ 报「P7 不可用」，不报错。
+_P7_DOMAIN_KEYS = ("domain", "domains", "能力域")
+_P7_PATH_RE = re.compile(r"(?:L[1-4][-_a-zA-Z0-9]*)/(?:[-_a-zA-Z0-9.]+/)*[-_a-zA-Z0-9.]+")
+_P7_LAYER_RANK = {"L1": 0, "L2": 1, "L3": 2, "L4": 3}
+
+
+def _p7_domain_values(cap: dict) -> list[str]:
+    """提取条目的能力域（str 或 list 均可），返回去重后的非空值。"""
+    vals: list[str] = []
+    for k in _P7_DOMAIN_KEYS:
+        v = cap.get(k)
+        if isinstance(v, str):
+            vals.append(v.strip())
+        elif isinstance(v, (list, tuple)):
+            vals.extend(str(x).strip() for x in v if str(x).strip())
+    seen: list[str] = []
+    for v in vals:
+        if v and v not in seen:
+            seen.append(v)
+    return seen
+
+
+def _p7_entry_paths(entry: str) -> list[str]:
+    """从 entry 命令串提取工作区相对物理路径（去参数/引号、去 `::函数` 后缀）。"""
+    out: list[str] = []
+    for m in _P7_PATH_RE.finditer(entry):
+        p = m.group(0).rstrip(".,;:)")
+        if "::" in p:
+            p = p.split("::", 1)[0]
+        if p and p not in out:
+            out.append(p)
+    return out
+
+
+def _p7_canonical_id(cid: str) -> str:
+    """skill 镜像是组件能力的派生入口（`skill-x` ↔ `x`），与组件同一能力。"""
+    return cid[6:] if cid.startswith("skill-") else cid
+
+
+def _p7_path_identity(rel: str) -> str:
+    """物理路径唯一标识：能解析到存在的绝对路径则用之，否则用规范化相对路径。"""
+    try:
+        p = WORKSPACE / rel
+        if p.exists():
+            return p.resolve().as_posix()
+    except OSError:
+        pass
+    return Path(rel).as_posix()
+
+
+def _p7_load_caps() -> tuple[list[dict] | None, str]:
+    """读取 registry.yaml 的 capabilities 列表；返回 (None, 原因) 表示不可用。"""
+    path = CAPABILITY_REGISTRY_YAML
+    if not path.is_file():
+        return None, f"注册表不存在: {path}"
+    try:
+        import yaml  # 延迟导入：缺失/异常只降级 P7，不拖累整个审计
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001 - 降级而非崩溃
+        return None, f"注册表解析失败: {e}"
+    if not isinstance(raw, dict):
+        return None, "注册表顶层不是映射"
+    caps = raw.get("capabilities")
+    if not isinstance(caps, list):
+        return None, "注册表无 capabilities 列表"
+    return [c for c in caps if isinstance(c, dict)], ""
+
+
+def _p7_domain_overlap() -> dict:
+    """P7 能力域重叠：registry 按 domain 聚合 entry，识别同域多入口。"""
+    caps, why = _p7_load_caps()
+    if caps is None:
+        return check("P7 能力域重叠", "✅", f"P7 不可用（{why}）")
+
+    th = ASSET_CONSISTENCY_THRESHOLDS
+    domains: dict[str, list[tuple[int, str, str, dict]]] = {}
+    declared = 0
+    for idx, cap in enumerate(caps):
+        cid = str(cap.get("id") or "").strip()
+        entries = cap.get("entry")
+        if not cid or not isinstance(entries, list) or not entries:
+            continue
+        doms = _p7_domain_values(cap)
+        if doms:
+            declared += 1
+        for d in doms:
+            domains.setdefault(d, []).append((idx, cid, _p7_canonical_id(cid), cap))
+
+    if declared == 0:
+        return check(
+            "P7 能力域重叠", "✅",
+            f"注册表 {len(caps)} 条均未声明 domain 字段，P7 不适用（字段就绪后自动生效）",
+        )
+
+    overlaps: list[str] = []
+    for dom, items in sorted(domains.items()):
+        canon: dict[str, dict] = {}
+        for idx, orig, cid, cap in items:
+            slot = canon.setdefault(cid, {
+                "orig": orig, "idx": idx, "entries": [], "paths": set(), "layer": str(cap.get("layer", "")),
+            })
+            slot["idx"] = min(slot["idx"], idx)
+            for e in cap.get("entry") or []:
+                if not isinstance(e, str):
+                    continue
+                if e not in slot["entries"]:
+                    slot["entries"].append(e)
+                for p in _p7_entry_paths(e):
+                    slot["paths"].add(_p7_path_identity(p))
+        if len(canon) < 2:
+            continue
+        all_paths: set[str] = set()
+        for s in canon.values():
+            all_paths |= s["paths"]
+        if len(all_paths) < 2:
+            continue  # 同域候选指向同一路径 = 同一实现的别名，不在本探针口径
+
+        def _rank(kv: tuple[str, dict]) -> tuple[int, int, int]:
+            _cid, s = kv
+            return (1 if s["orig"].startswith("skill-") else 0,
+                    _P7_LAYER_RANK.get(s["layer"], 9), s["idx"])
+
+        ordered = sorted(canon.items(), key=_rank)
+        auth_cid, auth = ordered[0]
+        auth_entry = (auth["entries"] or ["(无 entry)"])[0]
+        bits = []
+        for _cid, s in ordered[:th["domain_overlap_candidates_max"]]:
+            bits.append(f"{s['orig']} 首 entry: {(s['entries'] or ['(无 entry)'])[0]}")
+        if len(ordered) > th["domain_overlap_candidates_max"]:
+            bits.append(f"…另 {len(ordered) - th['domain_overlap_candidates_max']} 个候选")
+        overlaps.append(
+            f"域「{dom}」{len(canon)} 个候选: " + "; ".join(bits)
+            + f" | 建议权威入口: {auth_entry}"
+        )
+
+    if not overlaps:
+        return check("P7 能力域重叠", "✅",
+                     f"已扫描 {declared} 条带 domain 的能力，无同域多入口重叠")
+    shown = "; ".join(overlaps[:th["domain_overlap_report_max"]])
+    if len(overlaps) > th["domain_overlap_report_max"]:
+        shown += f"; …另 {len(overlaps) - th['domain_overlap_report_max']} 域"
+    return check("P7 能力域重叠", "⚠️", f"能力域重叠 {len(overlaps)} 处: {shown}")
+
+
 def audit_asset_consistency() -> list[dict]:
     """12. 资产一致性检测（纯只读）。
 
-    六探针：P1 计数漂移 / P2 路径断链 / P3 空壳组件 /
-    P4 未跟踪未提交 / P5 硬编码根路径 / P6 重复资产。
+    七探针：P1 计数漂移 / P2 路径断链 / P3 空壳组件 /
+    P4 未跟踪未提交 / P5 硬编码根路径 / P6 重复资产 / P7 能力域重叠。
     返回 check() 格式列表，与 §1-§11 同构，供 Lane B 聚合。
     """
     return [
@@ -1215,6 +1369,7 @@ def audit_asset_consistency() -> list[dict]:
         _p4_untracked_uncommitted(),
         _p5_hardcoded_root(),
         _p6_duplicate_assets(),
+        _p7_domain_overlap(),
     ]
 
 

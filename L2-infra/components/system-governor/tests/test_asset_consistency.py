@@ -1,8 +1,9 @@
-"""system-governor v1.1 — §12 资产一致性六探针测试。
+"""system-governor v1.2 — §12 资产一致性七探针测试（P1–P7）。
 
 黄金基准见 DESIGN-DETAIL-system-governor-v1.1.md §5。
 策略：monkeypatch WORKSPACE/_COMPONENT_BASES/DOCS_DIR/ASSET_INVENTORY_DOC
-到 tmp_path，构造完全隔离的注入环境，不碰真实工作区、测试后自动清理。
+/CAPABILITY_REGISTRY_YAML 到 tmp_path，构造完全隔离的注入环境，
+不碰真实工作区、测试后自动清理。
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent.parent / "scripts"))
@@ -28,6 +30,8 @@ def _isolate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         tmp_path / "L3-business" / "components",
         tmp_path / "L4-proprietary" / "components",
     ])
+    # P7 输入：默认指向不存在路径 → 隔离环境下 P7 优雅降级为「不可用」
+    monkeypatch.setattr(a, "CAPABILITY_REGISTRY_YAML", tmp_path / "nonexistent-registry.yaml")
     a.DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -264,15 +268,96 @@ def test_p6_exclusions_in_git_repo(tmp_path, monkeypatch):
     assert r["status"] == "✅", r["detail"]
 
 
+# ── P7 能力域重叠（v1.2，registry domain 聚合） ───────────────────────
+
+def _write_registry(tmp_path: Path, caps: list[dict]) -> Path:
+    """把 capabilities 列表写成 yaml，并让 P7 读取该文件。"""
+    reg = tmp_path / "registry.yaml"
+    reg.write_text(yaml.safe_dump({"version": 1, "capabilities": caps}, allow_unicode=True),
+                   encoding="utf-8")
+    return reg
+
+
+def test_p7_domain_overlap_hit_and_clear(tmp_path, monkeypatch):
+    """同域 ≥2 个不同能力、entry 指向不同物理路径 → 报出并给建议权威入口。"""
+    _isolate(tmp_path, monkeypatch)
+    reg = _write_registry(tmp_path, [
+        {"id": "alpha-impl-a", "layer": "L4", "domain": ["contract"],
+         "entry": ["python3 L4-proprietary/components/impl-a/cli.py run"]},
+        {"id": "alpha-impl-b", "layer": "L2", "domain": ["contract"],
+         "entry": ["python3 L2-infra/components/impl-b/main.py --query x"]},
+    ])
+    monkeypatch.setattr(a, "CAPABILITY_REGISTRY_YAML", reg)
+    r = a._p7_domain_overlap()
+    assert r["status"] == "⚠️", r["detail"]
+    assert "contract" in r["detail"]
+    assert "alpha-impl-a" in r["detail"] and "alpha-impl-b" in r["detail"]
+    # 建议权威入口取首个非 skill 条目（L4 排在 L2 前，因 id 更小）
+    assert "建议权威入口" in r["detail"]
+
+    # 去掉一个 domain → 无同域多候选 → 清零
+    _write_registry(tmp_path, [
+        {"id": "alpha-impl-a", "layer": "L4", "domain": ["contract"],
+         "entry": ["python3 L4-proprietary/components/impl-a/cli.py run"]},
+        {"id": "other-cap", "layer": "L2", "domain": ["kb"],
+         "entry": ["python3 L2-infra/components/impl-b/main.py --query x"]},
+    ])
+    r2 = a._p7_domain_overlap()
+    assert r2["status"] == "✅", r2["detail"]
+
+
+def test_p7_no_false_positive_component_plus_skill(tmp_path, monkeypatch):
+    """组件 + 其 skill 镜像同域同路径族：skill-x 按 id 前缀合并，不误报。"""
+    _isolate(tmp_path, monkeypatch)
+    reg = _write_registry(tmp_path, [
+        {"id": "contract-approval", "layer": "L3", "domain": ["contract"],
+         "entry": ["L3-business/skills/contract-approval/SKILL.md",
+                   "python3 L3-business/skills/contract-approval/scripts/approval_engine.py init"]},
+        {"id": "skill-contract-approval", "layer": "L3", "domain": ["contract"],
+         "entry": ["L3-business/skills/contract-approval/SKILL.md"]},
+        {"id": "kb-index", "layer": "L2", "domain": ["kb"],
+         "entry": ["python3 L2-infra/components/knowledge-base/kb_index.py --query x"]},
+    ])
+    monkeypatch.setattr(a, "CAPABILITY_REGISTRY_YAML", reg)
+    r = a._p7_domain_overlap()
+    assert r["status"] == "✅", r["detail"]
+
+
+def test_p7_graceful_degradation_without_domain_field(tmp_path, monkeypatch):
+    """registry 无 domain 字段（当前真实 registry 即如此）→ ✅ 报不适用，不报错。"""
+    _isolate(tmp_path, monkeypatch)
+    reg = _write_registry(tmp_path, [
+        {"id": "a", "layer": "L2", "interfaces": ["x"], "entry": ["python3 L2-infra/components/a/main.py"]},
+        {"id": "b", "layer": "L2", "interfaces": ["x"], "entry": ["python3 L2-infra/components/b/main.py"]},
+    ])
+    monkeypatch.setattr(a, "CAPABILITY_REGISTRY_YAML", reg)
+    r = a._p7_domain_overlap()
+    assert r["status"] == "✅", r["detail"]
+    assert "P7 不适用" in r["detail"]
+
+
+def test_p7_unavailable_registry_degrades_ok(tmp_path, monkeypatch):
+    """registry 文件缺失/损坏 → ✅ 报不可用，绝不抛异常。"""
+    _isolate(tmp_path, monkeypatch)
+    monkeypatch.setattr(a, "CAPABILITY_REGISTRY_YAML", tmp_path / "missing.yaml")
+    r = a._p7_domain_overlap()
+    assert r["status"] == "✅" and "不可用" in r["detail"]
+
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("::: not yaml [", encoding="utf-8")
+    monkeypatch.setattr(a, "CAPABILITY_REGISTRY_YAML", bad)
+    assert a._p7_domain_overlap()["status"] == "✅"
+
+
 # ── 汇总 ──────────────────────────────────────────────────────────────
 
-def test_audit_asset_consistency_returns_six_checks(tmp_path, monkeypatch):
+def test_audit_asset_consistency_returns_seven_checks(tmp_path, monkeypatch):
     _isolate(tmp_path, monkeypatch)
     monkeypatch.setattr(a, "_count_discovered_components", lambda: "41")
     monkeypatch.setattr(a, "_count_inventory_components", lambda: 41)
     res = a.audit_asset_consistency()
-    assert len(res) == 6
+    assert len(res) == 7
     names = [r["name"] for r in res]
-    assert "P1 计数漂移" in names and "P6 重复资产" in names
+    assert "P1 计数漂移" in names and "P6 重复资产" in names and "P7 能力域重叠" in names
     for r in res:
         assert r["status"] in ("✅", "⚠️")
