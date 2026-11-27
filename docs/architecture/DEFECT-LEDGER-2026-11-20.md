@@ -80,3 +80,52 @@
 | D-07 | 聚合 `-k` 3 连跑 38 passed；组件全量 175 passed in 4.13s（未复现，标记 flaky） |
 | D-08 | 8 个 YAML 角色文件 frontmatter 六字段全齐，无非 YAML 残留 |
 | D-09 | 5 skill 关键路径测试 18 passed in 0.30s（project-report 4 + summary 3 + obligation 3 + customer-profile 3 + retrospective 3 + 交叉） |
+
+---
+
+# 长期项总清单（2026-11-27 盘点）
+
+> 来源：2026-11-27 全仓只读取证（task-20261127-arch-audit-fix）。本表是「之前提过的所有长期项」的**单一事实源**，与上方 D-/E- 缺陷账本互补（此处多为决策项 / 工程债 / 口径核验，非单点代码缺陷）。
+> 状态图例同上。Owner 列「待定」= 需 Rex 拍板归属；证据均为实测，未核实项归入 D 类并标明待核实点。
+
+## A 类 · 待拍板才能动（决策项）
+
+| ID | 事项 | 现状（实测证据） | 需 Rex 拍板 |
+|---|---|---|---|
+| L-A-01 | Q-2 意图基准集 20 条定标 | `docs/architecture/intent-benchmark-20-calibration.md` 已备 20 条 + 理由，最终 YAML fixture **未生成** | **B-1**（customer-rectification-report 是否算 retrospective 竞品）、**B-4**（system-governor vs dag-orchestrator）、**B-7**（统一入口是否应优先于底层组件）、**A-4**（wecomcli-contact 走自建还是同名 plugin） |
+| L-A-02 | 会话中断根因修复 | 压缩截断为主因：日志 13 次 `compaction-safeguard`（多为 `loss=summary-tail`）；`postCompactionMaxChars=40000` 偏小。另有「发消息挤掉维护压缩」（`Session maintenance yielded to a foreground turn`）、子代理超时（`b87fcbb9…` / `af5af78e…` TimeoutError）、transcript 抢写（`SessionTranscriptWriterClaimReboundError`） | 本期 Q-4 冻结 `~/.openclaw/openclaw.json`，故**未改**。是否解冻调大 40000→96000 / `keepRecentTokens` 上调？transcript 按 task_id 分文件是否单独立项？ |
+| L-A-03 | 5 份 proposed ADR 定性 | KB：`ADR-202609-024` / `-028` / `-029` / `ADR-202611-036-session-boundary-guard`；arch：`ADR-033-web-ui-design-system` | 各自 accepted 还是 withdrawn？其中 036 尤其卡着——护栏已落地但状态未升 |
+
+## B 类 · 条件具备，可直接开工
+
+| ID | 事项 | 证据 | 建议 |
+|---|---|---|---|
+| L-B-01 | capability-router 建设 | `ADR-202611-037` 已 accepted，但代码未建；`dag-orchestrator` 有完整执行引擎却**零生产调用方**（引用仅落在自身目录 / registry / 描述性提及） | 走完整生命周期（调研→DESIGN→验收标准→建设→测试→登记），单独立项 |
+| L-B-02 | 28 个自建 SKILL.md 缺 `bins:` / `env:` | 实测 28/28 全缺（L2-infra 10 + L3-business 7 + L4-proprietary 11） | 批量补契约字段；非红项，影响可发现性 |
+| L-B-03 | ones-browser-export 真实 E2E | 同 D-11：仍受登录态 / CDP 阻塞，离线契约已过 | 待专用 CDP 环境，可与其他 E2E 合并排期 |
+
+## C 类 · 外部 / 环境阻塞（留证即可）
+
+| ID | 事项 | 判定 |
+|---|---|---|
+| L-C-01 | deepseek 两模型 HTTP 402 | 同 E-03：账户额度问题，脚本判定正确，非代码缺陷 |
+| L-C-02 | visual 端口撞号 / 服务缺失误报 | E-01、E-06 均已治理，可销账 |
+| L-C-03 | openpyxl / pydantic / PyPDF2 弃用告警 | E-05，依赖告警非失败 |
+
+## D 类 · 口径待核实（未下结论，禁止当既成事实引用）
+
+| ID | 事项 | 待核实点 |
+|---|---|---|
+| L-D-01 | dreaming 管线实况 | 实测 `rem` / `light` / `deep` 各 82 篇、`session-corpus` 77 文件、**无 `staged/` 目录**；此前记的「7499 staged 候选、deep ranked/promoted=0」与实测不符，口径需重核 |
+| L-D-02 | delivery-quality 闭环是否在跑 | 组件在，`feedback.jsonl` 38 行、`reviews/` 9 份；是否真在事件驱动运转待验 |
+| L-D-03 | P6 sha256 语义重复 | `workspace-temp-cleanup/scripts/archive.py` 10 处 sha256 调用，是否真重复需逐处比对，暂不认 |
+| L-D-04 | kb collectors 重叠 | `kb_index.py` / `system_full_audit.py` / `lane_d_tasks.py` 各自扫 `*.md`，职责边界需划 |
+| L-D-05 | P4 JSON Schema 校验器 | `VERIFICATION-P4` 自留 TODO：`$ref` / `oneOf` 等复杂关键字仍为最小实现 |
+
+## E 类 · 已闭环可销账
+
+| ID | 事项 | 证据 |
+|---|---|---|
+| L-E-01 | Q-1 L0-gateway 正式移交运行时原生通道 | `ADR-202611-037-capability-routing-orchestration-layer` accepted（2026-11-27 Rex 拍板）；auth-gateway / channel-router / session-manager 归档为「架构预留 / 参考设计」，骨架保留 |
+| L-E-02 | 跨目录 ADR 同号治理 | 提交 `2918ac2`：026 改号 `ADR-202609-030`、035/023 声明权威镜像、`adr_id→id` 归一、`--adr-audit` 接入 pre-commit step 3b、回归 12 例；`--adr-audit` exit=0、阻断错误 0 |
+
