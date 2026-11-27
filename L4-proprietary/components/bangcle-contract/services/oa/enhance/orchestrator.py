@@ -1,7 +1,12 @@
 """一条链编排：发现 757 待办 → 捕获 → R1/R2 → 固定核查 → 标准审批备注。
 
 只读：不提交/不审批/不退回/不转发；OA 写操作一律人工闸。
-合同原文为可选输入（``--contract-file``）；未提供时 L2 核查项 fail-closed 转人工。
+合同原文来源（按优先级）：
+  1) 显式 ``--contract-file``（人工指定，最高优先）；
+  2) **自动**从该单据 OA 表单附件下载（``attachment.fetch_contract_text``，
+     复用已建立会话）——2026-11-27 Rex 规则：审核阶段必须基于合同原文做
+     L2 核查与 R3 条款拆解，不得再以「附件取不到」为由整体转人工。
+两者皆无 → L2 三项 fail-closed 转人工。
 
 用法（CLI）:
   contractctl oa-approval [--raw-dir <dir>] [--contract-file <docx/txt>]
@@ -21,6 +26,7 @@ from .checks import CheckResult, parse_body_fields, run_fixed_checks
 from .oa_form import OrderForm, OrderFormError, parse_order_form
 from .remark import render_remark
 from .runner import run_enhance
+from .attachment import fetch_contract_text
 from .todo import TodoItem, discover_todos
 
 def _ws_root() -> Path:
@@ -54,6 +60,7 @@ class ApprovalResult:
     remark: str = ""
     degraded: List[str] = field(default_factory=list)
     error: Optional[str] = None
+    attachment: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -68,6 +75,7 @@ class ApprovalResult:
             "remark": self.remark,
             "degraded": self.degraded,
             "error": self.error,
+            "attachment": self.attachment,
         }
 
 
@@ -299,18 +307,31 @@ def run_approval(
             res.degraded = enhanced.get("degraded") or []
 
             # 4) 固定核查（L1 表单 + L2 原文）
+            #    原文来源：显式 --contract-file > OA 表单附件自动下载
             body = _read_body(raw_dir, rid)
+            contract_source = ""
             ctext = _read_contract_text(contract_file)
+            if ctext:
+                contract_source = str(contract_file)
+            else:
+                att = fetch_contract_text(raw_dir, rid, out_dir,
+                                          storage_state=storage_state)
+                res.attachment = att
+                if att.get("found"):
+                    ctext = att.get("text")
+                    contract_source = att.get("path") or ""
+                elif att.get("error"):
+                    res.degraded = sorted(set(res.degraded) | {"ATTACHMENT"})
             res.checks = run_fixed_checks(form, body, ctext)
 
-            # 4b) 合同原文 → 条款拆解 + 风险点（Rex 2026-11-24：757 --contract-file 场景）
+            # 4b) 合同原文 → 条款拆解 + 风险点（Rex 2026-11-24/11-27）
             cr = _build_contract_review(ctext)
             res.clauses = cr.get("clauses") or {}
             res.risk_points = cr.get("risk_points") or {}
             if cr.get("degraded"):
                 res.degraded = sorted(set(res.degraded) | set(cr["degraded"]))
             if ctext:
-                contract_ref = str(contract_file)
+                contract_ref = contract_source or "（未知来源）"
                 (out_dir / ("contract-review-%s.md" % rid)).write_text(
                     _render_contract_review_md(rid, cr, contract_ref), encoding="utf-8")
                 with open(out_dir / ("clauses-%s.json" % rid), "w", encoding="utf-8") as fh:
@@ -322,7 +343,8 @@ def run_approval(
                                        history_delivery=res.history_delivery,
                                        clauses=res.clauses,
                                        risk_points=res.risk_points,
-                                       contract_text=bool(ctext))
+                                       contract_text=bool(ctext),
+                                       contract_source=contract_source)
             (out_dir / ("remark-%s.md" % rid)).write_text(res.remark, encoding="utf-8")
         except OrderFormError as exc:
             res.error = "OrderFormError: %s" % exc
@@ -343,6 +365,10 @@ def run_approval(
         "risk_low": sum(1 for r in results
                         if (r.risk_points or {}).get("overall_risk") == "low"),
         "with_contract_text": sum(1 for r in results if r.clauses),
+        "with_attachment_auto": sum(1 for r in results
+                                    if (r.attachment or {}).get("found")),
+        "attachment_failed": sum(1 for r in results
+                                 if (r.attachment or {}).get("error")),
     }
     payload = {
         "todos": [t.to_dict() for t in todos],

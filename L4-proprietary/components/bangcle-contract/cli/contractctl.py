@@ -633,7 +633,9 @@ def main(argv=None) -> int:
     p_appr.add_argument("--requestid", nargs="*", default=None,
                         help="显式指定 requestid（给定则 --no-discover）")
     p_appr.add_argument("--contract-file", default=None,
-                        help="合同原文（docx/pdf/txt，可选；缺失则 L2 核查转人工）")
+                        help="合同原文（docx/pdf/txt，可选）。"
+                             "未给时自动从 OA 表单附件下载（loadlink）；"
+                             "两者皆无才 L2 核查转人工")
     p_appr.add_argument("--storage-state", default=None, help="Playwright storage_state（可空）")
     p_appr.add_argument("--no-discover", action="store_true", help="跳过待办发现，仅处理 --requestid")
     p_appr.set_defaults(func=cmd_oa_approval)
@@ -665,7 +667,8 @@ def main(argv=None) -> int:
         help="历史签约项目/合同交付问题盘点（BDMS 快照，只读；异常项目/应交未交/应验未验/验收异常）",
     )
     p_hd.add_argument("--contract-no", default="", help="合同编号（XSZS…，优先）")
-    p_hd.add_argument("--end-user", default="", help="最终用户名称（合同编号缺失时兜底）")
+    p_hd.add_argument("--end-user", default="", help="最终用户名称（兜底键；"
+                        "合同编号归档时生成，审核阶段常为空）")
     p_hd.add_argument("--out", default=None, help="JSON 输出路径（可空）")
     p_hd.set_defaults(func=cmd_history_delivery)
 

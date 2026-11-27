@@ -1,7 +1,7 @@
 """OA 销售合同审批触发链回归（真实数据，禁 mock）。
 
 覆盖：
-- 固定核查 L1（body.txt）：合同编号缺失=block；服务期已明确=pass
+- 固定核查 L1（body.txt）：合同编号缺失=warn（归档才生成，不阻断）；服务期已明确=pass
 - 固定核查 L2 无原文：三项 manual（fail-closed，不伪造）
 - 固定核查 L2 有原文：甲方邮箱=block、最终用户信息表=block、版本描述=warn
 - 备注渲染：block→退回补充；无 block 有 manual→退回补充（待原文）；全 pass→同意
@@ -47,9 +47,9 @@ def _lv(checks, cid):
 
 
 def test_l1_form_checks(form, body):
-    """L1 表单层：合同编号缺失=block；服务期已明确=pass。"""
+    """L1 表单层：合同编号缺失=warn（不阻断，归档时才生成）；服务期已明确=pass。"""
     checks = run_fixed_checks(form, body, None)
-    assert _lv(checks, "contract_no_missing") == "block"
+    assert _lv(checks, "contract_no_missing") == "warn"
     assert _lv(checks, "service_period") == "pass"
 
 
@@ -58,6 +58,44 @@ def test_l2_without_contract_text_is_manual(form, body):
     checks = run_fixed_checks(form, body, None)
     for cid in ("party_a_email", "end_user_table", "version_desc"):
         assert _lv(checks, cid) == "manual", cid
+
+
+def test_l2_party_a_email_external_domain_detected(form, body):
+    """甲方官方邮箱识别：非 @bangcle.com 域名即甲方邮箱（pass）。
+
+    2026-11-27 实测修正：旧版只认「甲方指定授权…邮箱」单处，漏检
+    「向甲方 <外部邮箱> 邮箱（官方邮箱）」形态（888194/888171/888166 均误报 manual）。
+    """
+    text = ("第一条 合同标的\nAndroid应用加固软件V7.0\n"
+            "3.1 乙方通过 limin.ren@bangcle.com 邮箱（官方邮箱）向甲方 "
+            "zhangyu33@xiaomi.com 邮箱发送授权码，同时抄送 delivery@bangcle.com。")
+    checks = run_fixed_checks(form, body, text)
+    assert _lv(checks, "party_a_email") == "pass"
+
+
+def test_l2_party_a_email_only_bangcle_is_block(form, body):
+    """仅乙方域名邮箱（占位未填甲方）→ 甲方官方邮箱未明确（block），维持 886377 口径。"""
+    text = ("4.2 验收；甲方指定授权          邮箱（官方邮箱）向"
+            "huijuan.lin@bangcle.com 邮箱（官方邮箱）发送验收确认信息，"
+            "同时抄送至乙方delivery@bangcle.com备份邮箱。")
+    checks = run_fixed_checks(form, body, text)
+    assert _lv(checks, "party_a_email") == "block"
+
+
+def test_l2_manual_evidence_not_claiming_missing_source(form, body):
+    """已有原文却未检索到条款时，evidence 不得写「未提供合同原文」（防误导人工）。"""
+    checks = run_fixed_checks(form, body, "第一条 合同标的\nAndroid应用加固软件V7.0\n")
+    for cid in ("party_a_email", "end_user_table"):
+        c = next(x for x in checks if x.check_id == cid)
+        assert c.level == "manual", cid
+        assert "未提供合同原文" not in c.evidence, cid
+
+
+def test_l2_without_text_evidence_says_missing(form, body):
+    """无原文时才允许写「未提供合同原文」。"""
+    checks = run_fixed_checks(form, body, None)
+    c = next(x for x in checks if x.check_id == "party_a_email")
+    assert c.level == "manual" and c.evidence == "未提供合同原文"
 
 
 def test_l2_with_contract_text(form, body):
@@ -72,18 +110,21 @@ def test_l2_with_contract_text(form, body):
 
 
 def test_verdict_derivation(form, body):
-    """结论推导：block→退回补充；仅 manual→待原文；全 pass→同意。"""
+    """结论推导：block→退回补充；仅 manual→待原文/待人工复核；全 pass→同意。"""
     checks = run_fixed_checks(form, body, None)
-    assert derive_verdict(checks) == "退回补充"
-    assert derive_verdict([c for c in checks if c.level != "block"]) == "退回补充（待原文）"
+    # 编号缺失降为 warn 后：仅剩 L2 manual → 待原文（非「退回补充」）
+    assert derive_verdict(checks) == "退回补充（待原文）"
+    # 已有原文但条款未检索到 → 「待人工复核」（不得误导为「待原文」）
+    assert derive_verdict(checks, contract_text=True) == "退回补充（待人工复核）"
+    assert derive_verdict([c for c in checks if c.level not in ("manual",)]) == "同意"
     assert derive_verdict(
-        [type(checks[0])(check_id="x", level="pass", message="ok")]  # noqa: SLF001
-    ) == "同意"
+        [type(checks[0])(check_id="x", level="block", message="bad")]  # noqa: SLF001
+    ) == "退回补充"
 
 
 def test_remark_format_block(form, body):
-    """备注含标准结构；block 存在时结论=退回补充。"""
-    checks = run_fixed_checks(form, body, None)
+    """备注含标准结构；显式 block 存在时结论=退回补充。"""
+    checks = [CheckResult("x_block", "block", "示例退回项")]
     md = render_remark(form, checks, {"verdict": "提示", "queried_at": "2026-11-19 11:00:00"},
                        {"verdict": "超概算（提醒级）", "total_estimate": "60000.00",
                         "total_actual": "64000.00"}, degraded=[])
@@ -97,7 +138,8 @@ def test_remark_format_block(form, body):
 def test_remark_has_answer_contract_footer(form, body):
     """ADR-035 fail-closed：备注必须自带时间戳 + 溯源链（否则交付门禁 BLOCK）。"""
     checks = run_fixed_checks(form, body, None)
-    md = render_remark(form, checks, {"verdict": "正常", "queried_at": "2026-11-24 15:00:00"},
+    md = render_remark(form, checks + [CheckResult("x_block", "block", "示例")],
+                       {"verdict": "正常", "queried_at": "2026-11-24 15:00:00"},
                        {"verdict": "一致", "billid": "9938",
                         "total_estimate": "100.00", "total_actual": "100.00"},
                        degraded=["R1"])

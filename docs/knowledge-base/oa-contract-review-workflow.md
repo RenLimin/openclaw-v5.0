@@ -248,6 +248,14 @@ id: EXP-20261118-001
 
 ## 十、变更历史
 
+### 2026-11-27（Rex 规则 + 实测修正）
+
+1. **合同编号口径**：OA 销售合同审核流程（workflowid=757）中合同编号于**合同归档时生成**，审核阶段默认为空属正常态 → 核查项由 block 降为 **warn（不阻断、不作退回理由）**。代码：`services/oa/enhance/checks.py::run_fixed_checks` L1-a。
+2. **合同原文自动获取**：`oa-approval` 未给 `--contract-file` 时，**自动从 OA 表单附件下载原文**（递归定位 `xhrs.json` 的 `filedatas` → `loadlink` 下载 → magic 校验 → 文本抽取），据此跑 L2 核查与 R3 条款/风险拆解。新增 `services/oa/enhance/attachment.py`。
+   - **旧结论修正**：旧注释/PRD P2 称「757 附件 REST 下载无权限」——实测为**会话过期误判**（返回 235B 登录跳转 HTML）。会话有效时可直接下载：886502 docx(PK/25339B)、888194/888171/888166 doc(OLE2)。
+3. **缺陷修复**：L3 `contract_parser._extract_clause_合同标的` 对无捕获组正则调用 `group(1)` 抛 IndexError（真实 .doc 触发）→ 无分组时用 `group(0)` 兜底。
+4. 结论措辞区分：「待原文」（无原文）vs「待人工复核」（有原文但条款未检索到），避免误导。
+
 - 2026-11-18：创建（Jerry）。依据 872777 单据导出件 + 2022 历史台账，固化销售合同审核流程结构，并接入 CME 路由表。
 - 2026-11-18（复核修正）：补 workflowid=757 及证据链（`oa_todo_dist.py` TARGETS + 夹具 882663）；
   修正 §六/§七——确认**无需新建**（原建议的 `oa_contract_review.py` 属重复建设，已删）。

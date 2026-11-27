@@ -11,7 +11,9 @@
   R2 概算一致性：<判定>
   （降级时）⚠️ 数据源…可能过期
 
-结论推导：block 存在 → 退回补充；否则 manual 存在 → 退回补充（待原文）；否则 → 同意。
+结论推导：block 存在 → 退回补充；否则 manual 存在 →
+  无合同原文 → 退回补充（待原文）；有原文但条款未检索到 → 退回补充（待人工复核）；
+  否则 → 同意。
 """
 from __future__ import annotations
 
@@ -37,12 +39,19 @@ def _fmt_amount(form: OrderForm) -> str:
     return ("%.2f" % total) if total is not None else "【未知】"
 
 
-def derive_verdict(checks: List[CheckResult]) -> str:
-    """由核查项推导审批结论。"""
+def derive_verdict(checks: List[CheckResult], *, contract_text: bool = False) -> str:
+    """由核查项推导审批结论。
+
+    Args:
+        checks: 固定核查项结果。
+        contract_text: 是否已有合同原文。用于区分「待原文」与
+            「有原文但条款未检索到」——后者缺的是自动检索口径，非原文本身，
+            写「待原文」会误导（Rex 2026-11-27 实测发现）。
+    """
     if any(c.level == "block" for c in checks):
         return "退回补充"
     if any(c.level == "manual" for c in checks):
-        return "退回补充（待原文）"
+        return "退回补充（待人工复核）" if contract_text else "退回补充（待原文）"
     return "同意"
 
 
@@ -52,6 +61,7 @@ def render_remark(
     r1: Optional[Dict[str, Any]] = None,
     r2: Optional[Dict[str, Any]] = None,
     *,
+    contract_source: Optional[str] = None,
     degraded: Optional[List[str]] = None,
     history_delivery: Optional[Dict[str, Any]] = None,
     clauses: Optional[Dict[str, Any]] = None,
@@ -81,7 +91,7 @@ def render_remark(
     blocks = [c for c in checks if c.level == "block"]
     warns = [c for c in checks if c.level == "warn"]
     manuals = [c for c in checks if c.level == "manual"]
-    verdict = derive_verdict(checks)
+    verdict = derive_verdict(checks, contract_text=bool(contract_text))
 
     lines: List[str] = []
     lines.append("【审批建议】%s" % verdict)
@@ -102,7 +112,10 @@ def render_remark(
         for i, c in enumerate(warns, 1):
             lines.append("%d. %s" % (i, c.message))
     if manuals:
-        lines.append("待人工（合同原文未提供，无法自动判定）：")
+        if contract_text:
+            lines.append("待人工复核（已有合同原文，以下条款未自动检索到）：")
+        else:
+            lines.append("待人工（合同原文未提供，无法自动判定）：")
         for i, c in enumerate(manuals, 1):
             lines.append("%d. %s" % (i, c.message))
 
@@ -179,7 +192,8 @@ def render_remark(
 
     # ADR-035 应答契约脚注（fail-closed 门禁：时间戳 + 溯源链）
     lines += _evidence_footer(form, r1, r2, degraded=degraded, history_delivery=hd,
-                              clauses=cl, risk_points=rp, contract_text=contract_text)
+                              clauses=cl, risk_points=rp, contract_text=contract_text,
+                              contract_source=contract_source)
     return "\n".join(lines)
 
 
@@ -199,6 +213,7 @@ def _evidence_footer(
     clauses: Optional[Dict[str, Any]] = None,
     risk_points: Optional[Dict[str, Any]] = None,
     contract_text: bool = False,
+    contract_source: Optional[str] = None,
 ) -> List[str]:
     """ADR-035 应答契约脚注：证据时间戳 + minimal trace 溯源链。
 
@@ -225,10 +240,11 @@ def _evidence_footer(
     if hd:
         chain.append("R1b BDMS dr_sheet_row 快照（读取时点 %s）→ 历史交付问题盘点=%s"
                      % (_DATE, hd.get("verdict", "未知")))
+    src_label = contract_source or "本地文件（未标注来源）"
     if contract_text and (cl or rp):
-        chain.append("R3 合同原文（用户提供，本地不外发）→ L3 contract_parser/CHECK_RULES"
+        chain.append("R3 合同原文（%s，本地不外发）→ L3 contract_parser/CHECK_RULES"
                      "（rule_set=%s）→ 条款拆解+风险点（overall=%s）"
-                     % (rp.get("rule_set_version") or "未知",
+                     % (src_label, rp.get("rule_set_version") or "未知",
                         rp.get("overall_risk", "unknown")))
 
     stamps = ["【已验证 %s｜OA 单据 %s】合同名称/金额/服务期/合同编号" % (d, rid)]

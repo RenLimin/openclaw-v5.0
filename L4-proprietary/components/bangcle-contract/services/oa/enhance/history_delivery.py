@@ -228,7 +228,8 @@ def check_history_delivery(
 
     Args:
         contract_no: OA/合同编号（XSZS…，优先匹配）。
-        end_user: 最终用户名称（合同编号缺失时兜底）。
+        end_user: 最终用户名称（兜底键）。Rex 2026-11-27：合同编号于归档时
+            生成，OA 审核阶段常为空，故按最终用户匹配是正常入口。
     """
     result = DeliveryResult(
         queried_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),

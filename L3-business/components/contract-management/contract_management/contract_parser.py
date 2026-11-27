@@ -614,9 +614,14 @@ def _extract_clause_合同标的(text: str) -> Optional[ContractClause]:
                     r'Android应用加固软件[^\n]+',
                     r'软件[：:]?(.+?)[年付费|许可]']:
             m = re.search(pat, art_text)
-            if m and m.group(1).strip():
-                key_terms["产品名称"] = m.group(1).strip()[:60]
-                summary_parts = [f"产品：{m.group(1).strip()[:40]}"]
+            if not m:
+                continue
+            # 模式可能无捕获组（如 Android应用加固软件[^\n]+）→ 用整段匹配兜底，
+            # 禁止对无分组正则调用 m.group(1)（真实 .doc 文本曾触发 IndexError）。
+            raw_name = (m.group(1) if m.groups() else m.group(0)).strip()
+            if raw_name:
+                key_terms["产品名称"] = raw_name[:60]
+                summary_parts = [f"产品：{raw_name[:40]}"]
                 found = True
                 break
         # 兜底：从表格里找产品行

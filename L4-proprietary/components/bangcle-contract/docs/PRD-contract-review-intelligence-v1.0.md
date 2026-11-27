@@ -17,6 +17,8 @@ Rex 2026-11-24 反馈「处理 OA 销售合同审批流程」结果粗糙。侦�
 |---|---|---|---|
 | P1 | 757 链只做 5 条字段核查，不做全文条款/风险分析 | `oa-approval` 链未接 `ReviewService`（L3 22 条风险 + product-kb 全闲置） | `services/oa/enhance/orchestrator.py` 无 `run_risk`/`parse_contract` 调用 |
 | P2 | 3/5 核查项恒「转人工」 | 合同附件 REST 下载无权限（`FileDownload?fileid=` 返回「对不起，您暂时没有权限！」）；`--contract-file` 未提供即 fail-closed | `services/oa/enhance/checks.py` 头注释（实测 2026-11-19） |
+
+> ⚠️ **P2 已于 2026-11-27 修正**（历史记录保留）：上记「REST 下载无权限」为**会话过期误判**——未登录时返回的是登录跳转 HTML，非权限文案。会话有效时 `loadlink` 可直接下载真实附件（实测 4 张单全部成功）。现已由编排层自动取原文，`checks.py` 头注释同步更正。详见 `VERIFICATION-contract-review-intelligence-v1.0.md` §口径修正。
 | P3 | 「合同编号缺失」误报 | L1 只认表单标签 `合同编号！`，而合同名常含编号（887756 合同名含 `20261106-01KP`） | `checks.py::run_fixed_checks` L1-a |
 | P4 | 757 链未入能力注册表 | `registry.yaml` 的 `bangcle-contract` entry 仅 `--help`/`oa-fetch`/`oa-project-mgmt`，grep `oa-approval` 零命中 | `capability-registry/registry.yaml:382-391` |
 | P5 | R1「未知」不透明 | 真因 `project_not_found` 只进 `missing`，备注正文只写「未知」 | `ones_obigation.py::check_obligations` + `remark.py` |

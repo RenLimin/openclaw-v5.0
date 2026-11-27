@@ -2,16 +2,22 @@
 
 分层（fail-closed）：
   L1 表单层：始终判定（数据源 = ``body.txt`` 渲染表单）。
-    - contract_no_missing  合同编号缺失 → block
+    - contract_no_missing  合同编号缺失 → **warn（不阻断）**
+      口径（Rex 2026-11-27）：合同编号于**合同归档时生成**，OA 销售合同
+      审核流程中该字段默认为空属正常态，不得作为退回理由。
     - service_period       服务期未明确起止 → warn
-  L2 原文层：仅在调用方提供合同原文时判定，否则 ``manual``（**不伪造**）。
+  L2 原文层：调用方提供合同原文（显式 ``--contract-file`` 或编排层自动从 OA
+  表单附件下载，见 ``attachment.fetch_contract_text``）时判定，否则 ``manual``
+  （**不伪造**）。
     - party_a_email        甲方官方邮箱留空 → block
     - end_user_table       最终用户信息表声明为附件但未随附 → block
     - version_desc         流程分项版本描述 vs 合同正文不一致 → warn
 
-⚠️ 硬约束（实测 2026-11-19）：757 单据合同附件 REST 下载无权限
-（``FileDownload?fileid=<id>`` 返回 HTML「对不起，您暂时没有权限！」），
-故 L2 三项**不会**自动取原文；未提供 ``contract_text`` 时一律 ``manual``。
+口径修正（Rex 2026-11-27 实测）：旧注释称「757 附件 REST 下载无权限」系
+**会话过期误判**——未登录时 ``FileDownload`` 返回的是登录跳转 HTML（235B
+``<script>...login</script>``），并非权限文案。会话有效时 ``loadlink`` 可
+直接下载真实文档（886502 docx=PK/25339B；888194/888171/888166 doc=OLE2）。
+因此 L2 **会**在编排层自动取原文后判定；仍拿不到时才 ``manual`` 转人工。
 """
 from __future__ import annotations
 
@@ -98,9 +104,34 @@ def extract_contract_no(body_text: str, contract_name: str = "") -> tuple:
     return m.group(1), "contract_name"
 
 
-def _manual(check_id: str, message: str) -> CheckResult:
+_EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
+_BANGGLE_DOMAIN = "@bangcle.com"
+
+
+def _manual(check_id: str, message: str, evidence: str = "") -> CheckResult:
+    """转人工项。``evidence`` 必须如实反映当前数据源状态。
+
+    注意（2026-11-27）：旧实现恒定写「未提供合同原文」，在自动下载附件后
+    该文案与事实不符（有原文但未检索到条款）→ 会误导人工复核方向。
+    """
     return CheckResult(check_id=check_id, level="manual", message=message,
-                       evidence="未提供合同原文", source="none")
+                       evidence=evidence or "未提供合同原文", source="none")
+
+
+def _party_a_email_windows(text: str) -> List[str]:
+    """收集「向甲方…邮箱」相关上下文窗口（供甲方官方邮箱判定）。"""
+    wins: List[str] = []
+    for m in re.finditer(r"向甲方", text):
+        wins.append(text[m.start(): m.start() + 160])
+    for m in re.finditer(r"甲方[^。\n]{0,50}?邮箱（官方邮箱）", text):
+        wins.append(text[max(0, m.start() - 120): m.end() + 40])
+    return wins
+
+
+def _external_emails(window: str) -> List[str]:
+    """窗口内的非乙方域名邮箱（甲方官方邮箱）。"""
+    return [e for e in _EMAIL_RE.findall(window)
+            if not e.lower().endswith(_BANGGLE_DOMAIN)]
 
 
 def run_fixed_checks(
@@ -134,9 +165,13 @@ def run_fixed_checks(
                 "合同编号", contract_no, cn_source),
             source=cn_source))
     else:
+        # Rex 2026-11-27：合同编号在合同归档时生成，OA 销售合同审核流程默认为空
+        # → 提示级（warn），不阻断审批，也不作为「退回补充」依据。
         results.append(CheckResult(
-            "contract_no_missing", "block", "合同编号缺失（表单与合同名称均未检出）",
-            evidence="合同编号！=【空】且合同名称无编号", source="none"))
+            "contract_no_missing", "warn",
+            "合同编号暂缺（归档时生成，非阻断项）",
+            evidence="合同编号！=【空】且合同名称无编号；口径：归档环节生成，"
+                     "OA 审核阶段允许为空（2026-11-27 Rex 规则）", source="none"))
 
     # ---- L1-b 服务期 ----
     start = (fields.get("服务开始日期") or fields.get("合同起始日期") or "").strip()
@@ -159,23 +194,33 @@ def run_fixed_checks(
         results.append(_manual("version_desc", "版本描述一致性——合同原文未提供，转人工"))
         return results
 
-    # L2-a 甲方官方邮箱（4.2 验收条款）
-    m = re.search(r"甲方指定授权[^\n]{0,40}?邮箱", text)
-    if m:
-        seg = text[m.start():m.start() + 120]
-        # 甲方邮箱位置为空（仅有乙方官方邮箱）→ block
-        party_a_blank = bool(re.search(r"甲方指定授权\s+邮箱", text))
-        if party_a_blank:
-            results.append(CheckResult(
-                "party_a_email", "block",
-                "合同 4.2 甲方指定授权邮箱留空（未明确甲方官方邮箱）",
-                evidence=seg.replace("\n", " ")[:100], source="contract_text"))
-        else:
-            results.append(CheckResult(
-                "party_a_email", "pass", "甲方官方邮箱已明确",
-                evidence=seg.replace("\n", " ")[:100], source="contract_text"))
+    # L2-a 甲方官方邮箱（交付/验收条款）
+    # 口径（2026-11-27 实测修正）：旧版只看「甲方指定授权…邮箱」单处，
+    # 漏检了「向甲方 <外部邮箱> 邮箱（官方邮箱）」形态（888194/888171/888166
+    # 均有真实甲方邮箱却报 manual）。现扫描全部相关窗口：
+    #   · 存在非 @bangcle.com 邮箱 → 甲方官方邮箱已明确（pass）
+    #   · 仅有乙方域名邮箱/占位符（"/"）→ 甲方官方邮箱未明确（block）
+    #   · 全文无邮箱痕迹 → manual（不臆断）
+    wins = _party_a_email_windows(text)
+    ext = sorted({e for w in wins for e in _external_emails(w)})
+    if ext:
+        # evidence 取命中邮箱的局部上下文（±窗口），避免拿无关句充证据
+        e0 = ext[0]
+        i = text.find(e0)
+        ev = text[max(0, i - 80): i + 40].replace("\n", " ").strip()
+        results.append(CheckResult(
+            "party_a_email", "pass", "甲方官方邮箱已明确",
+            evidence="%s → %s" % (ev[-60:], e0),
+            source="contract_text"))
+    elif wins:
+        results.append(CheckResult(
+            "party_a_email", "block",
+            "合同交付/验收条款未见甲方官方邮箱（仅有乙方邮箱/占位符）",
+            evidence=wins[0].replace("\n", " ")[:100], source="contract_text"))
     else:
-        results.append(_manual("party_a_email", "未检索到甲方授权邮箱条款，转人工"))
+        results.append(_manual(
+            "party_a_email", "未检索到甲方授权邮箱条款，转人工",
+            evidence="已有合同原文，全文未检出「向甲方…邮箱」等授权邮箱条款"))
 
     # L2-b 最终用户信息表（11.6 声明为附件）
     if "最终用户信息表" in text:
@@ -191,7 +236,9 @@ def run_fixed_checks(
                 "合同 11.6 声明附件「最终用户信息表」但未随附",
                 evidence="11.6 本合同附件：最终用户信息表", source="contract_text"))
     else:
-        results.append(_manual("end_user_table", "未检索到最终用户信息表条款，转人工"))
+        results.append(_manual(
+            "end_user_table", "未检索到最终用户信息表条款，转人工",
+            evidence="已有合同原文，全文未检出「最终用户信息表」表述"))
 
     # L2-c 版本描述一致性（流程分项标准服务内容 vs 合同正文）
     item_desc = " ".join(

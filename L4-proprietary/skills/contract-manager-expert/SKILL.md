@@ -47,7 +47,7 @@ metadata:
 | 本地合同（含扫描页）审查 | review `--file <合同>`（OCR 数字化→22 条风险规则→product-kb 标的参照→md/xlsx 报告） |
 | 合同审查 + 走正式审批归档 | bangcle-contract（审查结论）→ contract-approval / office-contract（审批流与归档） |
 | **项目实施管理批注建议**（916/815/820） | `oa_workflow_ones.py --capture <rid>`（OA 单落盘）→ `contractctl oa-project-mgmt --requestid <rid> --workflow wf_916\|wf_815\|wf_820 [--pm <名>]`（三流程解析 → ONES 参考项目（状态+授权期限）→ 风险注 → 三段式批注）；916 自动追加 757 异常备注（无权限降级不伪造）；**只读** |
-| **触发词「处理OA销售合同审批」**（757 全流程） | `contractctl oa-approval`（自动发现 757 待办 → 逐张 `oa_workflow_ones.py --capture` → `oa-enhance` R1/R2 → 固定核查 → **标准审批备注**）；可加 `--requestid <rid>` 指定单据、`--contract-file <docx/txt>` 提供合同原文；**只读**，写操作人工闸 |
+| **触发词「处理OA销售合同审批」**（757 全流程） | `contractctl oa-approval`（自动发现 757 待办 → 逐张 `oa_workflow_ones.py --capture` → `oa-enhance` R1/R2 → 固定核查 → **标准审批备注**）；可加 `--requestid <rid>` 指定单据；合同原文**未给 `--contract-file` 时自动从 OA 表单附件下载**（`loadlink`，需有效 OA 会话），据此执行 L2 核查与 R3 条款/风险拆解；两者皆无才转人工；**只读**，写操作人工闸 |
 | **合同全文风险体检**（条款 + 风险点） | `contractctl clauses --file <合同.docx>`（L3 受控库条款拆解 + 风险点，含必备条款缺失）→ 或 `review --file <合同>` 出完整 md/xlsx 报告（含风险点章节） |
 | **历史交付问题盘点** | `contractctl history-delivery --contract-no <XSZS…>`（BDMS 快照：异常项目/交付异常/应验未验/验收异常） |
 
@@ -84,7 +84,10 @@ python3 cli/contractctl.py --out-dir <dir> oa-enhance \
 # 6) 触发词「处理OA销售合同审批」：发现 757 待办 → 标准审批备注（只读）
 python3 cli/contractctl.py oa-approval \
   [--requestid <rid> ...] [--contract-file <docx|pdf|txt>] [--out-dir <dir>]
-#   默认发现 workflowid=757 待办；--requestid 指定单据；合同原文缺失则 L2 核查转人工
+#   默认发现 workflowid=757 待办；--requestid 指定单据；
+#   --contract-file 优先；未给则自动从 OA 表单附件下载原文（会话过期会失败→转人工）
+#   口径（2026-11-27 Rex）：合同编号归档时才生成，审核阶段为空→warn 不阻断；
+#   附件实测可下载（旧「REST 无权限」系会话过期误判）
 ```
 
 # 7) 项目实施管理「分配项目经理」批注建议（只读：916/815/820）
