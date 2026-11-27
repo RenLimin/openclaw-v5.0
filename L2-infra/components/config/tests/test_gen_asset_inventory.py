@@ -120,3 +120,81 @@ def test_resolve_cmd_under_minimal_path():
     assert os.path.exists(parts[0]), f"最小 PATH 下解析失败: {parts}"
     if parts[0].endswith(".mjs"):
         assert "node" in parts[1], parts
+
+
+def test_architecture_adr_dir_is_listed():
+    """Q-6 跨目录同号治理：docs/architecture/adr/ 必须入册，不得只扫 knowledge-base。
+
+    背景（事故 2026-11-27）：原 render_docs() 只扫 docs/knowledge-base/**（32 份），
+    docs/architecture/adr/（7 份，含 ADR-037）完全未收录；而 ADR-037 执行记录却写
+    「01-asset-inventory.md 重生成入册」——结论先于执行的假账。本测试锁定该口径不回退。
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gen_asset_inventory", GENERATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    out = "\n".join(mod.render_docs())
+    assert "ADR（架构目录）" in out, "清单缺少「架构目录」ADR 分类行"
+    assert "../architecture/adr/ADR-202611-037-capability-routing-orchestration-layer.md" in out, (
+        "ADR-037 未出现在资产清单中"
+    )
+    # 知识库目录仍须保留，避免修一处漏一处
+    assert "ADR（架构决策记录）" in out, "清单缺少知识库 ADR 分类行"
+
+
+def test_adr_status_variants():
+    """状态解析兼容三种格式：frontmatter / `> 状态：**x**` / `> **状态**：x`。"""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gen_asset_inventory", GENERATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    root = mod.REPO_ROOT
+    cases = {
+        "ADR-202611-036-session-boundary-guard": "proposed",
+        "ADR-202611-037-capability-routing-orchestration-layer": "accepted",
+        "ADR-032-context-overflow-auto-recovery": "accepted",
+    }
+    for stem, expected in cases.items():
+        hits = list((root / "docs").rglob(stem + ".md"))
+        assert hits, f"找不到 ADR: {stem}"
+        got = mod._adr_status(hits[0])
+        assert got == expected, f"{stem} 状态解析错误: {got!r} != {expected!r}"
+
+
+def test_l0_gateway_section_listed():
+    """Q-1（ADR-037）：L0-gateway 三组件须入册，且状态据实读自 README 组件表。
+
+    背景：原 render_l1() 只扫 L1_runtime，L0 的状态变更无任何机器可读登记；
+    ADR-037 执行记录写「资产清单重生成入册」却查无此项 = 假账。
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gen_asset_inventory", GENERATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    out = "\n".join(mod.render_l0())
+    assert "## L0 — 接入层资产（消息网关）" in out, "清单缺少 L0 段"
+    for comp in ("auth-gateway", "channel-router", "session-manager"):
+        assert f"`L0-gateway/components/{comp}/`" in out, f"L0 组件未入册: {comp}"
+    # 状态必须来自 README，且不得再出现骨架口径
+    assert "架构预留" in out, "L0 状态未反映「架构预留」"
+    assert "📐 骨架" not in out, "L0 组件仍标骨架，与 ADR-037 拍板不一致"
+
+
+def test_readme_component_status_parsed():
+    """README §3 组件表解析：表头行与分隔行不得被当作组件。"""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("gen_asset_inventory", GENERATOR)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    got = mod._l0_readme_status()
+    assert set(got) == {"channel-router", "session-manager", "auth-gateway"}, got
+    for name, status in got.items():
+        assert status == "📋 架构预留（参考设计）", f"{name}: {status!r}"

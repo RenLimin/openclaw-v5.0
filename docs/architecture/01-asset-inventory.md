@@ -4,13 +4,25 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-27 14:32 UTC+08:00
+最后生成：2026-11-27 16:07 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
 **安全边界**：本清单只记录资产的**存在与元信息**，绝不包含凭据值、token、密钥内容。
 
 ---
+
+## L0 — 接入层资产（消息网关）
+
+> **状态**: 📋 架构预留（参考设计）· 已移交运行时原生通道 (ADR-037 / Rex 拍板 2026-11-27)
+
+| 组件 | 路径 | Python 文件 | 测试 | 状态 |
+|---|---|---|---|---|
+| auth-gateway | `L0-gateway/components/auth-gateway/` | 7 | 1 | 📋 架构预留（参考设计） |
+| channel-router | `L0-gateway/components/channel-router/` | 7 | 1 | 📋 架构预留（参考设计） |
+| session-manager | `L0-gateway/components/session-manager/` | 6 | 1 | 📋 架构预留（参考设计） |
+
+> 骨架代码保留，作为未来非 OpenClaw 运行时的接入层参考实现，不进入生产链路（ADR-037）。
 
 ## L1 — 系统层资产 (OpenClaw 基座)
 
@@ -211,13 +223,14 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 
 ## 文档资产
 
-| 类别 | 数量 |
-|---|---|
-| ADR（架构决策记录） | 32 |
-| EXP（经验卡片） | 32 |
-| 模板 | 4 |
+| 类别 | 数量 | 来源 |
+|---|---|---|
+| ADR（架构决策记录） | 32 | `docs/knowledge-base/**` |
+| ADR（架构目录） | 7 | `docs/architecture/adr/` |
+| EXP（经验卡片） | 32 | `docs/knowledge-base/**` |
+| 模板 | 4 | `docs/knowledge-base/templates/` |
 
-### ADR 清单
+### ADR 清单（知识库）
 
 | 文件 | 状态 |
 |---|---|
@@ -253,6 +266,18 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | [`ADR-202609-029-l3-office-business-dimension`](../knowledge-base/by-category/project-experience/adr/ADR-202609-029-l3-office-business-dimension.md) | proposed |
 | [`ADR-202610-035-prompt-rule-system`](../knowledge-base/by-category/project-experience/adr/ADR-202610-035-prompt-rule-system.md) | accepted |
 | [`ADR-202611-036-session-boundary-guard`](../knowledge-base/by-category/project-experience/adr/ADR-202611-036-session-boundary-guard.md) | proposed |
+
+### ADR 清单（架构目录）
+
+| 文件 | 状态 |
+|---|---|
+| [`ADR-026-fin-l4-split-l3-l4`](../architecture/adr/ADR-026-fin-l4-split-l3-l4.md) | accepted |
+| [`ADR-032-context-overflow-auto-recovery`](../architecture/adr/ADR-032-context-overflow-auto-recovery.md) | accepted |
+| [`ADR-033-web-ui-design-system`](../architecture/adr/ADR-033-web-ui-design-system.md) | proposed |
+| [`ADR-034-workspace-temp-cleanup`](../architecture/adr/ADR-034-workspace-temp-cleanup.md) | accepted |
+| [`ADR-035-prompt-rule-system`](../architecture/adr/ADR-035-prompt-rule-system.md) | accepted |
+| [`ADR-202609-031-contract-approval-l3-l4-boundary`](../architecture/adr/ADR-202609-031-contract-approval-l3-l4-boundary.md) | accepted |
+| [`ADR-202611-037-capability-routing-orchestration-layer`](../architecture/adr/ADR-202611-037-capability-routing-orchestration-layer.md) | accepted |
 
 ### 经验卡片清单
 
@@ -296,8 +321,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `d18a877` |
-| Commit 数 | 814 |
+| HEAD | `3005eac` |
+| Commit 数 | 817 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 

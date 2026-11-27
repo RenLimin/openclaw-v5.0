@@ -58,9 +58,9 @@ L0 Gateway 是系统的**流量入口与出口**，负责所有外部通道（We
 
 | 组件 | 路径 | 状态 | 说明 |
 |---|---|---|---|
-| **channel-router** | `components/channel-router/` | 📐 骨架 | 消息路由与通道适配 |
-| **session-manager** | `components/session-manager/` | 📐 骨架 | 会话生命周期管理 |
-| **auth-gateway** | `components/auth-gateway/` | 📐 骨架 | 认证鉴权与速率限制 |
+| **channel-router** | `components/channel-router/` | 📋 架构预留（参考设计） | 消息路由与通道适配 |
+| **session-manager** | `components/session-manager/` | 📋 架构预留（参考设计） | 会话生命周期管理 |
+| **auth-gateway** | `components/auth-gateway/` | 📋 架构预留（参考设计） | 认证鉴权与速率限制 |
 
 ---
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -126,6 +127,79 @@ def collect() -> dict:
 # --------------------------------------------------------------------------
 # 各区渲染
 # --------------------------------------------------------------------------
+
+
+def _l0_readme_status() -> dict[str, str]:
+    """从 L0-gateway/README.md §3 组件清单读各组件状态（据实登记，不硬编码）。"""
+    readme = REPO_ROOT / "L0-gateway" / "README.md"
+    out: dict[str, str] = {}
+    if not readme.is_file():
+        return out
+    try:
+        lines = readme.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return out
+    in_table = False
+    for raw in lines:
+        s = raw.strip()
+        if s.startswith("## "):
+            in_table = ("组件清单" in s)
+            continue
+        if not in_table or not s.startswith("|"):
+            continue
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        if len(cells) < 3 or set(cells[0]) <= {"-", ":", " "}:
+            continue
+        name = cells[0].strip("*`").strip()
+        if not name or name == "组件":
+            continue
+        out[name] = cells[2]
+    return out
+
+
+def render_l0() -> list[str]:
+    """L0 接入层资产。
+
+    Q-1（ADR-037 / Rex 2026-11-27 拍板）：L0-gateway 三组件正式移交运行时原生通道，
+    归档为「架构预留（参考设计）」。此前资产清单只扫 L1_runtime，L0 的状态变更没有任何
+    机器可读登记（假账风险：ADR 写「已入册」而清单查无此项）。本段按 README 组件表据实登记。
+    """
+    l0root = REPO_ROOT / "L0-gateway"
+    lines = ["## L0 — 接入层资产（消息网关）", ""]
+    if not l0root.is_dir():
+        lines.append(f"> {UNAVAILABLE}")
+        lines.append("")
+        return lines
+    readme = l0root / "README.md"
+    if readme.is_file():
+        try:
+            head = readme.read_text(encoding="utf-8").splitlines()[:12]
+            for raw in head:
+                if raw.startswith("> **状态**") or raw.startswith("> 状态"):
+                    lines.append(raw.strip())
+                    break
+        except OSError:
+            pass
+    lines.append("")
+    statuses = _l0_readme_status()
+    comp_root = l0root / "components"
+    lines.append("| 组件 | 路径 | Python 文件 | 测试 | 状态 |")
+    lines.append("|---|---|---|---|---|")
+    comps = sorted(comp_root.iterdir()) if comp_root.is_dir() else []
+    if not comps:
+        lines.append("| （无组件目录） | — | — | — | — |")
+    for comp in comps:
+        if not comp.is_dir():
+            continue
+        py = len([p for p in comp.rglob("*.py") if "__pycache__" not in p.parts])
+        tdir = comp / "tests"
+        tests = len(list(tdir.glob("test_*.py"))) + len(list(tdir.glob("*_test.py"))) if tdir.is_dir() else 0
+        status = statuses.get(comp.name, "—")
+        lines.append(f"| {comp.name} | `L0-gateway/components/{comp.name}/` | {py} | {tests} | {status} |")
+    lines.append("")
+    lines.append("> 骨架代码保留，作为未来非 OpenClaw 运行时的接入层参考实现，不进入生产链路（ADR-037）。")
+    lines.append("")
+    return lines
 
 
 def render_l1(data: dict) -> list[str]:
@@ -562,20 +636,54 @@ def render_prompt_governance() -> list[str]:
     return lines
 
 
+def _adr_status(p: Path) -> str:
+    """读取 ADR 状态。兼容两种格式：
+
+    - 知识库 frontmatter：``status: accepted``
+    - 架构目录旧稿：``> 状态：**accepted**`` / ``状态：Accepted``
+    """
+    try:
+        head = p.read_text(encoding="utf-8").splitlines()[:25]
+    except OSError:
+        return UNAVAILABLE
+    for raw in head:
+        s = raw.strip()
+        if s.startswith("status:"):
+            return s.split(":", 1)[1].strip().strip("*`").lower()
+        if re.match(r"^>\s*\*{0,2}状态\*{0,2}[：:]", s) or s.startswith("状态："):
+            v = re.split(r"[：:]", s, maxsplit=1)[1].strip()
+            m = re.search(r"\*\*(.+?)\*\*", v)
+            if m:
+                return m.group(1).strip().lower()
+            # 无加粗时只取首个词，避免把括号说明整段吞进来
+            v = re.split(r"[（(,，\s]", v, maxsplit=1)[0]
+            return v.strip().strip("*` ").lower()
+    return "—"
+
+
 def render_docs() -> list[str]:
-    """文档资产：扫描文件系统。"""
+    """文档资产：扫描文件系统。
+
+    ADR 有两个权威目录（Q-6 跨目录同号治理）：
+      - ``docs/knowledge-base/**``（日期号体系，如 ADR-202611-036）
+      - ``docs/architecture/adr/``（短号/日期号混编，如 ADR-026 / ADR-037）
+    两者无同名重叠，分列计数与清单，避免「只扫一处」导致的漏登记。
+    """
     lines = ["## 文档资产", ""]
     kb = REPO_ROOT / "docs" / "knowledge-base"
+    arch = REPO_ROOT / "docs" / "architecture" / "adr"
 
-    adrs = sorted(kb.rglob("ADR-*.md")) if kb.is_dir() else []
+    kb_adrs = sorted(kb.rglob("ADR-*.md")) if kb.is_dir() else []
+    arch_adrs = sorted(arch.glob("ADR-*.md")) if arch.is_dir() else []
     exps = sorted(kb.rglob("EXP-*.md")) if kb.is_dir() else []
     templates = sorted((kb / "templates").glob("*.md")) if (kb / "templates").is_dir() else []
 
-    lines.append("| 类别 | 数量 |")
-    lines.append("|---|---|")
-    lines.append(f"| ADR（架构决策记录） | {len(adrs)} |")
-    lines.append(f"| EXP（经验卡片） | {len(exps)} |")
-    lines.append(f"| 模板 | {len(templates)} |")
+    lines.append("| 类别 | 数量 | 来源 |")
+    lines.append("|---|---|---|")
+    lines.append(f"| ADR（架构决策记录） | {len(kb_adrs)} | `docs/knowledge-base/**` |")
+    lines.append(f"| ADR（架构目录） | {len(arch_adrs)} | `docs/architecture/adr/` |")
+    lines.append(f"| EXP（经验卡片） | {len(exps)} | `docs/knowledge-base/**` |")
+    lines.append(f"| 模板 | {len(templates)} | `docs/knowledge-base/templates/` |")
     lines.append("")
 
     def render_group(title: str, paths: list[Path]) -> None:
@@ -586,20 +694,14 @@ def render_docs() -> list[str]:
         lines.append("| 文件 | 状态 |")
         lines.append("|---|---|")
         for p in paths:
-            status = "—"
-            try:
-                for raw in p.read_text(encoding="utf-8").splitlines()[:20]:
-                    if raw.startswith("status:"):
-                        status = raw.split(":", 1)[1].strip()
-                        break
-            except OSError:
-                status = UNAVAILABLE
+            status = _adr_status(p)
             # 本文件在 docs/architecture/，到 docs/ 其他子目录用 ../
             rel = p.relative_to(REPO_ROOT / "docs")
             lines.append(f"| [`{p.stem}`](../{rel.as_posix()}) | {status} |")
         lines.append("")
 
-    render_group("ADR 清单", adrs)
+    render_group("ADR 清单（知识库）", kb_adrs)
+    render_group("ADR 清单（架构目录）", arch_adrs)
     render_group("经验卡片清单", exps)
     return lines
 
@@ -644,6 +746,7 @@ def build_document(data: dict) -> str:
     ]
 
     for section in (
+        render_l0(),
         render_l1(data),
         render_plugins(data),
         render_skills(data),
