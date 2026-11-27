@@ -1,3 +1,18 @@
+---
+type: adr
+id: ADR-202610-035
+status: accepted
+date: 2026-10-30
+deciders: [Rex]
+layers: [L0, L1, L2, L3, L4]
+stage: develop
+tags: [prompt, governance, answer-spec, adr]
+# 本文件是架构目录下的历史短号副本；知识库同名 ADR 为本决策的**权威稿**
+# （内容为本文超集：多「数据闭环层 delivery-quality」与「输出格式契约」两节）。
+canonical: false
+copy_of: ../../knowledge-base/by-category/project-experience/adr/ADR-202610-035-prompt-rule-system.md
+---
+
 # ADR-035：Agent Prompt 规则体系（P0-P3 纵切层）与应答契约治理
 
 > 状态：accepted

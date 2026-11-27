@@ -23,6 +23,7 @@ ADR-003 阶段 2 工具链。同时是阶段 3 自建系统的解析内核（§4
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -30,7 +31,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 try:
     import yaml
@@ -63,6 +64,10 @@ VALID_CATEGORIES = {"industry-practice", "theoretical-knowledge", "project-exper
 # 漂移事实本身由 --validate 的 drift 段报告。
 LAYER_KEYS = ("layers", "layer")
 CATEGORY_KEYS = ("category", "kind")
+# ADR 主键别名：早期 ADR 用 `adr_id`，后规范为 `id`。
+# 不消歧会让这 3 份真实存在的 ADR 在 --validate 里报「缺 id」，
+# 进而被引用它们的文档报成「引用了不存在的 ID」（2026-11-27 Q-6 实测）。
+ID_KEYS = ("id", "adr_id")
 
 # type 值归一：experience-card 与 experience 混用
 TYPE_ALIASES = {
@@ -147,8 +152,10 @@ def _first_key(meta: dict, keys: tuple[str, ...]) -> tuple[str | None, Any]:
     return None, None
 
 
-def parse_doc(path: Path) -> Doc:
-    rel = str(path.relative_to(REPO))
+def parse_doc(path: Path, base: Path | None = None) -> Doc:
+    # ``base`` 仅供测试注入临时仓库；生产调用不传，取模块级 REPO。
+    base = base or REPO
+    rel = str(path.relative_to(base)) if base in path.parents else str(path)
     doc = Doc(path=rel, is_template="/templates/" in rel.replace("\\", "/"))
     text = path.read_text(encoding="utf-8")
 
@@ -186,7 +193,10 @@ def parse_doc(path: Path) -> Doc:
         if raw_type and raw_type != doc.doc_type:
             doc.drift.append(f"type 别名 `{raw_type}` → 归一为 `{doc.doc_type}`")
 
-        doc.doc_id = str(meta["id"]).strip() if meta.get("id") else None
+        _ik, _iv = _first_key(meta, ID_KEYS)
+        doc.doc_id = str(_iv).strip() if _iv else None
+        if _ik == "adr_id":
+            doc.drift.append("使用 `adr_id`，规范键为 `id`")
         doc.title = str(meta["title"]).strip() if meta.get("title") else None
         doc.date = str(meta.get("date") or meta.get("created") or meta.get("added") or "").strip() or None
         doc.status = str(meta["status"]).strip() if meta.get("status") else None
@@ -349,6 +359,281 @@ def validate(docs: list[Doc]) -> int:
     if not hard and not soft and not drift and not biz_hard and not biz_soft:
         print("\n✅ 全部通过")
     return 1 if (hard or biz_hard) else 0
+
+
+# ---------- ADR 跨目录普查（Q-6 结构性缺口治理，2026-11-27）----------
+#
+# 背景：全仓 ADR 分布在三处（知识库 / 架构目录 / 组件本地），编号体系混编
+# （``ADR-YYYYMM-NNN`` 与短号 ``ADR-NNN``），历史上已实测出 3 组冲突：
+#   - 026：arch 短号（L3/L4 拆分方案）vs kb 完整号（FIN 框架）——同号不同题
+#   - 035：arch 短号 vs kb 完整号——同题双稿（kb 为超集）
+#   - 023：组件本地副本 vs kb 权威稿——仅差一个 schema 键别名
+# 本普查把三处纳入同一判定，避免「只扫一处」导致的漏检。
+
+ADR_SCAN_ROOTS: tuple[tuple[str, Path], ...] = (
+    ("kb", KB_ROOT),
+    ("arch", REPO / "docs" / "architecture" / "adr"),
+    ("component", REPO / "docs" / "architecture" / "components"),
+)
+
+
+def _adr_serial(stem: str) -> tuple[str, int, str] | None:
+    """解析 ADR 序列号。
+
+    - ``ADR-202609-026-x`` → (``"full"``, 26, ``"202609"``)
+    - ``ADR-026-x``      → (``"short"``, 26, ``""``)
+    """
+    m = re.match(r"ADR-(?:(\d{6})-)?(\d+)", stem)
+    if not m:
+        return None
+    kind = "full" if m.group(1) else "short"
+    return kind, int(m.group(2)), m.group(1) or ""
+
+
+def _body_scalar(text: str, labels: tuple[str, ...]) -> str:
+    """从正文引用行（``> 日期：2026-09-08`` / ``> 决策人：Rex``）取标量。
+
+    架构目录 7 份 ADR 是无 frontmatter 的旧稿，元信息只存在于这类正文行；
+    只读 frontmatter 会让这些稿在 R3 同题判定中永久缺席（2026-11-27 实测缺口）。
+    读法与 ``gen_asset_inventory._adr_status`` 的兼容口径一致（不另造第二套）。
+    """
+    pat = (r"^\s*(?:>)?\s*(?:\*{0,2})(?:" + "|".join(
+        re.escape(x) for x in labels
+    ) + r")(?:\*{0,2})[：:]\s*(.+?)\s*$")
+    for raw in text.splitlines()[:40]:
+        m = re.match(pat, raw)
+        if not m:
+            continue
+        v = m.group(1).strip()
+        vm = re.search(r"\*\*(.+?)\*\*", v)
+        if vm:
+            return vm.group(1).strip()
+        return re.split(r"[（(,，\s]", v, maxsplit=1)[0].strip().strip("*` ")
+    return ""
+
+
+def _adr_record(path: Path, base: Path | None = None) -> dict[str, Any]:
+    """抽取单份 ADR 的判定字段（不引入额外口径，复用 gen_asset_inventory 的状态读法）。
+
+    ``base`` 仅供测试注入临时仓库；生产调用不传，取模块级 ``REPO``。
+    """
+    base = base or REPO
+    text = path.read_text(encoding="utf-8")
+    meta: dict[str, Any] = {}
+    m = FRONTMATTER_RE.match(text)
+    if m:
+        try:
+            meta = yaml.safe_load(_strip_comments(m.group(1))) or {}
+        except yaml.YAMLError:
+            meta = {}
+        if not isinstance(meta, dict):
+            meta = {}
+
+    def pick(*keys: str) -> str:
+        for k in keys:
+            v = meta.get(k)
+            if v not in (None, ""):
+                return str(v).strip()
+        return ""
+
+    # frontmatter 优先；缺失时回退正文旧式引用行（无 frontmatter 的旧稿）
+    def pick_any(fm_keys: tuple[str, ...], body_labels: tuple[str, ...]) -> str:
+        return pick(*fm_keys) or _body_scalar(text, body_labels)
+
+    rec = {
+        "path": path,
+        "rel": str(path.relative_to(base)) if base in path.parents else path.name,
+        "serial": _adr_serial(path.stem),
+        "title": pick("title") or _first_header(text),
+        "date": pick_any(("date", "created"), ("日期", "创建日期")),
+        "deciders": pick_any(("deciders", "decider"), ("决策人", "作者")),
+        "status": pick("status"),
+        "copy_of": pick("copy_of"),
+        "canonical": pick("canonical"),
+        "supersedes": pick("supersedes"),
+        "superseded_by": pick("superseded_by"),
+        "sha": hashlib.sha256(text.encode("utf-8")).hexdigest(),
+    }
+    return rec
+
+
+def _first_header(text: str) -> str:
+    m = re.search(r"^#\s+(.+)$", text, re.M)
+    return m.group(1).strip() if m else ""
+
+
+def collect_adrs(
+    roots: Sequence[tuple[str, Path]] = ADR_SCAN_ROOTS,
+    base: Path | None = None,
+) -> list[dict[str, Any]]:
+    """扫描所有 ADR 目录，返回记录列表。目录缺失则跳过（不静默当成空仓库）。"""
+    out: list[dict[str, Any]] = []
+    for tag, root in roots:
+        if not root.is_dir():
+            continue
+        # rel 的基准：优先显式 base，否则取各扫描根的公共祖先（保证 tmp 仓也取得到）
+        _base = base or _common_base([r for _, r in roots])
+        for p in sorted(root.rglob("ADR-*.md")):
+            rec = _adr_record(p, base=_base)
+            rec["root"] = tag
+            out.append(rec)
+    return out
+
+
+def _common_base(paths: Sequence[Path]) -> Path:
+    """求多个路径的公共父目录（用于测试注入的非工作树目录）。"""
+    resolved = [p.resolve() for p in paths if p.exists()]
+    if not resolved:
+        return REPO
+    common = resolved[0]
+    for p in resolved[1:]:
+        while common != common.parent and common not in p.parents:
+            common = common.parent
+    return common
+
+
+def _norm_title(t: str) -> str:
+    """归一标题用于同题判定：去编号前缀、去标点、小写。"""
+    t = re.sub(r"^ADR[-_ ].*?[:：]\s*", "", t)
+    t = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff]+", "", t)
+    return t.lower()
+
+
+def _norm_scalar(v: str) -> str:
+    """归一标量字段（日期/决策人）用于分组：列表括号/逗号/空白一律剥掉。
+
+    ``[Rex]`` 与 ``Rex`` 必须视为同一决策人，否则同题双稿会被漏判。
+    """
+    v = re.sub(r"[\[\](){}',，、\s]", "", v)
+    m = re.search(r"(\d{4})-(\d{2})-(\d{2})", v)
+    return f"{m.group(1)}{m.group(2)}{m.group(3)}" if m else v.lower()
+
+
+def adr_audit(
+    roots: Sequence[tuple[str, Path]] = ADR_SCAN_ROOTS,
+) -> tuple[list[str], list[str]]:
+    """ADR 跨目录一致性判定。返回 (hard, soft)。
+
+    硬错误（阻塞提交）：
+      R1 同一**完整**序列号在多处出现且存在未声明关系的稿（真·重号）。
+      R2 **短号**与任何文件的尾号撞车，或两个短号撞车（短号无命名空间，必然歧义）。
+      R3 同题同日期同决策人的双稿，且副本未声明 ``copy_of``（无法判断谁是权威）。
+    软警告（放行但提示）：
+      W1 同一尾号但月份不同（如 202608-018 与 202609-018）——合法但易误引，提示补全引用。
+      W2 同完整序列号多处存在但已声明镜像关系——放行，建议收敛为单稿。
+      W3 短号与完整序列号同名但已声明关系，或仍在使用已废弃的短号体系。
+
+    判定口径（2026-11-27 Q-6）：
+      - 「已声明关系」= frontmatter 含 ``copy_of`` / ``canonical`` /
+        ``supersedes`` / ``superseded_by`` 之一。声明后歧义已消解，降为软警告；
+        未声明的歧义一律 fail-closed —— 与 ADR-008「静默失败比明确失败更危险」同理。
+    """
+    recs = collect_adrs(roots)
+    hard: list[str] = []
+    soft: list[str] = []
+    if not recs:
+        return ([f"ADR 扫描无结果（根目录全部缺失: {[str(r) for _, r in roots]}）"], [])
+
+    # R1：完整序列号（月份+尾号）唯一 —— 同 (月份, 尾号) 才是真·重号。
+    by_full: dict[tuple[str, int], list[dict[str, Any]]] = defaultdict(list)
+    by_short: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for r in recs:
+        kind, num, month = r["serial"] or (None, 0, "")
+        if kind == "full":
+            by_full[(month, num)].append(r)
+        elif kind == "short":
+            by_short[num].append(r)
+    for (month, num), lst in sorted(by_full.items()):
+        if len(lst) > 1:
+            undeclared = [
+                x for x in lst
+                if not (x["copy_of"] or x["canonical"] or x["supersedes"] or x["superseded_by"])
+            ]
+            if undeclared:
+                hard.append(
+                    f"R1 完整序列号 {month}-{num} 重复 {len(lst)} 处: "
+                    + ", ".join(x["rel"] for x in lst)
+                )
+            else:
+                soft.append(
+                    f"W2 完整序列号 {month}-{num} 多处存在（已声明镜像关系，建议收敛为单稿）: "
+                    + ", ".join(x["rel"] for x in lst)
+                )
+
+    def _declared(x: dict[str, Any]) -> bool:
+        return bool(x["copy_of"] or x["canonical"] or x["supersedes"] or x["superseded_by"])
+
+    # R2：短号撞任何尾号（短号无命名空间，必然歧义）
+    for num, shorts in sorted(by_short.items()):
+        collide = [x for x in recs if (x["serial"] or (None, 0, ""))[1] == num
+                   and (x["serial"] or (None, 0, ""))[0] == "full"]
+        if len(shorts) > 1 or collide:
+            parts = [x["rel"] for x in shorts] + [x["rel"] for x in collide]
+            if any(_declared(x) for x in shorts + collide):
+                soft.append(
+                    f"W3 短号 {num} 与完整序列号同名（已声明关系，建议迁移为完整序列号）: "
+                    + ", ".join(parts)
+                )
+            else:
+                hard.append(
+                    f"R2 短号 {num} 与其他 ADR 尾号撞车（短号无命名空间，必然歧义）: "
+                    + ", ".join(parts)
+                )
+
+    # W3：仍在使用的短号体系（无论是否已撞车，均提示迁移）
+    for num, shorts in sorted(by_short.items()):
+        for x in shorts:
+            soft.append(
+                f"W3 `{x['rel']}` 使用短号 ADR-{num}；规范为 ADR-<YYYYMM>-<NNN>，"
+                "建议迁移并在迁移后更新引用"
+            )
+
+    # R3：同题同日期同决策人的双稿，需显式声明权威
+    groups: dict[tuple, list[dict[str, Any]]] = defaultdict(list)
+    for r in recs:
+        key = (_norm_title(r["title"]), _norm_scalar(r["date"]), _norm_scalar(r["deciders"]))
+        if key[1] and key[2]:
+            groups[key].append(r)
+    for key, lst in groups.items():
+        if len(lst) < 2:
+            continue
+        declared = [
+            x for x in lst
+            if x["copy_of"] or x["canonical"] or x["supersedes"] or x["superseded_by"]
+        ]
+        if declared:
+            continue
+        hard.append(
+            "R3 同题双稿未声明权威（标题/日期/决策人相同）: "
+            + ", ".join(x["rel"] for x in lst)
+            + " —— 声明关系之一：副本写 `copy_of: <权威稿路径>`；被取代稿写 `superseded_by: <权威稿 id>`"
+        )
+
+    # W1：同尾号不同月（合法但易误引，提示补全引用）
+    by_tail_month: dict[int, set[str]] = defaultdict(set)
+    for r in recs:
+        kind, num, month = r["serial"] or (None, 0, "")
+        if kind == "full" and month:
+            by_tail_month[num].add(month)
+    for num, months in sorted(by_tail_month.items()):
+        if len(months) > 1:
+            soft.append(f"W1 尾号 {num} 跨月份复用: {sorted(months)}（引用请写全序列号）")
+    return hard, soft
+
+
+def render_adr_audit() -> int:
+    recs = collect_adrs()
+    print(f"ADR 跨目录普查 — {len(recs)} 份")
+    counts: Counter = Counter(r["root"] for r in recs)
+    print("  " + " · ".join(f"{k}: {v}" for k, v in sorted(counts.items())))
+    hard, soft = adr_audit()
+    for h in hard:
+        print(f"\n❌ {h}")
+    for s in soft:
+        print(f"\n⚠️  {s}")
+    if not hard and not soft:
+        print("\n✅ 无跨目录冲突")
+    return 1 if hard else 0
 
 
 # ---------- 统计 ----------
@@ -736,6 +1021,7 @@ def render_doc(docs: list[Doc], target: str) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description="知识库索引器（ADR-003 阶段 2 工具链）")
     ap.add_argument("--validate", action="store_true", help="frontmatter schema 校验")
+    ap.add_argument("--adr-audit", action="store_true", help="ADR 跨目录普查（重号/撞短号/未声明权威副本）")
     ap.add_argument("--stats", action="store_true", help="三维分布统计")
     ap.add_argument("--tags", action="store_true", help="tag 聚合")
     ap.add_argument("--xref", action="store_true", help="交叉引用图")
@@ -777,6 +1063,8 @@ def main() -> int:
     if args.stats:
         stats(docs)
         return 0
+    if args.adr_audit:
+        return render_adr_audit()
     if args.validate:
         return validate(docs)
 

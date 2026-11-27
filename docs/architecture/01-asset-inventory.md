@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-27 16:29 UTC+08:00
+最后生成：2026-11-27 17:48 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -271,11 +271,11 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 
 | 文件 | 状态 |
 |---|---|
-| [`ADR-026-fin-l4-split-l3-l4`](../architecture/adr/ADR-026-fin-l4-split-l3-l4.md) | accepted |
 | [`ADR-032-context-overflow-auto-recovery`](../architecture/adr/ADR-032-context-overflow-auto-recovery.md) | accepted |
 | [`ADR-033-web-ui-design-system`](../architecture/adr/ADR-033-web-ui-design-system.md) | proposed |
 | [`ADR-034-workspace-temp-cleanup`](../architecture/adr/ADR-034-workspace-temp-cleanup.md) | accepted |
 | [`ADR-035-prompt-rule-system`](../architecture/adr/ADR-035-prompt-rule-system.md) | accepted |
+| [`ADR-202609-030-fin-l4-split-l3-l4`](../architecture/adr/ADR-202609-030-fin-l4-split-l3-l4.md) | accepted |
 | [`ADR-202609-031-contract-approval-l3-l4-boundary`](../architecture/adr/ADR-202609-031-contract-approval-l3-l4-boundary.md) | accepted |
 | [`ADR-202611-037-capability-routing-orchestration-layer`](../architecture/adr/ADR-202611-037-capability-routing-orchestration-layer.md) | accepted |
 
@@ -321,8 +321,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `19d703b` |
-| Commit 数 | 819 |
+| HEAD | `1444542` |
+| Commit 数 | 820 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -344,7 +344,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `credentials` | 6 | 0 | 3 | `L2-infra/components/credentials` |
 | `delivery-quality` | 2 | 0 | 0 | `L2-infra/components/delivery-quality` |
 | `gateway-safety` | 4 | 0 | 1 | `L2-infra/components/gateway-safety` |
-| `knowledge-base` | 19 | 0 | 6 | `L2-infra/components/knowledge-base` |
+| `knowledge-base` | 20 | 0 | 7 | `L2-infra/components/knowledge-base` |
 | `logs` | 3 | 0 | 0 | `L2-infra/components/logs` |
 | `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
 | `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |
@@ -385,7 +385,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `.deprecated` | 24 | 0 | 0 | `L4-proprietary/components/.deprecated` |
 | `bangcle-contract` | 117 | 22 | 3 | `L4-proprietary/components/bangcle-contract` |
 | `bangcle-ppt` | 32 | 0 | 6 | `L4-proprietary/components/bangcle-ppt` |
-| `bdms` | 191 | 12 | 37 | `L4-proprietary/components/bdms` |
+| `bdms` | 192 | 12 | 38 | `L4-proprietary/components/bdms` |
 | `cissp-trainer` | 24 | 0 | 9 | `L4-proprietary/components/cissp-trainer` |
 | `customer-delivery-intelligence` | 21 | 7 | 1 | `L4-proprietary/components/customer-delivery-intelligence` |
 | `delivery-center` | 81 | 0 | 16 | `L4-proprietary/components/delivery-center` |

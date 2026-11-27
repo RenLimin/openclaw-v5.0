@@ -1,5 +1,5 @@
 ---
-adr_id: ADR-202609-018
+id: ADR-202609-018
 title: 销售合同审批模块（SCA-001）建设与层级归属
 status: accepted
 date: 2026-09-02

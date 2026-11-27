@@ -7,12 +7,13 @@
 #   1. 重生成资产清单, 有变化则自动加入本次提交
 #   2. 检查 ~/.openclaw/openclaw.json 是否有未快照的变更, 仅提醒
 #   3. 知识库 schema 校验 + INDEX.md 派生小节同步 (ADR-003 阶段 2)
+#   3b. ADR 跨目录普查 (Q-6: 短号撞号 / 同号不同题 / 同题双稿未声明权威)
 #   4. 应答契约黄金基准 —— 仅当 prompts/ 下 spec/校验器/测试被改动时触发 (ADR-035 P1 §10)
 #   5. 防重复建设门禁 —— 新建脚本命中重复家族即阻断, 并指出能力注册表中的权威入口
 #   6. 覆盖率校验 —— 所有组件/skill 必须已在 registry.yaml 登记 (未登记=会被重复建设)
 #   7. 注册表自校验 —— entry 路径存在性 + 可执行性 (fitness function)
 #   8. 资产生命周期 —— 新增资产必须带设计/调研文档 (闭环门禁, 仅对真正新增目录)
-#   1/2 不阻塞; 0/3/4/5/6/7/8 命中阻塞性错误时阻塞提交
+#   3/3b 命中阻塞性错误时阻塞提交
 
 set -euo pipefail
 
@@ -83,6 +84,26 @@ if [ -f L2-infra/components/memory-embedding/kb_index.py ] && [ -d docs/knowledg
         echo "❌ 知识库校验失败 — 存在阻塞性错误"
         echo "    修完后重试, 或用 git commit --no-verify 跳过 (不推荐)"
         exit 1
+    fi
+
+    # 3b. ADR 跨目录普查（Q-6 结构性缺口治理，2026-11-27）
+    #     全仓 ADR 分布在三处（知识库 / docs/architecture/adr / 组件本地），历史上实测出
+    #     撞号（短号无命名空间）、同号不同题、同题双稿未声明权威三类歧义。
+    #     判定为硬错误即 fail-closed；已声明 copy_of/canonical/supersedes 的降为提示。
+    if [ -f L2-infra/components/knowledge-base/kb_index.py ]; then
+        ADR_OUT="$(mktemp -t adr_audit)"
+        trap 'rm -f "$KB_OUT" "$EMIT_OUT" "$ADR_OUT"' EXIT
+        if python3 L2-infra/components/knowledge-base/kb_index.py --adr-audit >"$ADR_OUT" 2>&1; then
+            echo "✅ ADR 跨目录普查通过（无硬冲突）"
+            grep '⚠️' "$ADR_OUT" || true
+        else
+            cat "$ADR_OUT"
+            echo ""
+            echo "❌ ADR 跨目录冲突 — 需消解后才能提交"
+            echo "    消解方式三选一：副本声明 `copy_of: <权威稿路径>`；"
+            echo "    被取代稿声明 `superseded_by: <权威稿 id>`；或按标准变更管理改号。"
+            exit 1
+        fi
     fi
 fi
 

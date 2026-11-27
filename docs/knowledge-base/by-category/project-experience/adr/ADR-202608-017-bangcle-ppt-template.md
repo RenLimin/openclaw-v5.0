@@ -1,5 +1,5 @@
 ---
-adr_id: ADR-202608-017
+id: ADR-202608-017
 title: 将 Bangcle 官方 PPT 模板注册为 L4 专有业务层组件
 status: accepted
 date: 2026-09-01

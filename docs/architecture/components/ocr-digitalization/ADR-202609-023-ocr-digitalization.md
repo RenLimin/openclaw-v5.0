@@ -1,10 +1,12 @@
 ---
-adr_id: ADR-202609-023
+id: ADR-202609-023
 title: L2 OCR 文档数字化组件（OCR-001）建设
 status: accepted
 date: 2026-09-02
 deciders: Rex
-layer: L2
+layers: L2
+# 本文件是组件本地镜像（历史遗留），权威稿在知识库：
+copy_of: ../../../knowledge-base/by-category/project-experience/adr/ADR-202609-023-ocr-digitalization.md
 component_id: OCR-001
 component_name: 文档数字化（OCR）组件
 tags: [adr, ocr, document-digitalization, L2, infrastructure, rapidocr, paddleocr]
