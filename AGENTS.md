@@ -133,8 +133,9 @@ python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --j
 > 此规则与「品牌素材检索铁律」同源：**先查记忆与已建能力，再判定缺失**。
 
 **能力注册表是权威索引（2026-11-20 全量固化）**：已建能力统一登记在
-`L2-infra/components/config/capability-registry/registry.yaml`（**81 条目 = 45 组件 + 26 skill + 10 能力族，覆盖率 100%**），
+`L2-infra/components/config/capability-registry/registry.yaml`（**85 条目 = L2 41 + L3 15 + L4 29，其中 `skill-*` 28；每条含 `domain`/`authority`(authoritative|overlap|deprecated)；覆盖率 100%**，口径以 `--coverage` 实时输出为准），
 同时渲染进 `docs/architecture/01-asset-inventory.md` §能力注册表。**先查表，再动手**。
+> 路由用法：`--query <词>` 命中同域多条时非权威项自动降权并标 `[overlap→权威:<id>]`；只要权威入口加 `--strict`。
 ```bash
 python3 L2-infra/components/config/capability-registry/capability_registry.py --query <关键词>
 python3 L2-infra/components/config/capability-registry/capability_registry.py --coverage   # 全量覆盖率硬指标
