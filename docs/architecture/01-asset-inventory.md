@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-26 23:14 UTC+08:00
+最后生成：2026-11-27 13:22 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -296,8 +296,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `033b09d` |
-| Commit 数 | 805 |
+| HEAD | `9e75159` |
+| Commit 数 | 811 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -323,6 +323,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `logs` | 3 | 0 | 0 | `L2-infra/components/logs` |
 | `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
 | `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |
+| `memory-promotion-gate` | 7 | 0 | 5 | `L2-infra/components/memory-promotion-gate` |
 | `model-scheduling` | 23 | 0 | 8 | `L2-infra/components/model-scheduling` |
 | `observability` | 14 | 0 | 4 | `L2-infra/components/observability` |
 | `ocr-digitalization` | 24 | 0 | 7 | `L2-infra/components/ocr-digitalization` |
@@ -373,7 +374,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 ## L2 / L3 / L4 已建设完成组件（自动登记）
 
 > 由 `gen_asset_inventory.discover_completed_components()` 全盘扫描，
-> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 45 个。
+> 完成判据：含 OPERATIONS/VERIFICATION/STATUS 证据，或 README + 实质代码。当前 46 个。
 
 ### L2 基础设施
 
@@ -392,6 +393,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | logs | ✅ 已实现（聚合器核心可用）；日志查询 DSL、轮转策略为演进方向，尚未实现。 | `L2-infra/components/logs` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | maintenance | 返回退出码 0 = 健康，非 0 = 存在问题。 | `L2-infra/components/maintenance` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | memory-embedding — 内存嵌入计算组件 | 模型不可用时自动降级到 MockEmbedder（基于文本哈希的伪向量），保证系统可用但检索质量下降。 | `L2-infra/components/memory-embedding` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
+| memory-promotion-gate — 记忆晋升门禁 | 高风险候选只输出待确认清单。 | `L2-infra/components/memory-promotion-gate` | `VERIFICATION-v1.0.md` |
 | model-scheduling — 智能模型调度组件 | 综合模型/供应商调度系统。参考 9router / OpenRouter / Portkey 业界最佳实践。 | `L2-infra/components/model-scheduling` | `VERIFICATION-v1.2-throttle.md`, `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | observability | — | `L2-infra/components/observability` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
 | ocr-digitalization — OCR 文档数字化组件 | 1. **表格结构还原**：接入 PP-Structure，识别表格行列并输出结构化数据 | `L2-infra/components/ocr-digitalization` | `OPERATIONS-v1.0.md`, `VERIFICATION-v1.0.md` |
@@ -458,7 +460,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 > 维护：`L2-infra/components/config/capability-registry/registry.yaml`
 > 门禁：pre-commit `--check --staged`（重复家族脚本命中即阻断并指出权威入口）
 
-**共 84 项能力**（更新于 2026-11-24）
+**共 85 项能力**（更新于 2026-11-24）
 
 | 能力 ID | 名称 | 层 | 权威入口 |
 |---|---|---|---|
@@ -490,6 +492,7 @@ python3 L2-infra/components/config/capability-registry/capability_registry.py --
 | `web-common` | Web 通用（FastAPI 应用基座） | L2 | `python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000` |
 | `workspace-temp-cleanup` | 工作区临时文件清理 | L2 | `python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py dry-run` |
 | `wecom-ax-collector` | 企业微信 macOS AX 采集（只读无障碍，零注入） | L2 | `python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/c...` |
+| `memory-promotion-gate` | 记忆晋升门禁（dreaming 死锁旁路 / 召回信号累积） | L2 | `python3 L2-infra/components/memory-promotion-gate/scripts/promote.py --dry-run` |
 | `contract-approval` | 合同审批（L3 纯逻辑核心） | L3 | `python3 -c "from contract_approval import *; print('OK')"` |
 | `contract-management` | 合同管理（解析 / 审查 / 风险扫描 / 本体适配） | L3 | `python3 L3-business/components/contract-management/contract_management/contract_auditor.py` |
 | `delivery-management-framework` | 交付管理框架（DMS CLI） | L3 | `python3 L3-business/components/delivery-management-framework/dms_cli.py --help` |
