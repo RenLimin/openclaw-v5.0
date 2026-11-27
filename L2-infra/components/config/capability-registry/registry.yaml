@@ -15,6 +15,12 @@
 #   - 能力下线/迁移 → 更新 entry，保留 id（不删历史）
 #   - entry 必须是**可直接调用**的路径/命令，禁止写「见文档」这类不可执行指针
 
+# 字段说明（2026-11-27 Lane A 新增）：
+#   - domain: 能力域。同域多入口时用于**权威性仲裁**；空=未声明（P7 只统计声明了域的条目）。
+#   - authority: authoritative（默认/权威入口）| overlap（同域次要入口，--query 降权并标注
+#                 `[overlap→权威:<id>]`）| deprecated（supersedes 指向文件已物理删除）。
+#   用法：`--query contract` 看全量与重叠标注；`--query contract --strict` 只看权威入口。
+#   回填由一次性脚本批量完成（见会话记录），后续手工维护请保持同域唯一 authoritative。
 version: 1
 updated: 2026-11-24
 
@@ -56,6 +62,8 @@ capabilities:
   - id: ai-knowledge-base
     name: AI 知识库（多 agent 实例 + 导入）
     layer: L2
+    domain: knowledge
+    authority: overlap
     interfaces: [ai, knowledge, kb, import, instance]
     entry:
       - "python3 L2-infra/components/ai-knowledge-base/cli/main.py"
@@ -66,6 +74,7 @@ capabilities:
   - id: backup
     name: 备份（SQLite 加密 / 官方全量）
     layer: L2
+    authority: authoritative
     interfaces: [backup, sqlite, full, daily, restore]
     entry:
       - "bash L2-infra/components/backup/backup.sh --daily"
@@ -76,6 +85,8 @@ capabilities:
   - id: browser-automation
     name: 浏览器自动化基础设施（隔离 Chrome 幂等管理）
     layer: L2
+    domain: browser
+    authority: overlap
     interfaces: [browser, chrome, cdp, automation]
     entry:
       - "python3 L2-infra/components/browser-automation/scripts/ensure_chrome.py ensure"
@@ -93,6 +104,7 @@ capabilities:
   - id: config
     name: 配置管理（快照/审计/hook 安装）
     layer: L2
+    authority: authoritative
     interfaces: [config, snapshot, audit, hooks, install]
     entry:
       - "bash L2-infra/components/config/config.sh apply"
@@ -107,6 +119,7 @@ capabilities:
   - id: context-guardian
     name: 上下文守护（插件）
     layer: L2
+    authority: authoritative
     interfaces: [context, guardian, plugin, guard]
     entry:
       - "node --test L2-infra/components/context-guardian/tests/test_core.js"
@@ -116,6 +129,7 @@ capabilities:
   - id: context-management
     name: 上下文管理（窗口探测 / 子代理守护 / 压缩健康门禁）
     layer: L2
+    authority: authoritative
     interfaces: [context, window, probe, subagent, guard, compaction]
     entry:
       - "python3 L2-infra/components/context-management/probe_context_window.py"
@@ -127,6 +141,7 @@ capabilities:
   - id: credentials
     name: 凭据管理（扫描 / 审计 / GitHub 同步）
     layer: L2
+    authority: authoritative
     interfaces: [credential, secret, scan, audit, github, token]
     entry:
       - "bash L2-infra/components/credentials/credentials.sh audit"
@@ -142,6 +157,7 @@ capabilities:
   - id: delivery-quality
     name: 交付质量反馈（记录 / 评审）
     layer: L2
+    authority: authoritative
     interfaces: [quality, feedback, review, record]
     entry:
       - "python3 L2-infra/components/delivery-quality/record.py --domain <d> --dimension <d> --severity <s>"
@@ -152,6 +168,7 @@ capabilities:
   - id: gateway-safety
     name: 网关安全（安全重启 / 预检守卫）
     layer: L2
+    authority: authoritative
     interfaces: [gateway, safety, restart, guard]
     entry:
       - "bash L2-infra/components/gateway-safety/scripts/safe_restart.sh"
@@ -162,6 +179,8 @@ capabilities:
   - id: knowledge-base
     name: 知识库（索引 / 检索 / 重建）
     layer: L2
+    domain: knowledge
+    authority: overlap
     interfaces: [kb, knowledge, search, index, rebuild]
     entry:
       - "python3 L2-infra/components/knowledge-base/kb_index.py --query <关键词>"
@@ -172,6 +191,7 @@ capabilities:
   - id: logs
     name: 日志收集（骨架，由 observability 代理）
     layer: L2
+    authority: authoritative
     interfaces: [logs, collect, observability]
     entry:
       - "L2-infra/components/logs/ (骨架；日志收集走 observability)"
@@ -181,6 +201,7 @@ capabilities:
   - id: maintenance
     name: 维护（记忆维护 / 仓库健康）
     layer: L2
+    authority: authoritative
     interfaces: [maintenance, memory, repo, health]
     entry:
       - "bash L2-infra/scripts/maintenance/memory_maintenance.sh"
@@ -191,6 +212,8 @@ capabilities:
   - id: memory-embedding
     name: 记忆与嵌入（openclaw memory）
     layer: L2
+    domain: knowledge
+    authority: overlap
     interfaces: [memory, embedding, search, status]
     entry:
       - "openclaw memory search <关键词>"
@@ -200,6 +223,7 @@ capabilities:
   - id: model-scheduling
     name: 模型调度（配额 / 恢复 / 路由 / 错峰限流）
     layer: L2
+    authority: authoritative
     interfaces: [model, scheduling, quota, restore, routing, throttle, rate-limit]
     entry:
       - "python3 L2-infra/components/model-scheduling/scripts/check_quota_and_restore.py --detail"
@@ -213,6 +237,7 @@ capabilities:
   - id: observability
     name: 可观测性（网关看门狗 / channel 恢复 / 网络定责探针）
     layer: L2
+    authority: authoritative
     interfaces: [observability, watchdog, gateway, monitor, channel, network, probe]
     entry:
       - "bash L2-infra/components/observability/gateway_watchdog.sh"
@@ -223,6 +248,7 @@ capabilities:
   - id: ocr-digitalization
     name: OCR 文档数字化（扫描件/图片 → 文本 + 签名印章检测）
     layer: L2
+    authority: authoritative
     interfaces: [ocr, digitize, scan, contract, signature]
     entry:
       - "python3 L2-infra/components/ocr-digitalization/scripts/ocr_main.py --help"
@@ -232,6 +258,7 @@ capabilities:
   - id: office-generation
     name: Office 文档生成（Excel / PPT / Word）
     layer: L2
+    authority: authoritative
     interfaces: [office, excel, ppt, word, generate]
     entry:
       - "python3 -c \"from office_engine import OfficeDocument; print('OK')\"  # 库接口，工作目录需含 L2-infra/components/office-generation/src"
@@ -242,6 +269,7 @@ capabilities:
   - id: persistence
     name: 持久化（SQLite 迁移 / schema）
     layer: L2
+    authority: authoritative
     interfaces: [persistence, sqlite, migration, schema]
     entry:
       - "python3 -c \"import L2-infra.components.persistence.migration as m; print('OK')\"  # 或 python3 L2-infra/components/persistence/migration.py"
@@ -252,6 +280,7 @@ capabilities:
   - id: sandbox
     name: 沙箱（隔离执行 / 健康检查）
     layer: L2
+    authority: authoritative
     interfaces: [sandbox, exec, health, isolate]
     entry:
       - "python3 L2-infra/components/sandbox/scripts/cli.py --help"
@@ -261,6 +290,7 @@ capabilities:
   - id: scheduler-guard
     name: 调度守卫（LaunchAgent 审计）
     layer: L2
+    authority: authoritative
     interfaces: [scheduler, guard, launchd, audit]
     entry:
       - "python3 L2-infra/components/scheduler-guard/audit.py"
@@ -270,6 +300,7 @@ capabilities:
   - id: session-boundary-guard
     name: 会话边界守卫（插件）
     layer: L2
+    authority: authoritative
     interfaces: [session, boundary, guard, plugin]
     entry:
       - "node --test L2-infra/components/session-boundary-guard/tests/"
@@ -279,6 +310,7 @@ capabilities:
   - id: session-isolation
     name: 会话隔离（task/state/event-log）
     layer: L2
+    authority: authoritative
     interfaces: [session, isolation, task, state, event]
     entry:
       - "python3 L2-infra/components/session-isolation/scripts/cli.py --health"
@@ -289,6 +321,7 @@ capabilities:
   - id: session-recovery
     name: 会话恢复（task_tracker / 断点重试）
     layer: L2
+    authority: authoritative
     interfaces: [session, recovery, task, tracker, retry]
     entry:
       - "python3 L2-infra/components/session-recovery/scripts/task_tracker.py current --json"
@@ -299,6 +332,7 @@ capabilities:
   - id: system-governor
     name: 系统治理（审计 P1~P6 / 归位）
     layer: L2
+    authority: authoritative
     interfaces: [governor, audit, policy, P6]
     entry:
       - "python3 L2-infra/components/system-governor/scripts/governor.py audit"
@@ -309,6 +343,7 @@ capabilities:
   - id: tool-policy
     name: 工具策略（审计 / 健康）
     layer: L2
+    authority: authoritative
     interfaces: [tool, policy, audit, health]
     entry:
       - "bash L2-infra/components/tool-policy/tool_policy_audit.sh"
@@ -318,6 +353,7 @@ capabilities:
   - id: web-common
     name: Web 通用（FastAPI 应用基座）
     layer: L2
+    authority: authoritative
     interfaces: [web, fastapi, uvicorn, common]
     entry:
       - "python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000"
@@ -326,6 +362,7 @@ capabilities:
   - id: workspace-temp-cleanup
     name: 工作区临时文件清理
     layer: L2
+    authority: authoritative
     interfaces: [temp, cleanup, workspace, trash]
     entry:
       - "python3 L2-infra/components/workspace-temp-cleanup/scripts/tempcleanctl.py dry-run"
@@ -336,6 +373,7 @@ capabilities:
   - id: wecom-ax-collector
     name: 企业微信 macOS AX 采集（只读无障碍，零注入）
     layer: L2
+    authority: authoritative
     interfaces: [wecom, ax, accessibility, collector, macos, message, 会话, 群消息]
     entry:
       - "python3 L2-infra/components/wecom-ax-collector/scripts/wecom_collector.py --config L2-infra/components/wecom-ax-collector/config.example.json --check"
@@ -347,10 +385,26 @@ capabilities:
     notes: "Swift 引擎(engine/wecom_ax_engine)直调 macOS Accessibility C API 【严格只读】采集，不注入/不改客户端；已物理移除一切点击/键盘/设值/PerformAction 能力（owner 2026-11-24 红线），守卫测试 tests/test_02_readonly_guard.py。前置：终端辅助功能权限 + 企业微信已登录。输出 JSONL(msg_id/content_hash 幂等)，只读当前人工打开会话、不自动切换。Phase 2 图片：子命令 images 从 AXImage.AXImageData 直出 PNG(sha256/尺寸)，scripts/wecom_images.py 四重分类(侧栏/跨会话复现/描述签名/极小图)→仅 content 落盘并关联消息；真实聊天照片分辨率待验。A6 崩溃安全：JsonlSink repair 截断半写尾行 + fsync，CLI --recover，真 kill -9 演练 tests/test_04_crash_safety.py；语义 at-least-once，下游按 msg_id/content_hash 去重。语音/视频本体未证；历史需滚动加载。设计 docs/research/DESIGN-wecom-ax-collector-phase1.md，验收 VERIFICATION-v1.0.md §7~§8"
     supersedes: []
 
+  - id: memory-promotion-gate
+    name: 记忆晋升门禁（dreaming 死锁旁路 / 召回信号累积）
+    layer: L2
+    interfaces: [memory, dreaming, promotion, recall, gate]
+    entry:
+      - "python3 L2-infra/components/memory-promotion-gate/scripts/promote.py --dry-run"
+      - "python3 L2-infra/components/memory-promotion-gate/scripts/promote.py --apply"
+      - "python3 L2-infra/components/memory-promotion-gate/scripts/promote.py --stats"
+    docs:
+      - "L2-infra/components/memory-promotion-gate/DESIGN.md"
+      - "L2-infra/components/memory-promotion-gate/VERIFICATION-v1.0.md"
+    notes: "L1 禁改(ADR-202608-001)下的补充晋升通道；fail-closed 需 promoted>0 且 recalls 非零；state/scores.json 已 gitignore"
+    supersedes: []
+
   # ══════════ L3 通用业务组件 ══════════
   - id: contract-approval
     name: 合同审批（L3 纯逻辑核心）
     layer: L3
+    domain: contract
+    authority: overlap
     interfaces: [contract, approval, workflow, risk]
     entry:
       - "python3 -c \"from contract_approval import *; print('OK')\""
@@ -360,6 +414,8 @@ capabilities:
   - id: contract-management
     name: 合同管理（解析 / 审查 / 风险扫描 / 本体适配）
     layer: L3
+    domain: contract
+    authority: authoritative
     interfaces: [contract, parser, auditor, risk, ontology]
     entry:
       - "python3 L3-business/components/contract-management/contract_management/contract_auditor.py"
@@ -370,6 +426,8 @@ capabilities:
   - id: delivery-management-framework
     name: 交付管理框架（DMS CLI）
     layer: L3
+    domain: project
+    authority: authoritative
     interfaces: [dms, delivery, management, cli, project]
     entry:
       - "python3 L3-business/components/delivery-management-framework/dms_cli.py --help"
@@ -378,6 +436,7 @@ capabilities:
   - id: dms-framework
     name: DMS 框架（成员/项目/Web UI）
     layer: L3
+    authority: authoritative
     interfaces: [dms, member, project, webui]
     entry:
       - "python3 L3-business/components/dms-framework/dms.py --help"
@@ -387,6 +446,8 @@ capabilities:
   - id: finance-engine
     name: 财务引擎（记账/贷款/保险）
     layer: L3
+    domain: finance
+    authority: authoritative
     interfaces: [finance, accounting, loan, insurance, engine]
     entry:
       - "python3 -c \"from finance_engine import *; print('OK')\""
@@ -396,6 +457,8 @@ capabilities:
   - id: health-engine
     name: 健康引擎（评分/生命体征）
     layer: L3
+    domain: health
+    authority: overlap
     interfaces: [health, score, vitals, engine]
     entry:
       - "python3 -c \"from health_engine import *; print('OK')\""
@@ -405,6 +468,8 @@ capabilities:
   - id: health-management
     name: 健康管理（档案/体检/仓储）
     layer: L3
+    domain: health
+    authority: authoritative
     interfaces: [health, profile, checkup, repository]
     entry:
       - "python3 -c \"from health_management import *; print('OK')\""
@@ -414,6 +479,7 @@ capabilities:
   - id: office-business
     name: 办公业务（模板/角色/知识库）
     layer: L3
+    authority: authoritative
     interfaces: [office, business, template, role, knowledge]
     entry:
       - "cat L3-business/components/office-business/templates/index.json | python3 -m json.tool"
@@ -424,6 +490,8 @@ capabilities:
   - id: bangcle-contract
     name: 合同智能审查（contractctl）
     layer: L4
+    domain: contract
+    authority: overlap
     interfaces: [contract, review, oa, ontology, cli]
     entry:
       - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py --help"
@@ -438,6 +506,7 @@ capabilities:
   - id: bangcle-ppt
     name: Bangcle PPT 模板系统
     layer: L4
+    authority: authoritative
     interfaces: [ppt, template, vi, generate]
     entry:
       - "node L4-proprietary/components/bangcle-ppt/pptx-automizer/build_final.cjs"
@@ -448,6 +517,8 @@ capabilities:
   - id: bdms
     name: BDMS 交付管理系统（Web + 数据库）
     layer: L4
+    domain: finance
+    authority: overlap
     interfaces: [bdms, delivery, web, db, report]
     entry:
       - "python3 -m uvicorn bdms.web.main:app --host 127.0.0.1 --port 8000"
@@ -458,6 +529,7 @@ capabilities:
   - id: cissp-trainer
     name: CISSP 训练器
     layer: L4
+    authority: authoritative
     interfaces: [cissp, trainer, exam, study]
     entry:
       - "PYTHONPATH=src python3 -m cissp_trainer.cli init --sample"
@@ -467,6 +539,8 @@ capabilities:
   - id: customer-delivery-intelligence
     name: 客户交付智能工作流（CDI）
     layer: L4
+    domain: project
+    authority: overlap
     interfaces: [cdi, delivery, intelligence, workflow, customer]
     entry:
       - "python3 -m runner.main decide"
@@ -477,6 +551,8 @@ capabilities:
   - id: delivery-center
     name: 交付中心（采集器/月报/导出）
     layer: L4
+    domain: project
+    authority: overlap
     interfaces: [delivery, center, collector, report, oa, ones]
     entry:
       - "python3 -c \"from delivery_center.v1.collectors import oa_collector, ones_collector\""
@@ -487,6 +563,8 @@ capabilities:
   - id: fin-l4
     name: 家庭个人理财 FIN-L4
     layer: L4
+    domain: finance
+    authority: overlap
     interfaces: [fin, finance, budget, loan, insurance, invest]
     entry:
       - "python3 -m fin_l4.cli --help"
@@ -498,6 +576,8 @@ capabilities:
   - id: office-contract
     name: 合同编制（contractctl，L4 持久化编排）
     layer: L4
+    domain: contract
+    authority: overlap
     interfaces: [contract, create, office, cli]
     entry:
       - "python3 -m cli.contractctl init"
@@ -508,6 +588,8 @@ capabilities:
   - id: product-kb
     name: 产品知识库（查询 / 标的匹配 / OA 同步）
     layer: L4
+    domain: product
+    authority: authoritative
     interfaces: [product, kb, query, match, oa, sync]
     entry:
       - "python3 -m product_kb.cli query <关键词>"
@@ -517,6 +599,8 @@ capabilities:
   - id: revenue-recognition
     name: 收入确认（v1）
     layer: L4
+    domain: finance
+    authority: overlap
     interfaces: [revenue, recognition, accounting]
     entry:
       - "python3 -m revenue_recognition.v1.main"
@@ -526,6 +610,8 @@ capabilities:
   - id: oa-session
     name: OA 会话建立与复用
     layer: L4
+    domain: oa
+    authority: overlap
     interfaces: [oa, session, login, iam, cookie]
     entry:
       - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-login"
@@ -537,6 +623,8 @@ capabilities:
   - id: oa-contract-fetch
     name: OA 合同原文/附件拉取
     layer: L4
+    domain: oa
+    authority: overlap
     interfaces: [oa, contract, fetch, cube]
     entry:
       - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-fetch --oa-billid <id>"
@@ -547,6 +635,8 @@ capabilities:
   - id: oa-ledger-export
     name: OA 合同台账导出
     layer: L4
+    domain: oa
+    authority: overlap
     interfaces: [oa, export, ledger, contract, browser]
     entry:
       - "delivery_center.v1.collectors.oa_collector::collect_contract_ledger_chrome(month)"
@@ -556,6 +646,8 @@ capabilities:
   - id: oa-workflow-ones
     name: OA 工作流 → ONES 字段导出
     layer: L4
+    domain: oa
+    authority: overlap
     interfaces: [oa, workflow, ones, export, graphql]
     entry:
       - "python3 L4-proprietary/skills/ones-browser-export/scripts/oa_workflow_ones.py --code <OA编码>"
@@ -567,6 +659,8 @@ capabilities:
   - id: oa-todo-dist
     name: OA 待办分发
     layer: L4
+    domain: oa
+    authority: overlap
     interfaces: [oa, todo, distribute]
     entry:
       - "python3 L4-proprietary/skills/ones-browser-export/scripts/oa_todo_dist.py --save"
@@ -576,6 +670,8 @@ capabilities:
   - id: oa-project-mgmt
     name: OA 项目实施管理批注（只读）
     layer: L4
+    domain: oa
+    authority: overlap
     interfaces: [oa, project-mgmt, approval]
     entry:
       - "python3 L4-proprietary/components/bangcle-contract/cli/contractctl.py oa-project-mgmt --requestid <rid> --workflow wf_916|wf_815|wf_820"
@@ -586,6 +682,8 @@ capabilities:
   - id: ones-export
     name: ONES 项目数据导出
     layer: L4
+    domain: ones
+    authority: deprecated
     interfaces: [ones, export, filter, browser]
     entry:
       - "delivery_center.v1.collectors.ones_collector::collect(filter_name)"
@@ -605,6 +703,8 @@ capabilities:
   - id: ones-auth
     name: ONES 认证（cookie 复用 + IAM 取码）
     layer: L4
+    domain: ones
+    authority: deprecated
     interfaces: [ones, auth, iam, cookie]
     entry:
       - "delivery_center.v1.collectors.iam_auth::get_cookie/set_cookie/is_cookie_valid"
@@ -622,6 +722,8 @@ capabilities:
   - id: browser-isolated-chrome
     name: 隔离 Chrome 实例（专用 profile + CDP 端口）
     layer: L2
+    domain: browser
+    authority: overlap
     interfaces: [browser, chrome, cdp, playwright, isolation]
     entry:
       - "~/.openclaw/data/chrome-profiles/oa-live + CDP http://127.0.0.1:9333"
@@ -633,6 +735,7 @@ capabilities:
   - id: github-credential
     name: GitHub 凭据链路与自检
     layer: L2
+    authority: authoritative
     interfaces: [github, credential, token, gh, git]
     entry:
       - "python3 L2-infra/components/credentials/github_credential_sync.py"
@@ -645,6 +748,7 @@ capabilities:
   - id: skill-dag-orchestrator
     name: DAG 工作流编排器（skill）
     layer: L2
+    authority: authoritative
     interfaces: [dag, workflow, orchestrator, skill]
     entry:
       - "L2-infra/skills/dag-orchestrator/SKILL.md"
@@ -655,6 +759,7 @@ capabilities:
   - id: skill-meeting-minutes
     name: 会议纪要（skill）
     layer: L2
+    authority: authoritative
     interfaces: [meeting, minutes, transcript, skill]
     entry:
       - "L2-infra/skills/meeting-minutes/SKILL.md"
@@ -664,6 +769,7 @@ capabilities:
   - id: skill-model-scheduling
     name: 模型调度（skill）
     layer: L2
+    authority: authoritative
     interfaces: [model, scheduling, skill]
     entry:
       - "L2-infra/skills/model-scheduling/SKILL.md"
@@ -672,6 +778,7 @@ capabilities:
   - id: skill-ocr-digitalization
     name: OCR 数字化（skill）
     layer: L2
+    authority: authoritative
     interfaces: [ocr, digitize, skill]
     entry:
       - "L2-infra/skills/ocr-digitalization/SKILL.md"
@@ -680,6 +787,7 @@ capabilities:
   - id: skill-ontology-identity-gate
     name: 本体身份门禁（skill）
     layer: L2
+    authority: authoritative
     interfaces: [ontology, identity, gate, hmac, skill]
     entry:
       - "L2-infra/skills/ontology-identity-gate/SKILL.md"
@@ -688,6 +796,7 @@ capabilities:
   - id: skill-pdf-toolkit
     name: PDF 工具箱（skill）
     layer: L2
+    authority: authoritative
     interfaces: [pdf, merge, split, rotate, skill]
     entry:
       - "python3 L2-infra/skills/pdf-toolkit/scripts/pdf_ops.py merge a.pdf b.pdf -o out.pdf"
@@ -697,6 +806,7 @@ capabilities:
   - id: skill-role-library
     name: 角色库（skill）
     layer: L2
+    authority: authoritative
     interfaces: [role, library, skill]
     entry:
       - "L2-infra/skills/role-library/SKILL.md"
@@ -705,6 +815,7 @@ capabilities:
   - id: skill-system-governor
     name: 系统治理（skill）
     layer: L2
+    authority: authoritative
     interfaces: [governor, audit, skill]
     entry:
       - "L2-infra/skills/system-governor/SKILL.md"
@@ -713,6 +824,7 @@ capabilities:
   - id: skill-system-health-check
     name: 系统健康检查（skill）
     layer: L2
+    authority: authoritative
     interfaces: [health, check, system, skill]
     entry:
       - "python3 L2-infra/skills/system-health-check/scripts/health_check.py"
@@ -724,6 +836,7 @@ capabilities:
   - id: skill-web-ui-design
     name: Web UI 设计（skill）
     layer: L2
+    authority: authoritative
     interfaces: [web, ui, design, skill]
     entry:
       - "L2-infra/skills/web-ui-design/SKILL.md"
@@ -733,6 +846,8 @@ capabilities:
   - id: skill-bangcle-customer-profile
     name: 客户画像（skill）
     layer: L3
+    domain: project
+    authority: overlap
     interfaces: [customer, profile, skill]
     entry:
       - "L3-business/skills/bangcle-customer-profile/SKILL.md"
@@ -741,6 +856,8 @@ capabilities:
   - id: skill-bangcle-obligation-summary
     name: 履约义务汇总（skill）
     layer: L3
+    domain: project
+    authority: overlap
     interfaces: [obligation, summary, skill]
     entry:
       - "L3-business/skills/bangcle-obligation-summary/SKILL.md"
@@ -749,6 +866,8 @@ capabilities:
   - id: skill-bangcle-project-report
     name: 项目汇报材料（skill）
     layer: L3
+    domain: project
+    authority: overlap
     interfaces: [project, report, skill]
     entry:
       - "L3-business/skills/bangcle-project-report/SKILL.md"
@@ -758,6 +877,8 @@ capabilities:
   - id: skill-bangcle-project-retrospective
     name: 项目复盘（skill）
     layer: L3
+    domain: project
+    authority: overlap
     interfaces: [project, retrospective, skill]
     entry:
       - "L3-business/skills/bangcle-project-retrospective/SKILL.md"
@@ -766,6 +887,7 @@ capabilities:
   - id: skill-customer-rectification-report
     name: 客户整改报告（项目复盘与整改报告 Word 正式件，skill）
     layer: L3
+    authority: authoritative
     interfaces: [project, rectification, report, word, skill]
     entry:
       - "L3-business/skills/customer-rectification-report/SKILL.md"
@@ -777,6 +899,8 @@ capabilities:
   - id: skill-bangcle-project-summary
     name: 项目信息汇总（skill）
     layer: L3
+    domain: project
+    authority: overlap
     interfaces: [project, summary, skill]
     entry:
       - "L3-business/skills/bangcle-project-summary/SKILL.md"
@@ -785,6 +909,8 @@ capabilities:
   - id: skill-contract-approval
     name: 合同审批（skill）
     layer: L3
+    domain: contract
+    authority: overlap
     interfaces: [contract, approval, skill]
     entry:
       - "L3-business/skills/contract-approval/SKILL.md"
@@ -795,6 +921,7 @@ capabilities:
   - id: skill-bangcle-ppt
     name: Bangcle PPT 模板（skill）
     layer: L4
+    authority: authoritative
     interfaces: [ppt, template, skill]
     entry:
       - "L4-proprietary/skills/bangcle-ppt/SKILL.md"
@@ -803,6 +930,8 @@ capabilities:
   - id: skill-bangcle-project-manager-expert
     name: 项目管理专家（skill，统一入口）
     layer: L4
+    domain: project
+    authority: overlap
     interfaces: [project, manager, expert, skill, router]
     entry:
       - "L4-proprietary/skills/bangcle-project-manager-expert/SKILL.md"
@@ -812,6 +941,8 @@ capabilities:
   - id: skill-bdms-revenue-forecast
     name: BDMS 确收预算预测（skill）
     layer: L4
+    domain: finance
+    authority: overlap
     interfaces: [bdms, revenue, forecast, skill]
     entry:
       - "L4-proprietary/skills/bdms-revenue-forecast/SKILL.md"
@@ -820,6 +951,8 @@ capabilities:
   - id: skill-bdms-web-ui-design
     name: BDMS Web UI 设计（skill）
     layer: L4
+    domain: finance
+    authority: overlap
     interfaces: [bdms, web, ui, design, skill]
     entry:
       - "L4-proprietary/skills/bdms-web-ui-design/SKILL.md"
@@ -828,6 +961,8 @@ capabilities:
   - id: skill-contract-manager-expert
     name: 合同管理专家（skill，统一入口）
     layer: L4
+    domain: contract
+    authority: overlap
     interfaces: [contract, manager, expert, skill, router]
     entry:
       - "L4-proprietary/skills/contract-manager-expert/SKILL.md"
@@ -837,6 +972,8 @@ capabilities:
   - id: skill-customer-delivery-intelligence
     name: 客户交付智能（skill，统一入口）
     layer: L4
+    domain: project
+    authority: overlap
     interfaces: [cdi, delivery, intelligence, skill, router]
     entry:
       - "L4-proprietary/skills/customer-delivery-intelligence/SKILL.md"
@@ -845,6 +982,8 @@ capabilities:
   - id: skill-fin-l4
     name: 家庭理财 FIN-L4（skill）
     layer: L4
+    domain: finance
+    authority: overlap
     interfaces: [fin, finance, skill]
     entry:
       - "L4-proprietary/skills/fin-l4/SKILL.md"
@@ -853,6 +992,7 @@ capabilities:
   - id: skill-ones-browser-export
     name: ONES 浏览器导出（skill）
     layer: L4
+    authority: authoritative
     interfaces: [ones, export, browser, skill]
     entry:
       - "L4-proprietary/skills/ones-browser-export/SKILL.md"
@@ -862,6 +1002,7 @@ capabilities:
   - id: skill-wecomcli-contact
     name: 企业微信通讯录查询（skill）
     layer: L4
+    authority: authoritative
     interfaces: [wecom, contact, 通讯录, department, org, skill]
     entry:
       - "python3 L4-proprietary/skills/wecomcli-contact/scripts/wecom_contact.py --name <姓名>"
@@ -872,6 +1013,8 @@ capabilities:
   - id: skill-product-kb
     name: 产品知识库（skill）
     layer: L4
+    domain: product
+    authority: overlap
     interfaces: [product, kb, skill]
     entry:
       - "L4-proprietary/skills/product-kb/SKILL.md"
@@ -880,6 +1023,8 @@ capabilities:
   - id: skill-product-manager-expert
     name: 产品管理专家（skill，统一入口）
     layer: L4
+    domain: product
+    authority: overlap
     interfaces: [product, manager, expert, skill, router]
     entry:
       - "L4-proprietary/skills/product-manager-expert/SKILL.md"

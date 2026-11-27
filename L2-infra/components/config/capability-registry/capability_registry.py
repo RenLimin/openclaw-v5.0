@@ -63,6 +63,28 @@ class Capability:
     health: list[str] = field(default_factory=list)
     # 新增资产强制要求 health 探针；确无稳定入口时填豁免理由（可审计，不得留空绕过）。
     health_exempt: str = ""
+    # 能力域（domain）：同域存在多个入口时用于**权威性仲裁**。
+    # 空字符串 = 未声明域（不参与重叠判定；P7 只统计声明了域的条目）。
+    domain: str = ""
+    # 权威性（authority）：
+    #   authoritative — 该域的权威入口（默认，缺省/非法值均归一化到此）
+    #   overlap       — 同域次要入口，查询时降权并指向权威 id
+    #   deprecated    — 已被取代（被取代物已物理删除的 supersedes 条目）
+    authority: str = "authoritative"
+
+
+# 合法 authority 取值；加载时非法/缺失一律归一化为 authoritative（fail-safe：
+# 新字段缺失不得让既有条目变成「次要入口」而把权威入口挤出首屏）。
+AUTHORITY_VALUES = ("authoritative", "overlap", "deprecated")
+
+
+def _normalize_authority(value: object) -> str:
+    s = str(value or "").strip().lower()
+    return s if s in AUTHORITY_VALUES else "authoritative"
+
+
+def _normalize_domain(value: object) -> str:
+    return str(value or "").strip()
 
 
 @dataclass
@@ -82,8 +104,14 @@ def load_registry(path: Path = REGISTRY) -> Registry:
     if not path.is_file():
         sys.exit(f"注册表不存在: {path}")
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    caps = [Capability(**{k: v for k, v in c.items() if k in Capability.__dataclass_fields__})
-            for c in raw.get("capabilities", [])]
+    fields = Capability.__dataclass_fields__
+    caps = []
+    for c in raw.get("capabilities", []):
+        d = {k: v for k, v in c.items() if k in fields}
+        # 容错：缺省/非法 authority → authoritative；domain 统一为去空字符串。
+        d["authority"] = _normalize_authority(d.get("authority"))
+        d["domain"] = _normalize_domain(d.get("domain"))
+        caps.append(Capability(**d))
     return Registry(
         version=int(raw.get("version", 0)),
         updated=str(raw.get("updated", "")),
@@ -130,8 +158,8 @@ def query(reg: Registry, term: str) -> list[tuple[int, Capability]]:
     return sorted([x for x in scored if x[0] > 0], key=lambda x: -x[0])
 
 
-def render_cap(cap: Capability, verbose: bool = False) -> str:
-    lines = [f"[{cap.layer}] {cap.id} — {cap.name}"]
+def render_cap(cap: Capability, verbose: bool = False, annotation: str = "") -> str:
+    lines = [f"[{cap.layer}] {cap.id} — {cap.name}{annotation}"]
     for e in cap.entry:
         lines.append(f"    入口: {e}")
     if cap.ssot:
@@ -144,6 +172,8 @@ def render_cap(cap: Capability, verbose: bool = False) -> str:
         lines.append(f"    说明: {cap.notes}")
     if verbose and cap.supersedes:
         lines.append(f"    已取代: {', '.join(Path(p).name for p in cap.supersedes)}")
+    if verbose and cap.domain:
+        lines.append(f"    能力域: {cap.domain}  权威: {cap.authority}")
     return "\n".join(lines)
 
 
@@ -230,16 +260,55 @@ def detect_duplicates(reg: Registry, files: list[str]) -> list[dict]:
 
 # -----------------------------------------------------------
 
+def rank_query_hits(results: list[tuple[int, Capability]]) -> tuple[list[tuple[int, Capability]], dict[str, str]]:
+    """按能力域做权威性仲裁排序。
+
+    规则：同一 domain 命中 ≥2 条且其中存在 authoritative 条目时，
+    非 authoritative（overlap/deprecated）条目一律降权排后，并返回
+    {能力 id: 权威 id} 映射供渲染标注 `[overlap→权威:<id>]`。
+    无 domain 或同域仅 1 条命中 → 原序返回（向后兼容）。
+    """
+    by_domain: dict[str, list[Capability]] = {}
+    for _, cap in results:
+        if cap.domain:
+            by_domain.setdefault(cap.domain, []).append(cap)
+    demoted: dict[str, str] = {}
+    for dom_caps in by_domain.values():
+        if len(dom_caps) < 2:
+            continue
+        auths = [c for c in dom_caps if c.authority == "authoritative"]
+        if not auths:
+            continue  # 无权威条目 → 无从标注，保持原序
+        auth = auths[0]
+        for c in dom_caps:
+            if c is not auth and c.authority != "authoritative":
+                demoted[c.id] = auth.id
+    if not demoted:
+        return results, {}
+    ordered = sorted(results, key=lambda x: (1 if x[1].id in demoted else 0, -x[0]))
+    return ordered, demoted
+
+
 def cmd_query(args, reg: Registry) -> int:
     results = query(reg, args.query)
+    strict = bool(getattr(args, "strict", False))
+    if strict:
+        results = [x for x in results if x[1].authority == "authoritative"]
+    results, demoted = rank_query_hits(results)
     if not results:
-        print(f"未命中能力: {args.query}")
-        print("提示: 先跑 `--list` 看全量；确认能力缺失后才允许新建。")
+        if strict:
+            print(f"未命中 authoritative 能力: {args.query}")
+            print("提示: 去掉 --strict 可查看同域次要入口（overlap/deprecated）。")
+        else:
+            print(f"未命中能力: {args.query}")
+            print("提示: 先跑 `--list` 看全量；确认能力缺失后才允许新建。")
         return 1
-    print(f"命中 {len(results)} 个能力 — {args.query}")
+    mode = "（--strict 仅 authoritative）" if strict else ""
+    print(f"命中 {len(results)} 个能力 — {args.query}{mode}")
     print()
     for score, cap in results:
-        print(render_cap(cap, verbose=args.verbose))
+        note = f"  [overlap→权威:{demoted[cap.id]}]" if cap.id in demoted else ""
+        print(render_cap(cap, verbose=args.verbose, annotation=note))
         print()
     return 0
 
@@ -687,6 +756,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--skip-health", action="store_true", help="配合 --validate：跳过 health 探针（仅验路径）")
     ap.add_argument("--staged", action="store_true", help="只扫暂存区（配 pre-commit）")
     ap.add_argument("--all", action="store_true", help="扫全部高危目录")
+    ap.add_argument("--strict", action="store_true",
+                    help="配合 --query：只返回 authoritative 条目（过滤 overlap/deprecated）")
     ap.add_argument("--verbose", "-v", action="store_true", help="显示说明/入口细节")
     ap.add_argument("--json", action="store_true", help="结构化输出（--query/--list 时生效）")
     args = ap.parse_args(argv)
@@ -695,6 +766,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.query:
         results = query(reg, args.query)
+        if getattr(args, "strict", False):
+            results = [x for x in results if x[1].authority == "authoritative"]
+        results, _demoted = rank_query_hits(results)
         if args.json:
             print(json.dumps([asdict(c) for _, c in results], ensure_ascii=False, indent=2))
             return 0 if results else 1
