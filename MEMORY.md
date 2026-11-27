@@ -61,3 +61,72 @@
 - 2026-09-15：BDMS v2.1 全量交付 · 验收 7 步法
 - 2026-08-23：全盘 review + 14 项修复 · 二轮 review + 9 项修复
 - 2026-08-24：压缩失效根因 · sticky 隔离 · 火山 embedding 结案
+
+## Dreaming 晋升（自动 · memory-promotion-gate）
+
+<!-- dream-promoted: 155fdfb996d5 -->
+- reference_data 表设计: `variance_reason`（8 条）：确收差异原因枚举  (evidence: memory/2026-09-14.md:42-42; recalls=0; score=0.3269)
+<!-- dream-promoted: 105e40412ee2 -->
+- 关键决策: **图例数据**：项目经理/偏差状态/验收原因/预算进度/团队/产线 → 全部存入 reference_data 表  (evidence: memory/2026-09-14.md:32-32; recalls=0; score=0.3269)
+<!-- dream-promoted: 0182aef68e82 -->
+- 已修复项确认（本次会话）: ✅ 架构文档同步：00/01/02/03 全部更新到最新状态  (evidence: memory/2026-09-17.md:23-23; recalls=0; score=0.3269)
+<!-- dream-promoted: 0e729f8bebd3 -->
+- 13:00-13:05 model-scoding health_check 修复 ★★: **修复 2**：lite 模型优先探测（chat completions 兼容性最好）  (evidence: memory/2026-09-17.md:6-6; recalls=0; score=0.3269)
+<!-- dream-promoted: ef8b68c30a8e -->
+- 已修复项确认（本次会话）: ✅ ~/.openclaw/ 根目录清理：备份归档 + 3.7GB tmp 清空  (evidence: memory/2026-09-17.md:24-24; recalls=0; score=0.3269)
+<!-- dream-promoted: 069ff1336ba4 -->
+- 关键上下文: 现有 Base 层代码：`modules/base.py`（已实现 BaseEngine/BaseService/BaseExporter，缺 BaseImporter）  (evidence: memory/2026-09-19.md:22-22; recalls=0; score=0.3269)
+<!-- dream-promoted: 0009340a0e0c -->
+- 待完成: Step 5：确收 Excel 导出器（与手工报表格式一致，最耗时）  (evidence: memory/2026-09-18.md:33-33; recalls=0; score=0.3269)
+<!-- dream-promoted: 0b0015d7f163 -->
+- 变更文件: `src/bdms/modules/revenue/service.py` — 更新 `has_data`/`list_months` 从宽表查询  (evidence: memory/2026-09-18.md:27-27; recalls=0; score=0.3269)
+<!-- dream-promoted: 60d11890e231 -->
+- Step 1 + Step 2 已完成（统一持久化 + 确收导入器）: 单位：我方元 / 手工万元（÷10000）  (evidence: memory/2026-09-18.md:20-20; recalls=0; score=0.3269)
+<!-- dream-promoted: 5f815500fb99 -->
+- 02:15 - BDMS v2.1 详细设计文档编制开始: Rex 要求今晚完成所有 BDMS v2.1 详细设计文档的编制，从 Base 层开始。  (evidence: memory/2026-09-19.md:5-5; recalls=0; score=0.3269)
+<!-- dream-promoted: 7e9efd28c60a -->
+- 模板对齐工作: Rex 16:41 要求"补模板对齐"。6 份旧模板文档（AFTER-SALES / BASE / CONTRACT-MANAGEMENT / DELIVERY-REPORT / KNOWLEDGE-BASE / PROJECT-MANAGEMENT）缺少统一章节结构，已全部补齐：  (evidence: memory/2026-09-19.md:54-54; recalls=0; score=0.3269)
+<!-- dream-promoted: 936487f444ce -->
+- 关键决策: 企微文档 → 本机路径 + API 预留  (evidence: memory/2026-09-20.md:22-22; recalls=0; score=0.3269)
+<!-- dream-promoted: 1ca159660b49 -->
+- 审核进度: ✅ PROJECT-MANAGEMENT — 通过（4 点确认：+ChangeManagementEngine / +ProjectFinancialService / 合同关联不囊括 / 业界对比）  (evidence: memory/2026-09-20.md:11-11; recalls=0; score=0.3269)
+<!-- dream-promoted: af21d4b57073 -->
+- 关键决策: ONES/OA/工时 → 全部浏览器自动化  (evidence: memory/2026-09-20.md:21-21; recalls=0; score=0.3269)
+<!-- dream-promoted: fac915579bb1 -->
+- 审核进度: ✅ DATA-MODEL — 通过（4 点建议已补：表类型分类 / 分片策略 / 报表配置表 / 业界对比）  (evidence: memory/2026-09-20.md:9-9; recalls=0; score=0.3269)
+<!-- dream-promoted: 769a5729a55d -->
+- L3 健康管理与理财引擎 五件套文档补齐 ★★: 6 大领域：profile / checkup / metrics / medication / risk_assessment / health_plan  (evidence: memory/2026-09-30.md:15-15; recalls=0; score=0.3269)
+<!-- dream-promoted: 98498f93ca13 -->
+- L3 健康管理与理财引擎 五件套文档补齐 ★★: 风险等级 5 级，风险类型 13 种  (evidence: memory/2026-09-30.md:19-19; recalls=0; score=0.3269)
+<!-- dream-promoted: 8ca6a868295f -->
+- L3 健康管理与理财引擎 五件套文档补齐 ★★: 模型：Pydantic v2，TenantModel 基类（id/tenant_id/created_at/updated_at/is_deleted）  (evidence: memory/2026-09-30.md:17-17; recalls=0; score=0.3269)
+<!-- dream-promoted: a0d7674d47e4 -->
+- L3 健康管理与理财引擎 五件套文档补齐 ★★: 用药频次 12 种（qd/bid/tid/qid 等医学缩写）  (evidence: memory/2026-09-30.md:20-20; recalls=0; score=0.3269)
+<!-- dream-promoted: 20eb6a990719 -->
+- 修复（已执行）: fallback 链优化：去掉 `model-scheduling/auto`（减少一层代理），改用 `deepseek-v4-flash` + `doubao-seed-2.0-lite`  (evidence: memory/2026-10-03.md:20-20; recalls=0; score=0.3269)
+<!-- dream-promoted: dbf1a042a966 -->
+- Session: 2026-10-02 21:14:56 Asia/Shanghai: **Session Key**: agent:main:main  (evidence: memory/2026-10-02-2114.md:3-3; recalls=0; score=0.3269)
+<!-- dream-promoted: 6b002dc02960 -->
+- Session: 2026-10-02 21:14:56 Asia/Shanghai: **Session ID**: 1fbbfe45-de4b-43bd-b949-cf73e48f6c52  (evidence: memory/2026-10-02-2114.md:4-4; recalls=0; score=0.3269)
+<!-- dream-promoted: 0d587ac67e50 -->
+- BDMS 清空历史测试数据（人工验收前置）✅: **清空**： > 顺带修复：kb_fts FTS5 表此前已损坏（reading blob 10 corruption），DROP 后按原 schema 重建  (evidence: memory/2026-10-27.md:11-11; recalls=0; score=0.3269)
+<!-- dream-promoted: 2620ec7fd0af -->
+- BDMS 清空历史测试数据（人工验收前置）✅: **清空**：  (evidence: memory/2026-10-27.md:7-7; recalls=0; score=0.3269)
+<!-- dream-promoted: 0b74be48213c -->
+- 任务 3：202606 交付月报浏览器自动化测试 ✅: 企微缓存：revenue_202606.csv + acceptance_202606.csv 已存在  (evidence: memory/2026-10-26.md:18-18; recalls=0; score=0.3269)
+<!-- dream-promoted: a15f433623ff -->
+- BDMS 清空历史测试数据（人工验收前置）✅: **验证**：服务由 tmux 守护脚本自动重启（PID 54516，uvicorn bdms.web.main 127.0.0.1:8000），HTTP 200；`/api/report/months`=[]、`/api/master-data/types`=[]、revenue summary 数值全 0  (evidence: memory/2026-10-27.md:13-13; recalls=0; score=0.3269)
+<!-- dream-promoted: 5c6d3e10f3ba -->
+- BDMS 修复月报生成完成后界面不刷新 + Tab 改名 ✅: **现象**：进度条 100% + toast 生成完成，但状态文字/圆点停在初始未生成态、KPI 全 0  (evidence: memory/2026-10-27.md:18-18; recalls=0; score=0.3269)
+<!-- dream-promoted: 656f5bac60d1 -->
+- 任务 3：202606 交付月报浏览器自动化测试 ✅: **E2E 测试修复**（真异步改造后的新发现）：  (evidence: memory/2026-10-26.md:23-23; recalls=0; score=0.3269)
+<!-- dream-promoted: 1ae7436cce67 -->
+- 任务 1：pytest collect error 排查 ✅: **修复**：`git mv tests/visual/test_dashboard.py tests/visual/test_visual_dashboard.py`，331 tests collected 0 error  (evidence: memory/2026-10-26.md:7-7; recalls=0; score=0.3269)
+<!-- dream-promoted: 1f48079d7e8d -->
+- 任务 1：pytest collect error 排查 ✅: **根因**：`tests/visual/test_dashboard.py` 与 `tests/test_dashboard.py` 同名模块冲突（pytest import file mismatch），visual 测试子目录 basename 撞名  (evidence: memory/2026-10-26.md:6-6; recalls=0; score=0.3269)
+<!-- dream-promoted: 26c46cea4899 -->
+- 任务 3：202606 交付月报浏览器自动化测试 ✅: **数据链路重建**（清空后）：  (evidence: memory/2026-10-26.md:16-16; recalls=0; score=0.3269)
+<!-- dream-promoted: dc24d1e73abe -->
+- Session: 2026-10-26 15:34:38 Asia/Shanghai: **Source**: webchat  (evidence: memory/2026-10-26-1534.md:5-5; recalls=0; score=0.3269)
+<!-- dream-promoted: 35c6490df89c -->
+- Session: 2026-10-27 20:50:13 Asia/Shanghai: **Session Key**: agent:main:dashboard:b669ddb2-3b01-4583-b4bd-3f8932dc59e9  (evidence: memory/2026-10-27-2050.md:3-3; recalls=0; score=0.3269)
