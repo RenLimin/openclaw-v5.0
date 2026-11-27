@@ -104,3 +104,8 @@ SOUL.md · AGENTS.md · MEMORY.md · docs/knowledge-base/
 - Always 专用 profile 与端口固定：OA/ONES 取数 `~/.openclaw/data/chrome-profiles/oa-live` + `9333`；不得复用 `~/.chrome-cdp-profile`/`~/.chrome-ones-profile` 之外的现有 Chrome。 <!-- observed: 2026-11-19 | status: active -->
 - Prefer 独立实例自带登录态（profile 持久化）；无登录态时用 secrets 凭据 + `iam_auth` 二步验证自动取码（IMAP `imb@bangcle.com`，60s 有效期，需「重新发送」后即时取）。 <!-- observed: 2026-11-19 | status: active -->
 - Always 独立 Chrome 实例**用后自动关闭**（任务收尾即 kill 主进程并确认端口释放），不长期驻留。 <!-- observed: 2026-11-19 | status: active -->
+
+## 提交授权与时机（2026-11-27 Rex 拍板）
+- Always 任务收尾的提交**按既定规则直接执行，不必逐次询问**；仅在「push 到远端」「force/rewrite 历史」「跨仓动他人分支」等不可逆外发动作前才需拍板。 <!-- observed: 2026-11-27 | status: active -->
+- Always 提交仍走隔离临时 index（`GIT_INDEX_FILE` + `update-ref` 旧值守卫），只含本任务文件；共享 `.git/index` 里他线 staged 内容原样不动、不 unstage。 <!-- observed: 2026-11-27 | status: active -->
+- Always 判定真实改动量以 **HEAD→工作树**为准（`git diff` 对的是可能被并行会话污染的共享 index，会误报巨量差异）。 <!-- observed: 2026-11-27 | status: active -->
