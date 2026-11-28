@@ -102,11 +102,14 @@ python3 scripts/kb_index.py --validate  # schema 校验（pre-commit 已集成�
 | [ADR-202608-014](./by-category/project-experience/adr/ADR-202608-014-error-auto-handling.md) | L2 错误自动处理(检测→分级→自愈闭环) | L2 | develop | accepted |
 | [ADR-202608-015](./by-category/project-experience/adr/ADR-202608-015-dynamic-compaction-model-routing.md) | 上下文压缩模型动态路由 —— 解耦 compaction 与静态配置 | L2 | design | accepted |
 | [ADR-202608-016](./by-category/project-experience/adr/ADR-202608-016-office-document-generation.md) | L2 Office 文档生成能力 — Word/Excel/PPT 多库工具链 | L2 | develop | accepted |
+| [ADR-202608-017](./by-category/project-experience/adr/ADR-202608-017-bangcle-ppt-template.md) | 将 Bangcle 官方 PPT 模板注册为 L4 专有业务层组件 | L4 | — | accepted |
 | [ADR-202608-018](./by-category/project-experience/adr/ADR-202608-018-context-management.md) | L2 上下文管理 — 两层压缩防线 + 生命周期治理 | L2 | — | accepted |
 | [ADR-202608-019](./by-category/project-experience/adr/ADR-202608-019-sandbox-isolation.md) | L2 沙箱隔离 — Docker 后端 + 加固基线 | L2 | — | accepted |
 | [ADR-202608-020](./by-category/project-experience/adr/ADR-202608-020-model-scheduling.md) | L2 模型调度 — 智能模型路由 + 多级 fallback | L2 | — | accepted |
 | [ADR-202608-021](./by-category/project-experience/adr/ADR-202608-021-system-backup.md) | L2 系统备份 — 每日自动 Git 备份 + 手动备份 | L2 | — | accepted |
 | [ADR-202608-022](./by-category/project-experience/adr/ADR-202608-022-bdms-delivery-center.md) | L4 BDMS 交付中心运营引擎 — 数据采集 + 业务引擎 + 报告生成 | L4 | — | accepted |
+| [ADR-202609-018](./by-category/project-experience/adr/ADR-202609-018-sales-contract-approval.md) | 销售合同审批模块（SCA-001）建设与层级归属 | L4 | — | accepted |
+| [ADR-202609-023](./by-category/project-experience/adr/ADR-202609-023-ocr-digitalization.md) | L2 OCR 文档数字化组件（OCR-001）建设 | L2 | — | accepted |
 | [ADR-202609-024](./by-category/project-experience/adr/ADR-202609-024-session-isolation-sharing.md) | L2 会话隔离与共享 — 跨会话状态协作机制 | L2 | design | proposed |
 | [ADR-202609-025](./by-category/project-experience/adr/ADR-202609-025-delivery-management-framework.md) | L3 通用交付管理框架设计（DMS-Framework） | L3,L4 | — | accepted |
 | [ADR-202609-026](./by-category/project-experience/adr/ADR-202609-026-personal-finance-framework-L3.md) | L3 家庭及个人理财通用框架（FIN）建设与层级归属 | L3,L4 | — | accepted |
