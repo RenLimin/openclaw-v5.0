@@ -90,6 +90,6 @@ tags: [adr, ocr, document-digitalization, L2, infrastructure, rapidocr, paddleoc
 - [ ] 表格结构还原（PP-Structure）作为演进方向
 
 ## 相关
-- 对偶组件：[ADR-016](./docs/knowledge-base/by-category/project-experience/adr/ADR-202608-016-office-document-generation.md)
-- 上游模块：[ADR-018](./docs/knowledge-base/by-category/project-experience/adr/ADR-202609-018-sales-contract-approval.md) (L4 合同审批)
+- 对偶组件：[ADR-202608-016](ADR-202608-016-office-document-generation.md)
+- 上游模块：[ADR-202609-018](ADR-202609-018-sales-contract-approval.md) (L4 合同审批)
 - 知识库工具链：ADR-010

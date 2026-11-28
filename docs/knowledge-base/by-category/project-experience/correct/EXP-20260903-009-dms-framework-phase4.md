@@ -92,7 +92,7 @@ ModuleRegistry (基类)
 单元测试只能测单个模块，E2E 才能发现"项目取消后子项是不是真的联动了"这种跨模块问题。
 
 ## 参考
-- [EXP-001](EXP-20260903-001-dms-framework-phase1.md)
-- [EXP-002](EXP-20260903-002-dms-framework-phase2.md)
-- [EXP-003](EXP-20260903-003-dms-framework-phase3.md)
-- [ADR-025](../../adr/ADR-202609-025-delivery-management-framework.md)
+- [EXP-20260903-006](EXP-20260903-006-dms-framework-phase1.md)
+- [EXP-20260903-007](EXP-20260903-007-dms-framework-phase2.md)
+- [EXP-20260903-008](EXP-20260903-008-dms-framework-phase3.md)
+- [ADR-025](../adr/ADR-202609-025-delivery-management-framework.md)

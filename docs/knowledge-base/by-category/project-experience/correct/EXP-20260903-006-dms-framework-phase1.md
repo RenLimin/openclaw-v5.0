@@ -67,4 +67,4 @@ Phase 2：5 个通用模块（project/milestone/deliverable/risk/raci）
 
 ## 参考
 - [ADR-025](ADR-202609-025-delivery-management-framework.md)
-- [DESIGN.md](../../../architecture/components/delivery-management-framework/DESIGN.md)
+- [DESIGN.md](../../../../../L3-business/components/delivery-management-framework/DESIGN.md)

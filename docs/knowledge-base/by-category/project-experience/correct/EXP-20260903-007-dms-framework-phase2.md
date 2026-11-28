@@ -82,5 +82,5 @@ Phase 3：知识库（12 能力 + 6 角色 + 8 模板 + 方法论）
 
 ## 参考
 - [ADR-025](ADR-202609-025-delivery-management-framework.md)
-- [DESIGN.md](../../../architecture/components/delivery-management-framework/DESIGN.md)
+- [DESIGN.md](../../../../../L3-business/components/delivery-management-framework/DESIGN.md)
 - [EXP-001](EXP-20260903-001-dms-framework-phase1.md)

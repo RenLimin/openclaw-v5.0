@@ -283,6 +283,11 @@ def validate(docs: list[Doc]) -> int:
                     hard.append(f"{d.path}: 非法 layer `{lay}`（合法: {sorted(VALID_LAYERS)}）")
             if d.stage and d.stage not in VALID_STAGES:
                 hard.append(f"{d.path}: 非法 stage `{d.stage}`（合法: {sorted(VALID_STAGES)}）")
+            # stage 是三维模型字段；业务知识库（有 dimension）用自己的维度体系，不要求 stage
+            # （见本函数上方注释与 quality-standard §2.2 软警告清单）。
+            # 此前该检查写在本分支之外，对 177 份业务文档无条件误报「缺 stage」。
+            if not d.stage:
+                soft.append(f"{d.path}: 缺 stage（三维查询会漏）")
         # 业务知识库（有 dimension）不受三维 category 约束
         if d.dimension:
             pass  # 业务知识库有自己的 frontmatter 规范
@@ -290,8 +295,6 @@ def validate(docs: list[Doc]) -> int:
             hard.append(f"{d.path}: 非法 category `{d.category}`")
         if not d.tags:
             soft.append(f"{d.path}: 无 tags（检索会变差）")
-        if not d.stage:
-            soft.append(f"{d.path}: 缺 stage（三维查询会漏）")
         if d.doc_type in {"adr", "experience"} and not d.status:
             soft.append(f"{d.path}: 缺 status（生命周期不可追踪，资产清单会显示 —）")
 

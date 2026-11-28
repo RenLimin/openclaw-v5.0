@@ -342,7 +342,7 @@ repo.bulk_insert(items)
 
 ### 核心文档
 - [ADR-025 框架设计决策](../adr/ADR-202609-025-delivery-management-framework.md)
-- [DESIGN.md 框架设计文档](../../../../architecture/components/delivery-management-framework/DESIGN.md)
+- [DESIGN.md 框架设计文档](../../../../../L3-business/components/delivery-management-framework/DESIGN.md)
 - [README.md 使用说明](L3-business/components/delivery-management-framework/README.md)
 
 ### 能力卡片

@@ -4,7 +4,7 @@
 > 生成器：`scripts/gen_asset_inventory.py` · 触发：git pre-commit hook
 > 手动重生成：`python3 scripts/gen_asset_inventory.py`
 
-最后生成：2026-11-27 17:48 UTC+08:00
+最后生成：2026-11-28 20:04 UTC+08:00
 
 本清单是 [系统架构文档](./00-system-architecture.md) 的附件，按 4 层架构组织（层级定义见 [ADR-202608-001](../knowledge-base/by-category/project-experience/adr/ADR-202608-001-four-layer-architecture.md)）。
 
@@ -321,8 +321,8 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | 项 | 值 |
 |---|---|
 | Remote | https://github.com/RenLimin/openclaw-v5.0.git |
-| HEAD | `1444542` |
-| Commit 数 | 820 |
+| HEAD | `3cca55d` |
+| Commit 数 | 822 |
 
 **不入版本控制**（见 `.gitignore`）：`MEMORY.md` · `memory/` · `skills/` · `business/*/logs/`
 
@@ -344,7 +344,7 @@ _自建技能总计: 28 个（L2: 10, L3: 7, L4: 11, 根目录: 0）_
 | `credentials` | 6 | 0 | 3 | `L2-infra/components/credentials` |
 | `delivery-quality` | 2 | 0 | 0 | `L2-infra/components/delivery-quality` |
 | `gateway-safety` | 4 | 0 | 1 | `L2-infra/components/gateway-safety` |
-| `knowledge-base` | 20 | 0 | 7 | `L2-infra/components/knowledge-base` |
+| `knowledge-base` | 21 | 0 | 8 | `L2-infra/components/knowledge-base` |
 | `logs` | 3 | 0 | 0 | `L2-infra/components/logs` |
 | `maintenance` | 3 | 0 | 1 | `L2-infra/components/maintenance` |
 | `memory-embedding` | 3 | 0 | 1 | `L2-infra/components/memory-embedding` |

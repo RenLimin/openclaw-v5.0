@@ -121,8 +121,8 @@ deliverable 的 create 输出格式跟其他模块不同（ID 和状态在同一
 - API 层：FastAPI 封装，支持 HTTP 调用
 
 ## 参考
-- [EXP-001](EXP-20260903-001-dms-framework-phase1.md)
-- [EXP-002](EXP-20260903-002-dms-framework-phase2.md)
-- [EXP-003](EXP-20260903-003-dms-framework-phase3.md)
-- [EXP-004](EXP-20260903-004-dms-framework-phase4.md)
-- [ADR-025](../../adr/ADR-202609-025-delivery-management-framework.md)
+- [EXP-20260903-006](EXP-20260903-006-dms-framework-phase1.md)
+- [EXP-20260903-007](EXP-20260903-007-dms-framework-phase2.md)
+- [EXP-20260903-008](EXP-20260903-008-dms-framework-phase3.md)
+- [EXP-20260903-009](EXP-20260903-009-dms-framework-phase4.md)
+- [ADR-025](../adr/ADR-202609-025-delivery-management-framework.md)

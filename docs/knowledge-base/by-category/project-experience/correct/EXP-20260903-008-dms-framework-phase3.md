@@ -59,4 +59,4 @@ Phase 4：端到端框架验证，用一个示例交付项目跑通全流程。
 ## 参考
 - [EXP-001](EXP-20260903-001-dms-framework-phase1.md)
 - [EXP-002](EXP-20260903-002-dms-framework-phase2.md)
-- [ADR-025](../../adr/ADR-202609-025-delivery-management-framework.md)
+- [ADR-025](../adr/ADR-202609-025-delivery-management-framework.md)
