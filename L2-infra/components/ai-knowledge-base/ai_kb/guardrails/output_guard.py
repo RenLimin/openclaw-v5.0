@@ -29,12 +29,21 @@ if TYPE_CHECKING:  # 避免与 ai_kb.ontology 包 __init__ 形成循环导入
 Violation = Dict[str, Any]
 
 
+_UNRESOLVED = object()  # $ref 解析失败哨兵（不可与任何真实 schema 混淆）
+
+
 class _MiniJSONSchema:
     """最小 JSON Schema 校验器（不引第三方依赖）。
 
-    覆盖本期 params_schema 用到的关键字：type / required / properties /
-    items / enum / minimum / maximum / minLength / maxLength /
-    additionalProperties。够用即止，不追求完整草案。
+    覆盖：type / required / properties / items / enum / minimum / maximum /
+    minLength / maxLength / additionalProperties，以及 P4 遗留待扩展的组合
+    关键字 $ref（本地 `#/definitions/...`、`#/$defs/...` 指针）/ oneOf /
+    anyOf / allOf / not。定位仍是「够用即止」，非完整草案实现。
+
+    约定：
+    - ``$ref`` 命中时**取代**同层兄弟关键字（经典 draft-07 语义），避免歧义；
+    - 布尔 schema（``True`` / ``False``）按 draft-06+ 语义处理；
+    - 嵌套深度上限 ``_MAX_DEPTH``，防 ``$ref`` 自引用导致的无限递归。
     """
 
     _TYPE_MAP = {
@@ -46,11 +55,37 @@ class _MiniJSONSchema:
         "boolean": bool,
         "null": type(None),
     }
+    _MAX_DEPTH = 32
 
-    def validate(self, instance: Any, schema: Dict[str, Any], path: str = "$") -> List[str]:
-        errors: List[str] = []
+    def validate(
+        self,
+        instance: Any,
+        schema: Any,
+        path: str = "$",
+        *,
+        _root: Any = None,
+        _depth: int = 0,
+    ) -> List[str]:
+        if schema is True:
+            return []
+        if schema is False:
+            return [f"{path}: schema is false (always invalid)"]
         if not isinstance(schema, dict):
-            return errors
+            return []
+        if _depth > self._MAX_DEPTH:
+            return [f"{path}: schema nesting exceeds {self._MAX_DEPTH} levels "
+                    f"(possible $ref cycle)"]
+        if _root is None:
+            _root = schema
+
+        ref = schema.get("$ref")
+        if isinstance(ref, str):
+            target = self._resolve_ref(_root, ref)
+            if target is _UNRESOLVED:
+                return [f"{path}: cannot resolve $ref {ref!r}"]
+            return self.validate(instance, target, path, _root=_root, _depth=_depth + 1)
+
+        errors: List[str] = self._validate_combinators(instance, schema, path, _root, _depth)
 
         expected = schema.get("type")
         if expected is not None:
@@ -83,16 +118,76 @@ class _MiniJSONSchema:
             properties = schema.get("properties", {})
             for key, value in instance.items():
                 if key in properties:
-                    errors.extend(self.validate(value, properties[key], f"{path}.{key}"))
+                    errors.extend(self.validate(
+                        value, properties[key], f"{path}.{key}",
+                        _root=_root, _depth=_depth + 1))
                 elif schema.get("additionalProperties") is False:
                     errors.append(f"{path}: additional property {key!r} not allowed")
 
         if isinstance(instance, list) and "items" in schema:
             item_schema = schema["items"]
             for idx, item in enumerate(instance):
-                errors.extend(self.validate(item, item_schema, f"{path}[{idx}]"))
+                errors.extend(self.validate(
+                    item, item_schema, f"{path}[{idx}]",
+                    _root=_root, _depth=_depth + 1))
 
         return errors
+
+    def _validate_combinators(
+        self, instance: Any, schema: Dict[str, Any], path: str, _root: Any, _depth: int
+    ) -> List[str]:
+        """组合关键字：allOf（全部满足）/ anyOf（至少一）/ oneOf（恰好一）/ not（均不满足）。"""
+        errors: List[str] = []
+        for keyword in ("allOf", "anyOf", "oneOf"):
+            subs = schema.get(keyword)
+            if not isinstance(subs, list):
+                continue
+            branch_errors = [
+                self.validate(instance, s, path, _root=_root, _depth=_depth + 1)
+                for s in subs
+            ]
+            if keyword == "allOf":
+                for errs in branch_errors:
+                    errors.extend(errs)
+            elif keyword == "anyOf":
+                if subs and not any(not e for e in branch_errors):
+                    errors.append(f"{path}: matches none of anyOf ({len(subs)} branches)")
+            else:  # oneOf
+                matched = sum(1 for e in branch_errors if not e)
+                if subs and matched != 1:
+                    errors.append(
+                        f"{path}: oneOf matched {matched} branches (expected exactly 1)")
+        not_schema = schema.get("not")
+        if isinstance(not_schema, (dict, bool)):
+            if not self.validate(
+                instance, not_schema, path, _root=_root, _depth=_depth + 1
+            ):
+                errors.append(f"{path}: matches 'not' schema (must not match)")
+        return errors
+
+    @staticmethod
+    def _resolve_ref(root: Any, ref: str) -> Any:
+        """解析本地 JSON Pointer 引用（``#/definitions/x`` / ``#/$defs/x``）。
+
+        仅支持 ``#`` 开头的内部指针；跨文件/URL 引用返回 ``_UNRESOLVED``（fail-closed）。
+        """
+        if not ref.startswith("#"):
+            return _UNRESOLVED
+        pointer = ref[1:]
+        if pointer == "":
+            return root
+        if not pointer.startswith("/"):
+            return _UNRESOLVED
+        node = root
+        for raw in pointer.split("/")[1:]:
+            token = raw.replace("~1", "/").replace("~0", "~")
+            if isinstance(node, dict) and token in node:
+                node = node[token]
+            elif isinstance(node, list) and token.isdigit() and int(token) < len(node):
+                node = node[int(token)]
+            else:
+                return _UNRESOLVED
+        return node
 
     @staticmethod
     def _match_type(instance: Any, type_name: str) -> bool:

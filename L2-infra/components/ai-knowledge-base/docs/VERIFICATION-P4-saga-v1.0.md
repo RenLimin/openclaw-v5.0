@@ -56,4 +56,10 @@ python3 -m pytest tests/ tests/integration/ -q
 2. `ont_writeback_step.payload_schema` 目前仅存储，未做运行时 payload 校验
    （连接器自行处理；如需 L2 强校验可后补）。
 3. JSON Schema 校验器仍为最小实现（复杂关键字 $ref/oneOf 待扩展，P3 遗留）。
+   → **2026-11-28 收口**（组件内自迭代，未改 DESIGN/契约）：`_MiniJSONSchema` 现支持
+     `$ref`（本地 `#/definitions/*`、`#/$defs/*` JSON Pointer）/ `oneOf` / `anyOf` / `allOf` /
+     `not` / 布尔 schema，并加嵌套深度上限防 `$ref` 自引用死循环；跨文件与 URL `$ref`
+     不支持时 fail-closed（报 cannot resolve，不静默放行）。回归证据：
+     `tests/test_mini_json_schema.py` 12 例通过；组件全量 `tests/ + tests/integration/`
+     187 passed。仍非完整草案实现，定位不变。
 4. handler 进程内执行未做子进程沙箱（详设 O3，风险由 L3/L4 实例评估）。
