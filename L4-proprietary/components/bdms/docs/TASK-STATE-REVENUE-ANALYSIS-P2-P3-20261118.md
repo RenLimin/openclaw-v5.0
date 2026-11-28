@@ -146,6 +146,34 @@ engine 新增 `persist/load/list_ledger_snapshot`：ra_snapshot (period, snapsho
 4. 生产库 202605 导入与正式 uvicorn 重启（按运维流程）
 
 
+### 4.5.3 切片6（BQ 落库 + 信号装载接线）+ P7 预测模型（2026-11-28）
+
+**切片6：§3.5/§3.6 信号装载与 BQ 落库接线**
+
+锁定三处实证缺口（实测 2026-11-27）：① `apply_bucket_rules` 硬编码只判 BU → `ra_bucket.budget_fill` 恒空、API `budget_fill_dist` 恒报「(空)」；② `compute()` 不传 OA/ONES 信号 → ②③④ 桶永远 fail-closed、`missing_signals` 恒含两键；③ `_resolve_ones_export` 单月回退 → 202606 的 634 行新签合同被假阴性为「无法匹配」。
+
+| 层 | 落地 |
+|---|---|
+| engine | 新增 `load_bucket_signals(period)`（OA `oa_contracts` 按 htbh 去重 / ONES 周报 CSV 按销售合同编号去重，O(n) 建字典，fail-closed）；`apply_bucket_rules` 增 `column` 参数，`save_bucket_entry` 按列写 BU→`bucket_source`、BQ→`budget_fill_source`（双列溯源互不覆盖） |
+| schema | `ra_bucket` 增 `budget_fill_source`（`_migrate_columns` 迁移 + v2.1 DDL） |
+| 口径 | BQ 继承优先级与 BU 一致（人工改判 > 跨期继承 > 规则）；修 `compute()` 落库顺序后写者覆盖先写者的溯源丢失 |
+
+**P7：Q8 年度目标 + 预测模型（IMPLEMENTATION-PLAN §10）**
+
+新建 `forecast_engine.py`：复用 `CaliberBuilder`（双口径单一事实源）与 `ra_bucket`，产出锁定/动态 + future 桶 + 实际达成 + 差距 + 四类风险清单（manual_review / missing_signals / contract_disappear / caliber_gap）。单位红线：caliber 为元、对外统一万元，边界一次性换算。服务 `forecast()` fail-closed 空结构；CLI `revenue-analysis forecast`；Web `GET /revenue-analysis/forecast/{period}`。
+
+**复用判定**：仓库已有 `modules/revenue_forecast/`（v1.0，输入 ObligationRow 物理列解析，不消费 ra_caliber/ra_bucket，无 future 桶/年度目标语义）——输入契约不同不可直接复用，仅复用其 CaliberBuilder；合并须单独立项做接口兼容评审。
+
+**回归证据（真实运行）**
+- 新增单测：`test_revenue_analysis_p7_forecast.py` 19 + `test_revenue_analysis_p3_slice6_wiring.py` 11 → **30 passed in 70.96s**
+- RA 全量回归（`-k revenue_analysis`）：**157 passed / 454 deselected in 1345.37s**（含真实源集成锚点 202606/202609 零差异）
+- CLI 真实链路：`forecast 202609` 空库 fail-closed `{has_data:false, risks:[]}` exit=0；`annual-targets` exit=0
+
+**遗留（非阻塞）**
+1. §3.3「之前年度已确收」Rex 未给规则 → BQ 侧该桶仍留空人工
+2. 生产库 202605 导入与正式 uvicorn 重启（按运维流程）
+3. `ra_annual_target` 已支持 2026 目标；2027 并存待业务填值
+
 ---
 
 ## 5. 验证命令（恢复后先跑）

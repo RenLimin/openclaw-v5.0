@@ -859,6 +859,18 @@ async def ra_buckets(period: str):
         raise HTTPException(500, str(e))
 
 
+@router.get("/revenue-analysis/forecast/{period}")
+async def ra_forecast(period: str):
+    """P7 预测快照（DESIGN v1.1 §8.3）：双口径 + future 桶 + 实际 + 差距 + 风险清单。"""
+    from bdms.modules.revenue_analysis.service import RevenueAnalysisService
+    try:
+        return RevenueAnalysisService().forecast(normalize_month(period))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
 @router.get("/revenue-analysis/annual-targets")
 async def ra_annual_targets():
     """Q8 年度目标列表（人工维护）。"""

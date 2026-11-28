@@ -251,7 +251,8 @@ class RevenueAnalysisService(BaseService):
         try:
             rows = conn.execute(
                 """SELECT perf_id, budget_fill, budget_trend, bucket_source,
-                          matched_oa, matched_ones, week_status, created_at
+                          budget_fill_source, matched_oa, matched_ones,
+                          week_status, created_at
                    FROM ra_bucket WHERE period = ? ORDER BY perf_id""",
                 (period,),
             ).fetchall()
@@ -265,13 +266,31 @@ class RevenueAnalysisService(BaseService):
         bt = Counter(r["budget_trend"] or "(空)" for r in items)
         bf = Counter(r["budget_fill"] or "(空)" for r in items)
         src = Counter(r["bucket_source"] or "" for r in items)
+        src_fill = Counter(r["budget_fill_source"] or "" for r in items)
         return {
             "total": len(items),
             "budget_trend_dist": dict(bt),
             "budget_fill_dist": dict(bf),
             "source_dist": dict(src),
+            "fill_source_dist": dict(src_fill),
             "items": items[:200],  # 预览前 200 条
         }
+
+    def forecast(self, period: str) -> dict:
+        """P7 预测快照（DESIGN v1.1 §8.3）。
+
+        fail-closed：宽表缺失 → ImportError_ 转空结构（不抛给前端，与 buckets 一致）。
+        仅读既有单一事实源（CaliberBuilder / ra_bucket / 汇总分析 / 年度目标），
+        不新增加总逻辑、不自造聚合。
+        """
+        from .forecast_engine import ForecastEngine
+        from bdms.modules.base import ImportError_
+        try:
+            out = ForecastEngine(self.engine).forecast(period)
+        except ImportError_:
+            return {"period": period, "has_data": False, "risks": []}
+        out["has_data"] = True
+        return out
 
     def annual_targets(self) -> list[dict]:
         """Q8 年度目标列表（ra_annual_target）。"""

@@ -186,6 +186,53 @@
 
 > **fail-closed 原则**：任一信号源缺失 → 该行分桶留空 + 提示人工校验；**禁止**用其他列推断。
 
+### 3.6 信号装载与落库契约（2026-11-27 补齐）
+
+**背景**：§3.5 声明 OA/ONES 信号「现成」，但实现侧存在三处缺口（实证于 2026-11-27）：
+
+| 缺口 | 现象 |
+|---|---|
+| `apply_bucket_rules` 硬编码 `judge_bucket("BU", ...)` | **BQ（预算填报）列从未落库** → `ra_bucket.budget_fill` 恒空、API `budget_fill_dist` 恒报「(空)」 |
+| `compute()` 调 `apply_bucket_rules(period)` 不传 `oa_ordered`/`ones_matched` | ②③④ 桶永远 fail-closed，`missing_signals` 恒含两键 |
+| 无信号装载器 | OA/ONES 数据源与预算执行表之间没有取数桥梁 |
+
+**装载契约**（新增 `load_bucket_signals`，fail-closed）：
+
+```python
+def load_bucket_signals(self, period: str) -> dict:
+    # 按「合同编号（B 列）」装载 OA/ONES 信号；源缺失 → {"available": False}
+    # 返回 {available, oa_ordered:{cid:bool}, ones_matched:{cid:bool},
+    #       sources:{oa, ones}, missing_sources:[...], coverage:{...}}
+```
+
+- **OA 源**：`oa_contracts` 表（`htbh`=合同编号、`合同下单（y/n）`）。
+  实测 2026-11-27：11177 行，`是` 8408 / 空 2404 / `否` 365；按 `htbh` 去重。
+- **ONES 源**：`~/.openclaw/data/ones_exports/{month}周报-签约项目统计.csv`
+  （回退不带月份前缀的同类文件），按 `销售合同编号` 去重；命中预算表 B 列即 `matched=True`。
+  实测 2026-11-27：唯一合同号 2929，与 202606 预算表 B 列交集 1883/1937（97%）。
+- **匹配口径**：按合同编号精确匹配（不做模糊/前后缀推断）；同一合同号多行取首个非空值。
+- **fail-closed**：OA 或 ONES 任一不可用 → `available=False`，规则引擎整批跳过 ②③④ 并计入
+  `missing_signals`；**不得**因单源缺失而用另一源推断。
+- **性能**：装载器一次性构建两个字典（O(n)），禁止逐行查库。
+
+**落库契约**（修正）：
+
+- `apply_bucket_rules` 增加 `column: str = "BU"` 参数，`save_bucket_entry` 按列写
+  `budget_trend`（BU）或 `budget_fill`（BQ）；同一次生成对 BU/BQ 各跑一遍。
+- BQ 继承按 §3.1「优先按上一个月度报告赋值」：`inherit_previous_buckets` 扩展为按履约ID
+  继承上期 `budget_fill`，上期无值再进规则（优先级与 BU 一致：人工改判 > 跨期继承 > 规则）。
+- `bucket_source` / `budget_fill_source` **按列分开记录**来源
+  （`inherit:<prev>` / `rule:<rule>` / `manual`），供审计。
+  实证缺陷（2026-11-27）：双列接入前 `bucket_source` 语义即 **BU（`budget_trend`）
+  的来源**；切片6 让 BQ 复用同一列后，`compute()` 的落库顺序为
+  BU 继承 → BQ 继承 → BU 规则 → BQ 规则，**后写者覆盖先写者**，BU 溯源丢失
+  （实测 P1 行最终只剩 `rule:plan_after_year`，`rule:plan_in_year` 被抹掉）。
+  修法：新增 `budget_fill_source` 承载 BQ 溯源，BQ 写入**不得**触碰
+  `bucket_source`；`save_bucket_entry` 按传入的 `trend`/`fill` 分别写对应来源列。
+
+**验收锚点**：`ra_bucket.budget_fill` 非空率 > 0（当前恒空，缺陷）；真实源 202606 生成后
+BQ 分布与设计 §3.2 七桶一致。
+
 ---
 
 ## 4. Q3 跨期继承与外部报表依赖
@@ -352,6 +399,61 @@ Y25 同比区（汇总分析 V6:AD6）取自《月度汇总记录》去年同期
 - Web 页面：目标录入/编辑（人工）
 - 导出：汇总分析 C21（年度目标）/ F21 / AI21（右侧同比区）读取该值
 
+### 8.3 预测模型实现契约（2026-11-27 补齐，P7）
+
+**模块**：`src/bdms/modules/revenue_analysis/forecast_engine.py`（新建），
+复用 `caliber_builder.CaliberBuilder`（双口径单一事实源）与 `ra_bucket`（分桶结果）。
+
+**口径定义**（全部金额单位：万元；内部不提前舍入）：
+
+| 组成 | 取数 | 说明 |
+|---|---|---|
+| **锁定口径** | `CaliberBuilder.build_locked` | 预算执行表 AB 按 A 分类求和 |
+| **动态口径** | `CaliberBuilder.build_dynamic` | 底稿 AQ 按 C 权威分类（DUE/PIPE） |
+| **future 桶** | `ra_bucket.budget_fill = 未来可确收` | 仅统计已落库桶，未落库不计 |
+| **实际达成** | 汇总分析「合计实际」（A 块） | 本期累计实际确收 |
+| **年度目标** | `ra_annual_target`（DB 优先）→ config 回退 | 人工维护，不写死 |
+| **差距** | 目标 −（实际达成 + 锁定口径 + future 桶） | 负值=缺口 |
+
+**风险清单**（fail-closed，只报证据不推断）：
+1. `manual_review`：`ra_bucket` 中规则未命中（留空）的履约ID → 需人工定桶；
+2. `missing_signals`：信号装载 `available=False` 或 coverage 不足的行；
+3. `contract_disappear`：AT=合同终止的消失合同；
+4. `caliber_gap`：动态口径与锁定口径差异超阈值（默认 ±1%）。
+
+**接口**：
+- 引擎：`forecast(self, period: str) -> dict`
+- 服务：`forecast(self, period: str) -> dict`（fail-closed：无数据返回空结构）
+- CLI：`bdms revenue-analysis forecast 202609`
+- Web：`GET /revenue-analysis/forecast/{period}`
+
+**复用判定（2026-11-27 盘点，AGENTS.md「未盘点不写自实现」）**：
+仓库已有独立模块 `src/bdms/modules/revenue_forecast/`（v1.0 设计 + classifier/
+report_parser/engine/repository/service/exporter + Web Phase 4 接线），
+其输入管线为 ObligationRow（col2/col27/col32..40 物理列解析），
+**不消费** `ra_caliber`/`ra_bucket`/`ra_annual_target`，也无 future 桶语义、
+年度目标、风险清单。二者输入契约不同、不可直接复用；P7 按 §8.3 在
+`revenue_analysis` 内新建 `forecast_engine.py`，仅复用其
+`CaliberBuilder`（双口径单一事实源）。若后续要合并两模块，须单独立项并做
+接口兼容评审，不在本切片范围内。
+
+**单位红线**：`CaliberBuilder` 输出与 `ra_caliber` 快照均为**元**（202606 实证
+locked=119,085,304.74 / dynamic=144,647,603.62），`ra_annual_target` 与
+future 桶金额为**万元**。预测引擎对外输出统一**万元**，内部换算在
+`forecast()` 边界一次性完成，禁止在聚合过程中混用单位。
+
+**取数细化（避免自造规则）**：
+- 实际达成 = `_build_summary_analysis` 的 A 块 r19「合计」实际列（col10，
+  即 `actual_all[新签]+actual_all[递延]`，单位元→万元）；为免重复推导，
+  预测引擎调用 `engine.compute(period)` 的汇总分析输出取该行，禁止另写聚合。
+- future 桶金额 = `ra_bucket.budget_fill='未来可确收'` 的履约ID集合 ×
+  预算执行表对应金额列（递延 L / 新签 Q_adj，与 `compute_budget_trend`
+  金额路由同源），仅统计已落库行。
+
+**验收锚点**：202606 真实源下锁定/动态口径与 P2 冻结值一致（回归零差异）；
+future 桶金额 = 该桶履约ID 的对应金额合计；风险清单条数与 `apply_bucket_rules` 的
+unresolved 计数自洽。
+
 ---
 
 ## 9. 预算执行表 93 列权威映射（202606）
@@ -469,7 +571,8 @@ CREATE TABLE IF NOT EXISTS ra_bucket (
     perf_id TEXT NOT NULL,
     budget_fill TEXT,                  -- BQ 预算填报
     budget_trend TEXT,                 -- BU 预算趋势
-    bucket_source TEXT,                -- inherited / rule / manual / empty
+    bucket_source TEXT,                -- BU(budget_trend) 来源: inherit/rule/manual
+    budget_fill_source TEXT,           -- BQ(budget_fill) 来源: inherit/rule/manual
     matched_oa INTEGER DEFAULT 0,      -- OA 下单标志匹配
     matched_ones INTEGER DEFAULT 0,    -- ONES 履约匹配
     week_status TEXT,                  -- BF 履约项统计状态（周报）

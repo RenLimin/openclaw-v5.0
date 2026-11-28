@@ -15,7 +15,10 @@
 
 from __future__ import annotations
 
+import csv
 import json
+import os
+import sqlite3
 from pathlib import Path
 from typing import Any, Optional
 import datetime
@@ -179,20 +182,43 @@ class RevenueAnalysisEngine(BaseEngine):
         # Q1 归因 + Q4 预警（DESIGN v1.1 §2/§5）：纯计算，随 compute 一起返回
         data["attribution"] = compute_attribution(budget_rows)
         data["alerts"] = build_alerts(budget_rows, data["attribution"])
-        # Q2 分桶（DESIGN v1.1 §3/§4）：先尝试跨期继承，留空行再跑规则
-        # fail-closed：上期表缺失 → 跳过继承，直接进规则
+        # Q2/Q3 分桶（DESIGN v1.1 §3/§4/§3.6）
+        # 优先级：① 本期人工改判 > ② 跨期继承（BU + BQ 各自按履约ID）> ③ §3 规则引擎
+        # fail-closed：上期表缺失 → 跳过继承；外部信号缺失 → 规则跳过 ②③④ 并记 missing
         try:
+            sig = self.load_bucket_signals(period)
+        except Exception as e:                       # 装载失败不阻断生成主流程
+            sig = {"available": False, "missing_sources": ["loader"],
+                   "oa_ordered": None, "ones_matched": None,
+                   "error": str(e)}
+        oa_map = sig.get("oa_ordered")
+        ones_map = sig.get("ones_matched")
+
+        inh = inh_fill = None
+        try:                                          # BU（预算趋势）继承
             inh = self.inherit_previous_buckets(period)
         except Exception:
-            inh = None  # 上期不可用时降级为空集，走规则冷启动
-        # 先落继承值
+            inh = None                                # 上期不可用 → 规则冷启动
         if inh and inh["total"] > 0:
             self.persist_buckets(period, inh)
-        # 再用规则填留空行（不覆盖已继承/人工值）
-        rules = self.apply_bucket_rules(period)
+        try:                                          # BQ（预算填报）继承（§3.1/§3.6）
+            inh_fill = self.inherit_previous_buckets(period, column=self.FILL_COL)
+        except Exception:
+            inh_fill = None
+        if inh_fill and inh_fill["total"] > 0:
+            self.persist_buckets(period, inh_fill, column=self.FILL_COL)
+
+        # 规则只填留空行（不覆盖已继承/人工值）；BU/BQ 各跑一遍
+        rules = self.apply_bucket_rules(
+            period, oa_ordered=oa_map, ones_matched=ones_map)
+        rules_fill = self.apply_bucket_rules(
+            period, oa_ordered=oa_map, ones_matched=ones_map, column=self.FILL_COL)
         data["bucket_result"] = {
+            "signals": sig,
             "inherit": inh,
+            "inherit_fill": inh_fill,
             "rules": rules,
+            "rules_fill": rules_fill,
         }
         return data
 
@@ -1736,6 +1762,7 @@ class RevenueAnalysisEngine(BaseEngine):
     #    不是 Excel 物理列位：Excel 物理 J=履约ID → 规范键 G；AT=消失备注 → AR；
     #    计划开始/结束/完成 Excel R/S/T → 规范键 M/N/O。
     BUCKET_COL = "BU"          # 预算趋势（规范键，两期一致）
+    FILL_COL = "BQ"            # 预算填报（规范键；源表已填满）
     PERF_ID_COL = "G"          # 履约ID（规范键；对应 Excel 物理列 J）
 
     def _prev_period(self, period: str) -> Optional[str]:
@@ -1746,8 +1773,11 @@ class RevenueAnalysisEngine(BaseEngine):
         return f"{y}{m - 1:02d}"
 
     def inherit_previous_buckets(self, period: str,
-                                  manual_override: Optional[dict] = None) -> dict:
-        """Q3 跨期继承：按「履约 ID」沿用上期 BU 桶值（本期人工改判优先）。
+                                  manual_override: Optional[dict] = None,
+                                  column: Optional[str] = None) -> dict:
+        """Q3 跨期继承：按「履约 ID」沿用上期桶值（本期人工改判优先）。
+
+        column 默认 BU（预算趋势）；传 BQ（预算填报）时继承 §3.1 的上月填报值。
 
         优先级（§4.1）：① 本期人工改判 > ② 跨期继承 > ③ 留空待 §3 规则引擎
         fail-closed（§4.2）：上期/本期数据缺失一律报错，**不推断、不伪造**。
@@ -1758,6 +1788,7 @@ class RevenueAnalysisEngine(BaseEngine):
              missing_prev_ids:[...], result:{perf_id: bucket}}
             total = 唯一履约ID 数 = inherited + overridden + blank。
         """
+        col = column or self.BUCKET_COL
         prev = self._prev_period(period)
 
         cur_rows = self._load_sheet_rows(period, SHEET_BUDGET)
@@ -1771,11 +1802,11 @@ class RevenueAnalysisEngine(BaseEngine):
         def clean(v: Any) -> str:
             return "" if v is None else str(v).strip()
 
-        # 上期：履约ID → BU 桶值（只记非空）
+        # 上期：履约ID → 目标列桶值（只记非空）
         prev_map: dict[str, str] = {}
         for r in prev_rows:
             pid = clean(r.get(self.PERF_ID_COL))
-            bu = clean(r.get(self.BUCKET_COL))
+            bu = clean(r.get(col))
             if pid and bu and pid not in prev_map:
                 prev_map[pid] = bu
 
@@ -1798,7 +1829,7 @@ class RevenueAnalysisEngine(BaseEngine):
             else:
                 cur_vals[pid] = ""
                 cur_order.append(pid)
-            v = clean(r.get(self.BUCKET_COL))
+            v = clean(r.get(col))
             if v and not cur_vals[pid]:
                 cur_vals[pid] = v
 
@@ -1811,7 +1842,7 @@ class RevenueAnalysisEngine(BaseEngine):
             #   ① 显式人工改判（外部传入，最高优先）
             #   ② 上期有值 → 继承（优先级高于重算）
             #   ③ 否则留空 → §3 分桶规则引擎
-            # 注意：本期 BU 列是上一轮生成+复核的**产出物**，不作为判定输入
+            # 注意：本期该列是上一轮生成+复核的**产出物**，不作为判定输入
             # （否则形成循环论证）；仅用于事后的 agree/disagree 审计。
             if pid in override and override[pid]:
                 result[pid] = override[pid]
@@ -1851,39 +1882,197 @@ class RevenueAnalysisEngine(BaseEngine):
             "result": result,
         }
 
-    def persist_buckets(self, period: str, result: dict) -> dict:
-        """把分桶结果落 ra_bucket（bucket_source 记录来源，供下一期再读）。"""
+    def persist_buckets(self, period: str, result: dict,
+                        column: Optional[str] = None) -> dict:
+        """把分桶结果落 ra_bucket（bucket_source 记录来源，供下一期再读）。
+
+        column=None（兼容旧调用）/"BU" → 写 budget_trend，且**全期替换**
+        （重复生成不残留旧履约ID）；"BQ" → 只 upsert budget_fill，
+        不清 BU 已写入的行（双列共用一行，§3.6）。
+        """
+        col = column or self.BUCKET_COL
+        # 双列溯源（§3.6）：BU→bucket_source，BQ→budget_fill_source，互不覆盖
+        if col == self.FILL_COL:
+            field, src_field = "budget_fill", "budget_fill_source"
+        else:
+            field, src_field = "budget_trend", "bucket_source"
         rows = result.get("result") or {}
         inherited = result.get("inherited") or 0
         source = (f"inherit:{result.get('prev')}" if inherited
                   else "inherit:none")
         conn = _db.get_connection(self.db_path)
         try:
-            conn.execute(
-                "DELETE FROM ra_bucket WHERE period = ?", (period,))
+            if col != self.FILL_COL:
+                conn.execute(
+                    "DELETE FROM ra_bucket WHERE period = ?", (period,))
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             for pid, bucket in rows.items():
                 conn.execute(
-                    """INSERT OR REPLACE INTO ra_bucket
-                       (period, perf_id, budget_trend, bucket_source, created_at)
-                       VALUES (?, ?, ?, ?, ?)""",
+                    f"""INSERT INTO ra_bucket
+                        (period, perf_id, {field}, {src_field}, created_at)
+                        VALUES (?, ?, ?, ?, ?)
+                        ON CONFLICT(period, perf_id) DO UPDATE SET
+                          {field}=excluded.{field},
+                          {src_field}=excluded.{src_field}""",
                     (period, pid, bucket, source, now))
             conn.commit()
         finally:
             conn.close()
-        return {"written": len(rows), "source": source}
+        return {"written": len(rows), "source": source, "column": col}
 
-    def load_buckets(self, period: str) -> dict[str, str]:
-        """读取本账期已落库的分桶结果（perf_id → budget_trend）。"""
+    def load_buckets(self, period: str,
+                     column: Optional[str] = None) -> dict[str, str]:
+        """读取本账期已落库的分桶结果（perf_id → 指定列值）。
+
+        column 默认 BU（预算趋势）；传 BQ 读 budget_fill（§3.6 双列）。
+        """
+        col = column or self.BUCKET_COL
+        field = "budget_fill" if col == self.FILL_COL else "budget_trend"
         conn = _db.get_connection(self.db_path)
         try:
             rows = conn.execute(
-                "SELECT perf_id, budget_trend FROM ra_bucket WHERE period = ?",
+                f"SELECT perf_id, {field} AS v FROM ra_bucket "
+                "WHERE period = ?",
                 (period,),
             ).fetchall()
-            return {r["perf_id"]: r["budget_trend"] for r in rows}
+            return {r["perf_id"]: r["v"] for r in rows if r["v"]}
         finally:
             conn.close()
+
+    # ─── §3.5/§3.6 外部信号装载（OA 下单标志 / ONES 履约匹配）───
+
+    def _read_oa_order_map(self, db_candidates) -> Optional[dict]:
+        """从 oa_contracts 表读「合同下单（y/n）」→ {合同编号: bool}。
+
+        只读连接；库/表不存在 → None（fail-closed，§3.5，不伪造）。
+        空串按 §3.2「为空或否」归一为 False；NULL/未知值跳过（该行 missing）。
+        """
+        for cand in db_candidates:
+            try:
+                if not Path(cand).is_file():
+                    continue
+                con = sqlite3.connect(
+                    Path(cand).absolute().as_uri() + "?mode=ro", uri=True)
+            except Exception:
+                continue
+            try:
+                tabs = {r[0] for r in con.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+                if "oa_contracts" not in tabs:
+                    continue
+                out: dict[str, bool] = {}
+                for htbh, yn in con.execute(
+                        'SELECT htbh, "合同下单（y/n）" FROM oa_contracts'
+                ).fetchall():
+                    cid = str(htbh or "").strip()
+                    if not cid:
+                        continue
+                    val = self._is_yes(yn)
+                    if val is None:
+                        continue
+                    if cid not in out:
+                        out[cid] = val
+                return out
+            except Exception:
+                continue
+            finally:
+                try:
+                    con.close()
+                except Exception:
+                    pass
+        return None
+
+    @staticmethod
+    def _ones_family_files() -> list:
+        """DESIGN §3.5 指定的 ONES 信号源：「周报-签约项目统计」家族（排除异常处置）。
+
+        取**全部同类导出的并集**：ONES 是活系统，单次快照相对预算表存在时间错配
+        （实测 2026-11-27：仅用 ≤period 的最新快照会让 202606 的 634 行新签合同
+        假阴性为「无法匹配」，误判成「已下单但无法交付」）。并集对导出增补单调，
+        新增导出只会增加命中，不会丢失既有命中。
+        """
+        base = Path.home() / ".openclaw" / "data" / "ones_exports"
+        if not base.is_dir():
+            return []
+        fam = [p for p in sorted(base.glob("*签约项目统计*.csv"))
+               if "异常" not in p.name]
+        return fam
+
+    @classmethod
+    def _read_ones_contract_set(cls, paths) -> Optional[set]:
+        """读一个或多个 ONES 导出的「销售合同编号」并集；无任何可读文件 → None。"""
+        if isinstance(paths, (str, Path)):
+            paths = [paths]
+        out: set = set()
+        got = False
+        for path in paths:
+            try:
+                with open(path, newline="", encoding="utf-8-sig") as f:
+                    for row in csv.DictReader(f):
+                        cid = str(row.get("销售合同编号") or "").strip()
+                        if cid:
+                            out.add(cid)
+                            got = True
+            except Exception:
+                continue
+        return out if got else None
+
+    def load_bucket_signals(self, period: str) -> dict:
+        """按「合同编号（B 列）」装载 OA/ONES 信号（DESIGN-DETAIL §3.5/§3.6）。
+
+        fail-closed：OA 或 ONES 任一不可用 → available=False，对应字典为 None，
+        由 judge_bucket 逐行计入 missing_signals（禁止用另一源推断，§3.5）。
+
+        Returns:
+            {period, available, sources, missing_sources,
+             oa_ordered:{cid:bool}|None, ones_matched:{cid:bool}|None, coverage}
+        """
+        rows = self._load_sheet_rows(period, SHEET_BUDGET)
+        cids: list[str] = []
+        seen: set[str] = set()
+        for r in rows:
+            cid = str(r.get("B") or "").strip()
+            if cid and cid not in seen:
+                seen.add(cid)
+                cids.append(cid)
+
+        candidates = []
+        env = os.environ.get("BDMS_OA_DB")
+        if env:
+            candidates.append(Path(env))
+        candidates.append(Path(self.db_path))
+        candidates.append(Path.home() / ".openclaw" / "data" / "bdms.db")
+
+        oa_map = self._read_oa_order_map(candidates)
+        ones_files = self._ones_family_files()
+        ones_set = (self._read_ones_contract_set(ones_files)
+                    if ones_files else None)
+
+        missing: list[str] = []
+        if oa_map is None:
+            missing.append("oa")
+        if ones_set is None:
+            missing.append("ones")
+
+        ones_matched = ({cid: (cid in ones_set) for cid in cids}
+                        if ones_set is not None else None)
+        return {
+            "period": period,
+            "available": not missing,
+            "sources": {
+                "oa": "available" if oa_map is not None else "missing",
+                "ones": ([p.name for p in ones_files] or "missing"),
+            },
+            "missing_sources": missing,
+            "oa_ordered": oa_map,
+            "ones_matched": ones_matched,
+            "coverage": {
+                "budget_contracts": len(cids),
+                "oa_known": len(seen & set(oa_map or {})),
+                "ones_matched": (sum(1 for v in ones_matched.values() if v)
+                                 if ones_matched else 0),
+            },
+        }
 
     # ─── §3 分桶规则引擎（DESIGN-DETAIL v1.1 §3；上期为空/新增履约ID 时）───
 
@@ -2005,22 +2194,27 @@ class RevenueAnalysisEngine(BaseEngine):
                           week_status: Optional[str] = None) -> None:
         """写入/更新单条分桶（upsert，COALESCE 不覆盖已存在值）。"""
         source = f"rule:{rule}" if rule else "manual"
+        # 双列溯源（§3.6）：本行只写实际传入的那一列的来源，另一列保持不变
+        trend_source = source if trend is not None else None
+        fill_source = source if fill is not None else None
         conn = _db.get_connection(self.db_path)
         try:
             conn.execute(
                 """INSERT INTO ra_bucket
                    (period, perf_id, budget_fill, budget_trend, bucket_source,
-                    matched_oa, matched_ones, week_status, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    budget_fill_source, matched_oa, matched_ones, week_status,
+                    created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT(period, perf_id) DO UPDATE SET
                      budget_fill=COALESCE(excluded.budget_fill, ra_bucket.budget_fill),
                      budget_trend=COALESCE(excluded.budget_trend, ra_bucket.budget_trend),
-                     bucket_source=excluded.bucket_source,
+                     bucket_source=COALESCE(excluded.bucket_source, ra_bucket.bucket_source),
+                     budget_fill_source=COALESCE(excluded.budget_fill_source, ra_bucket.budget_fill_source),
                      matched_oa=COALESCE(excluded.matched_oa, ra_bucket.matched_oa),
                      matched_ones=COALESCE(excluded.matched_ones, ra_bucket.matched_ones),
                      week_status=COALESCE(excluded.week_status, ra_bucket.week_status)""",
-                (period, perf_id, fill, trend, source, matched_oa, matched_ones,
-                 week_status,
+                (period, perf_id, fill, trend, trend_source, fill_source,
+                 matched_oa, matched_ones, week_status,
                  datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
             conn.commit()
         finally:
@@ -2028,17 +2222,21 @@ class RevenueAnalysisEngine(BaseEngine):
 
     def apply_bucket_rules(self, period: str, *, year: Optional[int] = None,
                            oa_ordered: Optional[dict] = None,
-                           ones_matched: Optional[dict] = None) -> dict:
+                           ones_matched: Optional[dict] = None,
+                           column: Optional[str] = None) -> dict:
         """对尚未定桶的履约ID应用 §3 规则（**不覆盖**已继承/已填值）。
 
+        column: 'BU'（预算趋势，默认）或 'BQ'（预算填报）——决定判定规则与落库列
+        （§3.2 BQ 用计划时间、§3.3 BU 用 BX，故必须分开跑，§3.6）。
         oa_ordered / ones_matched: {合同编号(B列): bool}；None 表示该源未接入
-        → 相关规则按 fail-closed 跳过并计入 missing_signals。
+        → 相关规则按 fail-closed 跳过并计入 missing_signals（§3.5）。
         """
+        col = column or self.BUCKET_COL
         rows = self._load_sheet_rows(period, SHEET_BUDGET)
         if not rows:
             raise ImportError_(f"{period} 预算执行表缺失，无法分桶")
         y = year or int(period[:4])
-        existing = self.load_buckets(period)
+        existing = self.load_buckets(period, column=col)
 
         agg: dict[str, dict] = {}
         order: list[str] = []
@@ -2053,8 +2251,8 @@ class RevenueAnalysisEngine(BaseEngine):
                 agg[pid] = {"row": r, "signals": {}}
                 order.append(pid)
             sig = agg[pid]["signals"]
-            for k, col in cols:
-                v = str(r.get(col) or "").strip()
+            for k, cc in cols:
+                v = str(r.get(cc) or "").strip()
                 if v and not sig.get(k):
                     sig[k] = v
 
@@ -2068,7 +2266,7 @@ class RevenueAnalysisEngine(BaseEngine):
             sig = agg[pid]["signals"]
             cid = str(agg[pid]["row"].get("B") or "").strip()
             j = self.judge_bucket(
-                "BU", at=sig.get("at"), bf=sig.get("bf"), bx=sig.get("bx"),
+                col, at=sig.get("at"), bf=sig.get("bf"), bx=sig.get("bx"),
                 plan_start=sig.get("plan_start"), plan_end=sig.get("plan_end"),
                 plan_finish=sig.get("plan_finish"),
                 oa_ordered=(oa_ordered or {}).get(cid),
@@ -2077,16 +2275,17 @@ class RevenueAnalysisEngine(BaseEngine):
                 results[pid] = j["bucket"]
                 key = f"rule:{j['rule']}"
                 stats[key] = stats.get(key, 0) + 1
-                self.save_bucket_entry(period, pid, trend=j["bucket"],
-                                       rule=j["rule"],
+                val_kw = ({"fill": j["bucket"]} if col == self.FILL_COL
+                          else {"trend": j["bucket"]})
+                self.save_bucket_entry(period, pid, rule=j["rule"],
                                        matched_ones=(ones_matched or {}).get(cid),
-                                       week_status=sig.get("bf"))
+                                       week_status=sig.get("bf"), **val_kw)
             else:
                 stats["unresolved"] = stats.get("unresolved", 0) + 1
                 unresolved.append({"perf_id": pid, "contract": cid,
                                    "missing_signals": j["missing_signals"]})
 
-        return {"period": period, "year": y, "total": len(order),
+        return {"period": period, "year": y, "column": col, "total": len(order),
                 "newly_bucketed": len(results), "stats": stats,
                 "unresolved": unresolved, "results": results}
 

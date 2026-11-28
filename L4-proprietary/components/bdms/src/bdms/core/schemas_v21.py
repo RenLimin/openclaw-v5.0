@@ -1020,6 +1020,7 @@ CREATE TABLE IF NOT EXISTS ra_bucket (
     budget_fill TEXT,
     budget_trend TEXT,
     bucket_source TEXT,
+    budget_fill_source TEXT,
     matched_oa INTEGER DEFAULT 0,
     matched_ones INTEGER DEFAULT 0,
     week_status TEXT,
