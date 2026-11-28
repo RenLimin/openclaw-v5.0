@@ -101,7 +101,7 @@
 | ID | 事项 | 证据 | 建议 |
 |---|---|---|---|
 | L-B-01 | capability-router 建设 | `ADR-202611-037` 已 accepted，但代码未建；`dag-orchestrator` 有完整执行引擎却**零生产调用方**（引用仅落在自身目录 / registry / 描述性提及） | 走完整生命周期（调研→DESIGN→验收标准→建设→测试→登记），单独立项 |
-| L-B-02 | 28 个自建 SKILL.md 缺 `bins:` / `env:` | 实测 28/28 全缺（L2-infra 10 + L3-business 7 + L4-proprietary 11） | 批量补契约字段；非红项，影响可发现性 |
+| L-B-02 | 自建 SKILL.md 依赖门禁未声明 | **口径已修正（2026-11-28）**：顶层 `bins:`/`env:` 并非 SKILL.md 字段，真身是 `metadata.openclaw.requires.{bins,env}`（官方 docs/tools/skills.md §Optional frontmatter keys）。实测 28 份中 16 份有 `metadata.openclaw`、其中仅 8 份声明 `requires`；另 12 份完全无 metadata 块 | **不在本轮盲改**：`requires.bins` 会使缺失二进制的 skill 直接失格（加载期硬门禁），误加会把现有可用 skill 弄成不可见，须逐份核实真实外部依赖后再加。降为 D 类核验项（见 L-D-06） |
 | L-B-03 | ones-browser-export 真实 E2E | 同 D-11：仍受登录态 / CDP 阻塞，离线契约已过 | 待专用 CDP 环境，可与其他 E2E 合并排期 |
 
 ## C 类 · 外部 / 环境阻塞（留证即可）
@@ -119,8 +119,9 @@
 | L-D-01 | dreaming 管线实况 | 实测 `rem` / `light` / `deep` 各 82 篇、`session-corpus` 77 文件、**无 `staged/` 目录**；此前记的「7499 staged 候选、deep ranked/promoted=0」与实测不符，口径需重核 |
 | L-D-02 | delivery-quality 闭环是否在跑 | 组件在，`feedback.jsonl` 38 行、`reviews/` 9 份；是否真在事件驱动运转待验 |
 | L-D-03 | P6 sha256 语义重复 | `workspace-temp-cleanup/scripts/archive.py` 10 处 sha256 调用，是否真重复需逐处比对，暂不认 |
-| L-D-04 | kb collectors 重叠 | `kb_index.py` / `system_full_audit.py` / `lane_d_tasks.py` 各自扫 `*.md`，职责边界需划 |
+| L-D-04 | ~~kb collectors 重叠~~ | **2026-11-28 查实为伪缺口，销账**：三者职责不同且不重复——`kb_index` 做 frontmatter schema 校验+索引派生（扫 `docs/knowledge-base`）、`lane_d_tasks` 只扫 L2/L3/L4 的 `- [ ]` 未勾选项（不解析 frontmatter）、`system_full_audit` 做全系统计数体检且已复用 `kb_index --stats`；后者 ADR/EXP 计数路径（`KB_DIR/adr`、`KB_DIR/correct`）经核实指向真实目录。无需划边界 |
 | L-D-05 | P4 JSON Schema 校验器 | `VERIFICATION-P4` 自留 TODO：`$ref` / `oneOf` 等复杂关键字仍为最小实现 |
+| L-D-06 | 12 份自建 SKILL.md 无 `metadata.openclaw` 块 | dag-orchestrator / meeting-minutes / model-scheduling / ocr-digitalization / role-library / system-governor / system-health-check / web-ui-design / contract-approval / bdms-web-ui-design / fin-l4 / ones-browser-export；正文实测用到 openclaw/python3/bash/git/curl/playwright 等外部命令。需逐份判定哪些该升为 `requires`（风险：误加即致失格，见 L-B-02） |
 
 ## E 类 · 已闭环可销账
 
@@ -128,4 +129,5 @@
 |---|---|---|
 | L-E-01 | Q-1 L0-gateway 正式移交运行时原生通道 | `ADR-202611-037-capability-routing-orchestration-layer` accepted（2026-11-27 Rex 拍板）；auth-gateway / channel-router / session-manager 归档为「架构预留 / 参考设计」，骨架保留 |
 | L-E-02 | 跨目录 ADR 同号治理 | 提交 `2918ac2`：026 改号 `ADR-202609-030`、035/023 声明权威镜像、`adr_id→id` 归一、`--adr-audit` 接入 pre-commit step 3b、回归 12 例；`--adr-audit` exit=0、阻断错误 0 |
+| L-E-03 | 知识库 validate 口径与断链修复 | 提交 `7166df1`：`缺 stage` 检查移入非业务库分支（业务库误报 177→28，剩余 28 份逐份核对确无 dimension）；清零 8 处失效相对链接 + 2 条悬空 ID 引用（EXP-20260903-003/004 号段不存在，改指真实 006~009）；新增回归 4 例（`test_kb_validate_fixes.py`）。全量回归 68 passed |
 
