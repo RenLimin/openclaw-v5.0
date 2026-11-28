@@ -116,9 +116,9 @@
 
 | ID | 事项 | 待核实点 |
 |---|---|---|
-| L-D-01 | dreaming 管线实况 | 实测 `rem` / `light` / `deep` 各 82 篇、`session-corpus` 77 文件、**无 `staged/` 目录**；此前记的「7499 staged 候选、deep ranked/promoted=0」与实测不符，口径需重核 |
-| L-D-02 | delivery-quality 闭环是否在跑 | 组件在，`feedback.jsonl` 38 行、`reviews/` 9 份；是否真在事件驱动运转待验 |
-| L-D-03 | P6 sha256 语义重复 | `workspace-temp-cleanup/scripts/archive.py` 10 处 sha256 调用，是否真重复需逐处比对，暂不认 |
+| L-D-01 | **dreaming 管线「只进不出」**（2026-11-28 定性，真实缺陷） | 实测（md5 逐篇去重）：`light` 83 篇均有内容，含 **7599 条 `- Candidate:` 且全部 `status: staged`**；`deep` 83 篇仅 **3 种内容**（80 篇同一 md5 的固定句「Ranked 0 candidate(s)…Promoted 0…」）；`rem` 83 篇仅 **68 种内容**（16 篇同 md5 的「No strong patterns surfaced.」）。旧记「7499 staged」与实测 7599 为同批数字（口径漂移非矛盾），但「staged 从不 promote」属实 | 待决策：dreaming 的 deep/rem 两层产出高度模板化、且候选无晋级通道——需先定机制（谁来 rank/promote、阈值、去重）再动；属新组件建设，须走完整生命周期 |
+| L-D-02 | ~~delivery-quality 闭环是否在跑~~ | **2026-11-28 澄清：按设计已接线，销账**。`record.py` 每次记录后默认 subprocess 调 `review.py`（内置触发，非 cron），AGENTS.md §交付质量反馈闭环明文要求「收到纠正即记录」；实测 `feedback.jsonl` 38 行、`reviews/` 9 份，链路与约定一致 |
+| L-D-03 | ~~P6 sha256 语义重复~~ | **2026-11-28 证伪，销账**：`archive.py` 中 `sha256_file()` 仅定义一次，两处调用分别作用于不同文件（`move.dst` 冲突检测 / `mv.src` 入 manifest），非重复实现；所谓「10 处」是把字段名与注释一并计入所致 |
 | L-D-04 | ~~kb collectors 重叠~~ | **2026-11-28 查实为伪缺口，销账**：三者职责不同且不重复——`kb_index` 做 frontmatter schema 校验+索引派生（扫 `docs/knowledge-base`）、`lane_d_tasks` 只扫 L2/L3/L4 的 `- [ ]` 未勾选项（不解析 frontmatter）、`system_full_audit` 做全系统计数体检且已复用 `kb_index --stats`；后者 ADR/EXP 计数路径（`KB_DIR/adr`、`KB_DIR/correct`）经核实指向真实目录。无需划边界 |
 | L-D-05 | P4 JSON Schema 校验器 | `VERIFICATION-P4` 自留 TODO：`$ref` / `oneOf` 等复杂关键字仍为最小实现 |
 | L-D-06 | 12 份自建 SKILL.md 无 `metadata.openclaw` 块 | dag-orchestrator / meeting-minutes / model-scheduling / ocr-digitalization / role-library / system-governor / system-health-check / web-ui-design / contract-approval / bdms-web-ui-design / fin-l4 / ones-browser-export；正文实测用到 openclaw/python3/bash/git/curl/playwright 等外部命令。需逐份判定哪些该升为 `requires`（风险：误加即致失格，见 L-B-02） |
